@@ -47,12 +47,10 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
  protected:
   /*
    * Decides whether a new revision of this node invalidates its cached
-   * measurement. The base implementation always says yes, which is expensive
-   * here: whenever an ancestor re-renders, Fabric clones every child of the
-   * changed parent just to re-own its Yoga node
-   * (`YogaLayoutableShadowNode::adoptYogaChild`), and each of those clones would
-   * re-measure — a full CoreText layout per node, for a revision in which
-   * nothing about the text changed.
+   * measurement — the base implementation always says yes, which would re-run a
+   * full CoreText layout per node whenever any ancestor re-renders. Delegates to
+   * `shouldRevisionDirtyMeasurement` in cpp/PlainTextMeasurementInvalidation.h,
+   * shared with Android; see there for why.
    */
   bool shouldNewRevisionDirtyMeasurement(
       const ShadowNode &sourceShadowNode,

@@ -13,8 +13,11 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => min_ios_version_supported }
   s.source       = { :git => "https://github.com/mdjastrzebski/react-native-plain-text.git", :tag => "#{s.version}" }
 
-  s.source_files = "ios/**/*.{h,m,mm,swift,cpp}"
-  s.private_header_files = "ios/**/*.h"
+  # cpp/ holds platform-independent C++ shared with Android (which picks it up
+  # through android/src/main/jni/CMakeLists.txt). Listing it here is what puts
+  # it on the header search path, so the ios/ sources can include it by name.
+  s.source_files = "ios/**/*.{h,m,mm,swift,cpp}", "cpp/**/*.{h,cpp}"
+  s.private_header_files = "ios/**/*.h", "cpp/**/*.h"
 
   install_modules_dependencies(s)
 end

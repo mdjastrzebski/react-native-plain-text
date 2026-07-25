@@ -27,6 +27,13 @@ file(GLOB generated_SRCS CONFIGURE_DEPENDS
 file(GLOB custom_SRCS CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/react/renderer/components/RNPlainTextSpec/*.cpp")
 
+# Platform-independent C++ shared with iOS (which picks it up through the
+# podspec). Header-only so far, hence include path only — no sources to compile.
+get_filename_component(
+  SHARED_CPP_DIR
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../../../cpp"
+  ABSOLUTE)
+
 add_library(
   react_codegen_RNPlainTextSpec
   OBJECT
@@ -41,6 +48,7 @@ target_include_directories(
   react_codegen_RNPlainTextSpec
   PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${SHARED_CPP_DIR}
   ${GENERATED_DIR}
   ${GENERATED_DIR}/react/renderer/components/RNPlainTextSpec
 )
