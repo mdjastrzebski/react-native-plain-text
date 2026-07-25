@@ -1,8 +1,13 @@
 package com.plaintext
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import java.util.concurrent.atomic.AtomicInteger
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.PixelUtil
@@ -34,6 +39,16 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
 
   public override fun createViewInstance(context: ThemedReactContext): RNPlainText {
     return RNPlainText(context)
+  }
+
+  // The @ReactProp setters below only record state — see the batching block in
+  // RNPlainText. ViewManager.updateProperties calls this once it has applied
+  // every prop in the transaction, which is where the recomputation happens: one
+  // setText, one typeface resolution, one text-size pass per view instead of one
+  // per prop.
+  override fun onAfterUpdateTransaction(view: RNPlainText) {
+    super.onAfterUpdateTransaction(view)
+    view.flushPendingUpdates()
   }
 
   @ReactProp(name = "text")
@@ -135,6 +150,8 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     heightMode: YogaMeasureMode,
     attachmentsPositions: FloatArray?
   ): Long {
+    val startNanos = if (LOG_MEASURE_BATCHES) System.nanoTime() else 0L
+
     val view = measureView(context)
     view.setAllowFontScaling(
       if (props?.hasKey("allowFontScaling") == true) props.getBoolean("allowFontScaling") else true
@@ -173,6 +190,8 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
       PixelUtil.toDIPFromPixel(view.measuredWidth.toFloat()),
       PixelUtil.toDIPFromPixel(view.measuredHeight.toFloat())
     )
+
+    if (LOG_MEASURE_BATCHES) recordMeasureCall(startNanos)
     return result
   }
 
@@ -208,6 +227,76 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     return view
   }
 
+  // Diagnostic: groups measure() calls into layout batches and logs one line per
+  // batch, to answer three questions the earlier numbers left open — how many
+  // times Yoga measures each node per commit (its per-node measure cache should
+  // make it once), which thread the layout pass runs on, and where the batch
+  // sits relative to the JS render window (the 🚨 logs in PerformanceScreen).
+  //
+  // Everything reported is timestamped at the calls themselves, never at the
+  // flush: the flush runs on the main looper, so if measurement is on the main
+  // thread it cannot run until the whole pass (and whatever follows it) is done.
+  // Deriving the span from flush time is what made a batch look like 418ms.
+  // `flushLate` reports that delay explicitly instead, as a read on how backed
+  // up the main thread was.
+  private val measureCalls = AtomicInteger(0)
+  @Volatile private var batchFirstCallMs = 0L
+  @Volatile private var batchLastCallMs = 0L
+  @Volatile private var batchBusyNanos = 0L
+  @Volatile private var batchThread: String? = null
+  @Volatile private var batchMixedThreads = false
+  private val measureLogHandler by lazy { Handler(Looper.getMainLooper()) }
+
+  // `busy` is the summed duration of the measure() calls themselves; `span` is
+  // wall-clock from the first call to the last. busy << span means the pass is
+  // interleaved with other work rather than measure-bound.
+  private val flushMeasureLog = object : Runnable {
+    override fun run() {
+      val idleMs = SystemClock.uptimeMillis() - batchLastCallMs
+      // A call landed while this was queued — the batch is still running.
+      if (idleMs < MEASURE_LOG_QUIET_MS) {
+        measureLogHandler.postDelayed(this, MEASURE_LOG_QUIET_MS - idleMs)
+        return
+      }
+      val count = measureCalls.getAndSet(0)
+      if (count == 0) return
+
+      val busyMs = batchBusyNanos / 1_000_000.0
+      val spanMs = batchLastCallMs - batchFirstCallMs
+      val flushLateMs = idleMs - MEASURE_LOG_QUIET_MS
+      Log.d(
+        NAME,
+        "🚨 measure batch: $count calls · busy ${"%.1f".format(busyMs)}ms " +
+          "(${"%.0f".format(busyMs * 1000 / count)}µs/call) · span ${spanMs}ms · " +
+          "uptime $batchFirstCallMs→$batchLastCallMs · thread=$batchThread" +
+          (if (batchMixedThreads) "(+others)" else "") +
+          " · flushLate ${flushLateMs}ms"
+      )
+    }
+  }
+
+  private fun recordMeasureCall(startNanos: Long) {
+    val endNanos = System.nanoTime()
+    val nowMs = SystemClock.uptimeMillis()
+    val thread = Thread.currentThread().name
+
+    if (measureCalls.getAndIncrement() == 0) {
+      batchFirstCallMs = nowMs - (endNanos - startNanos) / 1_000_000
+      batchBusyNanos = 0L
+      batchThread = thread
+      batchMixedThreads = false
+      // Armed once per batch rather than re-armed per call: 1000 handler
+      // post/remove pairs would themselves show up in what we are measuring.
+      // The Runnable re-posts itself while calls are still arriving.
+      measureLogHandler.postDelayed(flushMeasureLog, MEASURE_LOG_QUIET_MS)
+    } else if (thread != batchThread) {
+      batchMixedThreads = true
+    }
+
+    batchBusyNanos += endNanos - startNanos
+    batchLastCallMs = nowMs
+  }
+
   // The size constraints already arrive in pixels — FabricUIManager's
   // getYogaSize() converts the C++ (point-based) LayoutConstraints to px before
   // this is called — so they map straight onto an Android MeasureSpec without
@@ -222,5 +311,12 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
 
   companion object {
     const val NAME = "RNPlainText"
+
+    // Flip off to remove the per-batch measure() logging above.
+    private const val LOG_MEASURE_BATCHES = true
+    // How long without a measure() call ends a batch. Long enough to not split
+    // one layout pass in two, short enough to keep two passes apart — the gap
+    // between the mount pass and the settle re-render is ~1.9s.
+    private const val MEASURE_LOG_QUIET_MS = 200L
   }
 }

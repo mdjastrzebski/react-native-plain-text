@@ -13,6 +13,11 @@ import { unstable_NativeText as NativeText } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMemoryFootprint } from 'react-native-memory-footprint';
 import { PlainText } from 'react-native-plain-text';
+// The library's bare codegen host component, bypassing the PlainText JS
+// wrapper — the analogue of the NativeText-vs-Text pair below, used to price
+// what the wrapper's StyleSheet.flatten + rest destructure + 18-prop element
+// costs per view. Imported by path because it is deliberately not public API.
+import NativePlainText from '../../../src/PlainTextViewNativeComponent';
 
 const COUNT = 1000;
 
@@ -28,7 +33,18 @@ const FONT_SIZES = [
 // (GC timing, TextView layout) so it needs a longer settle window than iOS.
 const SETTLE_MS = Platform.select({ android: 2000, default: 500 });
 
-type Kind = 'plain' | 'text' | 'nativeText';
+type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
+
+// A frame slower than this counts as the UI thread still doing bulk work. Two
+// frames at 60Hz, four at 120Hz — deliberately generous, so the same constant
+// works on every device: what is being detected is a multi-hundred-millisecond
+// mount stall, not a marginally dropped frame.
+const LONG_FRAME_MS = 32;
+// Consecutive on-budget frames that mean the UI has settled.
+const QUIET_FRAMES = 3;
+// Give up if frames never settle (an animation elsewhere, or the app going to
+// the background, which stops frame callbacks entirely).
+const TTFF_TIMEOUT_MS = 10_000;
 
 type Stats = {
   memBefore: number;
@@ -36,14 +52,87 @@ type Stats = {
   totalBytes: number;
   perViewBytes: number;
   timeMs: number;
+  ttffMs: number | null;
 };
+
+// Time from `startTime` until the UI stops doing bulk work — the end of the
+// last frame that overran its budget.
+//
+// The render+commit number the effect captures covers only the JS thread: React
+// renders and commits, Yoga lays out, the effect fires, and *then* the mount
+// transaction is handed to the UI thread, which creates and draws the views
+// long after. Frame callbacks cannot run while that is happening, so the mount
+// storm appears as a gap in the frame stream and needs no native hook to see.
+// requestAnimationFrame is display-driven on both platforms (Choreographer on
+// Android, CADisplayLink on iOS) and nothing here touches the components under
+// test, so all four variants are measured by identical machinery.
+//
+// Being on the JS thread, the loop cannot attribute a long frame to JS work vs
+// UI work — that split comes from comparing this against the effect's number.
+// Every long frame is also reported, because the shape matters as much as the
+// total: "one 210ms gap then one 470ms gap" is a commit followed by a single
+// mount stall, whereas "300ms then 45ms, 38ms, 41ms" is a shorter mount stall
+// with a GC tail — same TTFF, different conclusion, and in the second case the
+// end of the last long frame is the wrong number to compare across variants.
+type LongFrame = { atMs: number; durationMs: number };
+
+function measureTimeToFirstFrame(
+  startTime: number,
+  isStale: () => boolean,
+  onSettled: (ttffMs: number, longFrames: LongFrame[]) => void
+) {
+  let lastFrameTime = startTime;
+  let lastLongFrameEnd = startTime;
+  let quietFrames = 0;
+  const longFrames: LongFrame[] = [];
+
+  const tick = () => {
+    if (isStale()) return;
+
+    const now = performance.now();
+    const delta = now - lastFrameTime;
+    lastFrameTime = now;
+
+    if (delta > LONG_FRAME_MS) {
+      lastLongFrameEnd = now;
+      quietFrames = 0;
+      longFrames.push({
+        atMs: now - delta - startTime,
+        durationMs: delta,
+      });
+    } else if (++quietFrames >= QUIET_FRAMES) {
+      onSettled(lastLongFrameEnd - startTime, longFrames);
+      return;
+    }
+
+    if (now - startTime > TTFF_TIMEOUT_MS) {
+      onSettled(lastLongFrameEnd - startTime, longFrames);
+      return;
+    }
+    requestAnimationFrame(tick);
+  };
+
+  requestAnimationFrame(tick);
+}
+
+// Diagnostics share the 🚨 marker with the native measure-batch logs, so
+// `adb logcat -s ReactNativeJS RNPlainText | grep 🚨` puts the JS render window
+// and the native layout passes on one timeline — which is the only way to tell
+// which work the timings above actually cover. console.log reaches logcat via
+// nativeLoggingHook (tag ReactNativeJS) in release builds too, but it crosses a
+// thread boundary to get there, so trust the ordering over the exact timestamp.
+function logDiag(message: string) {
+  console.log(`🚨 ${message} @${performance.now().toFixed(0)}`);
+}
 
 export default function PerformanceScreen() {
   const insets = useSafeAreaInsets();
   const [plainCount, setPlainCount] = useState(0);
+  const [nativePlainCount, setNativePlainCount] = useState(0);
   const [textCount, setTextCount] = useState(0);
   const [nativeTextCount, setNativeTextCount] = useState(0);
   const [plainStats, setPlainStats] = useState<Stats | null>(null);
+  const [nativePlainStats, setNativePlainStats] = useState<Stats | null>(null);
   const [textStats, setTextStats] = useState<Stats | null>(null);
   const [nativeTextStats, setNativeTextStats] = useState<Stats | null>(null);
   const [fontSize, setFontSize] = useState<number>(56);
@@ -57,14 +146,43 @@ export default function PerformanceScreen() {
     startTime: number;
   } | null>(null);
 
+  // Time-to-first-frame lands asynchronously, once frames settle (~0.5s here),
+  // which is well inside the SETTLE_MS wait before stats are built — so the
+  // stats row can just read whatever the loop has stored by then.
+  const ttff = useRef<number | null>(null);
+  // Bumped per run so a still-running frame loop from an earlier press stops
+  // instead of overwriting the current run's result.
+  const runId = useRef(0);
+
   const startMeasure = useCallback((kind: Kind) => {
     // Sample memory *before* the render that mounts the views, and mark the
     // start of the render+commit window right as we trigger the state update.
     const memBefore = getMemoryFootprint();
     const startTime = performance.now();
     pending.current = { kind, memBefore, startTime };
+    logDiag(`press ${kind}`);
+
+    // Started before the state update so the first sampled frame brackets the
+    // render itself, making the result a true press-to-painted number.
+    ttff.current = null;
+    runId.current += 1;
+    const thisRun = runId.current;
+    measureTimeToFirstFrame(
+      startTime,
+      () => runId.current !== thisRun,
+      (ttffMs, longFrames) => {
+        ttff.current = ttffMs;
+        const gaps = longFrames
+          .map((f) => `${f.durationMs.toFixed(0)}ms@${f.atMs.toFixed(0)}`)
+          .join(', ');
+        logDiag(`ttff ${kind} +${ttffMs.toFixed(0)}ms · gaps: ${gaps}`);
+      }
+    );
+
     if (kind === 'plain') {
       setPlainCount(COUNT);
+    } else if (kind === 'nativePlain') {
+      setNativePlainCount(COUNT);
     } else if (kind === 'text') {
       setTextCount(COUNT);
     } else {
@@ -80,7 +198,12 @@ export default function PerformanceScreen() {
     if (!m) return;
     pending.current = null;
 
+    // Covers the JS thread only — React render, Fabric commit, Yoga layout.
+    // Mounting and painting happen on the UI thread after this fires; that half
+    // is what the frame loop measures.
     const timeMs = performance.now() - m.startTime;
+    logDiag(`effect ${m.kind} +${timeMs.toFixed(0)}ms`);
+
     const timer = setTimeout(() => {
       const memAfter = getMemoryFootprint();
       const totalBytes = memAfter - m.memBefore;
@@ -90,9 +213,16 @@ export default function PerformanceScreen() {
         totalBytes,
         perViewBytes: totalBytes / COUNT,
         timeMs,
+        ttffMs: ttff.current,
       };
+      // A measure batch appearing after this line means the settle re-render
+      // re-measured every already-mounted node, even though none of their props
+      // changed — Yoga's per-node measure cache should have skipped them.
+      logDiag(`settle setState ${m.kind}`);
       if (m.kind === 'plain') {
         setPlainStats(stats);
+      } else if (m.kind === 'nativePlain') {
+        setNativePlainStats(stats);
       } else if (m.kind === 'text') {
         setTextStats(stats);
       } else {
@@ -101,7 +231,7 @@ export default function PerformanceScreen() {
     }, SETTLE_MS);
 
     return () => clearTimeout(timer);
-  }, [plainCount, textCount, nativeTextCount]);
+  }, [plainCount, nativePlainCount, textCount, nativeTextCount]);
 
   return (
     <ScrollView
@@ -140,6 +270,12 @@ export default function PerformanceScreen() {
       <StatsRow label="PlainText" stats={plainStats} />
 
       <Button
+        title={`Add ${COUNT} NativePlainText`}
+        onPress={() => startMeasure('nativePlain')}
+      />
+      <StatsRow label="NativePlainText" stats={nativePlainStats} />
+
+      <Button
         title={`Add ${COUNT} Text`}
         onPress={() => startMeasure('text')}
       />
@@ -155,6 +291,22 @@ export default function PerformanceScreen() {
         <PlainText key={n} style={[styles.listItem, { fontSize }]}>
           {`List Item ${n + 1}`}
         </PlainText>
+      ))}
+
+      {/*
+        Same rendered result as the PlainText block above (same text, fontSize
+        and backgroundColor), but with the props already in native shape: no
+        StyleSheet.flatten, no rest destructure, and only the props actually set
+        instead of 18 mostly-undefined ones. The delta against PlainText is the
+        JS wrapper's cost.
+      */}
+      {Array.from({ length: nativePlainCount }, (_, n) => (
+        <NativePlainText
+          key={n}
+          text={`List Item ${n + 1}`}
+          fontSize={fontSize}
+          style={styles.listItem}
+        />
       ))}
 
       {Array.from({ length: textCount }, (_, n) => (
@@ -178,8 +330,11 @@ function StatsRow({ label, stats }: { label: string; stats: Stats | null }) {
   return (
     <Text style={styles.stats}>
       {`${label}: ${formatBytes(stats.perViewBytes)}/view · ` +
-        `${formatBytes(stats.totalBytes)} total · ` +
-        `${stats.timeMs.toFixed(0)} ms\n` +
+        `${formatBytes(stats.totalBytes)} total\n` +
+        // commit = JS thread (render + layout); frame = press to painted, so
+        // frame - commit is what the UI thread spent mounting and drawing.
+        `${stats.timeMs.toFixed(0)} ms commit · ` +
+        `${stats.ttffMs == null ? '—' : `${stats.ttffMs.toFixed(0)} ms`} frame\n` +
         `initial ${formatBytes(stats.memBefore)} → final ${formatBytes(
           stats.memAfter
         )}`}

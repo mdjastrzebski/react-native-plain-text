@@ -46,6 +46,55 @@ class RNPlainText : AppCompatTextView {
   private var allowFontScaling: Boolean = true
   private var maxFontSizeMultiplier: Float = 0f
 
+  // --- Batched prop application ---------------------------------------------
+  //
+  // Fabric applies props one setter at a time, and several of ours feed the same
+  // expensive operations: fontSize and both font-scaling knobs all recompute the
+  // text size and letter spacing; text and lineHeight both rebuild the Spannable
+  // and call TextView.setText; fontFamily/fontWeight/fontStyle each re-resolve
+  // the typeface. Applied eagerly, mounting one view ran setText two or three
+  // times and resolved the typeface three times, each dragging its own
+  // requestLayout/invalidate behind it.
+  //
+  // So the setters below only record state and mark what needs recomputing, and
+  // the work happens once in flushPendingUpdates() — mirroring how RN's <Text>
+  // applies a single prebuilt ReactTextUpdate. The ViewManager calls it after
+  // the prop transaction (onAfterUpdateTransaction) and before the off-screen
+  // measure pass; anything else that adds a read path has to flush first.
+  private var dirtyFontSize = false
+  private var dirtyLetterSpacing = false
+  private var dirtyTypeface = false
+  private var dirtyText = false
+
+  fun flushPendingUpdates() {
+    if (dirtyFontSize) {
+      dirtyFontSize = false
+      // RN's <Text> (TextAttributeProps.setFontSize) converts sp to px via
+      // ceil(PixelUtil.toPixelFromSP(sp)) and applies that as an integer px text
+      // size, rather than letting the widget do its own sp->px conversion via
+      // setTextSize(SP, ...). The two conversions can land on different float px
+      // values (ours unrounded, RN's ceiled to a whole pixel), which shifts the
+      // paint's font metrics and compounds into a growing per-line height/width
+      // drift over a multiline block. Match RN's conversion exactly.
+      setTextSize(TypedValue.COMPLEX_UNIT_PX, ceil(toEffectivePixel(fontSizeSp)))
+      // letterSpacing is expressed relative to the font size, so a font-size
+      // change always invalidates it.
+      dirtyLetterSpacing = true
+    }
+    if (dirtyLetterSpacing) {
+      dirtyLetterSpacing = false
+      applyLetterSpacing()
+    }
+    if (dirtyTypeface) {
+      dirtyTypeface = false
+      applyTypeface()
+    }
+    if (dirtyText) {
+      dirtyText = false
+      applyText()
+    }
+  }
+
   init {
     // Default to black so text color matches iOS's UILabel default. The theme's
     // default TextView color is a gray, which would differ across platforms.
@@ -61,15 +110,11 @@ class RNPlainText : AppCompatTextView {
     // Match them so identical text wraps onto the same lines as <Text>.
     breakStrategy = Layout.BREAK_STRATEGY_HIGH_QUALITY
     hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
+    // A view whose props are never set still has to be self-consistent, so the
+    // 14sp seeded above is applied here rather than left pending.
+    flushPendingUpdates()
   }
 
-  // RN's <Text> (TextAttributeProps.setFontSize) converts sp to px via
-  // ceil(PixelUtil.toPixelFromSP(sp)) and applies that as an integer px text
-  // size, rather than letting the widget do its own sp->px conversion via
-  // setTextSize(SP, ...). The two conversions can land on different float px
-  // values (ours unrounded, RN's ceiled to a whole pixel), which shifts the
-  // paint's font metrics and compounds into a growing per-line height/width
-  // drift over a multiline block. Match RN's conversion exactly.
   // Mirrors RN's <Text> (TextAttributeProps#getEffectiveColor): a null value
   // resets to the black default rather than falling through to the theme's
   // gray, keeping the two platforms' unset-color rendering identical.
@@ -79,32 +124,26 @@ class RNPlainText : AppCompatTextView {
 
   fun setFontSizeSp(sp: Float) {
     fontSizeSp = sp
-    applyFontSize()
-  }
-
-  private fun applyFontSize() {
-    setTextSize(TypedValue.COMPLEX_UNIT_PX, ceil(toEffectivePixel(fontSizeSp)))
-    // letterSpacing is expressed relative to the font size (see below), so a
-    // font-size change has to recompute it.
-    applyLetterSpacing()
+    dirtyFontSize = true
   }
 
   fun setAllowFontScaling(value: Boolean) {
     if (allowFontScaling == value) return
     allowFontScaling = value
-    reapplyScaledSizes()
+    markScaledSizesDirty()
   }
 
   fun setMaxFontSizeMultiplier(value: Float) {
     if (maxFontSizeMultiplier == value) return
     maxFontSizeMultiplier = value
-    reapplyScaledSizes()
+    markScaledSizesDirty()
   }
 
-  // Recompute every size derived from an sp value after a scaling knob changes.
-  private fun reapplyScaledSizes() {
-    applyFontSize()
-    applyText()
+  // Every size derived from an sp value has to be recomputed after a scaling
+  // knob changes — including the text, whose lineHeight span is scaled too.
+  private fun markScaledSizesDirty() {
+    dirtyFontSize = true
+    dirtyText = true
   }
 
   // Mirrors RN's <Text> (TextAttributes#getEffective*): when font scaling is on,
@@ -128,7 +167,7 @@ class RNPlainText : AppCompatTextView {
   // or the line height changes.
   fun setPlainText(value: String?) {
     rawText = value
-    applyText()
+    dirtyText = true
   }
 
   // Mirrors RN's <Text> (TextAttributeProps#lineHeight): the value is in DIP and
@@ -136,7 +175,7 @@ class RNPlainText : AppCompatTextView {
   // keeps the font's natural line height.
   fun setLineHeight(lineHeight: Float) {
     lineHeightSp = if (lineHeight <= 0f) Float.NaN else lineHeight
-    applyText()
+    dirtyText = true
   }
 
   private fun applyText() {
@@ -165,7 +204,7 @@ class RNPlainText : AppCompatTextView {
   // iOS's absolute point kerning.
   fun setLetterSpacingDip(letterSpacing: Float) {
     letterSpacingDip = letterSpacing
-    applyLetterSpacing()
+    dirtyLetterSpacing = true
   }
 
   private fun applyLetterSpacing() {
@@ -214,7 +253,7 @@ class RNPlainText : AppCompatTextView {
   // when unset.
   fun setFontFamily(fontFamily: String?) {
     this.fontFamily = fontFamily
-    updateTypeface()
+    dirtyTypeface = true
   }
 
   // Mirrors RN's <Text> (TextAttributeProps#fontWeight): parses the numeric
@@ -222,15 +261,15 @@ class RNPlainText : AppCompatTextView {
   // correctly with a custom fontFamily via ReactFontManager.TypefaceStyle.
   fun setFontWeight(fontWeight: String?) {
     this.fontWeight = ReactTypefaceUtils.parseFontWeight(fontWeight)
-    updateTypeface()
+    dirtyTypeface = true
   }
 
   fun setFontStyle(fontStyle: String?) {
     this.fontStyle = ReactTypefaceUtils.parseFontStyle(fontStyle)
-    updateTypeface()
+    dirtyTypeface = true
   }
 
-  private fun updateTypeface() {
+  private fun applyTypeface() {
     typeface = ReactTypefaceUtils.applyStyles(
       baseTypeface,
       if (fontStyle == Typeface.ITALIC) Typeface.ITALIC else Typeface.NORMAL,
@@ -332,6 +371,17 @@ class RNPlainText : AppCompatTextView {
     // measure() itself — it needs the layout invalidation super does above, but
     // not the re-layout pass (it has no frame to lay out into).
     if (isMeasureOnly) return
+    // No frame yet means this is the initial mount, where Fabric already calls
+    // measure() + layout() itself once props are applied
+    // (SurfaceMountingManager.updateLayout). Posting here would only measure the
+    // view at 0x0 before that happens, and every prop setter that calls
+    // requestLayout queues another one — thousands of runnables across a screen,
+    // all redundant. The case this hack exists for is the other one: a prop
+    // change on an already-laid-out view whose size does not change, so Fabric
+    // emits no updateLayout and nothing else rebuilds the text Layout.
+    if (width == 0 || height == 0) return
+    // Coalesce: several prop setters can request a layout within one transaction.
+    removeCallbacks(measureAndLayout)
     post(measureAndLayout)
   }
 }
