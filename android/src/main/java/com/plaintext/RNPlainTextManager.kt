@@ -116,8 +116,14 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
   // Called from C++ (PlainTextMeasurementsManager, via FabricUIManager.measure)
   // on the Fabric layout thread to compute the view's intrinsic size. Fabric
   // never runs Android's normal onMeasure for our view, so this is where the
-  // text is actually measured. `props` carries the "text"/"fontSize" serialized
-  // by the C++ side; we size an off-screen TextView exactly as it will render.
+  // text is actually measured. `props` carries the size-affecting props
+  // serialized by the C++ side; we size an off-screen TextView exactly as it
+  // will render.
+  //
+  // The C++ side omits any prop still at its default, so a missing key means
+  // "default" — every fallback below must match the default in the generated
+  // Props.h. And because the off-screen view is reused across nodes, every prop
+  // has to be set on every call, not only when its key is present.
   override fun measure(
     context: Context,
     localData: ReadableMap?,
@@ -130,17 +136,13 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     attachmentsPositions: FloatArray?
   ): Long {
     val view = measureView(context)
-    // Apply the font-scaling knobs first: fontSize/lineHeight/letterSpacing are
-    // all converted through them, so they must be in place before those are set
-    // (matches the ordering the RNPlainText view itself relies on).
     view.setAllowFontScaling(
       if (props?.hasKey("allowFontScaling") == true) props.getBoolean("allowFontScaling") else true
     )
     view.setMaxFontSizeMultiplier(
       if (props?.hasKey("maxFontSizeMultiplier") == true) props.getDouble("maxFontSizeMultiplier").toFloat() else 0f
     )
-    // fontSize is in SP, matching the setFontSize prop setter above. Set it
-    // before letterSpacing, which is computed relative to the font size.
+    // fontSize is in SP, matching the setFontSize prop setter above.
     val fontSize = if (props?.hasKey("fontSize") == true) props.getDouble("fontSize") else 14.0
     view.setFontSizeSp(fontSize.toFloat())
     // props serializes an unset fontFamily as "" (the C++ std::string default),
@@ -155,18 +157,23 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     // numberOfLines caps the measured height; ellipsizeMode doesn't change the
     // size (only where the ellipsis lands), so it isn't serialized for measure.
     view.setNumberOfLines(if (props?.hasKey("numberOfLines") == true) props.getInt("numberOfLines") else 0)
-    // Set text last so the lineHeight span (applied on text set) is in place.
     view.setPlainText(props?.getString("text") ?: "")
+    // The setters above only marked state dirty; this is what applies it. It
+    // also enforces the ordering the sizes depend on (font size before letter
+    // spacing, which is relative to it), so the calls above no longer need to be
+    // in any particular order.
+    view.flushPendingUpdates()
 
     view.measure(
       toMeasureSpec(width, widthMode),
       toMeasureSpec(height, heightMode)
     )
 
-    return YogaMeasureOutput.make(
+    val result = YogaMeasureOutput.make(
       PixelUtil.toDIPFromPixel(view.measuredWidth.toFloat()),
       PixelUtil.toDIPFromPixel(view.measuredHeight.toFloat())
     )
+    return result
   }
 
   // The off-screen view measure() sizes is reused across calls rather than
