@@ -69,22 +69,14 @@ type Stats = {
 //
 // Being on the JS thread, the loop cannot attribute a long frame to JS work vs
 // UI work — that split comes from comparing this against the effect's number.
-// Every long frame is also reported, because the shape matters as much as the
-// total: "one 210ms gap then one 470ms gap" is a commit followed by a single
-// mount stall, whereas "300ms then 45ms, 38ms, 41ms" is a shorter mount stall
-// with a GC tail — same TTFF, different conclusion, and in the second case the
-// end of the last long frame is the wrong number to compare across variants.
-type LongFrame = { atMs: number; durationMs: number };
-
 function measureTimeToFirstFrame(
   startTime: number,
   isStale: () => boolean,
-  onSettled: (ttffMs: number, longFrames: LongFrame[]) => void
+  onSettled: (ttffMs: number) => void
 ) {
   let lastFrameTime = startTime;
   let lastLongFrameEnd = startTime;
   let quietFrames = 0;
-  const longFrames: LongFrame[] = [];
 
   const tick = () => {
     if (isStale()) return;
@@ -96,33 +88,19 @@ function measureTimeToFirstFrame(
     if (delta > LONG_FRAME_MS) {
       lastLongFrameEnd = now;
       quietFrames = 0;
-      longFrames.push({
-        atMs: now - delta - startTime,
-        durationMs: delta,
-      });
     } else if (++quietFrames >= QUIET_FRAMES) {
-      onSettled(lastLongFrameEnd - startTime, longFrames);
+      onSettled(lastLongFrameEnd - startTime);
       return;
     }
 
     if (now - startTime > TTFF_TIMEOUT_MS) {
-      onSettled(lastLongFrameEnd - startTime, longFrames);
+      onSettled(lastLongFrameEnd - startTime);
       return;
     }
     requestAnimationFrame(tick);
   };
 
   requestAnimationFrame(tick);
-}
-
-// Diagnostics share the 🚨 marker with the native measure-batch logs, so
-// `adb logcat -s ReactNativeJS RNPlainText | grep 🚨` puts the JS render window
-// and the native layout passes on one timeline — which is the only way to tell
-// which work the timings above actually cover. console.log reaches logcat via
-// nativeLoggingHook (tag ReactNativeJS) in release builds too, but it crosses a
-// thread boundary to get there, so trust the ordering over the exact timestamp.
-function logDiag(message: string) {
-  console.log(`🚨 ${message} @${performance.now().toFixed(0)}`);
 }
 
 export default function PerformanceScreen() {
@@ -160,7 +138,6 @@ export default function PerformanceScreen() {
     const memBefore = getMemoryFootprint();
     const startTime = performance.now();
     pending.current = { kind, memBefore, startTime };
-    logDiag(`press ${kind}`);
 
     // Started before the state update so the first sampled frame brackets the
     // render itself, making the result a true press-to-painted number.
@@ -170,12 +147,8 @@ export default function PerformanceScreen() {
     measureTimeToFirstFrame(
       startTime,
       () => runId.current !== thisRun,
-      (ttffMs, longFrames) => {
+      (ttffMs) => {
         ttff.current = ttffMs;
-        const gaps = longFrames
-          .map((f) => `${f.durationMs.toFixed(0)}ms@${f.atMs.toFixed(0)}`)
-          .join(', ');
-        logDiag(`ttff ${kind} +${ttffMs.toFixed(0)}ms · gaps: ${gaps}`);
       }
     );
 
@@ -202,7 +175,6 @@ export default function PerformanceScreen() {
     // Mounting and painting happen on the UI thread after this fires; that half
     // is what the frame loop measures.
     const timeMs = performance.now() - m.startTime;
-    logDiag(`effect ${m.kind} +${timeMs.toFixed(0)}ms`);
 
     const timer = setTimeout(() => {
       const memAfter = getMemoryFootprint();
@@ -215,10 +187,6 @@ export default function PerformanceScreen() {
         timeMs,
         ttffMs: ttff.current,
       };
-      // A measure batch appearing after this line means the settle re-render
-      // re-measured every already-mounted node, even though none of their props
-      // changed — Yoga's per-node measure cache should have skipped them.
-      logDiag(`settle setState ${m.kind}`);
       if (m.kind === 'plain') {
         setPlainStats(stats);
       } else if (m.kind === 'nativePlain') {
