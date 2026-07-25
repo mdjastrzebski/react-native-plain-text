@@ -199,6 +199,15 @@ class RNPlainText : AppCompatTextView {
   private var fontWeight: Int = ReactConstants.UNSET
   private var fontStyle: Int = ReactConstants.UNSET
 
+  // The typeface the view starts out with, used as the base every updateTypeface
+  // resolves against. It has to be a fixed base rather than the *current*
+  // typeface: with no fontFamily, ReactTypefaceUtils.applyStyles derives from
+  // whatever is passed in, so chaining off the live value would let an earlier
+  // family/weight survive a change that should have cleared it — which is how
+  // the reused measuring view (RNPlainTextManager.measure) would otherwise leak
+  // one node's font into the next node's measurement.
+  private val baseTypeface: Typeface? = typeface
+
   // Mirrors RN's <Text> (TextAttributeProps#fontFamily): resolves against
   // ReactFontManager so custom fonts bundled the RN way (assets/fonts, or
   // registered natively) work here too, falling back to the platform default
@@ -223,7 +232,7 @@ class RNPlainText : AppCompatTextView {
 
   private fun updateTypeface() {
     typeface = ReactTypefaceUtils.applyStyles(
-      typeface,
+      baseTypeface,
       if (fontStyle == Typeface.ITALIC) Typeface.ITALIC else Typeface.NORMAL,
       fontWeight,
       fontFamily,
@@ -299,6 +308,12 @@ class RNPlainText : AppCompatTextView {
     }
   }
 
+  // Marks the off-screen instance that RNPlainTextManager reuses for intrinsic
+  // measurement. That view is never attached to a window, so the Runnable below
+  // would never run — it would just pile up in the view's pending-action queue,
+  // once per prop set, for the lifetime of the process.
+  internal var isMeasureOnly: Boolean = false
+
   // React Native's Fabric layout system assigns this view's frame directly and
   // never triggers Android's normal measure/layout pass. TextView builds the
   // text Layout it draws during onMeasure, so without this the text is never
@@ -313,6 +328,10 @@ class RNPlainText : AppCompatTextView {
 
   override fun requestLayout() {
     super.requestLayout()
+    // The measuring instance is driven directly by the ViewManager, which calls
+    // measure() itself — it needs the layout invalidation super does above, but
+    // not the re-layout pass (it has no frame to lay out into).
+    if (isMeasureOnly) return
     post(measureAndLayout)
   }
 }

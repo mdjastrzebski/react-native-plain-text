@@ -2,6 +2,7 @@ package com.plaintext
 
 import android.content.Context
 import android.view.View
+import android.view.ViewGroup
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.PixelUtil
@@ -128,7 +129,7 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     heightMode: YogaMeasureMode,
     attachmentsPositions: FloatArray?
   ): Long {
-    val view = RNPlainText(context)
+    val view = measureView(context)
     // Apply the font-scaling knobs first: fontSize/lineHeight/letterSpacing are
     // all converted through them, so they must be in place before those are set
     // (matches the ordering the RNPlainText view itself relies on).
@@ -166,6 +167,38 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
       PixelUtil.toDIPFromPixel(view.measuredWidth.toFloat()),
       PixelUtil.toDIPFromPixel(view.measuredHeight.toFloat())
     )
+  }
+
+  // The off-screen view measure() sizes is reused across calls rather than
+  // allocated per node: constructing an AppCompatTextView is expensive (theme
+  // attribute resolution for the text style, AppCompat's tint/emoji helpers),
+  // and it dominated Fabric's layout pass on screens mounting many PlainTexts.
+  // Reuse is safe because measure() re-applies every size-affecting prop on
+  // each call. RN's own <Text> goes further and measures without a View at all
+  // (TextLayoutManager), off a ThreadLocal scratch TextPaint — the ThreadLocal
+  // here is for the same reason: measure() runs on whichever thread commits a
+  // Fabric transaction, and Views are not thread-safe.
+  private val measureViews = ThreadLocal<RNPlainText>()
+
+  private fun measureView(context: Context): RNPlainText {
+    // The Context is the surface's ThemedReactContext, so it changes when the
+    // surface does; a cached view would otherwise resolve fonts and metrics
+    // against a torn-down theme (and keep it alive).
+    measureViews.get()?.let { if (it.context === context) return it }
+
+    val view = RNPlainText(context)
+    view.isMeasureOnly = true
+    // TextView.setText() reaches checkForRelayout() once the view has a text
+    // Layout — i.e. from the second measurement onwards — and that dereferences
+    // the LayoutParams, crashing when they are null. RN hits the same thing in
+    // ReactTextView.setText (see its EMPTY_LAYOUT_PARAMS). The view is never
+    // attached to a parent, so the values themselves don't matter.
+    view.layoutParams = ViewGroup.LayoutParams(
+      ViewGroup.LayoutParams.WRAP_CONTENT,
+      ViewGroup.LayoutParams.WRAP_CONTENT
+    )
+    measureViews.set(view)
+    return view
   }
 
   // The size constraints already arrive in pixels — FabricUIManager's
