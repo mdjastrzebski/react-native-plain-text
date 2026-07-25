@@ -49,7 +49,7 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
    * Decides whether a new revision of this node invalidates its cached
    * measurement — the base implementation always says yes, which would re-run a
    * full CoreText layout per node whenever any ancestor re-renders. Delegates to
-   * `shouldRevisionDirtyMeasurement` in cpp/PlainTextMeasurementInvalidation.h,
+   * `shouldRevisionDirtyMeasurement` in cpp/PlainTextMeasurementHelpers.h,
    * shared with Android; see there for why.
    */
   bool shouldNewRevisionDirtyMeasurement(

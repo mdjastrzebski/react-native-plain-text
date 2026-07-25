@@ -4,7 +4,7 @@
 
 // Shared with the iOS shadow node; on the include path via the cpp/ directory
 // added in android/src/main/jni/CMakeLists.txt.
-#include "PlainTextMeasurementInvalidation.h"
+#include "PlainTextMeasurementHelpers.h"
 
 namespace facebook::react {
 

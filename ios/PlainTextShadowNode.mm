@@ -8,7 +8,7 @@
 
 // Shared with the Android shadow node; the podspec puts cpp/ on the header
 // search path.
-#import "PlainTextMeasurementInvalidation.h"
+#import "PlainTextMeasurementHelpers.h"
 
 namespace facebook::react {
 

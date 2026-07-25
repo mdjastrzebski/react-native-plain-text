@@ -61,7 +61,7 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
    * measurement — the base implementation always says yes, which would cost a
    * JNI hop and a TextView measure per node whenever any ancestor re-renders.
    * Delegates to `shouldRevisionDirtyMeasurement` in
-   * cpp/PlainTextMeasurementInvalidation.h, shared with iOS; see there for why.
+   * cpp/PlainTextMeasurementHelpers.h, shared with iOS; see there for why.
    */
   bool shouldNewRevisionDirtyMeasurement(
       const ShadowNode &sourceShadowNode,
