@@ -41,13 +41,21 @@ const EVENT_MATCH_SLACK_MS = 1_000;
 const COMMIT_START_MARK = 'plaintext-bench:press';
 const COMMIT_MEASURE = 'plaintext-bench:commit';
 
-type Stats = {
+// Distinct names from the mount benchmark above so the two runs stay separable
+// in React Native DevTools' Performance panel.
+const UPDATE_START_MARK = 'plaintext-bench:update-press';
+const UPDATE_MEASURE = 'plaintext-bench:update-commit';
+
+type Timing = {
+  commitMs: number;
+  interactionMs: number | null;
+};
+
+type Stats = Timing & {
   memBefore: number;
   memAfter: number;
   totalBytes: number;
   perViewBytes: number;
-  commitMs: number;
-  interactionMs: number | null;
 };
 
 // Measured with RN's own Web Performance APIs, stable since 0.83, rather than
@@ -96,6 +104,13 @@ export default function PerformanceScreen() {
   const [textStats, setTextStats] = useState<Stats | null>(null);
   const [nativeTextStats, setNativeTextStats] = useState<Stats | null>(null);
   const [fontSize, setFontSize] = useState<number>(56);
+  // Bumped by the Re-render button. Rendered into its label on purpose — see
+  // the comment there.
+  const [rerenders, setRerenders] = useState(0);
+  const [updateTiming, setUpdateTiming] = useState<{
+    label: string;
+    timing: Timing;
+  } | null>(null);
 
   // In-flight measurement. Only one runs at a time, so a single ref is enough.
   const pending = useRef<{
@@ -103,6 +118,13 @@ export default function PerformanceScreen() {
     memBefore: number;
     startTime: number;
   } | null>(null);
+
+  // Same, for the update runs (font size, forced re-render). Separate from
+  // `pending` because the two measure different things: mounting N new views
+  // vs. updating the ones already on screen. No memory sampling here — nothing
+  // is allocated, only how long an update to mounted text takes. Carries the
+  // label rather than just a flag, so the readout can say which run it was.
+  const updatePending = useRef<string | null>(null);
 
   // Event Timing arrives after mount, later than the effect that clears
   // `pending`, so the press timestamp it matches against has to outlive it.
@@ -156,6 +178,46 @@ export default function PerformanceScreen() {
     }
   }, []);
 
+  // Arms an update measurement. The caller must then trigger a state change
+  // that actually commits, otherwise the armed run leaks into the next press.
+  const startUpdateMeasure = useCallback((label: string) => {
+    performance.mark(UPDATE_START_MARK);
+    updatePending.current = label;
+
+    interactionMs.current = null;
+    runStartTime.current = performance.now();
+  }, []);
+
+  const changeFontSize = useCallback(
+    (value: number) => {
+      // Re-pressing the selected size renders nothing, so there would be no
+      // commit to measure — and the armed run would leak into the next press.
+      if (value === fontSize) return;
+      startUpdateMeasure('font size');
+      setFontSize(value);
+    },
+    [fontSize, startUpdateMeasure]
+  );
+
+  // The control for the font-size run: re-render the screen *without* touching
+  // any prop the mounted text receives. This is what isolates
+  // `shouldNewRevisionDirtyMeasurement`'s `fragment.props == nullptr` early
+  // return — the ancestor-re-render path, where Fabric clones every child of a
+  // changed parent purely to re-own its Yoga node
+  // (`YogaLayoutableShadowNode::adoptYogaChild`) and nothing should re-measure.
+  //
+  // The counter has to be *rendered* somewhere for this to test anything: a
+  // state change that produces an identical tree makes React bail out, Fabric
+  // commits no clones, and the run measures nothing at all rather than
+  // measuring a cheap re-own. Showing it in the label changes one sibling
+  // inside the same content container, which forces that container to be
+  // cloned with a new children list — and that is what re-owns all ~1000
+  // mounted items.
+  const forceRerender = useCallback(() => {
+    startUpdateMeasure('re-render');
+    setRerenders((n) => n + 1);
+  }, [startUpdateMeasure]);
+
   // Runs after React has committed the new views; memory is sampled SETTLE_MS
   // later, once native allocations have caught up.
   useEffect(() => {
@@ -196,6 +258,31 @@ export default function PerformanceScreen() {
     return () => clearTimeout(timer);
   }, [plainCount, nativePlainCount, textCount, nativeTextCount]);
 
+  // The update counterpart. Commit is readable right away, but Event Timing
+  // only delivers the entry once the update has mounted, so the result is read
+  // on the same SETTLE_MS timer — generous here, since it is tuned for native
+  // allocations settling, but a shorter deadline risks reading before a slow
+  // re-render has mounted and reporting no interaction at all.
+  useEffect(() => {
+    const label = updatePending.current;
+    if (label == null) return;
+    updatePending.current = null;
+
+    const commitMs = performance.measure(
+      UPDATE_MEASURE,
+      UPDATE_START_MARK
+    ).duration;
+
+    const timer = setTimeout(() => {
+      setUpdateTiming({
+        label,
+        timing: { commitMs, interactionMs: interactionMs.current },
+      });
+    }, SETTLE_MS);
+
+    return () => clearTimeout(timer);
+  }, [fontSize, rerenders]);
+
   return (
     <ScrollView
       style={styles.scroll}
@@ -210,7 +297,7 @@ export default function PerformanceScreen() {
           return (
             <Pressable
               key={value}
-              onPress={() => setFontSize(value)}
+              onPress={() => changeFontSize(value)}
               style={[styles.option, selected && styles.optionSelected]}
             >
               <Text
@@ -224,7 +311,32 @@ export default function PerformanceScreen() {
             </Pressable>
           );
         })}
+
+        {/*
+          `rerenders` is in the label deliberately: it is what makes this press
+          commit anything at all. See `forceRerender`.
+        */}
+        <Pressable onPress={forceRerender} style={styles.option}>
+          <Text style={styles.optionLabel}>{`Re-render (${rerenders})`}</Text>
+        </Pressable>
       </View>
+
+      {/*
+        Update cost for text already on screen, as opposed to the mount cost the
+        buttons below report. The pair is the point:
+
+        - `font size` changes a size-affecting prop on every mounted item, so
+          all of them must re-measure. It reads near zero when measurement
+          invalidation is broken — and the labels keep their old size.
+        - `re-render` changes nothing those items receive, so none of them
+          should re-measure. It reads close to the `font size` number when the
+          invalidation is too eager.
+      */}
+      {updateTiming != null && (
+        <Text style={styles.stats}>
+          {`${updateTiming.label}: ${formatTiming(updateTiming.timing)}`}
+        </Text>
+      )}
 
       <Button
         title={`Add ${COUNT} PlainText`}
@@ -292,17 +404,19 @@ function StatsRow({ label, stats }: { label: string; stats: Stats | null }) {
     <Text style={styles.stats}>
       {`${label}: ${formatBytes(stats.perViewBytes)}/view · ` +
         `${formatBytes(stats.totalBytes)} total\n` +
-        `${
-          stats.interactionMs == null
-            ? '—'
-            : `${stats.interactionMs.toFixed(0)} ms`
-        } interaction · ` +
-        `${stats.commitMs.toFixed(0)} ms commit\n` +
         `initial ${formatBytes(stats.memBefore)} → final ${formatBytes(
           stats.memAfter
-        )}`}
+        )}\n` +
+        `${formatTiming(stats)}`}
     </Text>
   );
+}
+
+// Shared by both readouts so the mount and font-size numbers stay comparable.
+function formatTiming({ interactionMs, commitMs }: Timing) {
+  const interaction =
+    interactionMs == null ? '—' : `${interactionMs.toFixed(0)} ms`;
+  return `${interaction} interaction · ${commitMs.toFixed(0)} ms commit`;
 }
 
 function formatBytes(bytes: number) {
@@ -331,6 +445,9 @@ const styles = StyleSheet.create({
   },
   selector: {
     flexDirection: 'row',
+    justifyContent: 'center',
+    // One line on a normal phone; wraps rather than overflowing on narrow ones.
+    flexWrap: 'wrap',
     gap: 8,
   },
   option: {

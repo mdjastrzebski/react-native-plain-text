@@ -25,14 +25,18 @@ Memory per mounted view:
 | Android, typical instance | 38 KB | 51 KB |
 
 Interaction latency — press until 1000 mounted views appear, as reported by
-RN's own Event Timing API (Pixel 3a, release build):
+RN's own Event Timing API, release builds:
 
 | | `PlainText` | RN `Text` |
 | --- | --- | --- |
-| Android, 1000 views | ~505 ms | ~720 ms\* |
+| Android, 1000 views (Pixel 3 device) | ~505 ms | ~720 ms\* |
+| iOS, 1000 views (M3 simulator) | ~195 ms | ~252 ms |
 
 \* the `Text` figure is derived from an earlier measurement rather than read
 directly from Event Timing; see [performance.md](docs/agent/performance.md).
+
+Compare within a row, never between rows: each row is one component against the
+other on one device, and the two rows say nothing about each other.
 
 ## Installation
 

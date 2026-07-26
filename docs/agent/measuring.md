@@ -66,17 +66,59 @@ The `PlainText`/`NativePlainText` and `Text`/`NativeText` deltas price each
 library's JS wrapper; the `NativePlainText`/`NativeText` delta compares the
 native implementations directly.
 
+### Update scenarios
+
+The four buttons above measure *mounting*. The controls on the top row measure
+*updating* text that is already on screen, which is a different cost and the
+only way to exercise measurement invalidation
+([intrinsic-sizing.md](intrinsic-sizing.md#measurement-invalidation-both-platforms)).
+They report `interaction`/`commit` on their own line, no memory.
+
+| Control | What changes | Should |
+| --- | --- | --- |
+| **Large / Regular / Small** | `fontSize` on every mounted item | re-measure all of them |
+| **Re-render** | one sibling label, nothing the items receive | re-measure none of them |
+
+They are complements, and they catch opposite failures: a **font size** run near
+the empty-screen baseline means invalidation never fires (stale sizes — text
+redraws inside its old frame), while a **re-render** run near the font-size
+number means it always fires (the override is doing nothing).
+
+Two things make these different from the mount runs:
+
+- **They require a populated tree**, so the "kill the app between runs" rule
+  cannot apply. Record what is mounted alongside the number; it is meaningless
+  without it. Take the empty-screen baseline first, before mounting anything —
+  the screen's own chrome costs a few ms and both runs include it.
+- **Neither is a clean zero.** Even a re-render that measures nothing still
+  re-runs 1000 React components and clones 1000 shadow nodes. That floor is
+  React and Fabric bookkeeping, not this library.
+
+The **Re-render** button puts its press count in its own label on purpose. A
+state change that renders an identical tree makes React bail out and Fabric
+commit nothing, which measures the absence of the scenario rather than a cheap
+one. Changing one sibling inside the same content container forces that
+container to be cloned with a new children list, which is what re-owns every
+mounted item via `YogaLayoutableShadowNode::adoptYogaChild`.
+
 ## Procedure
 
-1. **Release build**, on a physical device. Debug numbers are meaningless here.
-2. **Kill the app between every run.** Memory is a process-footprint delta, and
+1. **Release build.** Debug numbers are meaningless here.
+2. **Physical device, on Android.** The emulator diverges sharply from real
+   hardware and its numbers are not usable. On **iOS a simulator is acceptable**
+   for comparing variants: it is not an emulator, it runs the same arm64 binary
+   against the same frameworks, and Apple-silicon single-core throughput is in
+   the same class as current iPhones. Two limits — it models the UI-thread and
+   compositing path poorly, and its memory footprint is not a phone's, so never
+   take memory figures from it. Record which you used.
+3. **Kill the app between every run.** Memory is a process-footprint delta, and
    a warm process invalidates it. Mounted views from a previous variant also
    change the tree the next one commits into.
-3. Press one button, wait for the row to appear (memory is sampled after a
+4. Press one button, wait for the row to appear (memory is sampled after a
    settle delay), record, kill, repeat.
-4. **Report the median of at least 5 runs**, with the range. Single numbers on a
+5. **Report the median of at least 5 runs**, with the range. Single numbers on a
    phone are noise.
-5. State the **device and OS version**. Numbers are comparable across variants
+6. State the **device and OS version**. Numbers are comparable across variants
    on one device — never across devices or platforms.
 
 ## Reading the results
@@ -87,4 +129,10 @@ The stats row shows:
 PlainText: 36.1 KB/view · 35.3 MB total
 506 ms interaction · 200 ms commit
 initial 142 MB → final 177 MB
+```
+
+The update runs share a single line above it, labelled by which one produced it:
+
+```
+re-render: 102 ms interaction · 68 ms commit
 ```
