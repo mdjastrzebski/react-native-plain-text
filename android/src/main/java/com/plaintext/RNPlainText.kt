@@ -48,19 +48,15 @@ class RNPlainText : AppCompatTextView {
 
   // --- Batched prop application ---------------------------------------------
   //
-  // Fabric applies props one setter at a time, and several of ours feed the same
-  // expensive operations: fontSize and both font-scaling knobs all recompute the
-  // text size and letter spacing; text and lineHeight both rebuild the Spannable
-  // and call TextView.setText; fontFamily/fontWeight/fontStyle each re-resolve
-  // the typeface. Applied eagerly, mounting one view ran setText two or three
-  // times and resolved the typeface three times, each dragging its own
-  // requestLayout/invalidate behind it.
+  // Fabric applies props one setter at a time and several of ours feed the same
+  // expensive work — three font props each re-resolved the typeface, and
+  // text/lineHeight/the scaling knobs each called setText, every one dragging a
+  // requestLayout behind it. So setters only mark state dirty and
+  // flushPendingUpdates() does the work once, the way RN's <Text> applies a
+  // single prebuilt ReactTextUpdate.
   //
-  // So the setters below only record state and mark what needs recomputing, and
-  // the work happens once in flushPendingUpdates() — mirroring how RN's <Text>
-  // applies a single prebuilt ReactTextUpdate. The ViewManager calls it after
-  // the prop transaction (onAfterUpdateTransaction) and before the off-screen
-  // measure pass; anything else that adds a read path has to flush first.
+  // Flushed from onAfterUpdateTransaction, from init, and before the off-screen
+  // measure. Any new read path must flush first or it sees stale state.
   private var dirtyFontSize = false
   private var dirtyLetterSpacing = false
   private var dirtyTypeface = false
@@ -69,16 +65,12 @@ class RNPlainText : AppCompatTextView {
   fun flushPendingUpdates() {
     if (dirtyFontSize) {
       dirtyFontSize = false
-      // RN's <Text> (TextAttributeProps.setFontSize) converts sp to px via
-      // ceil(PixelUtil.toPixelFromSP(sp)) and applies that as an integer px text
-      // size, rather than letting the widget do its own sp->px conversion via
-      // setTextSize(SP, ...). The two conversions can land on different float px
-      // values (ours unrounded, RN's ceiled to a whole pixel), which shifts the
-      // paint's font metrics and compounds into a growing per-line height/width
-      // drift over a multiline block. Match RN's conversion exactly.
+      // Match RN's <Text> (TextAttributeProps.setFontSize) exactly: it converts
+      // sp to px itself and ceils to a whole pixel, where setTextSize(SP, ...)
+      // would leave a fractional value. The difference shifts the paint's font
+      // metrics and compounds into per-line drift over a multiline block.
       setTextSize(TypedValue.COMPLEX_UNIT_PX, ceil(toEffectivePixel(fontSizeSp)))
-      // letterSpacing is expressed relative to the font size, so a font-size
-      // change always invalidates it.
+      // letterSpacing is relative to the font size.
       dirtyLetterSpacing = true
     }
     if (dirtyLetterSpacing) {
@@ -110,8 +102,7 @@ class RNPlainText : AppCompatTextView {
     // Match them so identical text wraps onto the same lines as <Text>.
     breakStrategy = Layout.BREAK_STRATEGY_HIGH_QUALITY
     hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
-    // A view whose props are never set still has to be self-consistent, so the
-    // 14sp seeded above is applied here rather than left pending.
+    // A view whose props are never set still has to be self-consistent.
     flushPendingUpdates()
   }
 

@@ -57,11 +57,9 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
 
  protected:
   /*
-   * Decides whether a new revision of this node invalidates its cached
-   * measurement — the base implementation always says yes, which would cost a
-   * JNI hop and a TextView measure per node whenever any ancestor re-renders.
-   * Delegates to `shouldRevisionDirtyMeasurement` in
-   * cpp/PlainTextMeasurementHelpers.h, shared with iOS; see there for why.
+   * The base implementation always invalidates, which would cost a JNI hop and
+   * a TextView measure per node on any ancestor re-render. Logic is shared with
+   * iOS in cpp/PlainTextMeasurementHelpers.h.
    */
   bool shouldNewRevisionDirtyMeasurement(
       const ShadowNode &sourceShadowNode,

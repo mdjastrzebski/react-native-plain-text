@@ -2,6 +2,8 @@
 
 This file provides guidance to coding agents when working with code in this repository.
 
+Longer-form agent documentation lives in **`docs/agent/`** — currently [MEASURING.md](docs/agent/MEASURING.md) and [PERFORMANCE.md](docs/agent/PERFORMANCE.md) (see [Performance work](#performance-work)). Put new agent-facing documents there rather than at the repo root, and link them from here. These are written for agents, not users; the human-facing docs are the README and `CONTRIBUTING.md`.
+
 ## What this is
 
 A React Native library exposing a `PlainText` component: a lightweight static-text view backed directly by the platform's native text widget — `UILabel` on iOS, `TextView` on Android — rather than by RN's own `<Text>`. It is a **Fabric (New Architecture) native component**, scaffolded with `create-react-native-library` (`fabric-view`, `kotlin-objc`).
@@ -101,3 +103,19 @@ Wiring gotchas (this is the fiddly part):
 ## Example app
 
 `example/` targets Expo (see `example/AGENTS.md` — check the versioned Expo docs before touching Expo config). It consumes the library via the local source through `example/react-native.config.js`, which points the dependency at the repo root.
+
+Two screens: **Features** (`src/screens/FeaturesScreen.tsx`, the per-prop coverage every new feature must extend) and **Performance** (`src/screens/PerformanceScreen.tsx`, the benchmark harness).
+
+## Performance work
+
+Two documents, read both before optimizing or quoting a number:
+
+- **[MEASURING.md](docs/agent/MEASURING.md)** — the metrics, the procedure, and what they exclude.
+- **[PERFORMANCE.md](docs/agent/PERFORMANCE.md)** — what has already been optimized and by how much, what was tried and **rejected** (with what would change the decision), and the Fabric mechanisms behind both. Check the rejected list before proposing an optimization; most of the obvious ones have been costed already.
+
+Two rules that are easy to violate by accident:
+
+- **Measure with RN's own Web Performance APIs, not with bespoke timing.** `interaction` comes from a `PerformanceObserver` on `event` entries (RN's INP analogue: native press → mount, held until `shadowTreeDidMount`); `commit` comes from `performance.mark`/`measure`. An earlier version of this screen hand-rolled a `requestAnimationFrame` quiescence loop and a `setState`→`useEffect` timer; both were deleted once the first-party numbers agreed with them to within a millisecond. Don't reintroduce hand-rolled timing — it has magic constants to defend and names that overclaim (the rAF loop was called "time to first frame" while measuring neither a first nor a frame).
+- **Never leave instrumentation in the measured path.** Native measure-batch logging (two `System.nanoTime()` calls and an atomic per `measure()`) was inflating the very numbers it was there to explain. Diagnostics go in, get read, and come straight back out.
+
+Worth knowing when interpreting results: the JS-side `commit` number covers only React render + Fabric commit + Yoga layout. Mounting is dispatched to the UI thread *afterwards* and is roughly `interaction - commit` — on Android it has historically been the larger half, so a change that doesn't move `commit` may still be a large win.

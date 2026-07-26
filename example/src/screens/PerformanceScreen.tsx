@@ -35,73 +35,60 @@ const SETTLE_MS = Platform.select({ android: 2000, default: 500 });
 
 type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
 
-// A frame slower than this counts as the UI thread still doing bulk work. Two
-// frames at 60Hz, four at 120Hz — deliberately generous, so the same constant
-// works on every device: what is being detected is a multi-hundred-millisecond
-// mount stall, not a marginally dropped frame.
-const LONG_FRAME_MS = 32;
-// Consecutive on-budget frames that mean the UI has settled.
-const QUIET_FRAMES = 3;
-// Give up if frames never settle (an animation elsewhere, or the app going to
-// the background, which stops frame callbacks entirely).
-const TTFF_TIMEOUT_MS = 10_000;
+// How far an Event Timing entry's startTime may sit from the press timestamp
+// and still be counted as this run's. The native event is stamped before the JS
+// handler runs, so the entry always starts slightly earlier.
+const EVENT_MATCH_SLACK_MS = 1_000;
+
+const COMMIT_START_MARK = 'plaintext-bench:press';
+const COMMIT_MEASURE = 'plaintext-bench:commit';
 
 type Stats = {
   memBefore: number;
   memAfter: number;
   totalBytes: number;
   perViewBytes: number;
-  timeMs: number;
-  ttffMs: number | null;
+  commitMs: number;
+  interactionMs: number | null;
 };
 
-// Time from `startTime` until the UI stops doing bulk work — the end of the
-// last frame that overran its budget.
+// Everything here is measured with RN's own Web Performance APIs, stable since
+// 0.83 (see docs/agent/MEASURING.md) — no hand-rolled timing, so the numbers
+// mean what the spec says they mean rather than what this file decided they
+// mean.
 //
-// The render+commit number the effect captures covers only the JS thread: React
-// renders and commits, Yoga lays out, the effect fires, and *then* the mount
-// transaction is handed to the UI thread, which creates and draws the views
-// long after. Frame callbacks cannot run while that is happening, so the mount
-// storm appears as a gap in the frame stream and needs no native hook to see.
-// requestAnimationFrame is display-driven on both platforms (Choreographer on
-// Android, CADisplayLink on iOS) and nothing here touches the components under
-// test, so all four variants are measured by identical machinery.
+// `interaction` is the headline: RN installs PerformanceObserver as a global
+// (src/private/setup/setUpPerformance.js), and for an event whose handler causes
+// rendering updates, EventPerformanceLogger holds the entry until the shadow
+// tree mounts, reporting `duration = mountTime - eventStartTime`. Press to
+// mounted, measured by the core — RN's analogue of INP.
 //
-// Being on the JS thread, the loop cannot attribute a long frame to JS work vs
-// UI work — that split comes from comparing this against the effect's number.
-function measureTimeToFirstFrame(
-  startTime: number,
-  isStale: () => boolean,
-  onSettled: (ttffMs: number) => void
-) {
-  let lastFrameTime = startTime;
-  let lastLongFrameEnd = startTime;
-  let quietFrames = 0;
+// Typed locally: tsconfig has no DOM lib, and RN's strict TS API doesn't declare
+// these globals even though the runtime installs them.
+type EventTimingEntry = {
+  name: string;
+  startTime: number;
+  duration: number;
+};
 
-  const tick = () => {
-    if (isStale()) return;
+type PerformanceObserverLike = {
+  observe(options: {
+    type: string;
+    buffered?: boolean;
+    durationThreshold?: number;
+  }): void;
+  disconnect(): void;
+};
 
-    const now = performance.now();
-    const delta = now - lastFrameTime;
-    lastFrameTime = now;
+type PerformanceObserverCtor = new (
+  callback: (list: { getEntries(): EventTimingEntry[] }) => void
+) => PerformanceObserverLike;
 
-    if (delta > LONG_FRAME_MS) {
-      lastLongFrameEnd = now;
-      quietFrames = 0;
-    } else if (++quietFrames >= QUIET_FRAMES) {
-      onSettled(lastLongFrameEnd - startTime);
-      return;
-    }
-
-    if (now - startTime > TTFF_TIMEOUT_MS) {
-      onSettled(lastLongFrameEnd - startTime);
-      return;
-    }
-    requestAnimationFrame(tick);
-  };
-
-  requestAnimationFrame(tick);
-}
+const PerformanceObserverGlobal = (
+  globalThis as unknown as {
+    PerformanceObserver?: PerformanceObserverCtor;
+  }
+).PerformanceObserver;
 
 export default function PerformanceScreen() {
   const insets = useSafeAreaInsets();
@@ -124,33 +111,49 @@ export default function PerformanceScreen() {
     startTime: number;
   } | null>(null);
 
-  // Time-to-first-frame lands asynchronously, once frames settle (~0.5s here),
-  // which is well inside the SETTLE_MS wait before stats are built — so the
-  // stats row can just read whatever the loop has stored by then.
-  const ttff = useRef<number | null>(null);
-  // Bumped per run so a still-running frame loop from an earlier press stops
-  // instead of overwriting the current run's result.
-  const runId = useRef(0);
+  // Event Timing arrives from the observer below, after mount — later than the
+  // effect that clears `pending` — so the press timestamp it matches against
+  // has to outlive it here.
+  const interactionMs = useRef<number | null>(null);
+  const runStartTime = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (PerformanceObserverGlobal == null) return;
+
+    const observer = new PerformanceObserverGlobal((list) => {
+      const start = runStartTime.current;
+      if (start == null) return;
+
+      for (const entry of list.getEntries()) {
+        if (Math.abs(entry.startTime - start) > EVENT_MATCH_SLACK_MS) continue;
+        // A press emits several entries (touchstart, touchend, click…); only
+        // the one whose handler triggered the render waits for mount, so it is
+        // by far the longest.
+        interactionMs.current = Math.max(
+          interactionMs.current ?? 0,
+          entry.duration
+        );
+      }
+    });
+
+    // durationThreshold 0 overrides the spec's default (which drops short
+    // events); we want the entry regardless of how fast the render turns out.
+    observer.observe({ type: 'event', durationThreshold: 0 });
+    return () => observer.disconnect();
+  }, []);
 
   const startMeasure = useCallback((kind: Kind) => {
     // Sample memory *before* the render that mounts the views, and mark the
-    // start of the render+commit window right as we trigger the state update.
+    // start of the commit window right as we trigger the state update. The mark
+    // is User Timing rather than a bare timestamp so the same span shows up in
+    // React Native DevTools' Performance panel alongside everything else.
     const memBefore = getMemoryFootprint();
+    performance.mark(COMMIT_START_MARK);
     const startTime = performance.now();
     pending.current = { kind, memBefore, startTime };
 
-    // Started before the state update so the first sampled frame brackets the
-    // render itself, making the result a true press-to-painted number.
-    ttff.current = null;
-    runId.current += 1;
-    const thisRun = runId.current;
-    measureTimeToFirstFrame(
-      startTime,
-      () => runId.current !== thisRun,
-      (ttffMs) => {
-        ttff.current = ttffMs;
-      }
-    );
+    interactionMs.current = null;
+    runStartTime.current = startTime;
 
     if (kind === 'plain') {
       setPlainCount(COUNT);
@@ -172,9 +175,12 @@ export default function PerformanceScreen() {
     pending.current = null;
 
     // Covers the JS thread only — React render, Fabric commit, Yoga layout.
-    // Mounting and painting happen on the UI thread after this fires; that half
-    // is what the frame loop measures.
-    const timeMs = performance.now() - m.startTime;
+    // Mounting happens on the UI thread after this fires, so the difference
+    // against `interaction` is what mounting cost.
+    const commitMs = performance.measure(
+      COMMIT_MEASURE,
+      COMMIT_START_MARK
+    ).duration;
 
     const timer = setTimeout(() => {
       const memAfter = getMemoryFootprint();
@@ -184,8 +190,8 @@ export default function PerformanceScreen() {
         memAfter,
         totalBytes,
         perViewBytes: totalBytes / COUNT,
-        timeMs,
-        ttffMs: ttff.current,
+        commitMs,
+        interactionMs: interactionMs.current,
       };
       if (m.kind === 'plain') {
         setPlainStats(stats);
@@ -299,10 +305,14 @@ function StatsRow({ label, stats }: { label: string; stats: Stats | null }) {
     <Text style={styles.stats}>
       {`${label}: ${formatBytes(stats.perViewBytes)}/view · ` +
         `${formatBytes(stats.totalBytes)} total\n` +
-        // commit = JS thread (render + layout); frame = press to painted, so
-        // frame - commit is what the UI thread spent mounting and drawing.
-        `${stats.timeMs.toFixed(0)} ms commit · ` +
-        `${stats.ttffMs == null ? '—' : `${stats.ttffMs.toFixed(0)} ms`} frame\n` +
+        // interaction = press to mounted (the headline); commit = the JS-thread
+        // slice of it, so interaction - commit is roughly what mounting cost.
+        `${
+          stats.interactionMs == null
+            ? '—'
+            : `${stats.interactionMs.toFixed(0)} ms`
+        } interaction · ` +
+        `${stats.commitMs.toFixed(0)} ms commit\n` +
         `initial ${formatBytes(stats.memBefore)} → final ${formatBytes(
           stats.memAfter
         )}`}

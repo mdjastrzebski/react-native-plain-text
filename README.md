@@ -11,7 +11,11 @@ perf-conscious apps and design systems alike. It's an early, evolving
 library, and feedback drives what gets built next.
 
 Early measurements with the example app's Performance tab (rough,
-self-measured, take as directional):
+self-measured, take as directional — see
+[MEASURING.md](docs/agent/MEASURING.md) for what the numbers mean and how to
+reproduce them):
+
+Memory per mounted view:
 
 | Text size | `PlainText` | RN `Text` |
 | --- | --- | --- |
@@ -19,6 +23,16 @@ self-measured, take as directional):
 | iOS, regular | 43 KB | 83 KB |
 | iOS, large | 154 KB | 405 KB |
 | Android, typical instance | 38 KB | 51 KB |
+
+Interaction latency — press until 1000 mounted views appear, as reported by
+RN's own Event Timing API (Pixel 3a, release build):
+
+| | `PlainText` | RN `Text` |
+| --- | --- | --- |
+| Android, 1000 views | ~505 ms | ~720 ms\* |
+
+\* the `Text` figure is derived from an earlier measurement rather than read
+directly from Event Timing; see [PERFORMANCE.md](docs/agent/PERFORMANCE.md).
 
 ## Installation
 
@@ -100,6 +114,7 @@ These are real `<Text>` props and styles that `PlainText` does **not** plan to s
 
 ## Contributing
 
+- [Measuring performance](docs/agent/MEASURING.md) · [Performance notes](docs/agent/PERFORMANCE.md)
 - [Development workflow](CONTRIBUTING.md#development-workflow)
 - [Sending a pull request](CONTRIBUTING.md#sending-a-pull-request)
 - [Code of conduct](CODE_OF_CONDUCT.md)

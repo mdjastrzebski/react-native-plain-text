@@ -36,11 +36,9 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     return RNPlainText(context)
   }
 
-  // The @ReactProp setters below only record state — see the batching block in
-  // RNPlainText. ViewManager.updateProperties calls this once it has applied
-  // every prop in the transaction, which is where the recomputation happens: one
-  // setText, one typeface resolution, one text-size pass per view instead of one
-  // per prop.
+  // The @ReactProp setters below only record state (see the batching block in
+  // RNPlainText); updateProperties calls this once the whole transaction is
+  // applied, so the recomputation runs once per view rather than once per prop.
   override fun onAfterUpdateTransaction(view: RNPlainText) {
     super.onAfterUpdateTransaction(view)
     view.flushPendingUpdates()
@@ -130,10 +128,10 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
   // serialized by the C++ side; we size an off-screen TextView exactly as it
   // will render.
   //
-  // The C++ side omits any prop still at its default, so a missing key means
-  // "default" — every fallback below must match the default in the generated
-  // Props.h. And because the off-screen view is reused across nodes, every prop
-  // has to be set on every call, not only when its key is present.
+  // Two invariants: the C++ side omits props still at their default, so every
+  // fallback below must match the default in the generated Props.h; and since
+  // the off-screen view is reused across nodes, every prop must be set on every
+  // call, not only when its key is present.
   override fun measure(
     context: Context,
     localData: ReadableMap?,
@@ -168,10 +166,8 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     // size (only where the ellipsis lands), so it isn't serialized for measure.
     view.setNumberOfLines(if (props?.hasKey("numberOfLines") == true) props.getInt("numberOfLines") else 0)
     view.setPlainText(props?.getString("text") ?: "")
-    // The setters above only marked state dirty; this is what applies it. It
-    // also enforces the ordering the sizes depend on (font size before letter
-    // spacing, which is relative to it), so the calls above no longer need to be
-    // in any particular order.
+    // Applies the state the setters above marked dirty, in dependency order —
+    // so their call order here doesn't matter.
     view.flushPendingUpdates()
 
     view.measure(
@@ -185,30 +181,24 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     )
   }
 
-  // The off-screen view measure() sizes is reused across calls rather than
-  // allocated per node: constructing an AppCompatTextView is expensive (theme
-  // attribute resolution for the text style, AppCompat's tint/emoji helpers),
-  // and it dominated Fabric's layout pass on screens mounting many PlainTexts.
-  // Reuse is safe because measure() re-applies every size-affecting prop on
-  // each call. RN's own <Text> goes further and measures without a View at all
-  // (TextLayoutManager), off a ThreadLocal scratch TextPaint — the ThreadLocal
-  // here is for the same reason: measure() runs on whichever thread commits a
-  // Fabric transaction, and Views are not thread-safe.
+  // The view measure() sizes is reused rather than allocated per node:
+  // constructing an AppCompatTextView (theme attribute resolution, AppCompat's
+  // tint/emoji helpers) dominated Fabric's layout pass on text-heavy screens.
+  // ThreadLocal because measure() runs on whichever thread commits the Fabric
+  // transaction, and Views are not thread-safe.
   private val measureViews = ThreadLocal<RNPlainText>()
 
   private fun measureView(context: Context): RNPlainText {
-    // The Context is the surface's ThemedReactContext, so it changes when the
-    // surface does; a cached view would otherwise resolve fonts and metrics
-    // against a torn-down theme (and keep it alive).
+    // The Context is the surface's ThemedReactContext, so it dies with the
+    // surface; a cached view would resolve fonts against a torn-down theme.
     measureViews.get()?.let { if (it.context === context) return it }
 
     val view = RNPlainText(context)
     view.isMeasureOnly = true
-    // TextView.setText() reaches checkForRelayout() once the view has a text
-    // Layout — i.e. from the second measurement onwards — and that dereferences
-    // the LayoutParams, crashing when they are null. RN hits the same thing in
-    // ReactTextView.setText (see its EMPTY_LAYOUT_PARAMS). The view is never
-    // attached to a parent, so the values themselves don't matter.
+    // From the second measurement on, setText() reaches checkForRelayout(),
+    // which dereferences the LayoutParams and crashes when they are null — the
+    // same crash RN works around in ReactTextView (EMPTY_LAYOUT_PARAMS). The
+    // view is never attached, so the values don't matter.
     view.layoutParams = ViewGroup.LayoutParams(
       ViewGroup.LayoutParams.WRAP_CONTENT,
       ViewGroup.LayoutParams.WRAP_CONTENT
