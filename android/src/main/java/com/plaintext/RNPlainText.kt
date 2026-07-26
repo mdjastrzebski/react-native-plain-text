@@ -20,11 +20,9 @@ import com.facebook.react.views.text.ReactTypefaceUtils
 import kotlin.math.ceil
 import kotlin.math.floor
 
-// Extends AppCompatTextView (not the plain platform TextView) because that's
-// what RN's own <Text> is backed by (ReactTextView extends AppCompatTextView).
-// AppCompatTextView's compat font/paint resolution shifts glyph metrics
-// slightly from a raw TextView; using a different base class than <Text>
-// made PlainText's rendering drift out of alignment with it.
+// Extends AppCompatTextView because RN's ReactTextView does: its compat font/paint
+// resolution shifts glyph metrics slightly from a raw TextView, which drifted
+// PlainText out of alignment with <Text>.
 class RNPlainText : AppCompatTextView {
   constructor(context: Context) : super(context)
   constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
@@ -36,56 +34,44 @@ class RNPlainText : AppCompatTextView {
 
   // --- State ------------------------------------------------------------------
   //
-  // Every field is declared here, above the init block. Kotlin runs property
-  // initializers and init blocks in declaration order, so a field declared below
-  // init is still at its zero-default while init runs, which is a silent wrong value
-  // rather than a crash (allowFontScaling false instead of true, letterSpacingDip 0f
-  // instead of NaN, fontWeight 0 instead of UNSET, a null baseTypeface).
+  // All fields live above init: Kotlin runs initializers in declaration order, so a
+  // field below init still holds its zero-default while init runs — the wrong value,
+  // silently (allowFontScaling false, letterSpacingDip 0f, fontWeight 0).
   //
-  // SYNC: for the four fields init reads directly this is a compile error if
-  // violated, not just a convention — Kotlin's "must be initialized" check catches a
-  // field read written inside init. It does NOT follow a call, so the check
-  // disappears the moment init reads state through a helper instead. That is why the
-  // two conversions init needs are pure top-level functions at the bottom of this
-  // file taking their inputs as parameters; turning either back into a method
-  // removes the enforcement and nothing fails until someone reorders a field.
+  // SYNC: that is a compile error only for the fields init reads directly, because
+  // Kotlin's check does not follow a call. Hence the pure top-level conversions at the
+  // bottom of this file. See docs/agent/sync-points.md.
 
-  // The 14f default mirrors the codegen fontSize default — see init.
+  // 14f mirrors the codegen fontSize default.
   private var fontSizeSp: Float = 14f
-  // Font scaling knobs, mirroring RN's <Text> (TextAttributes): allowFontScaling
-  // (default true) toggles whether sizes track the OS accessibility text-size
-  // setting, and maxFontSizeMultiplier (0 = no cap) clamps that scale. Both feed
-  // toEffectivePixel, which every sp-based size (font/line height/letter spacing)
-  // routes through.
+  // Mirrors RN's <Text> (TextAttributes): sp sizes track the OS text-size setting
+  // unless allowFontScaling is off, clamped by maxFontSizeMultiplier (0 = no cap).
   private var allowFontScaling: Boolean = true
   private var maxFontSizeMultiplier: Float = 0f
-  // NaN, not 0f, means "unset" — see calculateLetterSpacing.
+  // NaN, not 0f, means unset.
   private var letterSpacingDip: Float = Float.NaN
 
   private var rawText: CharSequence? = null
-  // NaN means unset, keeping the font's natural line height — see setLineHeight.
+  // NaN means unset — the font's natural line height.
   private var lineHeightSp: Float = Float.NaN
 
   private var fontFamily: String? = null
   private var fontWeight: Int = ReactConstants.UNSET
   private var fontStyle: Int = ReactConstants.UNSET
 
-  // A fixed base for applyTypeface, never the view's current typeface: with no
-  // fontFamily, ReactTypefaceUtils.applyStyles derives from whatever it is passed,
-  // so chaining off the live value lets an earlier family/weight survive a change
-  // that should have cleared it — and lets one node's font leak into the next
-  // through the reused measuring view.
+  // A fixed base for applyTypeface, never the live typeface: applyStyles derives from
+  // whatever it is passed when fontFamily is null, so chaining off the live value lets
+  // a font that should have been cleared survive — and leak between nodes through the
+  // reused measuring view.
   private val baseTypeface: Typeface? = typeface
 
-  // Marks the off-screen instance RNPlainTextManager reuses for measurement. It is
-  // never attached to a window, so measureAndLayout would never run — it would just
-  // pile up in the pending-action queue, once per prop set, forever.
+  // The off-screen instance RNPlainTextManager reuses. Never attached to a window, so
+  // measureAndLayout would never run — it would queue forever, once per prop set.
   internal var isMeasureOnly: Boolean = false
 
-  // React Native's Fabric layout system assigns this view's frame directly and
-  // never triggers Android's normal measure/layout pass. TextView builds the text
-  // Layout it draws during onMeasure, so without this the text is never rendered.
-  // Re-run measure + layout ourselves whenever a layout is requested.
+  // Fabric assigns this view's frame directly and never runs Android's measure/layout
+  // pass, but TextView builds the text Layout it draws during onMeasure — so re-run
+  // both ourselves whenever a layout is requested.
   private val measureAndLayout = Runnable {
     measure(
       MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
@@ -94,8 +80,7 @@ class RNPlainText : AppCompatTextView {
     layout(left, top, right, bottom)
   }
 
-  // Marked by the prop setters, applied by flushPendingUpdates — see the batching
-  // note on it below.
+  // Marked by the prop setters, applied by flushPendingUpdates.
   private var dirtyFontSize = false
   private var dirtyLetterSpacing = false
   private var dirtyTypeface = false
@@ -103,32 +88,21 @@ class RNPlainText : AppCompatTextView {
 
   // --- Batched prop application ---------------------------------------------
   //
-  // Fabric applies props one setter at a time and several of ours feed the same
-  // expensive work — three font props each re-resolved the typeface, and
-  // text/lineHeight/the scaling knobs each called setText, every one dragging a
-  // requestLayout behind it. So setters only mark state dirty and
-  // flushPendingUpdates() does the work once, the way RN's <Text> applies a single
-  // prebuilt ReactTextUpdate.
+  // Fabric applies props one setter at a time and several feed the same expensive
+  // work: every font prop re-resolved the typeface, and text/lineHeight each called
+  // setText, dragging a requestLayout along. Setters only mark state dirty; this does
+  // the work once, the way <Text> applies a single prebuilt ReactTextUpdate.
   //
-  // Flushed from onAfterUpdateTransaction and before the off-screen measure — never
-  // from construction. Between them the apply* helpers read most of this class's
-  // state one call deep, which is exactly where Kotlin's initialization check stops
-  // looking (see the State section above), so calling this from init would make the
-  // field order above silently rather than loudly wrong. init seeds the two values
-  // it needs itself, reading their fields at the call site.
+  // Never call it from init — its apply* helpers read state one call deep, which is
+  // where Kotlin's initialization check stops looking.
   //
-  // SYNC: a new prop's setter must mark the flag its work belongs to, and
-  // flushPendingUpdates must apply it in dependency order. A prop that is set but
-  // never flushed silently does nothing; a new read path that doesn't flush first
-  // sees stale state.
+  // SYNC: a new prop's setter must mark its flag, and the flush must apply it in
+  // dependency order. Set but never flushed silently does nothing.
   fun flushPendingUpdates() {
     if (dirtyFontSize) {
       dirtyFontSize = false
-      // Ceiling to a whole pixel matches RN's <Text>
-      // (TextAttributeProps.setFontSize), which converts sp to px itself rather
-      // than letting setTextSize(SP, ...) leave a fractional value. The difference
-      // shifts the paint's font metrics and compounds into per-line drift over a
-      // multiline block.
+      // Ceil to a whole pixel, as RN's TextAttributeProps.setFontSize does: a
+      // fractional textSize shifts the paint's metrics and drifts per line.
       setTextSize(
         TypedValue.COMPLEX_UNIT_PX,
         ceil(toEffectivePixel(fontSizeSp, allowFontScaling, maxFontSizeMultiplier))
@@ -152,44 +126,30 @@ class RNPlainText : AppCompatTextView {
   }
 
   init {
-    // Default to black so text color matches iOS's UILabel default. The theme's
-    // default TextView color is a gray, which would differ across platforms.
+    // Black, matching iOS's UILabel; the theme's TextView gray would differ.
     setTextColor(Color.BLACK)
-    // A view whose props are never set still has to be self-consistent, so seed
-    // textSize from the fontSizeSp default above (the codegen fontSize default,
-    // 14sp). Fabric only calls setFontSize when the prop differs from that
-    // default, so a view using the default would otherwise keep the theme's
-    // TextView size and mismatch the 14sp the shadow node measures with —
-    // truncating the text.
-    //
-    // The fields are read here, in init, rather than inside a helper that reaches
-    // for them itself — that's what makes the declaration order above
-    // compiler-enforced instead of merely documented. See toEffectivePixel. Both
-    // conversions are the ones flushPendingUpdates applies above.
+    // Fabric skips setters for props still at their default, so seed textSize and
+    // letterSpacing here or a defaulted view keeps the theme's values and mismatches
+    // what the shadow node measured. The fields are read here rather than inside a
+    // helper to keep the declaration order above compiler-enforced.
     setTextSize(
       TypedValue.COMPLEX_UNIT_PX,
       ceil(toEffectivePixel(fontSizeSp, allowFontScaling, maxFontSizeMultiplier))
     )
-    // Same reasoning for letter spacing, which a theme's textAppearance can set to
-    // a non-zero em value. The off-screen measuring view applies the letterSpacing
-    // prop on every measure, so a mounted view left on the theme's value would
-    // render wider than it was measured. (RN's <Text> has no equivalent seed —
-    // ReactTextView#setLetterSpacing returns early on NaN — so this is about
-    // agreeing with our own measure pass, not <Text> parity.) Must follow
-    // setTextSize: the em conversion divides by the current textSize.
+    // Must follow setTextSize: the em conversion divides by textSize. <Text> has no
+    // equivalent seed (ReactTextView#setLetterSpacing early-returns on NaN), so this
+    // is about agreeing with our own measure pass, not <Text> parity.
     letterSpacing =
       calculateLetterSpacing(letterSpacingDip, textSize, allowFontScaling, maxFontSizeMultiplier)
-    // RN's <Text> explicitly sets these (TextAttributeProps' DEFAULT_BREAK_STRATEGY /
-    // DEFAULT_HYPHENATION_FREQUENCY) rather than relying on the platform/theme default,
-    // which can differ (e.g. some widget styles default breakStrategy to "simple").
-    // Match them so identical text wraps onto the same lines as <Text>.
+    // <Text> sets these explicitly (TextAttributeProps' DEFAULT_BREAK_STRATEGY /
+    // DEFAULT_HYPHENATION_FREQUENCY) rather than trusting the theme, which can differ.
+    // Match it so identical text wraps onto the same lines.
     breakStrategy = Layout.BREAK_STRATEGY_HIGH_QUALITY
     hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
   }
 
-  // Mirrors RN's <Text> (TextAttributeProps#getEffectiveColor): a null value
-  // resets to the black default rather than falling through to the theme's
-  // gray, keeping the two platforms' unset-color rendering identical.
+  // Mirrors <Text> (TextAttributeProps#getEffectiveColor): null resets to black rather
+  // than falling through to the theme's gray, so both platforms match when unset.
   fun setColor(color: Int?) {
     setTextColor(color ?: Color.BLACK)
   }
@@ -211,39 +171,33 @@ class RNPlainText : AppCompatTextView {
     markScaledSizesDirty()
   }
 
-  // Every size derived from an sp value has to be recomputed after a scaling
-  // knob changes — including the text, whose lineHeight span is scaled too.
+  // Every sp-derived size has to be recomputed, including the text's lineHeight span.
   private fun markScaledSizesDirty() {
     dirtyFontSize = true
     dirtyText = true
   }
 
-  // Text is routed through here (rather than TextView.setText directly) so a
-  // lineHeight span can be layered on when needed. Re-applied whenever the text
-  // or the line height changes.
   fun setPlainText(value: String?) {
     rawText = value
     dirtyText = true
   }
 
-  // Mirrors RN's <Text> (TextAttributeProps#lineHeight): the value is in DIP and
-  // scaled to px with font scaling on (RN's allowFontScaling default). 0/unset
-  // keeps the font's natural line height.
+  // Mirrors <Text> (TextAttributeProps#lineHeight): DIP, scaled with font scaling on.
+  // 0/unset keeps the font's natural line height.
   fun setLineHeight(lineHeight: Float) {
     lineHeightSp = if (lineHeight <= 0f) Float.NaN else lineHeight
     dirtyText = true
   }
 
+  // The single place text reaches TextView, because a lineHeight span has to be
+  // layered on — so both setPlainText and setLineHeight mark dirtyText.
   private fun applyText() {
     val value = rawText ?: ""
     if (lineHeightSp.isNaN()) {
       setText(value)
       return
     }
-    // Reimplements RN's (internal) CustomLineHeightSpan so line spacing matches
-    // <Text> exactly. Applied over the whole string with the same span flags RN
-    // uses for a span anchored at index 0. The height is scaled through the same
-    // font-scaling path as the font size.
+    // Same span flags RN uses for a span anchored at index 0.
     val spannable = SpannableString(value)
     spannable.setSpan(
       RNLineHeightSpan(
@@ -256,19 +210,14 @@ class RNPlainText : AppCompatTextView {
     setText(spannable)
   }
 
-  // The field is declared above init, with the other values init seeds; see
-  // calculateLetterSpacing for the conversion.
   fun setLetterSpacingDip(letterSpacing: Float) {
     letterSpacingDip = letterSpacing
     dirtyLetterSpacing = true
   }
 
-  // Mirrors RN's <Text> (ReactBaseTextShadowNode's UnderlineSpan/
-  // StrikethroughSpan): "underline"/"line-through" can appear together in a
-  // space-joined string, and each toggles independently. Applied via the
-  // paint's flags (which cover the whole view) rather than spans, since this
-  // TextView always renders a single uniform run. The decoration line color
-  // follows the text color, matching <Text>.
+  // Mirrors <Text> (ReactBaseTextShadowNode): both values can appear together in one
+  // space-joined string and toggle independently. Applied via the paint's flags rather
+  // than spans, since this view always renders a single uniform run.
   fun setTextDecorationLine(value: String?) {
     paintFlags = if (value?.contains("underline") == true) {
       paintFlags or Paint.UNDERLINE_TEXT_FLAG
@@ -282,18 +231,15 @@ class RNPlainText : AppCompatTextView {
     }
   }
 
-  // Mirrors RN's <Text> (TextAttributeProps#fontFamily): resolves against
-  // ReactFontManager so custom fonts bundled the RN way (assets/fonts, or
-  // registered natively) work here too, falling back to the platform default
-  // when unset.
+  // Mirrors <Text> (TextAttributeProps#fontFamily): resolved via ReactFontManager, so
+  // fonts bundled the RN way (assets/fonts, or registered natively) work here too.
   fun setFontFamily(fontFamily: String?) {
     this.fontFamily = fontFamily
     dirtyTypeface = true
   }
 
-  // Mirrors RN's <Text> (TextAttributeProps#fontWeight): parses the numeric
-  // ("100".."900") / "normal" / "bold" values into a raw weight so it composes
-  // correctly with a custom fontFamily via ReactFontManager.TypefaceStyle.
+  // Mirrors <Text> (TextAttributeProps#fontWeight): parsed to a raw weight so it
+  // composes with a custom fontFamily via ReactFontManager.TypefaceStyle.
   fun setFontWeight(fontWeight: String?) {
     this.fontWeight = ReactTypefaceUtils.parseFontWeight(fontWeight)
     dirtyTypeface = true
@@ -314,11 +260,9 @@ class RNPlainText : AppCompatTextView {
     )
   }
 
-  // Mirrors RN's <Text> (TextAttributeProps#getTextAlign): textAlign maps onto
-  // Gravity rather than View.TEXT_ALIGNMENT_*, and "start"/"left"/"right"/"end"
-  // are resolved against the view's layout direction so they match <Text> in
-  // RTL locales too. "justify" alone is just left-aligned Gravity — actual
-  // justification is a separate Layout.justificationMode (API 26+, see below).
+  // Mirrors <Text> (TextAttributeProps#getTextAlign): maps onto Gravity rather than
+  // TEXT_ALIGNMENT_*, resolving left/right against layout direction so RTL matches.
+  // "justify" is left Gravity plus justificationMode below (API 26+).
   fun setTextAlign(textAlign: String?) {
     val isRTL = layoutDirection == LAYOUT_DIRECTION_RTL
     val horizontal = when (textAlign) {
@@ -329,12 +273,10 @@ class RNPlainText : AppCompatTextView {
       "center" -> Gravity.CENTER_HORIZONTAL
       else -> Gravity.NO_GRAVITY
     }
-    // Set only the horizontal bits so a textAlignVertical set in either order
-    // survives (mirrors RN's ReactTextView#setGravityHorizontal). Both the
-    // absolute and the relative horizontal masks must be cleared: the view's
-    // default gravity is START, a *relative* gravity whose flag lives outside
-    // HORIZONTAL_GRAVITY_MASK, so clearing only the absolute bits would leave it
-    // set and resolve "center" (which sets no pull direction) back to start.
+    // Horizontal bits only, so a textAlignVertical set in either order survives (as
+    // RN's setGravityHorizontal). Both masks must be cleared: the default START is a
+    // *relative* gravity whose flag lives outside HORIZONTAL_GRAVITY_MASK, so clearing
+    // only the absolute bits resolves "center" back to start.
     gravity = (gravity and
       Gravity.HORIZONTAL_GRAVITY_MASK.inv() and
       Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK.inv()) or horizontal
@@ -346,12 +288,9 @@ class RNPlainText : AppCompatTextView {
     }
   }
 
-  // Mirrors RN's <Text> (ReactTextViewManager#setTextAlignVertical +
-  // ReactTextView#setGravityVertical): maps onto the vertical component of
-  // Gravity, touching only the vertical bits so it composes with textAlign's
-  // horizontal gravity. "auto" falls back to the default top alignment. Only
-  // affects the text's position when the view is taller than the text (e.g. an
-  // explicit height); Android-only, matching RN (iOS <Text> ignores it).
+  // Mirrors <Text> (ReactTextView#setGravityVertical): vertical bits only, so it
+  // composes with textAlign's horizontal gravity. Only affects the text's position
+  // when the view is taller than its text. Android-only, matching RN.
   fun setTextAlignVertical(textAlignVertical: String?) {
     val vertical = when (textAlignVertical) {
       "top" -> Gravity.TOP
@@ -363,15 +302,13 @@ class RNPlainText : AppCompatTextView {
     gravity = (gravity and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
   }
 
-  // Mirrors RN's <Text> (ReactTextView#setNumberOfLines): 0 means unlimited,
-  // so map it onto TextView's Integer.MAX_VALUE maxLines. This also bounds the
-  // off-screen measure pass in the ViewManager, matching the intrinsic height.
+  // Mirrors <Text> (ReactTextView#setNumberOfLines): 0 means unlimited. Also bounds
+  // the off-screen measure pass, matching the intrinsic height.
   fun setNumberOfLines(numberOfLines: Int) {
     maxLines = if (numberOfLines <= 0) Integer.MAX_VALUE else numberOfLines
   }
 
-  // Mirrors RN's <Text> (ReactTextView#setEllipsizeMode): "clip" removes the
-  // ellipsis (text is hard-cut at maxLines); the rest map onto TruncateAt.
+  // Mirrors <Text> (ReactTextView#setEllipsizeMode): "clip" hard-cuts at maxLines.
   fun setEllipsizeMode(ellipsizeMode: String?) {
     ellipsize = when (ellipsizeMode) {
       "head" -> TextUtils.TruncateAt.START
@@ -384,20 +321,14 @@ class RNPlainText : AppCompatTextView {
 
   override fun requestLayout() {
     super.requestLayout()
-    // The ViewManager calls measure() on the measuring instance itself; it needs
-    // the invalidation above but has no frame to lay out into.
+    // The measuring instance needs the invalidation above but has no frame to lay out.
     if (isMeasureOnly) return
-    // No frame yet means the initial mount, where Fabric calls measure() +
-    // layout() itself after applying props (SurfaceMountingManager.updateLayout)
-    // — posting here would measure at 0x0, once per prop setter. What this hack
-    // actually covers is the other case: a prop change on a laid-out view whose
-    // size doesn't change, where Fabric emits no updateLayout.
-    //
-    // This guard also covers construction. TextView's own constructor calls
-    // requestLayout(), which lands here before any of our field initializers have
-    // run — measureAndLayout is still null at that point, so post() would throw if
-    // the zero-size check didn't return first. Field declaration order cannot fix
-    // that one: super() runs before every initializer regardless.
+    // Zero size means either the initial mount, where Fabric calls measure() +
+    // layout() itself and posting would measure at 0x0 once per setter, or
+    // construction, where TextView's constructor reaches here before any initializer
+    // has run and measureAndLayout is still null. What this hack covers is neither: a
+    // prop change on a laid-out view whose size doesn't change, where Fabric emits no
+    // updateLayout.
     if (width == 0 || height == 0) return
     // Several setters can request a layout within one transaction.
     removeCallbacks(measureAndLayout)
@@ -405,18 +336,12 @@ class RNPlainText : AppCompatTextView {
   }
 }
 
-// Mirrors RN's <Text> (TextAttributes#getEffective*): when font scaling is on,
-// scale sp -> px through the OS setting, clamped by maxFontSizeMultiplier
-// (PixelUtil ignores the cap unless it's >= 1); when off, treat the value as raw
-// DIP so it renders at its literal size.
+// Mirrors <Text> (TextAttributes#getEffective*): sp -> px through the OS setting,
+// clamped by maxFontSizeMultiplier (PixelUtil ignores a cap below 1); raw DIP when
+// scaling is off, so the value renders at its literal size.
 //
-// Top-level and pure rather than a method, so the scaling inputs have to be passed
-// in and cannot be picked up from the view's fields. Do not "simplify" it into a
-// method: RNPlainText's init block seeds textSize through this, and Kotlin's "must
-// be initialized" check only fires for a field read written *inside* init — a read
-// one call deep is invisible to it, so a version free to reach for allowFontScaling
-// itself could silently see false instead of true. Taking the inputs as parameters
-// forces them to appear at the call site, where the compiler checks them.
+// Keep it pure and top-level: init seeds textSize through it, and Kotlin only checks a
+// field read written inside init. See docs/agent/sync-points.md.
 private fun toEffectivePixel(
   sp: Float,
   allowFontScaling: Boolean,
@@ -429,15 +354,11 @@ private fun toEffectivePixel(
   }
 }
 
-// Mirrors RN's <Text> (TextAttributeProps#letterSpacing + ReactTextView): the DIP
-// input is scaled to px and divided by the font size, because Android's
-// TextView.letterSpacing is in em units (relative to the font size), unlike iOS's
-// absolute point kerning. NaN or 0 means unset, which is 0 em.
+// Mirrors <Text> (TextAttributeProps#letterSpacing): px divided by the font size,
+// because TextView.letterSpacing is in em units unlike iOS's absolute kerning. NaN or
+// 0 means unset. fontSizePx is the view's applied textSize, not one of our fields.
 //
-// Pure and top-level for the same reason as toEffectivePixel above: init seeds
-// letterSpacing through this, so every input has to appear at the call site where
-// Kotlin's "must be initialized" check can see it. fontSizePx is the view's
-// already-applied textSize, not one of our fields.
+// Pure and top-level for the same reason as toEffectivePixel.
 private fun calculateLetterSpacing(
   letterSpacingDip: Float,
   fontSizePx: Float,
@@ -451,11 +372,9 @@ private fun calculateLetterSpacing(
   }
 }
 
-// A reimplementation of RN's internal CustomLineHeightSpan (which isn't part of
-// the public API). Unlike LineHeightSpan.Standard it uses web-like line-box
-// behavior: the extra leading is split evenly above and below the text, and it
-// also affects the space before the first line and after the last, so text
-// vertically matches RN's own <Text>.
+// RN's CustomLineHeightSpan isn't public, so reimplemented here. Unlike
+// LineHeightSpan.Standard it splits the extra leading evenly above and below the text
+// and also pads before the first line and after the last, matching <Text> vertically.
 private class RNLineHeightSpan(height: Float) : LineHeightSpan {
   private val lineHeight: Int = ceil(height.toDouble()).toInt()
 
