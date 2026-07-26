@@ -104,6 +104,9 @@ both platforms), so a revision changing only e.g. `color` also keeps its size.
 
 ## Considered and rejected
 
+Each of these has a revisit trigger; they are summarized in
+[Open opportunities](#open-opportunities) below.
+
 ### Measure via `StaticLayout`/`BoringLayout` instead of a `TextView`
 
 RN's approach. **Rejected**, for three reasons that compound:
@@ -160,6 +163,41 @@ so hits skip JNI entirely. **Not implemented**: zero benefit in this benchmark
 **Not possible.** Fabric's `updateLayout` covers the mount path, but a prop
 change on a laid-out view whose size doesn't change emits no `updateLayout`, and
 nothing else rebuilds the `TextView`'s draw `Layout`.
+
+## Open opportunities
+
+Nothing here is blocked; each is waiting on a trigger or on evidence that it
+matters. Ordered by expected value if its trigger fires.
+
+| Idea | Expected value | Why not yet | Revisit when |
+| --- | --- | --- | --- |
+| **iOS mount path** | Unknown — possibly large | Every mount-path fix so far is Android-only. iOS's `updateProps:` already diffs old/new props, but nothing checks whether `applyContentFromProps` rebuilds the attributed string more than once per transaction, which is the exact problem prop batching solved on Android | iOS is measured at all (see below) |
+| **View recycling** | Nothing on cold mount; real for list churn | `enableViewRecycling` defaults false, so not even RN's `<Text>` recycles ([details](#view-recycling)) | The flag flips, or a consuming app enables it. Do it with the flag on locally and a mount/unmount churn benchmark |
+| **Measurement LRU cache** (C++, keyed on size-affecting props + constraints) | Skips the JNI hop entirely on a hit | Zero benefit in a benchmark of 1000 unique strings | A real screen with repeated labels shows measurement cost |
+| **`StaticLayout` measure path** | Small, now that the view is reused | Parity risk, and Minikin shaping sits under both approaches ([details](#measure-via-staticlayoutboringlayout-instead-of-a-textview)) | Profiling shows measurement dominating again |
+| **Custom JNI measure entry** (primitives instead of a `ReadableNativeMap`) | Removes the per-node map allocation | Default-omission already took most of it | The remaining serialization shows in a profile |
+| **Trim the JS wrapper** | A few ms per 1000 views | Most of the 33 ms is one extra React fiber per item, which trimming can't remove ([details](#trimming-the-js-wrapper)) | Only if the wrapper delta grows |
+
+## What we don't know yet
+
+Gaps in evidence rather than in implementation. Worth closing before making
+stronger claims — or before assuming a change was a win everywhere.
+
+- **iOS has never been measured with the current metric.** Every number in this
+  document is Android. iOS memory figures in the README predate the interaction
+  metric entirely.
+- **The clone-invalidation override was verified on Android only.** It was added
+  to both platforms, but iOS hasn't been built since. It's shared C++ plus a
+  one-line delegation, so the risk is low — but it is untested there.
+- **Scrolling and steady-state jank are unmeasured.** The harness only does a
+  cold mount of 1000 views in one commit; real apps virtualize. For a long list
+  the number that matters is dropped frames during scroll, and nothing here
+  reports it. The same `PerformanceObserver` can watch `longtask` entries, which
+  would be the cheapest first step.
+- **`Text`'s interaction figure is derived**, not read from Event Timing — one
+  run with the current harness replaces it.
+- **All published numbers are single runs**, while [measuring.md](measuring.md)
+  asks for a median of five with the range.
 
 ## Mechanisms worth knowing
 

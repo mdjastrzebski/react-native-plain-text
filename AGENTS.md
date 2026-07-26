@@ -40,4 +40,4 @@ exists.
 | Touching measurement, shadow nodes, JNI or CMake | [intrinsic-sizing.md](docs/agent/intrinsic-sizing.md) — how self-sizing works on each platform |
 | A native change "does nothing", or builds misbehave | [native-gotchas.md](docs/agent/native-gotchas.md) |
 | Quoting or producing a performance number | [measuring.md](docs/agent/measuring.md) — metrics and procedure |
-| Optimizing anything | [performance.md](docs/agent/performance.md) — what's been done, what was rejected and why |
+| Optimizing anything | [performance.md](docs/agent/performance.md) — what's been done, what was rejected and why, and what's still open |
