@@ -128,10 +128,12 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
   // serialized by the C++ side; we size an off-screen TextView exactly as it
   // will render.
   //
-  // Two invariants: the C++ side omits props still at their default, so every
-  // fallback below must match the default in the generated Props.h; and since
-  // the off-screen view is reused across nodes, every prop must be set on every
-  // call, not only when its key is present.
+  // SYNC: two invariants, neither checked by anything. The C++ side omits props
+  // still at their default, so every fallback below must match the default in
+  // the generated Props.h; and since the off-screen view is reused across nodes,
+  // every prop must be set on every call, not only when its key is present.
+  // This must also apply props the same way the mounted view does, or the
+  // measured size won't match what is drawn.
   override fun measure(
     context: Context,
     localData: ReadableMap?,

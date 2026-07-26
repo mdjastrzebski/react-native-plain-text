@@ -44,6 +44,28 @@ Note the naming split: the **public JS API is `PlainText`**, but the **native co
 - **Text-style props (e.g. `fontSize`) are NOT part of RN `ViewProps`**, so they don't flow through the native view's `style` automatically. The pattern (see `PlainText.native.tsx`): accept a `TextStyle` `style`, `StyleSheet.flatten` it, destructure the text-style keys out, pass them as **explicit codegen props**, and forward the remaining layout styles as `style`.
 - Codegen types come from the **`CodegenTypes` namespace exported by `react-native`** (e.g. `CodegenTypes.WithDefault<CodegenTypes.Float, 14>`). Do **not** import from `react-native/Libraries/Types/CodegenTypes` — this project uses the strict API (`customConditions` in `tsconfig.json`), which blocks `react-native/Libraries/*` subpaths.
 
+### Manual sync points
+
+Several places must be updated together and **nothing verifies them** — no type error, no failing test, and in most cases nothing visibly wrong on first render. Each site carries a `// SYNC:` comment; `grep -rn "SYNC:" src cpp ios android` lists them.
+
+**Any prop** — the four-layer flow above, plus a section on the Features screen (`example/src/screens/FeaturesScreen.tsx`).
+
+**A prop that affects measured size** (anything the text's width/height depends on: text, font, spacing, line count) additionally needs all five of these, or the box and the text disagree:
+
+| Site | Miss it and… |
+| --- | --- |
+| `cpp/PlainTextMeasurementHelpers.cpp` → `measurementInputsEqual` | the size goes stale after an update — correct on first render, wrong on the next |
+| `ios/PlainTextShadowNode.mm` → `measureContent` | iOS measures without it; must mirror `RNPlainText.mm`'s `applyContentFromProps` |
+| `android/.../PlainTextMeasurementsManager.cpp` | the prop never reaches the Android measure pass |
+| `RNPlainTextManager.kt` → `measure()` | same, from the other side — and it must apply props exactly as the mounted view does |
+| `RNPlainText.kt` → setter + `flushPendingUpdates()` | the prop is recorded but never applied |
+
+**Three-way default contract.** The generated `Props.h` default, the `if (prop != default)` condition in `PlainTextMeasurementsManager.cpp`, and the fallback in `RNPlainTextManager.measure()` must all agree. The C++ side omits props still at their default, so an absent key means "default", not "unset" — a mismatch silently measures at the wrong size.
+
+**Reused measuring view.** `RNPlainTextManager.measure()` must set *every* size-affecting prop on every call (the view is shared across nodes), and nothing in `RNPlainText` may derive new state from its own current state — see the `baseTypeface` comment for the bug that caused.
+
+**Both platforms' shadow nodes.** `ios/PlainTextShadowNode.h` and `android/.../PlainTextShadowNode.h` are separate files with the same traits and overrides; a change to one usually belongs in the other.
+
 ## Feature implementation policy
 
 Unless told otherwise, any request to implement a new feature (e.g. a new prop) implies all three of the following:
@@ -51,6 +73,8 @@ Unless told otherwise, any request to implement a new feature (e.g. a new prop) 
 - **API parity with RN `Text`**: match the shape/semantics of the equivalent prop or behavior on React Native's own `<Text>` component, rather than inventing a new API.
 - **Both platforms**: implement it for iOS and Android — not one platform first "for now". See the four-layer prop flow above for what touching both platforms means in practice.
 - **Example coverage**: add a dedicated section for it on the Features tab (`example/src/screens/FeaturesScreen.tsx`) so it's visible and testable in the example app.
+
+Check [Manual sync points](#manual-sync-points) before starting — a size-affecting prop touches five more files than the four-layer flow suggests, and none of them fail loudly when missed.
 
 Work in this order:
 

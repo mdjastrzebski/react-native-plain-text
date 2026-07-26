@@ -56,7 +56,12 @@ class RNPlainText : AppCompatTextView {
   // single prebuilt ReactTextUpdate.
   //
   // Flushed from onAfterUpdateTransaction, from init, and before the off-screen
-  // measure. Any new read path must flush first or it sees stale state.
+  // measure.
+  //
+  // SYNC: a new prop's setter must mark the flag its work belongs to, and
+  // flushPendingUpdates must apply it in dependency order. A prop that is set
+  // but never flushed silently does nothing; a new read path that doesn't flush
+  // first sees stale state.
   private var dirtyFontSize = false
   private var dirtyLetterSpacing = false
   private var dirtyTypeface = false

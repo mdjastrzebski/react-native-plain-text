@@ -19,6 +19,10 @@ bool PlainTextShadowNode::shouldNewRevisionDirtyMeasurement(
   return shouldRevisionDirtyMeasurement(sourceShadowNode, fragment, getConcreteProps());
 }
 
+// SYNC: must mirror what the mounted UILabel renders (RNPlainText.mm's
+// applyContentFromProps), and every prop read here must appear in
+// `measurementInputsEqual` — otherwise the measured size drifts from the drawn
+// text, or goes stale after an update.
 Size PlainTextShadowNode::measureContent(
     const LayoutContext &layoutContext,
     const LayoutConstraints &layoutConstraints) const {

@@ -178,6 +178,8 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 // either is set the text/font/color/alignment all have to be expressed through
 // an NSAttributedString. This applies whichever form is needed from the current
 // props; call it whenever any text-content prop changes.
+// SYNC: PlainTextShadowNode::measureContent must mirror every attribute set
+// here, or the measured size won't match the drawn text.
 - (void)applyContentFromProps:(const RNPlainTextProps &)props
 {
     UIFont *font = RNPlainTextFontFromProps(props);

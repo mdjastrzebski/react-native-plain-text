@@ -5,6 +5,9 @@ import {
   type ViewProps,
 } from 'react-native';
 
+// SYNC: this spec is the source of truth for props. Adding or changing one
+// touches several files that nothing checks automatically — see AGENTS.md
+// ("Manual sync points"), or `grep -rn "SYNC:"` for the sites themselves.
 export interface NativeProps extends ViewProps {
   text?: string;
   color?: ColorValue;

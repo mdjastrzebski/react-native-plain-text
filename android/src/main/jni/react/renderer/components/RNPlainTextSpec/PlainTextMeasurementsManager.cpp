@@ -39,8 +39,12 @@ Size PlainTextMeasurementsManager::measure(
   //
   // Only non-default props are serialized: each entry costs a folly::dynamic
   // insert and a JNI-visible map slot per node, and typical usage sets two or
-  // three. That makes the defaults a contract — the Kotlin side must fall back
-  // to exactly the default in Props.h, since an omitted key now means "default".
+  // three.
+  //
+  // SYNC: that makes the defaults a three-way contract — the value in each
+  // condition below, the default in the generated Props.h, and the fallback in
+  // RNPlainTextManager.measure() for the same key. A mismatch silently measures
+  // at the wrong size, since an omitted key means "default", not "not set".
   folly::dynamic serializedProps = folly::dynamic::object;
   if (!props.text.empty()) {
     serializedProps["text"] = props.text;

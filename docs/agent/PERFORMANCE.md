@@ -193,3 +193,20 @@ mount cost after the fixes: ~300 µs.
   frame loop and RN's Event Timing landed on the same instant, differing only by
   a constant ~13–14 ms across variants — which identified that offset as
   input-dispatch latency and justified deleting the hand-rolled one.
+
+## Sync points these optimizations introduced
+
+Three of the changes above traded automatic correctness for speed, and the cost
+is manual coupling that nothing verifies. All are listed with their failure
+modes in AGENTS.md under *Manual sync points*, and marked in code with `// SYNC:`
+comments — `grep -rn "SYNC:" src cpp ios android`.
+
+| Optimization | What must now be kept in sync |
+| --- | --- |
+| Serializing only non-default props across JNI | The generated `Props.h` default, the C++ omission condition, and the Kotlin fallback — three places, one value |
+| Reusing the off-screen measuring view | Every size-affecting prop must be set on every `measure()` call, and no view state may derive from the view's own current state |
+| Comparing measurement inputs on clone | `measurementInputsEqual` must list every prop either `measureContent` reads |
+
+The shared failure mode is the same in all three: correct on first render, wrong
+after an update, and silent in between. Worth knowing before optimizing further
+in this area — each of these was cheap to add and would be expensive to debug.
