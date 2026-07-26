@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Button,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,9 +26,15 @@ const FONT_SIZES = [
 ] as const;
 
 // Native allocations (CoreText layout, CALayer backing stores, JS heap growth)
-// are deferred past the React commit, so sampling immediately undercounts.
-// Android defers more (GC timing, TextView layout) than iOS.
-const SETTLE_MS = Platform.select({ android: 2000, default: 500 });
+// are deferred past the React commit, so sampling immediately undercounts. This
+// also bounds how long the Event Timing entry has to arrive, since the readouts
+// are published on this timer — see the effects below.
+//
+// One value for both platforms, deliberately generous. Neither platform's
+// settle curve has been sampled, and undercounting memory fails *silently* —
+// a short window yields a plausible-looking smaller number, not a visible gap.
+// Too long only costs waiting.
+const SETTLE_MS = 3000;
 
 type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
 
