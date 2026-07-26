@@ -1,7 +1,7 @@
 # Performance notes
 
 What has been optimized, what was tried and rejected, and the mechanisms behind
-both. Read [MEASURING.md](MEASURING.md) first for what the numbers mean.
+both. Read [measuring.md](measuring.md) first for what the numbers mean.
 
 All figures: Pixel 3a, release build, 1000 views mounted in one state update,
 app killed between runs. Directional, not a controlled benchmark.

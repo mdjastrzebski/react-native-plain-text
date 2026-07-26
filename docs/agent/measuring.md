@@ -4,7 +4,7 @@ How the numbers in the README are produced, what they mean, and what they
 deliberately don't cover. The example app's **Performance** tab is the harness.
 
 For what has actually been optimized and what was tried and rejected, see
-[PERFORMANCE.md](PERFORMANCE.md).
+[performance.md](performance.md).
 
 ## What is measured
 

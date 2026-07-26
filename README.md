@@ -12,7 +12,7 @@ library, and feedback drives what gets built next.
 
 Early measurements with the example app's Performance tab (rough,
 self-measured, take as directional — see
-[MEASURING.md](docs/agent/MEASURING.md) for what the numbers mean and how to
+[measuring.md](docs/agent/measuring.md) for what the numbers mean and how to
 reproduce them):
 
 Memory per mounted view:
@@ -32,7 +32,7 @@ RN's own Event Timing API (Pixel 3a, release build):
 | Android, 1000 views | ~505 ms | ~720 ms\* |
 
 \* the `Text` figure is derived from an earlier measurement rather than read
-directly from Event Timing; see [PERFORMANCE.md](docs/agent/PERFORMANCE.md).
+directly from Event Timing; see [performance.md](docs/agent/performance.md).
 
 ## Installation
 
@@ -114,7 +114,7 @@ These are real `<Text>` props and styles that `PlainText` does **not** plan to s
 
 ## Contributing
 
-- [Measuring performance](docs/agent/MEASURING.md) · [Performance notes](docs/agent/PERFORMANCE.md)
+- [Measuring performance](docs/agent/measuring.md) · [Performance notes](docs/agent/performance.md)
 - [Development workflow](CONTRIBUTING.md#development-workflow)
 - [Sending a pull request](CONTRIBUTING.md#sending-a-pull-request)
 - [Code of conduct](CODE_OF_CONDUCT.md)

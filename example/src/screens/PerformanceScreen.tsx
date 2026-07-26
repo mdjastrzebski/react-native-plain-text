@@ -51,7 +51,7 @@ type Stats = {
 };
 
 // Measured with RN's own Web Performance APIs, stable since 0.83, rather than
-// hand-rolled timing — see docs/agent/MEASURING.md.
+// hand-rolled timing — see docs/agent/measuring.md.
 //
 // `interaction` is the headline: for an event whose handler causes rendering
 // updates, EventPerformanceLogger holds the entry until the shadow tree mounts
