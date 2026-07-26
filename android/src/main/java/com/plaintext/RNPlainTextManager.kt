@@ -14,6 +14,7 @@ import com.facebook.react.viewmanagers.RNPlainTextManagerInterface
 import com.facebook.react.viewmanagers.RNPlainTextManagerDelegate
 import com.facebook.yoga.YogaMeasureMode
 import com.facebook.yoga.YogaMeasureOutput
+import java.lang.ref.WeakReference
 
 @ReactModule(name = RNPlainTextManager.NAME)
 class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
@@ -186,14 +187,29 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
   // The view measure() sizes is reused rather than allocated per node:
   // constructing an AppCompatTextView (theme attribute resolution, AppCompat's
   // tint/emoji helpers) dominated Fabric's layout pass on text-heavy screens.
+  //
   // ThreadLocal because measure() runs on whichever thread commits the Fabric
   // transaction, and Views are not thread-safe.
-  private val measureViews = ThreadLocal<RNPlainText>()
+  //
+  // WeakReference because the view holds the surface's ThemedReactContext, whose
+  // base is the Activity, and nothing here learns that a surface stopped:
+  // ViewManager.onSurfaceStopped only fires under enableViewRecycling (false by
+  // default) and trimMemory() is package-private to RN, so neither hook is
+  // available to us. Held strongly, this ThreadLocal outlives the surface — it
+  // lives as long as the ReactInstance and the layout thread — so the last
+  // measured surface's Activity would stay reachable until some other surface
+  // measured, i.e. for the rest of the session in an app whose ReactHost
+  // outlives its Activity. Weakly, the view is a GC root only inside a single
+  // measure() call, so a collection mid-pass costs one rebuild, not one per node.
+  private val measureViews = ThreadLocal<WeakReference<RNPlainText>>()
 
   private fun measureView(context: Context): RNPlainText {
     // The Context is the surface's ThemedReactContext, so it dies with the
     // surface; a cached view would resolve fonts against a torn-down theme.
-    measureViews.get()?.let { if (it.context === context) return it }
+    // Two live surfaces alternate through this check — but per commit, not per
+    // node: Fabric serializes layout per thread, so every measure() call within
+    // one pass shares a surface. One extra construction per surface switch.
+    measureViews.get()?.get()?.let { if (it.context === context) return it }
 
     val view = RNPlainText(context)
     view.isMeasureOnly = true
@@ -205,7 +221,7 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
       ViewGroup.LayoutParams.WRAP_CONTENT,
       ViewGroup.LayoutParams.WRAP_CONTENT
     )
-    measureViews.set(view)
+    measureViews.set(WeakReference(view))
     return view
   }
 

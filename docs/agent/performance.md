@@ -101,6 +101,19 @@ This was the single largest win. RN's own `<Text>` never constructs a view to
 measure at all (`TextLayoutManager` uses a `ThreadLocal<TextPaint>` and a
 `StaticLayout`), which is why it was faster here despite a slower commit.
 
+The scratch view is held through a `WeakReference`, because reuse means holding a
+`Context`. `FabricUIManager.measure` hands us the surface's `ThemedReactContext`,
+whose base is the Activity, and no ViewManager hook tells us a surface stopped —
+`onSurfaceStopped` is gated on `enableViewRecycling` (see
+[below](#view-recycling)) and `trimMemory()` is package-private to RN. A strong
+reference therefore retained a destroyed Activity until some other surface
+measured, which for an app whose `ReactHost` outlives its Activity is the rest of
+the session. Weakly held, the view is only reachable inside one `measure()` call,
+so the cost is a rebuild per GC that lands mid-pass — bounded by GC frequency,
+not by node count. With two live surfaces the `Context` identity check alternates
+per commit rather than per node (Fabric serializes layout per thread, so every
+call within one pass shares a surface), so the reuse win holds there too.
+
 Reuse forced three fixes, all documented as invariants in AGENTS.md: every
 size-affecting prop must be set unconditionally on each call; nothing in the
 view may derive new state from its own current state (this is why
