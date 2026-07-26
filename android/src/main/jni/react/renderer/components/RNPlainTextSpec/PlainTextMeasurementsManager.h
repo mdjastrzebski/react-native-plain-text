@@ -20,12 +20,10 @@ class PlainTextMeasurementsManager {
  public:
   explicit PlainTextMeasurementsManager(
       const std::shared_ptr<const ContextContainer> &contextContainer)
-      // RN's own measurement managers re-resolve this string key on every
-      // measure; it is hoisted here because measure() runs once per node per
-      // layout pass. FabricUIManagerBinding inserts the key before it builds
-      // the Scheduler, and the Scheduler is what creates the component
-      // descriptor registry owning this manager — so it is always present by
-      // the time this runs.
+      // Hoisted out of measure(), which runs once per node per layout pass (RN's
+      // own managers re-resolve this key every call). Safe this early:
+      // FabricUIManagerBinding inserts the key before building the Scheduler,
+      // which is what creates the registry owning this manager.
       : fabricUIManager_(
             contextContainer->at<jni::global_ref<jobject>>("FabricUIManager")) {}
 

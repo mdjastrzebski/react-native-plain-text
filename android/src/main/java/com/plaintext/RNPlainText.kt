@@ -229,13 +229,11 @@ class RNPlainText : AppCompatTextView {
   private var fontWeight: Int = ReactConstants.UNSET
   private var fontStyle: Int = ReactConstants.UNSET
 
-  // The typeface the view starts out with, used as the base every updateTypeface
-  // resolves against. It has to be a fixed base rather than the *current*
-  // typeface: with no fontFamily, ReactTypefaceUtils.applyStyles derives from
-  // whatever is passed in, so chaining off the live value would let an earlier
-  // family/weight survive a change that should have cleared it — which is how
-  // the reused measuring view (RNPlainTextManager.measure) would otherwise leak
-  // one node's font into the next node's measurement.
+  // A fixed base for applyTypeface, never the view's current typeface: with no
+  // fontFamily, ReactTypefaceUtils.applyStyles derives from whatever it is
+  // passed, so chaining off the live value lets an earlier family/weight survive
+  // a change that should have cleared it — and lets one node's font leak into
+  // the next through the reused measuring view.
   private val baseTypeface: Typeface? = typeface
 
   // Mirrors RN's <Text> (TextAttributeProps#fontFamily): resolves against
@@ -338,10 +336,9 @@ class RNPlainText : AppCompatTextView {
     }
   }
 
-  // Marks the off-screen instance that RNPlainTextManager reuses for intrinsic
-  // measurement. That view is never attached to a window, so the Runnable below
-  // would never run — it would just pile up in the view's pending-action queue,
-  // once per prop set, for the lifetime of the process.
+  // Marks the off-screen instance RNPlainTextManager reuses for measurement. It
+  // is never attached to a window, so the Runnable below would never run — it
+  // would just pile up in the pending-action queue, once per prop set, forever.
   internal var isMeasureOnly: Boolean = false
 
   // React Native's Fabric layout system assigns this view's frame directly and
@@ -358,20 +355,16 @@ class RNPlainText : AppCompatTextView {
 
   override fun requestLayout() {
     super.requestLayout()
-    // The measuring instance is driven directly by the ViewManager, which calls
-    // measure() itself — it needs the layout invalidation super does above, but
-    // not the re-layout pass (it has no frame to lay out into).
+    // The ViewManager calls measure() on the measuring instance itself; it needs
+    // the invalidation above but has no frame to lay out into.
     if (isMeasureOnly) return
-    // No frame yet means this is the initial mount, where Fabric already calls
-    // measure() + layout() itself once props are applied
-    // (SurfaceMountingManager.updateLayout). Posting here would only measure the
-    // view at 0x0 before that happens, and every prop setter that calls
-    // requestLayout queues another one — thousands of runnables across a screen,
-    // all redundant. The case this hack exists for is the other one: a prop
-    // change on an already-laid-out view whose size does not change, so Fabric
-    // emits no updateLayout and nothing else rebuilds the text Layout.
+    // No frame yet means the initial mount, where Fabric calls measure() +
+    // layout() itself after applying props (SurfaceMountingManager.updateLayout)
+    // — posting here would measure at 0x0, once per prop setter. What this hack
+    // actually covers is the other case: a prop change on a laid-out view whose
+    // size doesn't change, where Fabric emits no updateLayout.
     if (width == 0 || height == 0) return
-    // Coalesce: several prop setters can request a layout within one transaction.
+    // Several setters can request a layout within one transaction.
     removeCallbacks(measureAndLayout)
     post(measureAndLayout)
   }

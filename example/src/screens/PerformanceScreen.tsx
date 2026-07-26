@@ -13,10 +13,9 @@ import { unstable_NativeText as NativeText } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMemoryFootprint } from 'react-native-memory-footprint';
 import { PlainText } from 'react-native-plain-text';
-// The library's bare codegen host component, bypassing the PlainText JS
-// wrapper — the analogue of the NativeText-vs-Text pair below, used to price
-// what the wrapper's StyleSheet.flatten + rest destructure + 18-prop element
-// costs per view. Imported by path because it is deliberately not public API.
+// The library's bare codegen host component — the analogue of the
+// NativeText-vs-Text pair, which prices the JS wrapper. Imported by path
+// because it is deliberately not public API.
 import NativePlainText from '../../../src/PlainTextViewNativeComponent';
 
 const COUNT = 1000;
@@ -27,17 +26,16 @@ const FONT_SIZES = [
   { label: 'Small', value: 14 },
 ] as const;
 
-// How long to wait after commit before sampling memory. Native allocations
-// (CoreText layout, CALayer backing stores, JS heap growth) are deferred past
-// the React commit, so sampling immediately undercounts. Android defers more
-// (GC timing, TextView layout) so it needs a longer settle window than iOS.
+// Native allocations (CoreText layout, CALayer backing stores, JS heap growth)
+// are deferred past the React commit, so sampling immediately undercounts.
+// Android defers more (GC timing, TextView layout) than iOS.
 const SETTLE_MS = Platform.select({ android: 2000, default: 500 });
 
 type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
 
-// How far an Event Timing entry's startTime may sit from the press timestamp
-// and still be counted as this run's. The native event is stamped before the JS
-// handler runs, so the entry always starts slightly earlier.
+// How far an Event Timing entry may sit from the press timestamp and still
+// count as this run's: the native event is stamped before the JS handler runs,
+// so the entry always starts a little earlier.
 const EVENT_MATCH_SLACK_MS = 1_000;
 
 const COMMIT_START_MARK = 'plaintext-bench:press';
@@ -52,19 +50,16 @@ type Stats = {
   interactionMs: number | null;
 };
 
-// Everything here is measured with RN's own Web Performance APIs, stable since
-// 0.83 (see docs/agent/MEASURING.md) — no hand-rolled timing, so the numbers
-// mean what the spec says they mean rather than what this file decided they
-// mean.
+// Measured with RN's own Web Performance APIs, stable since 0.83, rather than
+// hand-rolled timing — see docs/agent/MEASURING.md.
 //
-// `interaction` is the headline: RN installs PerformanceObserver as a global
-// (src/private/setup/setUpPerformance.js), and for an event whose handler causes
-// rendering updates, EventPerformanceLogger holds the entry until the shadow
-// tree mounts, reporting `duration = mountTime - eventStartTime`. Press to
-// mounted, measured by the core — RN's analogue of INP.
+// `interaction` is the headline: for an event whose handler causes rendering
+// updates, EventPerformanceLogger holds the entry until the shadow tree mounts
+// and reports `duration = mountTime - eventStartTime`. Press to mounted,
+// measured by the core — RN's analogue of INP.
 //
-// Typed locally: tsconfig has no DOM lib, and RN's strict TS API doesn't declare
-// these globals even though the runtime installs them.
+// Typed locally: tsconfig has no DOM lib and RN's strict TS API doesn't declare
+// these globals, though the runtime installs them.
 type EventTimingEntry = {
   name: string;
   startTime: number;
@@ -102,18 +97,15 @@ export default function PerformanceScreen() {
   const [nativeTextStats, setNativeTextStats] = useState<Stats | null>(null);
   const [fontSize, setFontSize] = useState<number>(56);
 
-  // Holds an in-flight measurement between the button press (state update)
-  // and the moment the new views have been laid out on screen. Only one
-  // measurement runs at a time, so a single ref is enough.
+  // In-flight measurement. Only one runs at a time, so a single ref is enough.
   const pending = useRef<{
     kind: Kind;
     memBefore: number;
     startTime: number;
   } | null>(null);
 
-  // Event Timing arrives from the observer below, after mount — later than the
-  // effect that clears `pending` — so the press timestamp it matches against
-  // has to outlive it here.
+  // Event Timing arrives after mount, later than the effect that clears
+  // `pending`, so the press timestamp it matches against has to outlive it.
   const interactionMs = useRef<number | null>(null);
   const runStartTime = useRef<number | null>(null);
 
@@ -136,17 +128,15 @@ export default function PerformanceScreen() {
       }
     });
 
-    // durationThreshold 0 overrides the spec's default (which drops short
-    // events); we want the entry regardless of how fast the render turns out.
+    // 0 overrides the spec's default, which drops short events.
     observer.observe({ type: 'event', durationThreshold: 0 });
     return () => observer.disconnect();
   }, []);
 
   const startMeasure = useCallback((kind: Kind) => {
-    // Sample memory *before* the render that mounts the views, and mark the
-    // start of the commit window right as we trigger the state update. The mark
-    // is User Timing rather than a bare timestamp so the same span shows up in
-    // React Native DevTools' Performance panel alongside everything else.
+    // Memory is sampled before the render that mounts the views. The commit
+    // start is a User Timing mark rather than a bare timestamp so the span also
+    // shows up in React Native DevTools' Performance panel.
     const memBefore = getMemoryFootprint();
     performance.mark(COMMIT_START_MARK);
     const startTime = performance.now();
@@ -166,17 +156,16 @@ export default function PerformanceScreen() {
     }
   }, []);
 
-  // Runs after React has committed the new views. That commit is our
-  // render+commit endpoint (captured immediately), but native memory keeps
-  // growing past it, so we wait SETTLE_MS before sampling the "after" memory.
+  // Runs after React has committed the new views; memory is sampled SETTLE_MS
+  // later, once native allocations have caught up.
   useEffect(() => {
     const m = pending.current;
     if (!m) return;
     pending.current = null;
 
-    // Covers the JS thread only — React render, Fabric commit, Yoga layout.
-    // Mounting happens on the UI thread after this fires, so the difference
-    // against `interaction` is what mounting cost.
+    // The JS thread only — React render, Fabric commit, Yoga layout. Mounting
+    // happens on the UI thread after this fires, so `interaction - commit` is
+    // roughly what mounting cost.
     const commitMs = performance.measure(
       COMMIT_MEASURE,
       COMMIT_START_MARK
@@ -268,11 +257,9 @@ export default function PerformanceScreen() {
       ))}
 
       {/*
-        Same rendered result as the PlainText block above (same text, fontSize
-        and backgroundColor), but with the props already in native shape: no
-        StyleSheet.flatten, no rest destructure, and only the props actually set
-        instead of 18 mostly-undefined ones. The delta against PlainText is the
-        JS wrapper's cost.
+        Same rendered result as the PlainText block above, but with props already
+        in native shape — no StyleSheet.flatten, no rest destructure, and only
+        the props actually set. The delta is the JS wrapper's cost.
       */}
       {Array.from({ length: nativePlainCount }, (_, n) => (
         <NativePlainText
@@ -305,8 +292,6 @@ function StatsRow({ label, stats }: { label: string; stats: Stats | null }) {
     <Text style={styles.stats}>
       {`${label}: ${formatBytes(stats.perViewBytes)}/view · ` +
         `${formatBytes(stats.totalBytes)} total\n` +
-        // interaction = press to mounted (the headline); commit = the JS-thread
-        // slice of it, so interaction - commit is roughly what mounting cost.
         `${
           stats.interactionMs == null
             ? '—'

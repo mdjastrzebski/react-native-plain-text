@@ -33,18 +33,14 @@ Size PlainTextMeasurementsManager::measure(
   auto minimumSize = layoutConstraints.minimumSize;
   auto maximumSize = layoutConstraints.maximumSize;
 
-  // The generic FabricUIManager.measure path takes props as a ReadableMap; the
-  // Kotlin ViewManager.measure reads "text"/"fontSize"/... back out to size an
-  // off-screen TextView. (AndroidSwitch passes null here because its size is
-  // prop-independent — ours is not.)
+  // The generic FabricUIManager.measure path takes props as a ReadableMap, which
+  // RNPlainTextManager.measure reads back to size an off-screen TextView.
+  // (AndroidSwitch passes null here — its size is prop-independent; ours isn't.)
   //
-  // Only props that differ from their default are serialized: every entry costs
-  // a folly::dynamic insert plus a JNI-visible map slot on the per-node measure
-  // path, and typical usage sets two or three of these. This makes the C++ and
-  // Kotlin defaults a contract — RNPlainTextManager.measure() must fall back to
-  // exactly the default in Props.h for every key it reads, since an omitted key
-  // now means "default" rather than "not set by JS". It still has to set every
-  // size-affecting prop unconditionally, because the measuring view is reused.
+  // Only non-default props are serialized: each entry costs a folly::dynamic
+  // insert and a JNI-visible map slot per node, and typical usage sets two or
+  // three. That makes the defaults a contract — the Kotlin side must fall back
+  // to exactly the default in Props.h, since an omitted key now means "default".
   folly::dynamic serializedProps = folly::dynamic::object;
   if (!props.text.empty()) {
     serializedProps["text"] = props.text;
