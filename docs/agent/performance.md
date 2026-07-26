@@ -150,8 +150,8 @@ laid-out view whose size doesn't change, where Fabric emits no `updateLayout`.
 
 Fabric applies props one setter at a time and several feed the same expensive
 operation: three font props each re-resolved the typeface, and
-`text`/`lineHeight`/the scaling knobs each called `setText`. Setters now record
-state and set a dirty flag; `flushPendingUpdates()` does the work once, from
+`text`/`lineHeight`/the scaling knobs each called `setText`. Those setters now
+record state and set a dirty flag; `flushPendingUpdates()` does the work once, from
 `onAfterUpdateTransaction` (which `ViewManager.updateProperties` calls after the
 whole transaction) and before the off-screen measure — never from the view's
 `init`, which seeds the two values it needs itself (see

@@ -87,14 +87,20 @@ class RNPlainText : AppCompatTextView {
   //
   // Fabric applies props one setter at a time and several feed the same expensive
   // work: every font prop re-resolved the typeface, and text/lineHeight each called
-  // setText, dragging a requestLayout along. Setters only mark state dirty; this does
-  // the work once, like <Text>'s single prebuilt ReactTextUpdate.
+  // setText, dragging a requestLayout along. Those setters only mark state dirty; this
+  // does the work once, like <Text>'s single prebuilt ReactTextUpdate.
+  //
+  // Batched means shared work — typeface resolution, setText, anything derived from the
+  // scaled font size. The rest are one cheap independent write and apply inline; the
+  // unconditional requestLayout() a couple of them trigger (maxLines,
+  // justificationMode) is collapsed by the removeCallbacks/post at the bottom of the
+  // class.
   //
   // Never call it from init — its apply* helpers read state one call deep, which is
   // where Kotlin's initialization check stops looking.
   //
-  // SYNC: a new prop's setter must mark its flag, and this must apply it in dependency
-  // order. Set but never flushed silently does nothing.
+  // SYNC: a new prop feeding that shared work must mark its flag, and this must apply
+  // it in dependency order. Set but never flushed silently does nothing.
   fun flushPendingUpdates() {
     if (dirtyFontSize) {
       dirtyFontSize = false

@@ -27,7 +27,7 @@ count. All five, or the box and the text disagree:
 | `ios/PlainTextShadowNode.mm` → `measureContent` | iOS measures without it; must mirror `RNPlainText.mm`'s `applyContentFromProps` |
 | `android/.../PlainTextMeasurementsManager.cpp` | the prop never reaches the Android measure pass |
 | `RNPlainTextManager.kt` → `measure()` | same from the other side — and it must apply props exactly as the mounted view does |
-| `RNPlainText.kt` → setter + `flushPendingUpdates()` | the prop is recorded but never applied |
+| `RNPlainText.kt` → setter, plus `flushPendingUpdates()` if its work is batched | the prop is recorded but never applied |
 
 ## The three-way default contract
 
@@ -60,11 +60,20 @@ must hold because of that:
 
 ## Deferred prop application
 
-Setters on `RNPlainText` record state and set a dirty flag; `flushPendingUpdates()`
-does the work. A new prop's setter must mark the flag its work belongs to, and
-the flush must apply it in dependency order. A prop that is set but never
-flushed silently does nothing; a new read path that doesn't flush first sees
-stale state.
+Setters on `RNPlainText` whose work is **shared with other props** record state
+and set a dirty flag; `flushPendingUpdates()` does the work once. That covers
+typeface resolution, `setText`, and anything derived from the scaled font size —
+the props that used to redo the same expensive work several times per transaction.
+
+A new prop feeding any of that must mark the flag it belongs to, and the flush
+must apply it in dependency order. A prop that is set but never flushed silently
+does nothing; a new read path that doesn't flush first sees stale state.
+
+Props that map onto a single cheap independent write apply inline — there is
+nothing to coalesce, and a dirty flag would only add state to keep in sync. Some
+of them (`maxLines`, `justificationMode`) call `requestLayout()` unconditionally,
+which the `removeCallbacks`/`post` in `RNPlainText.requestLayout()` collapses to
+one re-layout per transaction.
 
 Flush happens in `RNPlainTextManager.onAfterUpdateTransaction` and before the
 off-screen `measure` — never in the view's `init`, for the reason below.

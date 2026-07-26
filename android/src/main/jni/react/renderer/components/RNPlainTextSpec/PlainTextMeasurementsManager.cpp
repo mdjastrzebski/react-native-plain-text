@@ -71,7 +71,7 @@ Size PlainTextMeasurementsManager::measure(
     serializedProps["numberOfLines"] = props.numberOfLines;
   }
   if (!props.allowFontScaling) {
-    serializedProps["allowFontScaling"] = props.allowFontScaling;
+    serializedProps["allowFontScaling"] = false;
   }
   if (props.maxFontSizeMultiplier != 0.0) {
     serializedProps["maxFontSizeMultiplier"] = props.maxFontSizeMultiplier;
