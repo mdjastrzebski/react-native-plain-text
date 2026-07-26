@@ -6,18 +6,7 @@
 #import <UIKit/UIKit.h>
 #import <cmath>
 
-// Shared with the Android shadow node; the podspec puts cpp/ on the header
-// search path.
-#import "PlainTextMeasurementHelpers.h"
-
 namespace facebook::react {
-
-bool PlainTextShadowNode::shouldNewRevisionDirtyMeasurement(
-    const ShadowNode &sourceShadowNode,
-    const ShadowNodeFragment &fragment) const
-{
-  return shouldRevisionDirtyMeasurement(sourceShadowNode, fragment, getConcreteProps());
-}
 
 // SYNC: must mirror what the mounted UILabel renders (RNPlainText.mm's
 // applyContentFromProps), and every prop read here must appear in

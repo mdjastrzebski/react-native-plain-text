@@ -31,13 +31,22 @@ bool measurementInputsEqual(
     const RNPlainTextProps &b);
 
 /*
- * Body of `PlainTextShadowNode::shouldNewRevisionDirtyMeasurement` for both
- * platforms. A free function rather than a shared base class, so each shadow
- * node stays a plain `ConcreteViewShadowNode` subclass.
+ * Whether a new revision of the node invalidates its cached measurement, for
+ * both platforms. A free function rather than a shared base class, so each
+ * shadow node stays a plain `ConcreteViewShadowNode` subclass.
  *
- * `newProps` is the caller's `getConcreteProps()`: the clone already carries the
- * new props by the time the override runs, so only the old ones come from
- * `sourceShadowNode`.
+ * Call this from the shadow node's **clone constructor**, not from
+ * `shouldNewRevisionDirtyMeasurement`. That override cannot answer the
+ * question: `YogaLayoutableShadowNode::completeClone` discards its own
+ * `sourceShadowNode` parameter and invokes the override with `*this`, whose
+ * `props_` the base `ShadowNode` clone constructor has already replaced with
+ * `fragment.props`. Passing that in would compare the new props against
+ * themselves — always equal, never dirty, and the stale size survives every
+ * update. The clone constructor is the last point where the two revisions are
+ * distinguishable, so the verdict is computed there and cached on the node.
+ *
+ * `newProps` is the *new* revision's `getConcreteProps()`; the old one is read
+ * off `sourceShadowNode`.
  */
 bool shouldRevisionDirtyMeasurement(
     const ShadowNode &sourceShadowNode,

@@ -28,6 +28,10 @@
 #include <react/renderer/components/RNPlainTextSpec/States.h>
 #include <react/renderer/components/view/ConcreteViewShadowNode.h>
 
+// Shared with the iOS shadow node; on the include path via the cpp/ directory
+// added in android/src/main/jni/CMakeLists.txt.
+#include "PlainTextMeasurementHelpers.h"
+
 namespace facebook::react {
 
 class PlainTextShadowNode final : public ConcreteViewShadowNode<
@@ -37,6 +41,31 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
                                      RNPlainTextState> {
  public:
   using ConcreteViewShadowNode::ConcreteViewShadowNode;
+
+  /*
+   * Clone constructor, declared only to decide `measurementInputsChanged_`.
+   *
+   * This is the one point where the source node and the new props are both
+   * reachable, so the verdict has to be computed here rather than in
+   * `shouldNewRevisionDirtyMeasurement` — see the comment on that override.
+   * Declaring it excludes the inherited constructor of the same signature.
+   *
+   * The base subobject is fully initialized before this member, so
+   * `getConcreteProps()` already returns the *new* props while
+   * `sourceShadowNode` still carries the old ones.
+   *
+   * `measurementsManager_` is left null here, as it would be by the inherited
+   * constructor; `RNPlainTextComponentDescriptor::adopt` re-wires it right
+   * after the clone completes.
+   */
+  PlainTextShadowNode(
+      const ShadowNode &sourceShadowNode,
+      const ShadowNodeFragment &fragment)
+      : ConcreteViewShadowNode(sourceShadowNode, fragment),
+        measurementInputsChanged_(shouldRevisionDirtyMeasurement(
+            sourceShadowNode,
+            fragment,
+            getConcreteProps())) {}
 
   static ShadowNodeTraits BaseTraits() {
     auto traits = ConcreteViewShadowNode::BaseTraits();
@@ -60,13 +89,27 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
    * The base implementation always invalidates, which would cost a JNI hop and
    * a TextView measure per node on any ancestor re-render. Logic is shared with
    * iOS in cpp/PlainTextMeasurementHelpers.h.
+   *
+   * Both parameters are useless here: `YogaLayoutableShadowNode::completeClone`
+   * discards its own `sourceShadowNode` and calls this with `*this`, which by
+   * then already holds `fragment.props`. Comparing those would compare the new
+   * props against themselves and never invalidate. The verdict is computed in
+   * the clone constructor instead, where the real source is still in scope.
    */
   bool shouldNewRevisionDirtyMeasurement(
-      const ShadowNode &sourceShadowNode,
-      const ShadowNodeFragment &fragment) const override;
+      const ShadowNode &,
+      const ShadowNodeFragment &) const override {
+    return measurementInputsChanged_;
+  }
 
  private:
   std::shared_ptr<PlainTextMeasurementsManager> measurementsManager_;
+
+  /*
+   * Whether this revision's props measure differently from the previous one.
+   * True on the create path, which never clones and never consults it.
+   */
+  bool measurementInputsChanged_{true};
 };
 
 } // namespace facebook::react

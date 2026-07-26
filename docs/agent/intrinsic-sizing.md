@@ -98,14 +98,49 @@ actually reads, so a revision changing only e.g. `color` keeps its cached size.
 
 Both the decision (`shouldRevisionDirtyMeasurement`) and the comparison it rests
 on (`measurementInputsEqual`) live in **`cpp/PlainTextMeasurementHelpers.{h,cpp}`**
-— the only C++ shared by both platforms, leaving each override a one-line
-delegation. The rest of the shadow node stays duplicated: the two
+— the only C++ shared by both platforms. The rest of the shadow node stays
+duplicated: the two
 `measureContent`s share nothing but their prop reads, since one is CoreText and
 the other a JNI hop.
 
 It reaches both builds through the podspec's `cpp/**/*.{h,cpp}` glob and through
 `shared_SRCS` + `SHARED_CPP_DIR` in `android/src/main/jni/CMakeLists.txt`; `cpp`
 is already in `package.json`'s `files`.
+
+### Where the comparison has to happen
+
+**`shouldRevisionDirtyMeasurement` is called from each shadow node's clone
+constructor, not from the `shouldNewRevisionDirtyMeasurement` override.** The
+override only returns the `bool` the constructor cached. This looks
+roundabout and is not: the override *cannot* do the comparison itself.
+
+`YogaLayoutableShadowNode::completeClone` discards its own `sourceShadowNode`
+parameter and calls the override with `*this`:
+
+```cpp
+void YogaLayoutableShadowNode::completeClone(
+    const ShadowNode& /*sourceShadowNode*/, const ShadowNodeFragment& fragment) {
+  if (getTraits().check(...MeasurableYogaNode) &&
+      (fragment.children || shouldNewRevisionDirtyMeasurement(*this, fragment)))
+    yogaNode_.setDirty(true);
+}
+```
+
+`ConcreteComponentDescriptor::cloneShadowNode` runs the clone constructor first
+and `completeClone` after, and the base `ShadowNode` clone constructor has by
+then already installed `fragment.props` as `props_`. So inside the override,
+`sourceShadowNode.getProps()` and `getConcreteProps()` are the *same object* —
+comparing them is comparing the new props against themselves. It is always
+equal, the node is never dirtied, and every size-affecting prop change keeps
+its stale frame. This shipped once; see the note in
+[performance.md](performance.md).
+
+The clone constructor is the last point where the two revisions are still
+distinguishable, so the verdict is computed there. Declaring it also excludes
+the inherited constructor of the same signature, which is why
+`using ConcreteViewShadowNode::ConcreteViewShadowNode;` can stay for the create
+path. This is also why RN's `ParagraphShadowNode` ignores `sourceShadowNode`
+entirely — it is useless in that position.
 
 Yoga *style* props are deliberately excluded from the comparison —
 `updateYogaProps` dirties the node on style changes independently.

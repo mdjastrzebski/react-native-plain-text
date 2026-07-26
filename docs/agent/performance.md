@@ -27,7 +27,7 @@ Starting point for the same scenario was ~450 ms commit and ~687 ms to painted.
 | Reuse the off-screen measuring view | commit 450 → 230 ms |
 | C++ micro-optimizations in the measure hop | commit 230 → 200 ms |
 | `requestLayout` scoping + batched prop application | mount half 488 → 307 ms (interaction 687 → ~505 ms) |
-| `shouldNewRevisionDirtyMeasurement` override | re-measures on an ancestor re-render: 1000 → 0 |
+| `shouldNewRevisionDirtyMeasurement` override | re-measures on an ancestor re-render: 1000 → 0 [†](#the-clone-invalidation-number-needs-a-re-measure) |
 
 The first two moved the JS half, the last two the UI half. Nothing moved both,
 which is why the `interaction`/`commit` split is worth keeping.
@@ -101,6 +101,26 @@ each clone dirtied its measurement. RN's `ParagraphShadowNode` overrides it to
 `fragment.props != nullptr`; ours goes further and compares the props
 measurement actually reads (`cpp/PlainTextMeasurementHelpers.{h,cpp}`, shared by
 both platforms), so a revision changing only e.g. `color` also keeps its size.
+
+The comparison runs in the shadow node's **clone constructor**, and the override
+just returns the cached verdict. It cannot run in the override itself —
+`completeClone` calls that with the *new* node, whose props are already the new
+ones. [intrinsic-sizing.md](intrinsic-sizing.md#where-the-comparison-has-to-happen)
+has the details; the paragraph below has the history.
+
+#### The clone-invalidation number needs a re-measure
+
+The `1000 → 0` figure above was recorded while the comparison still ran in the
+override, i.e. while it was comparing the new props against themselves and
+returning `false` unconditionally. Symptom: after mounting 1000 items on the
+Performance screen, changing the font size left every label at its old size.
+Fixed by moving the comparison into the clone constructor.
+
+The number itself is probably still sound — the ancestor-re-render path it
+measures goes through `fragment.props == nullptr`, which is the early return and
+was never affected by the bug. But it was produced by a binary that also had
+`0` re-measures on *real* prop changes, so it flattered the change either way,
+and it has not been re-run since the fix.
 
 ## Considered and rejected
 
@@ -186,9 +206,13 @@ stronger claims — or before assuming a change was a win everywhere.
 - **iOS has never been measured with the current metric.** Every number in this
   document is Android. iOS memory figures in the README predate the interaction
   metric entirely.
-- **The clone-invalidation override was verified on Android only.** It was added
-  to both platforms, but iOS hasn't been built since. It's shared C++ plus a
-  one-line delegation, so the risk is low — but it is untested there.
+- **The clone-invalidation override is unverified on both platforms since the
+  fix.** Its first version never invalidated anything (see
+  [above](#the-clone-invalidation-number-needs-a-re-measure)); the correction
+  moved the comparison into the clone constructor and neither platform has been
+  built since. Two things to check: mount 1000 items on the Performance screen
+  and confirm changing the font size actually resizes them, then re-run the
+  ancestor-re-render count to confirm the `1000 → 0` win survived.
 - **Scrolling and steady-state jank are unmeasured.** The harness only does a
   cold mount of 1000 views in one commit; real apps virtualize. For a long list
   the number that matters is dropped frames during scroll, and nothing here

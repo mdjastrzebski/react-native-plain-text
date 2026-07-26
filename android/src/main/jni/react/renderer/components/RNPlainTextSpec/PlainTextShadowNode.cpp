@@ -2,10 +2,6 @@
 
 #include <react/renderer/core/LayoutContext.h>
 
-// Shared with the iOS shadow node; on the include path via the cpp/ directory
-// added in android/src/main/jni/CMakeLists.txt.
-#include "PlainTextMeasurementHelpers.h"
-
 namespace facebook::react {
 
 // Note: `RNPlainTextComponentName` is defined by the generated ShadowNodes.cpp
@@ -16,13 +12,6 @@ void PlainTextShadowNode::setPlainTextMeasurementsManager(
     const std::shared_ptr<PlainTextMeasurementsManager> &measurementsManager) {
   ensureUnsealed();
   measurementsManager_ = measurementsManager;
-}
-
-bool PlainTextShadowNode::shouldNewRevisionDirtyMeasurement(
-    const ShadowNode &sourceShadowNode,
-    const ShadowNodeFragment &fragment) const {
-  return shouldRevisionDirtyMeasurement(
-      sourceShadowNode, fragment, getConcreteProps());
 }
 
 Size PlainTextShadowNode::measureContent(
