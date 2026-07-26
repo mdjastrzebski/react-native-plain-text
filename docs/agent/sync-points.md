@@ -43,8 +43,8 @@ The C++ side omits props still at their default, so an absent key means
 ## The reused measuring view
 
 `RNPlainTextManager.measure()` sizes one shared off-screen view rather than a
-fresh one per node (see [performance.md](performance.md) for why). That makes
-three things load-bearing:
+fresh one per node (see [performance.md](performance.md) for why). Three things
+must hold because of that:
 
 - **Set every size-affecting prop on every call**, with its default when absent
   — otherwise the previous node's value leaks into this one.
@@ -66,8 +66,41 @@ the flush must apply it in dependency order. A prop that is set but never
 flushed silently does nothing; a new read path that doesn't flush first sees
 stale state.
 
-Flush happens in `RNPlainTextManager.onAfterUpdateTransaction`, at the end of the
-view's `init`, and before the off-screen `measure`.
+Flush happens in `RNPlainTextManager.onAfterUpdateTransaction` and before the
+off-screen `measure` — never in the view's `init`, for the reason below.
+
+## Construction-time state
+
+`RNPlainText`'s `init` seeds `textSize` and `letterSpacing`, because Fabric skips
+setters for props still at their default and the off-screen measuring view always
+applies both — a view left on the theme's values would render at a size nothing
+measured.
+
+Kotlin runs property initializers and `init` blocks in declaration order, so a
+field declared **below** `init` still holds its zero-default while `init` runs —
+`allowFontScaling` false rather than true, `letterSpacingDip` 0f rather than NaN,
+`fontWeight` 0 rather than `UNSET`, a null `baseTypeface`. Anything `init` reads,
+directly or through a call, therefore gets that value instead of the written one:
+no crash, just the wrong font or size on every view. `init` currently reads only
+the first four fields, but which ones it reads is not a property you want a future
+edit to have to re-derive, hence the blanket rule.
+
+Two things keep that from happening, and only the first is enforced:
+
+- **Every field is declared in the `State` block above `init`.** For the four
+  fields `init` reads, Kotlin's "must be initialized" check makes a violation a
+  compile error.
+- **`toEffectivePixel` and `calculateLetterSpacing` are pure top-level functions,
+  not methods.** This is the unverified half. The check only fires for a field read
+  written *inside* `init`; it does not follow a call. Turn either function into a
+  method that reads the fields itself and every guarantee above silently
+  disappears, with nothing to show for it until someone reorders a field months
+  later.
+
+`requestLayout()` is a separate case that field order cannot fix: `TextView`'s
+constructor calls it before any initializer runs, so `measureAndLayout` is null
+there. The `width == 0 || height == 0` guard is what makes that safe — it is not
+only about Fabric's initial mount.
 
 ## Both platforms' shadow nodes
 

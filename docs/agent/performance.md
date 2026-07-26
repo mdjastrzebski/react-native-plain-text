@@ -153,7 +153,9 @@ operation: three font props each re-resolved the typeface, and
 `text`/`lineHeight`/the scaling knobs each called `setText`. Setters now record
 state and set a dirty flag; `flushPendingUpdates()` does the work once, from
 `onAfterUpdateTransaction` (which `ViewManager.updateProperties` calls after the
-whole transaction), from the view's `init`, and before the off-screen measure.
+whole transaction) and before the off-screen measure — never from the view's
+`init`, which seeds the two values it needs itself (see
+[sync-points.md](sync-points.md#construction-time-state)).
 
 Mirrors how RN's `<Text>` applies a single prebuilt `ReactTextUpdate`.
 

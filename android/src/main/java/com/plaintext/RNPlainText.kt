@@ -34,17 +34,72 @@ class RNPlainText : AppCompatTextView {
     defStyleAttr
   )
 
-  // Declared before the init block below because init calls setFontSizeSp, which
-  // reads all three; a property whose initializer runs after init would still be
-  // at its zero-default (notably allowFontScaling would be false, not true).
+  // --- State ------------------------------------------------------------------
+  //
+  // Every field is declared here, above the init block. Kotlin runs property
+  // initializers and init blocks in declaration order, so a field declared below
+  // init is still at its zero-default while init runs, which is a silent wrong value
+  // rather than a crash (allowFontScaling false instead of true, letterSpacingDip 0f
+  // instead of NaN, fontWeight 0 instead of UNSET, a null baseTypeface).
+  //
+  // SYNC: for the four fields init reads directly this is a compile error if
+  // violated, not just a convention — Kotlin's "must be initialized" check catches a
+  // field read written inside init. It does NOT follow a call, so the check
+  // disappears the moment init reads state through a helper instead. That is why the
+  // two conversions init needs are pure top-level functions at the bottom of this
+  // file taking their inputs as parameters; turning either back into a method
+  // removes the enforcement and nothing fails until someone reorders a field.
+
+  // The 14f default mirrors the codegen fontSize default — see init.
   private var fontSizeSp: Float = 14f
   // Font scaling knobs, mirroring RN's <Text> (TextAttributes): allowFontScaling
   // (default true) toggles whether sizes track the OS accessibility text-size
   // setting, and maxFontSizeMultiplier (0 = no cap) clamps that scale. Both feed
-  // toEffectivePixel below, which every sp-based size (font/line height/letter
-  // spacing) routes through.
+  // toEffectivePixel, which every sp-based size (font/line height/letter spacing)
+  // routes through.
   private var allowFontScaling: Boolean = true
   private var maxFontSizeMultiplier: Float = 0f
+  // NaN, not 0f, means "unset" — see calculateLetterSpacing.
+  private var letterSpacingDip: Float = Float.NaN
+
+  private var rawText: CharSequence? = null
+  // NaN means unset, keeping the font's natural line height — see setLineHeight.
+  private var lineHeightSp: Float = Float.NaN
+
+  private var fontFamily: String? = null
+  private var fontWeight: Int = ReactConstants.UNSET
+  private var fontStyle: Int = ReactConstants.UNSET
+
+  // A fixed base for applyTypeface, never the view's current typeface: with no
+  // fontFamily, ReactTypefaceUtils.applyStyles derives from whatever it is passed,
+  // so chaining off the live value lets an earlier family/weight survive a change
+  // that should have cleared it — and lets one node's font leak into the next
+  // through the reused measuring view.
+  private val baseTypeface: Typeface? = typeface
+
+  // Marks the off-screen instance RNPlainTextManager reuses for measurement. It is
+  // never attached to a window, so measureAndLayout would never run — it would just
+  // pile up in the pending-action queue, once per prop set, forever.
+  internal var isMeasureOnly: Boolean = false
+
+  // React Native's Fabric layout system assigns this view's frame directly and
+  // never triggers Android's normal measure/layout pass. TextView builds the text
+  // Layout it draws during onMeasure, so without this the text is never rendered.
+  // Re-run measure + layout ourselves whenever a layout is requested.
+  private val measureAndLayout = Runnable {
+    measure(
+      MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+      MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
+    )
+    layout(left, top, right, bottom)
+  }
+
+  // Marked by the prop setters, applied by flushPendingUpdates — see the batching
+  // note on it below.
+  private var dirtyFontSize = false
+  private var dirtyLetterSpacing = false
+  private var dirtyTypeface = false
+  private var dirtyText = false
 
   // --- Batched prop application ---------------------------------------------
   //
@@ -52,35 +107,39 @@ class RNPlainText : AppCompatTextView {
   // expensive work — three font props each re-resolved the typeface, and
   // text/lineHeight/the scaling knobs each called setText, every one dragging a
   // requestLayout behind it. So setters only mark state dirty and
-  // flushPendingUpdates() does the work once, the way RN's <Text> applies a
-  // single prebuilt ReactTextUpdate.
+  // flushPendingUpdates() does the work once, the way RN's <Text> applies a single
+  // prebuilt ReactTextUpdate.
   //
-  // Flushed from onAfterUpdateTransaction, from init, and before the off-screen
-  // measure.
+  // Flushed from onAfterUpdateTransaction and before the off-screen measure — never
+  // from construction. Between them the apply* helpers read most of this class's
+  // state one call deep, which is exactly where Kotlin's initialization check stops
+  // looking (see the State section above), so calling this from init would make the
+  // field order above silently rather than loudly wrong. init seeds the two values
+  // it needs itself, reading their fields at the call site.
   //
   // SYNC: a new prop's setter must mark the flag its work belongs to, and
-  // flushPendingUpdates must apply it in dependency order. A prop that is set
-  // but never flushed silently does nothing; a new read path that doesn't flush
-  // first sees stale state.
-  private var dirtyFontSize = false
-  private var dirtyLetterSpacing = false
-  private var dirtyTypeface = false
-  private var dirtyText = false
-
+  // flushPendingUpdates must apply it in dependency order. A prop that is set but
+  // never flushed silently does nothing; a new read path that doesn't flush first
+  // sees stale state.
   fun flushPendingUpdates() {
     if (dirtyFontSize) {
       dirtyFontSize = false
-      // Match RN's <Text> (TextAttributeProps.setFontSize) exactly: it converts
-      // sp to px itself and ceils to a whole pixel, where setTextSize(SP, ...)
-      // would leave a fractional value. The difference shifts the paint's font
-      // metrics and compounds into per-line drift over a multiline block.
-      setTextSize(TypedValue.COMPLEX_UNIT_PX, ceil(toEffectivePixel(fontSizeSp)))
+      // Ceiling to a whole pixel matches RN's <Text>
+      // (TextAttributeProps.setFontSize), which converts sp to px itself rather
+      // than letting setTextSize(SP, ...) leave a fractional value. The difference
+      // shifts the paint's font metrics and compounds into per-line drift over a
+      // multiline block.
+      setTextSize(
+        TypedValue.COMPLEX_UNIT_PX,
+        ceil(toEffectivePixel(fontSizeSp, allowFontScaling, maxFontSizeMultiplier))
+      )
       // letterSpacing is relative to the font size.
       dirtyLetterSpacing = true
     }
     if (dirtyLetterSpacing) {
       dirtyLetterSpacing = false
-      applyLetterSpacing()
+      letterSpacing =
+        calculateLetterSpacing(letterSpacingDip, textSize, allowFontScaling, maxFontSizeMultiplier)
     }
     if (dirtyTypeface) {
       dirtyTypeface = false
@@ -96,19 +155,36 @@ class RNPlainText : AppCompatTextView {
     // Default to black so text color matches iOS's UILabel default. The theme's
     // default TextView color is a gray, which would differ across platforms.
     setTextColor(Color.BLACK)
-    // Seed textSize to the codegen fontSize default (14sp). Fabric only calls
-    // setFontSize when the prop differs from that default, so a view using the
-    // default would otherwise keep the theme's TextView size and mismatch the
-    // 14sp the shadow node measures with — truncating the text.
-    setFontSizeSp(14f)
+    // A view whose props are never set still has to be self-consistent, so seed
+    // textSize from the fontSizeSp default above (the codegen fontSize default,
+    // 14sp). Fabric only calls setFontSize when the prop differs from that
+    // default, so a view using the default would otherwise keep the theme's
+    // TextView size and mismatch the 14sp the shadow node measures with —
+    // truncating the text.
+    //
+    // The fields are read here, in init, rather than inside a helper that reaches
+    // for them itself — that's what makes the declaration order above
+    // compiler-enforced instead of merely documented. See toEffectivePixel. Both
+    // conversions are the ones flushPendingUpdates applies above.
+    setTextSize(
+      TypedValue.COMPLEX_UNIT_PX,
+      ceil(toEffectivePixel(fontSizeSp, allowFontScaling, maxFontSizeMultiplier))
+    )
+    // Same reasoning for letter spacing, which a theme's textAppearance can set to
+    // a non-zero em value. The off-screen measuring view applies the letterSpacing
+    // prop on every measure, so a mounted view left on the theme's value would
+    // render wider than it was measured. (RN's <Text> has no equivalent seed —
+    // ReactTextView#setLetterSpacing returns early on NaN — so this is about
+    // agreeing with our own measure pass, not <Text> parity.) Must follow
+    // setTextSize: the em conversion divides by the current textSize.
+    letterSpacing =
+      calculateLetterSpacing(letterSpacingDip, textSize, allowFontScaling, maxFontSizeMultiplier)
     // RN's <Text> explicitly sets these (TextAttributeProps' DEFAULT_BREAK_STRATEGY /
     // DEFAULT_HYPHENATION_FREQUENCY) rather than relying on the platform/theme default,
     // which can differ (e.g. some widget styles default breakStrategy to "simple").
     // Match them so identical text wraps onto the same lines as <Text>.
     breakStrategy = Layout.BREAK_STRATEGY_HIGH_QUALITY
     hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
-    // A view whose props are never set still has to be self-consistent.
-    flushPendingUpdates()
   }
 
   // Mirrors RN's <Text> (TextAttributeProps#getEffectiveColor): a null value
@@ -142,22 +218,6 @@ class RNPlainText : AppCompatTextView {
     dirtyText = true
   }
 
-  // Mirrors RN's <Text> (TextAttributes#getEffective*): when font scaling is on,
-  // scale sp -> px through the OS setting, clamped by maxFontSizeMultiplier
-  // (PixelUtil ignores the cap unless it's >= 1); when off, treat the value as
-  // raw DIP so it renders at its literal size.
-  private fun toEffectivePixel(sp: Float): Float {
-    return if (allowFontScaling) {
-      PixelUtil.toPixelFromSP(sp, maxFontSizeMultiplier)
-    } else {
-      PixelUtil.toPixelFromDIP(sp)
-    }
-  }
-
-  private var rawText: CharSequence? = null
-  private var lineHeightSp: Float = Float.NaN
-  private var letterSpacingDip: Float = Float.NaN
-
   // Text is routed through here (rather than TextView.setText directly) so a
   // lineHeight span can be layered on when needed. Re-applied whenever the text
   // or the line height changes.
@@ -186,7 +246,9 @@ class RNPlainText : AppCompatTextView {
     // font-scaling path as the font size.
     val spannable = SpannableString(value)
     spannable.setSpan(
-      RNLineHeightSpan(toEffectivePixel(lineHeightSp)),
+      RNLineHeightSpan(
+        toEffectivePixel(lineHeightSp, allowFontScaling, maxFontSizeMultiplier)
+      ),
       0,
       spannable.length,
       Spannable.SPAN_INCLUSIVE_INCLUSIVE
@@ -194,21 +256,11 @@ class RNPlainText : AppCompatTextView {
     setText(spannable)
   }
 
-  // Mirrors RN's <Text> (TextAttributeProps#letterSpacing + ReactTextView): the
-  // DIP input is scaled to px and divided by the font size, because Android's
-  // TextView.letterSpacing is in em units (relative to the font size), unlike
-  // iOS's absolute point kerning.
+  // The field is declared above init, with the other values init seeds; see
+  // calculateLetterSpacing for the conversion.
   fun setLetterSpacingDip(letterSpacing: Float) {
     letterSpacingDip = letterSpacing
     dirtyLetterSpacing = true
-  }
-
-  private fun applyLetterSpacing() {
-    letterSpacing = if (letterSpacingDip.isNaN() || letterSpacingDip == 0f) {
-      0f
-    } else {
-      toEffectivePixel(letterSpacingDip) / textSize
-    }
   }
 
   // Mirrors RN's <Text> (ReactBaseTextShadowNode's UnderlineSpan/
@@ -229,17 +281,6 @@ class RNPlainText : AppCompatTextView {
       paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
     }
   }
-
-  private var fontFamily: String? = null
-  private var fontWeight: Int = ReactConstants.UNSET
-  private var fontStyle: Int = ReactConstants.UNSET
-
-  // A fixed base for applyTypeface, never the view's current typeface: with no
-  // fontFamily, ReactTypefaceUtils.applyStyles derives from whatever it is
-  // passed, so chaining off the live value lets an earlier family/weight survive
-  // a change that should have cleared it — and lets one node's font leak into
-  // the next through the reused measuring view.
-  private val baseTypeface: Typeface? = typeface
 
   // Mirrors RN's <Text> (TextAttributeProps#fontFamily): resolves against
   // ReactFontManager so custom fonts bundled the RN way (assets/fonts, or
@@ -341,23 +382,6 @@ class RNPlainText : AppCompatTextView {
     }
   }
 
-  // Marks the off-screen instance RNPlainTextManager reuses for measurement. It
-  // is never attached to a window, so the Runnable below would never run — it
-  // would just pile up in the pending-action queue, once per prop set, forever.
-  internal var isMeasureOnly: Boolean = false
-
-  // React Native's Fabric layout system assigns this view's frame directly and
-  // never triggers Android's normal measure/layout pass. TextView builds the
-  // text Layout it draws during onMeasure, so without this the text is never
-  // rendered. Re-run measure + layout ourselves whenever a layout is requested.
-  private val measureAndLayout = Runnable {
-    measure(
-      MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
-      MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
-    )
-    layout(left, top, right, bottom)
-  }
-
   override fun requestLayout() {
     super.requestLayout()
     // The ViewManager calls measure() on the measuring instance itself; it needs
@@ -368,10 +392,62 @@ class RNPlainText : AppCompatTextView {
     // — posting here would measure at 0x0, once per prop setter. What this hack
     // actually covers is the other case: a prop change on a laid-out view whose
     // size doesn't change, where Fabric emits no updateLayout.
+    //
+    // This guard also covers construction. TextView's own constructor calls
+    // requestLayout(), which lands here before any of our field initializers have
+    // run — measureAndLayout is still null at that point, so post() would throw if
+    // the zero-size check didn't return first. Field declaration order cannot fix
+    // that one: super() runs before every initializer regardless.
     if (width == 0 || height == 0) return
     // Several setters can request a layout within one transaction.
     removeCallbacks(measureAndLayout)
     post(measureAndLayout)
+  }
+}
+
+// Mirrors RN's <Text> (TextAttributes#getEffective*): when font scaling is on,
+// scale sp -> px through the OS setting, clamped by maxFontSizeMultiplier
+// (PixelUtil ignores the cap unless it's >= 1); when off, treat the value as raw
+// DIP so it renders at its literal size.
+//
+// Top-level and pure rather than a method, so the scaling inputs have to be passed
+// in and cannot be picked up from the view's fields. Do not "simplify" it into a
+// method: RNPlainText's init block seeds textSize through this, and Kotlin's "must
+// be initialized" check only fires for a field read written *inside* init — a read
+// one call deep is invisible to it, so a version free to reach for allowFontScaling
+// itself could silently see false instead of true. Taking the inputs as parameters
+// forces them to appear at the call site, where the compiler checks them.
+private fun toEffectivePixel(
+  sp: Float,
+  allowFontScaling: Boolean,
+  maxFontSizeMultiplier: Float,
+): Float {
+  return if (allowFontScaling) {
+    PixelUtil.toPixelFromSP(sp, maxFontSizeMultiplier)
+  } else {
+    PixelUtil.toPixelFromDIP(sp)
+  }
+}
+
+// Mirrors RN's <Text> (TextAttributeProps#letterSpacing + ReactTextView): the DIP
+// input is scaled to px and divided by the font size, because Android's
+// TextView.letterSpacing is in em units (relative to the font size), unlike iOS's
+// absolute point kerning. NaN or 0 means unset, which is 0 em.
+//
+// Pure and top-level for the same reason as toEffectivePixel above: init seeds
+// letterSpacing through this, so every input has to appear at the call site where
+// Kotlin's "must be initialized" check can see it. fontSizePx is the view's
+// already-applied textSize, not one of our fields.
+private fun calculateLetterSpacing(
+  letterSpacingDip: Float,
+  fontSizePx: Float,
+  allowFontScaling: Boolean,
+  maxFontSizeMultiplier: Float,
+): Float {
+  return if (letterSpacingDip.isNaN() || letterSpacingDip == 0f) {
+    0f
+  } else {
+    toEffectivePixel(letterSpacingDip, allowFontScaling, maxFontSizeMultiplier) / fontSizePx
   }
 }
 
