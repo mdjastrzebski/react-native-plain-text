@@ -27,7 +27,7 @@ Learned the hard way. Most of these cost an afternoon the first time.
   props (`SurfaceMountingManager.updateLayout`), which covers mounting — but a
   prop change on an already-laid-out view whose size doesn't change emits no
   `updateLayout`, and nothing else rebuilds the `Layout` that `TextView` draws.
-  `RNPlainText.kt` handles that in an overridden `requestLayout()`, scoped to
+  `PlainTextView.kt` handles that in an overridden `requestLayout()`, scoped to
   views that already have a frame. Keep it, and keep the scoping: unscoped, it
   posted thousands of redundant runnables per screen.
 - Text color is hardcoded black on both platforms (Android's theme default is

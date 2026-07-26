@@ -89,9 +89,9 @@ which is why the `interaction`/`commit` split is worth keeping.
 
 ## Implemented
 
-### Reuse the off-screen measuring view (`RNPlainTextManager.kt`)
+### Reuse the off-screen measuring view (`PlainTextViewManager.kt`)
 
-`measure()` allocated a fresh `RNPlainText` per node. Constructing an
+`measure()` allocated a fresh `PlainTextView` per node. Constructing an
 `AppCompatTextView` is expensive — theme attribute resolution for the text
 style, `AppCompatTextHelper`, emoji/tint helpers — roughly 100–200 µs, which
 dominated the layout pass. It is now a `ThreadLocal` scratch view, rebuilt only
@@ -133,7 +133,7 @@ The default-omission introduces a coupling: the Kotlin `measure()` fallbacks
 must match the defaults in the generated `Props.h` exactly, because an absent
 key now means "default", not "unset".
 
-### Scope the `requestLayout` re-measure hack (`RNPlainText.kt`)
+### Scope the `requestLayout` re-measure hack (`PlainTextView.kt`)
 
 The hack posts a `measureAndLayout` runnable so the mounted `TextView` rebuilds
 its draw `Layout`. It fired on *every* `requestLayout`, including during initial
@@ -146,7 +146,7 @@ Now guarded on `width`/`height` being non-zero, with `removeCallbacks` to
 coalesce. What the hack actually covers is the other case: a prop change on a
 laid-out view whose size doesn't change, where Fabric emits no `updateLayout`.
 
-### Batch prop application (`RNPlainText.kt` + `onAfterUpdateTransaction`)
+### Batch prop application (`PlainTextView.kt` + `onAfterUpdateTransaction`)
 
 Fabric applies props one setter at a time and several feed the same expensive
 operation: three font props each re-resolved the typeface, and

@@ -59,8 +59,8 @@ project's only C++/CMake/JNI, under `android/src/main/jni/`:
 - **`.../ComponentDescriptors.h`** — an override of the generated header *of the
   same include path*, defining a measuring `RNPlainTextComponentDescriptor` whose
   `adopt()` wires the manager onto the shadow node.
-- **`RNPlainTextManager.kt`** — overrides `measure(...)`: reads the serialized
-  props, sizes a reused off-screen `RNPlainText`, returns
+- **`PlainTextViewManager.kt`** — overrides `measure(...)`: reads the serialized
+  props, sizes a reused off-screen `PlainTextView`, returns
   `YogaMeasureOutput.make(...)`.
 
 ### Wiring (the fiddly part)

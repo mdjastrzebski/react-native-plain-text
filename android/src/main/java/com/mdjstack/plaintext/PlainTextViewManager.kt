@@ -1,4 +1,4 @@
-package com.plaintext
+package com.mdjstack.plaintext
 
 import android.content.Context
 import android.view.View
@@ -16,16 +16,16 @@ import com.facebook.yoga.YogaMeasureMode
 import com.facebook.yoga.YogaMeasureOutput
 import java.lang.ref.WeakReference
 
-@ReactModule(name = RNPlainTextManager.NAME)
-class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
-  RNPlainTextManagerInterface<RNPlainText> {
-  private val mDelegate: ViewManagerDelegate<RNPlainText>
+@ReactModule(name = PlainTextViewManager.NAME)
+class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
+  RNPlainTextManagerInterface<PlainTextView> {
+  private val mDelegate: ViewManagerDelegate<PlainTextView>
 
   init {
     mDelegate = RNPlainTextManagerDelegate(this)
   }
 
-  override fun getDelegate(): ViewManagerDelegate<RNPlainText>? {
+  override fun getDelegate(): ViewManagerDelegate<PlainTextView>? {
     return mDelegate
   }
 
@@ -33,92 +33,92 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     return NAME
   }
 
-  public override fun createViewInstance(context: ThemedReactContext): RNPlainText {
-    return RNPlainText(context)
+  public override fun createViewInstance(context: ThemedReactContext): PlainTextView {
+    return PlainTextView(context)
   }
 
   // The @ReactProp setters below only record state (see the batching block in
-  // RNPlainText); updateProperties calls this once the whole transaction is
+  // PlainTextView); updateProperties calls this once the whole transaction is
   // applied, so the recomputation runs once per view rather than once per prop.
-  override fun onAfterUpdateTransaction(view: RNPlainText) {
+  override fun onAfterUpdateTransaction(view: PlainTextView) {
     super.onAfterUpdateTransaction(view)
     view.flushPendingUpdates()
   }
 
   @ReactProp(name = "text")
-  override fun setText(view: RNPlainText?, text: String?) {
+  override fun setText(view: PlainTextView?, text: String?) {
     view?.setPlainText(text)
   }
 
   @ReactProp(name = "color", customType = "Color")
-  override fun setColor(view: RNPlainText?, color: Int?) {
+  override fun setColor(view: PlainTextView?, color: Int?) {
     view?.setColor(color)
   }
 
   // TextView.textSize uses SP units, which matches React Native's default of
   // scaling font sizes with the user's accessibility font settings.
   @ReactProp(name = "fontSize")
-  override fun setFontSize(view: RNPlainText?, fontSize: Float) {
+  override fun setFontSize(view: PlainTextView?, fontSize: Float) {
     view?.setFontSizeSp(fontSize)
   }
 
   @ReactProp(name = "fontFamily")
-  override fun setFontFamily(view: RNPlainText?, fontFamily: String?) {
+  override fun setFontFamily(view: PlainTextView?, fontFamily: String?) {
     view?.setFontFamily(fontFamily)
   }
 
   @ReactProp(name = "fontWeight")
-  override fun setFontWeight(view: RNPlainText?, fontWeight: String?) {
+  override fun setFontWeight(view: PlainTextView?, fontWeight: String?) {
     view?.setFontWeight(fontWeight)
   }
 
   @ReactProp(name = "fontStyle")
-  override fun setFontStyle(view: RNPlainText?, fontStyle: String?) {
+  override fun setFontStyle(view: PlainTextView?, fontStyle: String?) {
     view?.setFontStyle(fontStyle)
   }
 
   @ReactProp(name = "textAlign")
-  override fun setTextAlign(view: RNPlainText?, textAlign: String?) {
+  override fun setTextAlign(view: PlainTextView?, textAlign: String?) {
     view?.setTextAlign(textAlign)
   }
 
   @ReactProp(name = "textAlignVertical")
-  override fun setTextAlignVertical(view: RNPlainText?, textAlignVertical: String?) {
+  override fun setTextAlignVertical(view: PlainTextView?, textAlignVertical: String?) {
     view?.setTextAlignVertical(textAlignVertical)
   }
 
   @ReactProp(name = "textDecorationLine")
-  override fun setTextDecorationLine(view: RNPlainText?, textDecorationLine: String?) {
+  override fun setTextDecorationLine(view: PlainTextView?, textDecorationLine: String?) {
     view?.setTextDecorationLine(textDecorationLine)
   }
 
   @ReactProp(name = "lineHeight")
-  override fun setLineHeight(view: RNPlainText?, lineHeight: Float) {
+  override fun setLineHeight(view: PlainTextView?, lineHeight: Float) {
     view?.setLineHeight(lineHeight)
   }
 
   @ReactProp(name = "letterSpacing")
-  override fun setLetterSpacing(view: RNPlainText?, letterSpacing: Float) {
+  override fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float) {
     view?.setLetterSpacingDip(letterSpacing)
   }
 
   @ReactProp(name = "numberOfLines")
-  override fun setNumberOfLines(view: RNPlainText?, numberOfLines: Int) {
+  override fun setNumberOfLines(view: PlainTextView?, numberOfLines: Int) {
     view?.setNumberOfLines(numberOfLines)
   }
 
   @ReactProp(name = "ellipsizeMode")
-  override fun setEllipsizeMode(view: RNPlainText?, ellipsizeMode: String?) {
+  override fun setEllipsizeMode(view: PlainTextView?, ellipsizeMode: String?) {
     view?.setEllipsizeMode(ellipsizeMode)
   }
 
   @ReactProp(name = "allowFontScaling", defaultBoolean = true)
-  override fun setAllowFontScaling(view: RNPlainText?, allowFontScaling: Boolean) {
+  override fun setAllowFontScaling(view: PlainTextView?, allowFontScaling: Boolean) {
     view?.setAllowFontScaling(allowFontScaling)
   }
 
   @ReactProp(name = "maxFontSizeMultiplier")
-  override fun setMaxFontSizeMultiplier(view: RNPlainText?, maxFontSizeMultiplier: Float) {
+  override fun setMaxFontSizeMultiplier(view: PlainTextView?, maxFontSizeMultiplier: Float) {
     view?.setMaxFontSizeMultiplier(maxFontSizeMultiplier)
   }
 
@@ -201,9 +201,9 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
   // measured, i.e. for the rest of the session in an app whose ReactHost
   // outlives its Activity. Weakly, the view is a GC root only inside a single
   // measure() call, so a collection mid-pass costs one rebuild, not one per node.
-  private val measureViews = ThreadLocal<WeakReference<RNPlainText>>()
+  private val measureViews = ThreadLocal<WeakReference<PlainTextView>>()
 
-  private fun measureView(context: Context): RNPlainText {
+  private fun measureView(context: Context): PlainTextView {
     // The Context is the surface's ThemedReactContext, so it dies with the
     // surface; a cached view would resolve fonts against a torn-down theme.
     // Two live surfaces alternate through this check — but per commit, not per
@@ -211,7 +211,7 @@ class RNPlainTextManager : SimpleViewManager<RNPlainText>(),
     // one pass shares a surface. One extra construction per surface switch.
     measureViews.get()?.get()?.let { if (it.context === context) return it }
 
-    val view = RNPlainText(context)
+    val view = PlainTextView(context)
     view.isMeasureOnly = true
     // From the second measurement on, setText() reaches checkForRelayout(),
     // which dereferences the LayoutParams and crashes when they are null — the

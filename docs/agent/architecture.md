@@ -15,17 +15,25 @@ editing all four — and, if it affects measured size, five more
 3. **iOS** — `ios/RNPlainText.mm` (+ `.h`): an `RCTViewComponentView` subclass
    hosting a `UILabel`, applying props in `updateProps:` by diffing
    `oldViewProps`/`newViewProps`.
-4. **Android** — `android/src/main/java/com/plaintext/`: `RNPlainText.kt` (the
-   `TextView` subclass), `RNPlainTextManager.kt` (`@ReactProp` setters
-   implementing the codegen `...ManagerInterface`), `RNPlainTextPackage.kt`
-   (registration).
+4. **Android** — `android/src/main/java/com/mdjstack/plaintext/`:
+   `PlainTextView.kt` (the `TextView` subclass), `PlainTextViewManager.kt`
+   (`@ReactProp` setters implementing the codegen `...ManagerInterface`),
+   `PlainTextPackage.kt` (registration).
 
 Intrinsic sizing adds a custom `ShadowNode` on each platform — see
 [intrinsic-sizing.md](intrinsic-sizing.md).
 
-**Naming split:** the public JS API is `PlainText`, but the native component,
-codegen spec and pod are all `RNPlainText` (`package.json` → `codegenConfig`,
-name `RNPlainTextSpec`; podspec `RNPlainText.podspec`).
+**Naming split:** the `RN` prefix is reserved for names that share a global
+namespace — the native component name, the codegen spec, the pod and the iOS
+Objective-C classes are all `RNPlainText` (`package.json` → `codegenConfig`,
+name `RNPlainTextSpec`; podspec `RNPlainText.podspec`). The public JS API is
+`PlainText`, and the Android classes drop the prefix too: `PlainTextView`,
+`PlainTextViewManager`, `PlainTextPackage`. That follows react-native-screens and
+react-native-safe-area-context (`ScreenViewManager`, `SafeAreaViewManager`), and
+react-native-pager-view, whose unprefixed `PagerViewViewManager` implements the
+prefixed `RNCViewPagerManagerInterface` exactly as ours does. On Android the only
+prefixed names left are the generated ones we implement:
+`RNPlainTextManagerInterface` and `RNPlainTextManagerDelegate`.
 
 ## Prop conventions
 

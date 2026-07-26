@@ -113,7 +113,7 @@
     "type": "all",
     "jsSrcsDir": "src",
     "android": {
-      "javaPackageName": "com.plaintext"
+      "javaPackageName": "com.mdjstack.plaintext"
     },
     "ios": {
       "components": {

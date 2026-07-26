@@ -1,4 +1,4 @@
-package com.plaintext
+package com.mdjstack.plaintext
 
 import android.content.Context
 import android.graphics.Color
@@ -23,7 +23,7 @@ import kotlin.math.floor
 // Extends AppCompatTextView because RN's ReactTextView does: its compat font/paint
 // resolution shifts glyph metrics slightly, so a raw TextView drifted out of alignment
 // with <Text>.
-class RNPlainText : AppCompatTextView {
+class PlainTextView : AppCompatTextView {
   constructor(context: Context) : super(context)
   constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
   constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(
@@ -64,7 +64,7 @@ class RNPlainText : AppCompatTextView {
   // — and leak between nodes through the reused measuring view.
   private val baseTypeface: Typeface? = typeface
 
-  // The instance RNPlainTextManager reuses for measurement. Never attached to a
+  // The instance PlainTextViewManager reuses for measurement. Never attached to a
   // window, so measureAndLayout would queue forever, once per prop set.
   internal var isMeasureOnly: Boolean = false
 

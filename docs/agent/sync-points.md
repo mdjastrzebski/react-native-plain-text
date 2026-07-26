@@ -26,8 +26,8 @@ count. All five, or the box and the text disagree:
 | `cpp/PlainTextMeasurementHelpers.cpp` → `measurementInputsEqual` | the size goes stale after an update |
 | `ios/PlainTextShadowNode.mm` → `measureContent` | iOS measures without it; must mirror `RNPlainText.mm`'s `applyContentFromProps` |
 | `android/.../PlainTextMeasurementsManager.cpp` | the prop never reaches the Android measure pass |
-| `RNPlainTextManager.kt` → `measure()` | same from the other side — and it must apply props exactly as the mounted view does |
-| `RNPlainText.kt` → setter, plus `flushPendingUpdates()` if its work is batched | the prop is recorded but never applied |
+| `PlainTextViewManager.kt` → `measure()` | same from the other side — and it must apply props exactly as the mounted view does |
+| `PlainTextView.kt` → setter, plus `flushPendingUpdates()` if its work is batched | the prop is recorded but never applied |
 
 ## The three-way default contract
 
@@ -35,20 +35,20 @@ These must all agree, per prop:
 
 1. the default in the generated `Props.h`,
 2. the `if (prop != default)` condition in `PlainTextMeasurementsManager.cpp`,
-3. the fallback in `RNPlainTextManager.measure()`.
+3. the fallback in `PlainTextViewManager.measure()`.
 
 The C++ side omits props still at their default, so an absent key means
 "default", not "unset". A mismatch silently measures at the wrong size.
 
 ## The reused measuring view
 
-`RNPlainTextManager.measure()` sizes one shared off-screen view rather than a
+`PlainTextViewManager.measure()` sizes one shared off-screen view rather than a
 fresh one per node (see [performance.md](performance.md) for why). Three things
 must hold because of that:
 
 - **Set every size-affecting prop on every call**, with its default when absent
   — otherwise the previous node's value leaks into this one.
-- **Nothing in `RNPlainText` may derive new state from its own current state.**
+- **Nothing in `PlainTextView` may derive new state from its own current state.**
   `applyTypeface()` resolves against a fixed `baseTypeface` for exactly this
   reason: `ReactTypefaceUtils.applyStyles` derives from the typeface passed in
   when `fontFamily` is null, so chaining off the live value let one node's font
@@ -60,7 +60,7 @@ must hold because of that:
 
 ## Deferred prop application
 
-Setters on `RNPlainText` whose work is **shared with other props** record state
+Setters on `PlainTextView` whose work is **shared with other props** record state
 and set a dirty flag; `flushPendingUpdates()` does the work once. That covers
 typeface resolution, `setText`, and anything derived from the scaled font size —
 the props that used to redo the same expensive work several times per transaction.
@@ -72,15 +72,15 @@ does nothing; a new read path that doesn't flush first sees stale state.
 Props that map onto a single cheap independent write apply inline — there is
 nothing to coalesce, and a dirty flag would only add state to keep in sync. Some
 of them (`maxLines`, `justificationMode`) call `requestLayout()` unconditionally,
-which the `removeCallbacks`/`post` in `RNPlainText.requestLayout()` collapses to
+which the `removeCallbacks`/`post` in `PlainTextView.requestLayout()` collapses to
 one re-layout per transaction.
 
-Flush happens in `RNPlainTextManager.onAfterUpdateTransaction` and before the
+Flush happens in `PlainTextViewManager.onAfterUpdateTransaction` and before the
 off-screen `measure` — never in the view's `init`, for the reason below.
 
 ## Construction-time state
 
-`RNPlainText`'s `init` seeds `textSize` and `letterSpacing`, because Fabric skips
+`PlainTextView`'s `init` seeds `textSize` and `letterSpacing`, because Fabric skips
 setters for props still at their default and the off-screen measuring view always
 applies both — a view left on the theme's values would render at a size nothing
 measured.

@@ -32,7 +32,7 @@ apply plugin: "kotlin-android"
 apply plugin: "com.facebook.react"
 
 android {
-  namespace "com.plaintext"
+  namespace "com.mdjstack.plaintext"
 
   compileSdkVersion getExtOrDefault("compileSdkVersion")
 
