@@ -29,6 +29,12 @@ count. All five, or the box and the text disagree:
 | `PlainTextViewManager.kt` → `measure()` | same from the other side — and it must apply props exactly as the mounted view does |
 | `PlainTextView.kt` → setter, plus `flushPendingUpdates()` if its work is batched | the prop is recorded but never applied |
 
+The two iOS sites are the ones that have to agree *attribute by attribute*, with
+one exception: the `UIFont` itself is not mirrored. `fontFamily`, `fontSize`,
+`fontWeight` and `fontStyle` all go through `plainTextFont`
+(`ios/PlainTextFont.h`), so a change to font resolution lands on both sides at
+once. A new prop that feeds the font belongs in there, not in either caller.
+
 ## The three-way default contract
 
 These must all agree, per prop:

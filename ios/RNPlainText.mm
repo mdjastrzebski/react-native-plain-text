@@ -6,76 +6,19 @@
 #import <react/renderer/components/RNPlainTextSpec/RCTComponentViewHelpers.h>
 
 #import "PlainTextComponentDescriptor.h"
+#import "PlainTextFont.h"
 #import "RCTFabricComponentsPlugins.h"
 
 using namespace facebook::react;
 
-// Mirrors RCTFont.mm's core weight map (RCTConvert RCTFontWeight): the named
-// aliases beyond "normal"/"bold" (e.g. "ultralight", "condensed") are dropped
-// since codegen can't type fontWeight as an enum (see PlainTextViewNativeComponent.ts).
-static UIFontWeight RNPlainTextFontWeightFromProp(const std::string &fontWeight)
-{
-    static NSDictionary<NSString *, NSNumber *> *weights = @{
-        @"normal" : @(UIFontWeightRegular),
-        @"bold" : @(UIFontWeightBold),
-        @"100" : @(UIFontWeightUltraLight),
-        @"200" : @(UIFontWeightThin),
-        @"300" : @(UIFontWeightLight),
-        @"400" : @(UIFontWeightRegular),
-        @"500" : @(UIFontWeightMedium),
-        @"600" : @(UIFontWeightSemibold),
-        @"700" : @(UIFontWeightBold),
-        @"800" : @(UIFontWeightHeavy),
-        @"900" : @(UIFontWeightBlack),
-    };
-    NSString *key = [NSString stringWithUTF8String:fontWeight.c_str()];
-    NSNumber *weight = weights[key];
-    return weight != nil ? (UIFontWeight)weight.doubleValue : UIFontWeightRegular;
-}
-
 // The accessibility font-size multiplier to apply, mirroring RN's
-// RCTEffectiveFontSizeMultiplierFromTextAttributes: the system Dynamic Type
-// scale (RCTFontSizeMultiplier, same value the Fabric surface feeds into layout)
-// when allowFontScaling is on, clamped by maxFontSizeMultiplier when that is
-// >= 1. Runs on the main thread from updateProps; the shadow node mirrors this
-// with the layout context's fontSizeMultiplier for measurement.
+// RCTEffectiveFontSizeMultiplierFromTextAttributes. This runs on the main
+// thread from updateProps, so the base scale is read straight from
+// RCTFontSizeMultiplier(); the shadow node passes the layout context's
+// fontSizeMultiplier, which the Fabric surface seeds from the same value.
 static CGFloat RNPlainTextFontSizeMultiplier(const RNPlainTextProps &props)
 {
-    if (!props.allowFontScaling) {
-        return 1.0;
-    }
-    CGFloat multiplier = RCTFontSizeMultiplier();
-    if (props.maxFontSizeMultiplier >= 1.0) {
-        multiplier = fminf((CGFloat)props.maxFontSizeMultiplier, multiplier);
-    }
-    return multiplier;
-}
-
-static UIFont *RNPlainTextFontFromProps(const RNPlainTextProps &props)
-{
-    UIFontWeight weight = RNPlainTextFontWeightFromProp(props.fontWeight);
-    BOOL italic = props.fontStyle == RNPlainTextFontStyle::Italic;
-    CGFloat fontSize = props.fontSize * RNPlainTextFontSizeMultiplier(props);
-
-    UIFont *font;
-    if (!props.fontFamily.empty()) {
-        NSString *fontFamily = [NSString stringWithUTF8String:props.fontFamily.c_str()];
-        UIFontDescriptor *descriptor = [UIFontDescriptor fontDescriptorWithFontAttributes:@{
-            UIFontDescriptorFamilyAttribute : fontFamily,
-            UIFontDescriptorTraitsAttribute : @{UIFontWeightTrait : @(weight)},
-        }];
-        font = [UIFont fontWithDescriptor:descriptor size:fontSize];
-    } else {
-        font = [UIFont systemFontOfSize:fontSize weight:weight];
-    }
-
-    if (italic) {
-        UIFontDescriptor *italicDescriptor = [font.fontDescriptor
-            fontDescriptorWithSymbolicTraits:font.fontDescriptor.symbolicTraits | UIFontDescriptorTraitItalic];
-        font = [UIFont fontWithDescriptor:italicDescriptor size:fontSize];
-    }
-
-    return font;
+    return plainTextFontSizeMultiplier(props, RCTFontSizeMultiplier());
 }
 
 static NSTextAlignment RNPlainTextAlignmentFromProp(RNPlainTextTextAlign textAlign)
@@ -179,10 +122,12 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 // an NSAttributedString. This applies whichever form is needed from the current
 // props; call it whenever any text-content prop changes.
 // SYNC: PlainTextShadowNode::measureContent must mirror every attribute set
-// here, or the measured size won't match the drawn text.
+// here, or the measured size won't match the drawn text. The font is the one
+// exception — both sides go through plainTextFont (ios/PlainTextFont.h).
 - (void)applyContentFromProps:(const RNPlainTextProps &)props
 {
-    UIFont *font = RNPlainTextFontFromProps(props);
+    CGFloat fontSizeMultiplier = RNPlainTextFontSizeMultiplier(props);
+    UIFont *font = plainTextFont(props, props.fontSize * fontSizeMultiplier);
     UIColor *color = props.color ? RCTUIColorFromSharedColor(props.color) : [UIColor blackColor];
     NSTextAlignment alignment = RNPlainTextAlignmentFromProp(props.textAlign);
     NSString *text = [NSString stringWithUTF8String:props.text.c_str()] ?: @"";
@@ -231,7 +176,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         // lineHeight is in points, scaled by the same accessibility multiplier
         // as the font (mirrors RN <Text>, which multiplies lineHeight by the
         // effective font-size multiplier); pin the line box to it.
-        CGFloat lineHeight = props.lineHeight * RNPlainTextFontSizeMultiplier(props);
+        CGFloat lineHeight = props.lineHeight * fontSizeMultiplier;
         paragraphStyle.minimumLineHeight = lineHeight;
         paragraphStyle.maximumLineHeight = lineHeight;
         // Vertically center the glyphs within the enlarged line box, matching

@@ -6,12 +6,15 @@
 #import <UIKit/UIKit.h>
 #import <cmath>
 
+#import "PlainTextFont.h"
+
 namespace facebook::react {
 
 // SYNC: must mirror what the mounted UILabel renders (RNPlainText.mm's
 // applyContentFromProps), and every prop read here must appear in
 // `measurementInputsEqual` — otherwise the measured size drifts from the drawn
-// text, or goes stale after an update.
+// text, or goes stale after an update. The font is the one attribute that isn't
+// mirrored: both sides go through plainTextFont (PlainTextFont.h).
 Size PlainTextShadowNode::measureContent(
     const LayoutContext &layoutContext,
     const LayoutConstraints &layoutConstraints) const {
@@ -22,56 +25,12 @@ Size PlainTextShadowNode::measureContent(
     text = @"";
   }
 
-  // Accessibility font scaling, mirroring RNPlainTextFontSizeMultiplier in
-  // RNPlainText.mm so the measured size matches the mounted UILabel. The base
-  // scale comes from the layout context (the Fabric surface seeds it from
-  // RCTFontSizeMultiplier), clamped by maxFontSizeMultiplier when >= 1.
-  CGFloat fontSizeMultiplier = 1.0;
-  if (props.allowFontScaling) {
-    fontSizeMultiplier = layoutContext.fontSizeMultiplier;
-    if (props.maxFontSizeMultiplier >= 1.0) {
-      fontSizeMultiplier = fminf((CGFloat)props.maxFontSizeMultiplier, fontSizeMultiplier);
-    }
-  }
-  CGFloat fontSize = props.fontSize * fontSizeMultiplier;
-
-  // Mirrors RNPlainTextFontFromProps in RNPlainText.mm, so the measured size
-  // matches what the mounted UILabel will render.
-  static NSDictionary<NSString *, NSNumber *> *weights = @{
-      @"normal" : @(UIFontWeightRegular),
-      @"bold" : @(UIFontWeightBold),
-      @"100" : @(UIFontWeightUltraLight),
-      @"200" : @(UIFontWeightThin),
-      @"300" : @(UIFontWeightLight),
-      @"400" : @(UIFontWeightRegular),
-      @"500" : @(UIFontWeightMedium),
-      @"600" : @(UIFontWeightSemibold),
-      @"700" : @(UIFontWeightBold),
-      @"800" : @(UIFontWeightHeavy),
-      @"900" : @(UIFontWeightBlack),
-  };
-  NSString *fontWeightKey = [NSString stringWithUTF8String:props.fontWeight.c_str()];
-  NSNumber *weightNumber = weights[fontWeightKey];
-  UIFontWeight weight = weightNumber != nil ? (UIFontWeight)weightNumber.doubleValue : UIFontWeightRegular;
-  BOOL italic = props.fontStyle == RNPlainTextFontStyle::Italic;
-
-  UIFont *font;
-  if (!props.fontFamily.empty()) {
-    NSString *fontFamily = [NSString stringWithUTF8String:props.fontFamily.c_str()];
-    UIFontDescriptor *descriptor = [UIFontDescriptor fontDescriptorWithFontAttributes:@{
-        UIFontDescriptorFamilyAttribute : fontFamily,
-        UIFontDescriptorTraitsAttribute : @{UIFontWeightTrait : @(weight)},
-    }];
-    font = [UIFont fontWithDescriptor:descriptor size:fontSize];
-  } else {
-    font = [UIFont systemFontOfSize:fontSize weight:weight];
-  }
-
-  if (italic) {
-    UIFontDescriptor *italicDescriptor = [font.fontDescriptor
-        fontDescriptorWithSymbolicTraits:font.fontDescriptor.symbolicTraits | UIFontDescriptorTraitItalic];
-    font = [UIFont fontWithDescriptor:italicDescriptor size:fontSize];
-  }
+  // Accessibility font scaling. The base scale comes from the layout context
+  // (the Fabric surface seeds it from RCTFontSizeMultiplier, which is what the
+  // mounted view reads directly); the clamping on top of it is shared with that
+  // view, so the measured size matches.
+  CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
+  UIFont *font = plainTextFont(props, props.fontSize * fontSizeMultiplier);
 
   // Build the same attributes the mounted UILabel renders with, so the measured
   // size matches. Kerning (letterSpacing) widens the text; a pinned line height

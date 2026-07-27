@@ -159,6 +159,30 @@ whole transaction) and before the off-screen measure — never from the view's
 
 Mirrors how RN's `<Text>` applies a single prebuilt `ReactTextUpdate`.
 
+### Share and cache iOS font resolution (`ios/PlainTextFont.{h,mm}`)
+
+`RNPlainTextFontFromProps` in `RNPlainText.mm` and a hand-duplicated copy in
+`PlainTextShadowNode::measureContent` resolved the same `UIFont` from the same
+props — so mounting 1000 items ran 2000 uncached resolutions for what is usually
+a single distinct font. Both now call `plainTextFont`, backed by an `NSCache`
+keyed on the only four inputs that reach `UIFont`: family, size, weight, italic.
+
+Resolution is not free, which is why RN caches its own system fonts the same way
+(`RCTFont.mm`, `cachedSystemFont`). The custom-family path is the expensive one:
+`fontDescriptorWithFontAttributes:` + `fontWithDescriptor:` matches against the
+font database, and italic adds a second descriptor round-trip. `UIFont` and
+`NSCache` are both thread-safe, so the shadow thread and the main thread share
+one cache.
+
+This is the iOS counterpart to Android's batched typeface resolution, and unlike
+the changes above it *removes* a sync point rather than adding one — the two
+copies had to stay identical or the measured box wouldn't fit the drawn text.
+The cache clears on `kCTFontManagerRegisteredFontsChangedNotification`, so a font
+registered at runtime (expo-font) doesn't leave the earlier fallback cached.
+
+Not yet measured; the font path is a small share of an iOS commit dominated by
+CoreText layout.
+
 ### Skip measurement invalidation on structural clones (both platforms)
 
 The largest structural inefficiency, and invisible in a cold-mount benchmark:
@@ -370,3 +394,8 @@ comments — `grep -rn "SYNC:" src cpp ios android`.
 The shared failure mode is the same in all three: correct on first render, wrong
 after an update, and silent in between. Worth knowing before optimizing further
 in this area — each of these was cheap to add and would be expensive to debug.
+
+[Sharing iOS font resolution](#share-and-cache-ios-font-resolution-iosplaintextfonthmm)
+went the other way and removed one, which is the shape to aim for: the two
+copies of `RNPlainTextFontFromProps` were a sync point on their own, and folding
+them into `plainTextFont` was what made caching worth doing.
