@@ -200,7 +200,7 @@ class PlainTextView : AppCompatTextView {
     }
     val spannable = SpannableString(value)
     spannable.setSpan(
-      RNLineHeightSpan(
+      CustomLineHeightSpan(
         toEffectivePixel(lineHeightSp, allowFontScaling, maxFontSizeMultiplier)
       ),
       0,
@@ -361,10 +361,11 @@ private fun calculateLetterSpacing(
   }
 }
 
-// RN's CustomLineHeightSpan isn't public. Unlike LineHeightSpan.Standard it splits the
-// extra leading evenly above and below the text and also pads before the first line
-// and after the last, matching <Text> vertically.
-private class RNLineHeightSpan(height: Float) : LineHeightSpan {
+// A copy of RN's own CustomLineHeightSpan, which is `internal` to RN and so can't be
+// reused — same name on purpose, to keep the counterpart findable. Unlike
+// LineHeightSpan.Standard it splits the extra leading evenly above and below the text
+// and also pads before the first line and after the last, matching <Text> vertically.
+private class CustomLineHeightSpan(height: Float) : LineHeightSpan {
   private val lineHeight: Int = ceil(height.toDouble()).toInt()
 
   override fun chooseHeight(
