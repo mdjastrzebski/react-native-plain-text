@@ -2,6 +2,7 @@
 
 #import <CoreText/CoreText.h>
 
+#import <cmath>
 #import <string>
 
 namespace facebook::react {
@@ -29,11 +30,17 @@ static UIFontWeight fontWeightFromProp(const std::string &fontWeight)
   return weight != nil ? (UIFontWeight)weight.doubleValue : UIFontWeightRegular;
 }
 
+static constexpr char kFieldSeparator = '|';
+
 // The four cache inputs joined into one key. Assembled as a std::string and
 // bridged once, so a hit costs a single NSString allocation instead of a trip
-// through the font database. "\n" separates the fields because no font family
-// or weight token contains one — with a printable separator, a family named
-// "Foo|bold" could collide with the family "Foo" at weight "bold".
+// through the font database.
+//
+// fontFamily and fontWeight are adjacent free-form strings, so a separator
+// inside either shifts the boundary between them — family "Foo|" at weight
+// "bold" keys the same as family "Foo" at weight "|bold". Left unguarded: it
+// takes a fontWeight no real style produces, and the worst case is one wrong
+// font, consistently, since both callers share the key.
 static NSString *fontCacheKey(
     const std::string &fontFamily,
     CGFloat fontSize,
@@ -41,10 +48,16 @@ static NSString *fontCacheKey(
     bool italic)
 {
   std::string key = fontFamily;
-  key += '\n';
+  key += kFieldSeparator;
   key += fontWeight;
-  key += italic ? "\ni\n" : "\nn\n";
-  key += std::to_string(fontSize);
+  key += kFieldSeparator;
+  key += italic ? 'i' : 'n';
+  key += kFieldSeparator;
+  // Hundredths of a point, as an integer — sidestepping the padded
+  // "17.000000" that std::to_string gives a double, and the cost of formatting
+  // one. Sizes closer together than that render identically at any screen
+  // scale, so collapsing them onto one entry is correct rather than lossy.
+  key += std::to_string(std::lround(fontSize * 100));
   return [NSString stringWithUTF8String:key.c_str()];
 }
 
