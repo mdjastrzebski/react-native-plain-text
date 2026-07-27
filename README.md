@@ -19,21 +19,28 @@ Memory per mounted view:
 
 | Text size | `PlainText` | RN `Text` |
 | --- | --- | --- |
-| iOS, small | 28 KB | 56 KB |
-| iOS, regular | 43 KB | 83 KB |
-| iOS, large | 154 KB | 405 KB |
-| Android, typical instance | 38 KB | 51 KB |
+| iOS, small | 34.5 KB | 42.6 KB |
+| iOS, regular | 49.6 KB | 58.4 KB |
+| iOS, large | 148.6 KB | 197.6 KB |
+| Android, small | 35.1 KB | 52.9 KB |
+| Android, regular | 35.4 KB | 52.7 KB |
+| Android, large | 35.3 KB | 53.2 KB |
 
 Interaction latency — press until 1000 mounted views appear, as reported by
 RN's own Event Timing API, release builds:
 
 | | `PlainText` | RN `Text` |
 | --- | --- | --- |
-| Android, 1000 views (Pixel 3 device) | ~505 ms | ~720 ms\* |
-| iOS, 1000 views (M3 simulator) | ~195 ms | ~252 ms |
+| Android, 1000 views, small (Pixel 3 device) | 502 ms | 716 ms |
+| Android, 1000 views, regular (Pixel 3 device) | 505 ms | 724 ms |
+| Android, 1000 views, large (Pixel 3 device) | 504 ms | 718 ms |
+| iOS, 1000 views, small (iPhone 16 device) | 142 ms | 164 ms |
+| iOS, 1000 views, regular (iPhone 16 device) | 144 ms | 171 ms |
+| iOS, 1000 views, large (iPhone 16 device) | 165 ms | 210 ms |
 
-\* the `Text` figure is derived from an earlier measurement rather than read
-directly from Event Timing; see [performance.md](docs/agent/performance.md).
+Each figure is a mean of 3 runs; see [performance.md](docs/agent/performance.md)
+for the per-run numbers and the older single-run `commit`/`NativePlainText`
+breakdown.
 
 Compare within a row, never between rows: each row is one component against the
 other on one device, and the two rows say nothing about each other.

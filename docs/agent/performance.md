@@ -9,71 +9,95 @@ Directional, not a controlled benchmark.
 **Every comparison in this document is within one device.** `PlainText` vs
 `Text`, or one version of `PlainText` against another, on the same hardware.
 Nothing here compares iOS to Android, and no number on one platform's table
-means anything held against the other's — different devices, and in one case a
-simulator against a phone. Optimization decisions follow from the within-device
-deltas only.
+means anything held against the other's — different devices, and in some
+sections a simulator against a phone. Optimization decisions follow from the
+within-device deltas only.
 
 ## Where things stand
 
 ### Android — Pixel 3, physical device
 
+Release build, mount 1000 views in one state update, mean of 3 runs at each
+font size — same methodology and Large/Regular/Small tiers as the iOS table
+below.
+
+| | `PlainText` mem | `PlainText` interaction | `Text` mem | `Text` interaction | `NativeText` mem | `NativeText` interaction |
+| --- | --- | --- | --- | --- | --- | --- |
+| Large | 35.3 KB | 503.7 ms | 53.2 KB | 718.0 ms | 50.0 KB | 673.7 ms |
+| Regular | 35.4 KB | 504.7 ms | 52.7 KB | 724.3 ms | 50.1 KB | 675.0 ms |
+| Small | 35.1 KB | 502.0 ms | 52.9 KB | 716.3 ms | 50.4 KB | 675.7 ms |
+| **mean** | **35.3 KB** | **503.4 ms** | **52.9 KB** | **719.6 ms** | **50.2 KB** | **674.8 ms** |
+
+`PlainText` vs `Text`:
+
+| | mem | interaction |
+| --- | --- | --- |
+| Large | -33.6% | -29.9% |
+| Regular | -32.8% | -30.3% |
+| Small | -33.6% | -30.1% |
+| **average** | **-33.3%** | **-30.1%** |
+
+`NativeText` vs `Text` is again mostly flat across sizes (-4.8% to -6.1% mem,
+-6.2% to -6.8% interaction) — the same read as iOS below: most of `PlainText`'s
+margin over `Text` is the native implementation, not its JS wrapper.
+
+Unlike iOS, **memory and interaction barely move across font sizes** here — the
+three rows differ by well under 1%. `TextView` measurement cost scales with
+string content and layout, not directly with `UIFont`/`NSAttributedString`
+construction the way iOS's does, so a bigger font doesn't add proportionally
+more work on this platform.
+
+This mean-of-3 measurement replaces the single-run `interaction` figure this
+section used to report, including the earlier `Text` number that had been
+derived from a pre-Event-Timing measurement rather than read directly — these
+are real, repeated Event Timing runs. The `commit` (JS-thread) breakdown and the
+`NativePlainText` comparison below are still from that single earlier run and
+haven't been repeated per size:
+
 | | `PlainText` | `NativePlainText` | `Text` | `NativeText` |
 | --- | --- | --- | --- | --- |
-| interaction (press → mounted) | ~505 ms | ~490 ms | ~720 ms\* | ~677 ms |
 | commit (JS thread) | ~200 ms | ~175 ms | ~324 ms | ~272 ms |
-| memory/view | ~36 KB | ~36 KB | ~51 KB | — |
-
-\* derived: `Text` was measured before the switch to Event Timing, so this is
-its frame-loop number plus the measured ~13 ms input-dispatch offset. Re-measure
-before quoting it anywhere that matters.
 
 Starting point for the same scenario was ~450 ms commit and ~687 ms to painted.
 
-### iOS — simulator, MBP M3, release build
+### iOS — iPhone 16, physical device
 
-Single runs. The simulator is not an emulator: it runs the same arm64 binary
-against the same frameworks, and M3 single-core throughput sits in the same
-class as current A-series, so for `commit` — React, Fabric, Yoga and CoreText,
-all plain CPU work — this is a fair proxy for a modern iPhone. Neither throttles
-over a sub-second burst.
+Release build, mount 1000 views in one state update, median of 3 runs at each
+font size. Font size matters because it changes how much text pipeline there is
+to skip: Large is a headline-scale size, Regular is body text, Small is a
+caption — the same three tiers the example app's Large/Regular/Small buttons
+mount.
 
-Two things it is *not* good for: the UI-thread half goes through a different
-compositing and backing-store path than a device, and simulator memory footprint
-is not comparable to a phone's. Read it as a high-end iPhone either way — a
-mid-range or older one is much slower.
+| | `PlainText` mem | `PlainText` interaction | `Text` mem | `Text` interaction | `NativeText` mem | `NativeText` interaction |
+| --- | --- | --- | --- | --- | --- | --- |
+| Large | 148.6 KB | 165.0 ms | 197.6 KB | 210.3 ms | 196.5 KB | 202.0 ms |
+| Regular | 49.6 KB | 144.3 ms | 58.4 KB | 170.7 ms | 57.1 KB | 162.3 ms |
+| Small | 34.5 KB | 142.0 ms | 42.6 KB | 164.0 ms | 41.0 KB | 155.7 ms |
 
-| | `PlainText` | `Text` | ratio |
-| --- | --- | --- | --- |
-| mount 1000 — interaction | 195 ms | 252 ms | 1.3× |
-| mount 1000 — commit | 44 ms | 75 ms | 1.7× |
-| font size, 1000 mounted — interaction | 110 ms | 150 ms | 1.4× |
-| font size, 1000 mounted — commit | 34 ms | 62 ms | 1.8× |
-| re-render, 1000 mounted — interaction | 25 ms | 31 ms | 1.2× |
-| re-render, 1000 mounted — commit | 23 ms | 27 ms | 1.2× |
+`PlainText` vs `Text` (its JS wrapper included both sides):
 
-**The win here is on the JS thread, not the UI thread.** Commit is 1.7–1.8×
-better across mount and font size, while the UI-thread halves are much closer
-(mount 151 ms vs 177 ms — only 15%). What `PlainText` skips is RN's text
-pipeline (`AttributedString`, `ParagraphShadowNode`, the layout manager), and
-that work lives in commit. Handing a finished string to a `UILabel` is not
-dramatically cheaper than what RN already does on the UI side.
+| | mem | interaction |
+| --- | --- | --- |
+| Large | -24.8% | -21.6% |
+| Regular | -15.1% | -15.4% |
+| Small | -19.1% | -13.4% |
+| **average** | **-19.7%** | **-16.8%** |
 
-The commit half of that split is the trustworthy one; the UI-thread half is
-exactly what the simulator models least well, so treat the 15% as provisional.
+`NativeText` vs `Text` isolates the wrapper cost from the native win: it is
+mostly flat, -0.6% to -3.8% on memory and -4.0% to -5.1% on interaction across
+sizes — RN's own bare host component barely beats its JS-wrapped form here, so
+almost all of `PlainText`'s margin over `Text` is the native implementation, not
+avoiding a JS wrapper.
 
-Subtracting the re-render row from the font-size row isolates measurement, since
-both include the same screen chrome and React/Fabric bookkeeping: **11 ms per
-1000 measurements for `PlainText`, 35 ms for `Text`** — ~3× cheaper. Measuring a
-plain string with CoreText beats building an attributed string and running RN's
-layout manager over it.
+The win grows with font size rather than shrinking: Large shows the largest gap
+on both memory and time, Small the smallest. A bigger font means a longer
+`NSAttributedString` and more `NSLayoutManager` work for `Text` to build; `PlainText`
+skips that pipeline regardless of size, so the delta it avoids scales with it.
 
-11 ms out of a 34 ms commit also sets what measurement invalidation can save
-here: skipping it on an ancestor re-render is worth that much and no more. The
-override earns its place on iOS for correctness — without it sizes go stale —
-rather than for speed. (The mechanism differs by platform: iOS measures inline
-with CoreText, Android hops through JNI into a real `TextView`. That is an
-architectural difference, not something these numbers can size — the two
-platforms were measured on different hardware and are not comparable.)
+This mount-level view (memory and interaction only) replaces the earlier
+simulator-based numbers for this platform. It does not yet have a `commit`/
+UI-thread split the way the Android numbers do — no physical-device run of that
+split exists yet (see [Open opportunities](#open-opportunities)).
 
 ## What changed, in order
 
@@ -312,7 +336,7 @@ matters. Ordered by expected value if its trigger fires.
 
 | Idea | Expected value | Why not yet | Revisit when |
 | --- | --- | --- | --- |
-| **iOS mount path** | Unknown, but the UI thread is where `PlainText` leads least | On one iOS run, commit beats `Text` by ~1.7× while the UI-thread half of the same mount beats it by only ~1.2× (151 ms vs 177 ms) — so mounting, not measuring, is where the remaining headroom looks to be. Every mount-path fix so far has been Android-only, and nothing checks whether `applyContentFromProps` rebuilds the attributed string more than once per transaction | A physical-device iOS run reproduces that gap. The UI thread is exactly what a simulator models worst, so the ~1.2× may be an artifact |
+| **iOS mount path** | Unknown, but the UI thread is where `PlainText` leads least | The iPhone 16 mount numbers confirm a real, size-scaling win (13–25% on interaction) but only as one combined figure — nothing splits it into commit vs UI-thread the way the Pixel 3 numbers do, so whether the remaining headroom is in mounting or measuring is still unknown on device. Every mount-path fix so far has been Android-only, and nothing checks whether `applyContentFromProps` rebuilds the attributed string more than once per transaction | A physical-device iOS run adds the `performance.mark`/`measure` commit split alongside `interaction`, the way the Android numbers already do |
 | **View recycling** | Nothing on cold mount; real for list churn | `enableViewRecycling` defaults false, so not even RN's `<Text>` recycles ([details](#view-recycling)) | The flag flips, or a consuming app enables it. Do it with the flag on locally and a mount/unmount churn benchmark |
 | **Measurement LRU cache** (C++, keyed on size-affecting props + constraints) | Skips the JNI hop entirely on a hit | Zero benefit in a benchmark of 1000 unique strings | A real screen with repeated labels shows measurement cost |
 | **`StaticLayout` measure path** | Small, now that the view is reused | Parity risk, and Minikin shaping sits under both approaches ([details](#measure-via-staticlayoutboringlayout-instead-of-a-textview)) | Profiling shows measurement dominating again |
@@ -324,26 +348,34 @@ matters. Ordered by expected value if its trigger fires.
 Gaps in evidence rather than in implementation. Worth closing before making
 stronger claims — or before assuming a change was a win everywhere.
 
-- **iOS has never been measured on a physical device.** Every iOS figure is from
-  an M3 simulator. That is defensible for `commit` and for variant ratios, but
-  it leaves the UI-thread half and anything memory-related unconfirmed, and it
-  represents a top-end phone rather than a typical one. iOS memory figures in
-  the README are older still and predate the interaction metric entirely.
+- **iOS mount cost and memory are now measured on a physical device** (iPhone
+  16, [above](#ios--iphone-16-physical-device)), confirming the simulator's
+  directional read: `PlainText` beats `Text` on both mem and interaction, and
+  the win scales up with font size rather than down. What's still unconfirmed
+  on device is the `commit`/UI-thread split and the update scenarios
+  (re-render, font-size-on-mounted) — those numbers below remain simulator-only.
 - **The clone-invalidation override is verified on both platforms.** Prop
-  changes re-measure and ancestor re-renders don't. Each platform confirms it
-  against its own baseline — Android 165 vs 68 ms commit, iOS 34 vs 23 ms — and
-  those two pairs are separate results, not a comparison. Visual check passes on
-  both: labels resize, and iOS shows no rendering discrepancy against `Text`.
-  No longer an open question; kept here only because both are single runs.
+  changes re-measure and ancestor re-renders don't. Android confirms it against
+  its own baseline (165 vs 68 ms commit, physical device); iOS confirms it
+  against a simulator baseline (34 vs 23 ms commit) — those two are separate
+  results, not a comparison. Visual check passes on both: labels resize, and
+  iOS shows no rendering discrepancy against `Text`. No longer an open
+  question; kept here only because both are single runs, and the iOS one is
+  still simulator-only.
 - **Scrolling and steady-state jank are unmeasured.** The harness only does a
   cold mount of 1000 views in one commit; real apps virtualize. For a long list
   the number that matters is dropped frames during scroll, and nothing here
   reports it. The same `PerformanceObserver` can watch `longtask` entries, which
   would be the cheapest first step.
-- **`Text`'s interaction figure is derived**, not read from Event Timing — one
-  run with the current harness replaces it.
-- **All published numbers are single runs**, while [measuring.md](measuring.md)
-  asks for a median of five with the range.
+- **`Text`'s interaction figure is derived** only in the single-run Android
+  `commit`/`NativePlainText` table still sitting below the mean-of-3 numbers.
+  The mount-level Android and iOS tables above both read `Text` interaction
+  directly from Event Timing, no derivation.
+- **Most published numbers are still single runs.** The mount-level mem/
+  interaction tables (Android and iOS, both above) are now a mean of 3, closer
+  to but still short of the median-of-5 [measuring.md](measuring.md) asks for.
+  The `commit`/UI-thread breakdown, `NativePlainText`, and the update scenarios
+  (re-render, font-size-on-mounted) remain single runs.
 
 ## Mechanisms worth knowing
 
