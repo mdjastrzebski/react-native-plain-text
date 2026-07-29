@@ -89,36 +89,6 @@ export default function FeaturesScreen({ navigation }: Props) {
           Bold italic font style
         </TextItem>
       </Section>
-      {/* fontVariant turns OpenType features on, so a row only changes if the
-          font actually carries the feature: the platform system fonts cover the
-          figure styles, while small caps and the ligature sets are hit and miss.
-          A row that looks like the default one is that, not a broken prop. */}
-      <Section title="Font Variant">
-        {FONT_VARIANTS.map(({ label, fontVariant }) => (
-          <TextItem
-            key={label}
-            showText={showText}
-            style={{ fontSize: 18, fontVariant }}
-          >{`${label} — Waffle office 0123456789`}</TextItem>
-        ))}
-        {/* Figure spacing shows up as width: both rows have the same digit
-            count, so tabular figures make them equally wide (each row
-            shrink-wraps to its text) and proportional ones do not. */}
-        {TABULAR_FIGURE_ROWS.map((digits) => (
-          <TextItem
-            key={`tabular-${digits}`}
-            showText={showText}
-            style={{ fontSize: 18, fontVariant: ['tabular-nums'] }}
-          >{`${digits} tabular`}</TextItem>
-        ))}
-        {TABULAR_FIGURE_ROWS.map((digits) => (
-          <TextItem
-            key={`proportional-${digits}`}
-            showText={showText}
-            style={{ fontSize: 18, fontVariant: ['proportional-nums'] }}
-          >{`${digits} proportional`}</TextItem>
-        ))}
-      </Section>
       <Section title="Text Align">
         <TextItem showText={showText} style={styles.alignLeft} containerStyle={styles.wideRow}>
           This text is left-aligned within a wider fixed-width box.
@@ -293,6 +263,36 @@ export default function FeaturesScreen({ navigation }: Props) {
           maxFontSizeMultiplier 1.5: scales up to 1.5x.
         </TextItem>
       </Section>
+      {/* fontVariant turns OpenType features on, so a row only changes if the
+          font actually carries the feature: the platform system fonts cover the
+          figure styles, while small caps and the ligature sets are hit and miss.
+          A row that looks like the default one is that, not a broken prop. */}
+      <Section title="Font Variant">
+        {FONT_VARIANTS.map(({ label, fontVariant }) => (
+          <TextItem
+            key={label}
+            showText={showText}
+            style={{ fontSize: 18, fontVariant }}
+          >{`${label} — Waffle office 0123456789`}</TextItem>
+        ))}
+        {/* Figure spacing shows up as width: both rows have the same digit
+            count, so tabular figures make them equally wide (each row
+            shrink-wraps to its text) and proportional ones do not. */}
+        {TABULAR_FIGURE_ROWS.map((digits) => (
+          <TextItem
+            key={`tabular-${digits}`}
+            showText={showText}
+            style={{ fontSize: 18, fontVariant: ['tabular-nums'] }}
+          >{`${digits} tabular`}</TextItem>
+        ))}
+        {TABULAR_FIGURE_ROWS.map((digits) => (
+          <TextItem
+            key={`proportional-${digits}`}
+            showText={showText}
+            style={{ fontSize: 18, fontVariant: ['proportional-nums'] }}
+          >{`${digits} proportional`}</TextItem>
+        ))}
+      </Section>
       {/* Vertical alignment is Android-only (matches RN <Text>); on iOS it's a
           no-op. Each box is taller than its text so the position is visible. */}
       <Section title="Vertical Align (Android)">
@@ -336,6 +336,12 @@ export default function FeaturesScreen({ navigation }: Props) {
             matter. */}
         <TextItem showText={showText} style={styles.wrapProbe}>
           {'A\nBB\nthis line is longest  \nCCC'}
+        </TextItem>
+        {/* Same with more paragraphs, and with the longest one in the middle:
+            the width comes from a max over paragraphs, so order shouldn't
+            matter. */}
+        <TextItem showText={showText} style={styles.wrapProbe}>
+          {'A\nBB\nCCC\nthis line is longest  '}
         </TextItem>
         {/* No hard break, too long to fit → full constraint width. */}
         <TextItem showText={showText} style={styles.wrapProbe}>
@@ -544,6 +550,11 @@ const styles = StyleSheet.create({
   wideRow: {
     alignSelf: 'stretch',
   },
+  // No `right`, so the width stays auto: the Text shrink-wraps to its own text
+  // and wraps only at the container's full width. Pinning both edges stretched
+  // it to the container instead, and a demo whose style sets an explicit width
+  // (the align and multiline rows) still gets it from `style`, which is applied
+  // before this.
   overlay: {
     position: 'absolute',
     top: 0,
