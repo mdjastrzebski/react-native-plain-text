@@ -264,9 +264,20 @@ export default function FeaturesScreen({ navigation }: Props) {
         </TextItem>
       </Section>
       {/* fontVariant turns OpenType features on, so a row only changes if the
-          font actually carries the feature: the platform system fonts cover the
-          figure styles, while small caps and the ligature sets are hit and miss.
-          A row that looks like the default one is that, not a broken prop. */}
+          font actually carries the feature: the figure styles are the reliable
+          ones, while small caps and the ligature sets are hit and miss. A row
+          that looks like the default one is usually that, not a broken prop.
+
+          On Android the red <Text> overlay is the less capable of the two, for
+          two reasons in RN core. It only attaches the span that carries
+          fontFeatureSettings when fontStyle, fontWeight or fontFamily is set as
+          well (the CustomStyleSpan gate in TextLayoutManager.kt), so fontVariant
+          on its own does nothing; and its Fabric MapBuffer path maps only
+          small-caps, the figure styles and ss01-ss20, dropping the ligature and
+          contextual values (TextAttributeProps.setFontVariant). PlainText sets
+          the features straight on the paint and goes through
+          ReactTypefaceUtils.parseFontVariant, so neither limit applies — expect
+          rows where the gray box changes and the overlay doesn't. */}
       <Section title="Font Variant">
         {FONT_VARIANTS.map(({ label, fontVariant }) => (
           <TextItem

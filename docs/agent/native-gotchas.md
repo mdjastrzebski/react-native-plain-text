@@ -101,6 +101,35 @@ Learned the hard way. Most of these cost an afternoon the first time.
   black. iOS matches for the same reason — RN's `RCTAttributedTextUtils.mm`
   falls back to `[UIColor blackColor]`, not `labelColor`.
 
+- **RN `<Text>` under-supports `fontVariant` on Android, and `PlainText`
+  deliberately does not match it.** Two independent gaps in RN core, both read
+  from 0.83:
+  1. `fontFeatureSettings` reaches the paint only through `CustomStyleSpan`, and
+     both sites that attach that span (`TextLayoutManager`, in the two span
+     builders) are gated on
+     `fontStyle != UNSET || fontWeight != UNSET || fontFamily != null`. So
+     `fontVariant` set on its own does nothing, while setting any other font prop
+     next to it makes it work. There is no second path:
+     `TextLayoutManager.updateTextPaint`, the other place a paint gets font
+     attributes, never touches `fontFeatureSettings`. The span itself is fine —
+     it takes the value and applies it in both `updateDrawState` and
+     `updateMeasureState`; only the condition deciding whether it exists was
+     never extended.
+  2. `TextAttributeProps` maps the variant names twice.
+     `setFontVariant(ReadableArray)` delegates to
+     `ReactTypefaceUtils.parseFontVariant`, which covers the ligature and
+     contextual values; `setFontVariant(MapBuffer)` — the Fabric path —
+     reimplements the table inline and omits them, mapping only `small-caps`, the
+     figure styles and `ss01`–`ss20`. Fabric Android `<Text>` therefore supports
+     fewer values than iOS or RN's own legacy Android path.
+
+  `PlainTextView.kt` sets `fontFeatureSettings` unconditionally and goes through
+  `parseFontVariant`, so it has neither gap: `fontVariant` works on its own and
+  the ligature values work. This is the one place `PlainText` is knowingly _more_
+  capable than `<Text>` — the inverse of the usual parity risk, so expect rows in
+  the Features screen's Font Variant section where the `PlainText` box changes and
+  the `<Text>` overlay does not. Don't "fix" that by reproducing the gate.
+
 ## iOS
 
 - **Accepted limitation: wrapped text can break one word earlier than RN
