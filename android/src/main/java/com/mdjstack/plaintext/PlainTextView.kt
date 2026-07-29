@@ -15,6 +15,7 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import androidx.appcompat.widget.AppCompatTextView
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.views.text.ReactTypefaceUtils
@@ -301,6 +302,15 @@ class PlainTextView : AppCompatTextView {
   fun setFontStyle(fontStyle: String?) {
     this.fontStyle = ReactTypefaceUtils.parseFontStyle(fontStyle)
     dirtyTypeface = true
+  }
+
+  // Mirrors <Text> (TextAttributeProps#setFontVariant): the variant names become an
+  // OpenType feature-settings string on the paint, which is where Android expresses
+  // them — not on the typeface, so this doesn't feed applyTypeface. One cheap
+  // independent write, hence inline rather than a dirty flag. Null clears the
+  // features, which is what the measuring view needs when the prop is absent.
+  fun setFontVariant(fontVariant: ReadableArray?) {
+    fontFeatureSettings = ReactTypefaceUtils.parseFontVariant(fontVariant)
   }
 
   private fun applyTypeface() {

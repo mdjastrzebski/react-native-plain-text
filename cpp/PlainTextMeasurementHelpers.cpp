@@ -9,7 +9,8 @@ bool measurementInputsEqual(
     const RNPlainTextProps &b) {
   return a.text == b.text && a.fontSize == b.fontSize &&
       a.fontFamily == b.fontFamily && a.fontWeight == b.fontWeight &&
-      a.fontStyle == b.fontStyle && a.lineHeight == b.lineHeight &&
+      a.fontStyle == b.fontStyle && a.fontVariant == b.fontVariant &&
+      a.lineHeight == b.lineHeight &&
       a.letterSpacing == b.letterSpacing &&
       a.numberOfLines == b.numberOfLines &&
       a.allowFontScaling == b.allowFontScaling &&

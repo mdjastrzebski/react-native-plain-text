@@ -252,6 +252,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         oldViewProps.fontFamily != newViewProps.fontFamily ||
         oldViewProps.fontWeight != newViewProps.fontWeight ||
         oldViewProps.fontStyle != newViewProps.fontStyle ||
+        oldViewProps.fontVariant != newViewProps.fontVariant ||
         oldViewProps.textAlign != newViewProps.textAlign ||
         oldViewProps.color != newViewProps.color ||
         oldViewProps.lineHeight != newViewProps.lineHeight ||

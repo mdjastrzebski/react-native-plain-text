@@ -61,6 +61,15 @@ Size PlainTextMeasurementsManager::measure(
   if (props.fontStyle != RNPlainTextFontStyle::Normal) {
     serializedProps["fontStyle"] = toString(props.fontStyle);
   }
+  if (!props.fontVariant.empty()) {
+    // A dynamic array, so it arrives as a ReadableArray — what RN's own
+    // ReactTypefaceUtils.parseFontVariant takes on the other side.
+    folly::dynamic fontVariant = folly::dynamic::array;
+    for (const auto &variant : props.fontVariant) {
+      fontVariant.push_back(variant);
+    }
+    serializedProps["fontVariant"] = std::move(fontVariant);
+  }
   if (props.lineHeight != 0.0) {
     serializedProps["lineHeight"] = props.lineHeight;
   }

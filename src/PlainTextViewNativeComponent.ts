@@ -20,6 +20,12 @@ export interface NativeProps extends ViewProps {
   // fontWeight as plain `string`).
   fontWeight?: string;
   fontStyle?: CodegenTypes.WithDefault<'normal' | 'italic', 'normal'>;
+  // OpenType feature toggles, as RN <Text>'s fontVariant: variant names, each
+  // mapping to one or more font features. Strings rather than a literal union
+  // because codegen turns an array of enums into a bitmask enum; plain strings
+  // arrive as a ReadableArray on Android, which is what RN's own
+  // ReactTypefaceUtils.parseFontVariant takes. Empty means no features set.
+  fontVariant?: ReadonlyArray<string>;
   // Points. 0 means unset (matches RN <Text>, where lineHeight defaults to the
   // font's natural line height); any positive value overrides it.
   lineHeight?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;

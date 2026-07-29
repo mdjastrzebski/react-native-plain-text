@@ -32,6 +32,19 @@ function resolveTextAlignVertical(
   return textAlignVertical;
 }
 
+// RN types fontVariant as either an array of variant names or a CSS-style
+// `font-variant` string, and accepts both (ReactCommon's
+// parseUnprocessedFontVariant). The native prop takes only the array, so split
+// the string form on the separators CSS allows — the token names are the same
+// either way, so nothing else has to know which form arrived.
+function resolveFontVariant(fontVariant: TextStyle['fontVariant']): readonly string[] | undefined {
+  if (typeof fontVariant !== 'string') {
+    return fontVariant;
+  }
+  const variants = fontVariant.split(/[\s,]+/).filter((variant) => variant.length > 0);
+  return variants.length > 0 ? variants : undefined;
+}
+
 export function PlainText({
   children,
   style,
@@ -50,6 +63,7 @@ export function PlainText({
     fontFamily,
     fontWeight,
     fontStyle,
+    fontVariant,
     textAlign,
     textAlignVertical,
     verticalAlign,
@@ -67,6 +81,7 @@ export function PlainText({
       fontFamily={fontFamily}
       fontWeight={fontWeight != null ? String(fontWeight) : undefined}
       fontStyle={fontStyle}
+      fontVariant={resolveFontVariant(fontVariant)}
       textAlign={textAlign}
       textAlignVertical={resolveTextAlignVertical(textAlignVertical, verticalAlign)}
       textDecorationLine={textDecorationLine}

@@ -3,6 +3,7 @@ package com.mdjstack.plaintext
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.PixelUtil
@@ -99,6 +100,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setFontStyle(fontStyle)
   }
 
+  @ReactProp(name = "fontVariant")
+  override fun setFontVariant(view: PlainTextView?, fontVariant: ReadableArray?) {
+    view?.setFontVariant(fontVariant)
+  }
+
   @ReactProp(name = "textAlign")
   override fun setTextAlign(view: PlainTextView?, textAlign: String?) {
     view?.setTextAlign(textAlign)
@@ -183,6 +189,10 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setFontFamily(props?.getString("fontFamily")?.ifEmpty { null })
     view.setFontWeight(props?.getString("fontWeight")?.ifEmpty { null })
     view.setFontStyle(props?.getString("fontStyle")?.ifEmpty { null })
+    // fontVariant switches OpenType features that change glyph advances — tabular
+    // figures, small caps, ligatures — so the measured width depends on it. Absent
+    // means the C++ side had an empty list, which maps onto the same null.
+    view.setFontVariant(props?.getArray("fontVariant"))
     // letterSpacing widens the text (width) and lineHeight grows each line
     // (height), so both must be applied for the measured size to match.
     view.setLetterSpacingDip(if (props?.hasKey("letterSpacing") == true) props.getDouble("letterSpacing").toFloat() else 0f)

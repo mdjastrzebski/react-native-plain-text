@@ -53,6 +53,10 @@ Via `style={{ ... }}`:
 - `fontWeight`
 - `fontFamily`
 - `fontStyle`: `'normal' | 'italic'`
+- `fontVariant`: the full RN `<Text>` set — `'small-caps'`, the figure styles
+  (`'tabular-nums'`, `'oldstyle-nums'`, …), the ligature sets and
+  `'stylistic-one'`…`'stylistic-twenty'`. Each one only does something if the
+  rendered font carries that OpenType feature.
 - `lineHeight`
 - `letterSpacing`
 - `textAlign`
@@ -80,7 +84,7 @@ Via `style={{ ... }}`:
 - `textDecorationColor` / `textDecorationStyle`
 - `textShadowColor` / `textShadowOffset` / `textShadowRadius`
 - `includeFontPadding` (Android)
-- `fontVariant`, `fontVariationSettings`
+- `fontVariationSettings`
 - `adjustsFontSizeToFit` / `minimumFontScale`: the most expensive item on the
   list, and the only one that is more than a prop. Shrinking text to fit needs
   the view's final frame, which the measurement pass — the thing that decides

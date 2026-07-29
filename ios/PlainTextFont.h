@@ -35,8 +35,8 @@ CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseM
 
 /*
  * The UIFont for these props at `fontSize`, which the caller has already scaled
- * by `plainTextFontSizeMultiplier`. Cached, keyed on the only four inputs that
- * reach UIFont: fontFamily, fontSize, fontWeight and italic.
+ * by `plainTextFontSizeMultiplier`. Cached, keyed on the only five inputs that
+ * reach UIFont: fontFamily, fontSize, fontWeight, italic and fontVariant.
  *
  * Callable from any thread: UIFont and NSCache are both thread-safe, so the
  * shadow thread and the main thread share one cache.

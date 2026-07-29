@@ -4,6 +4,7 @@
 
 #import <cmath>
 #import <string>
+#import <vector>
 
 namespace facebook::react {
 
@@ -30,9 +31,79 @@ static UIFontWeight fontWeightFromProp(const std::string &fontWeight)
   return weight != nil ? (UIFontWeight)weight.doubleValue : UIFontWeightRegular;
 }
 
+// Mirrors RCTFont.mm's RCTFontVariantDescriptor map: each fontVariant name
+// names one OpenType feature, expressed as the type/selector identifier pair
+// UIFontDescriptor takes. Unrecognized names are dropped, as RN drops them.
+static NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors()
+{
+  static NSDictionary<NSString *, NSDictionary *> *descriptors;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+#define RNPlainTextFeature(type, selector) \
+  @{UIFontFeatureTypeIdentifierKey : @(type), UIFontFeatureSelectorIdentifierKey : @(selector)}
+    descriptors = @{
+      @"small-caps" : RNPlainTextFeature(kLowerCaseType, kLowerCaseSmallCapsSelector),
+      @"oldstyle-nums" : RNPlainTextFeature(kNumberCaseType, kLowerCaseNumbersSelector),
+      @"lining-nums" : RNPlainTextFeature(kNumberCaseType, kUpperCaseNumbersSelector),
+      @"tabular-nums" : RNPlainTextFeature(kNumberSpacingType, kMonospacedNumbersSelector),
+      @"proportional-nums" : RNPlainTextFeature(kNumberSpacingType, kProportionalNumbersSelector),
+      @"common-ligatures" : RNPlainTextFeature(kLigaturesType, kCommonLigaturesOnSelector),
+      @"no-common-ligatures" : RNPlainTextFeature(kLigaturesType, kCommonLigaturesOffSelector),
+      @"discretionary-ligatures" : RNPlainTextFeature(kLigaturesType, kRareLigaturesOnSelector),
+      @"no-discretionary-ligatures" : RNPlainTextFeature(kLigaturesType, kRareLigaturesOffSelector),
+      @"historical-ligatures" : RNPlainTextFeature(kLigaturesType, kHistoricalLigaturesOnSelector),
+      @"no-historical-ligatures" : RNPlainTextFeature(kLigaturesType, kHistoricalLigaturesOffSelector),
+      @"contextual" : RNPlainTextFeature(kContextualAlternatesType, kContextualAlternatesOnSelector),
+      @"no-contextual" : RNPlainTextFeature(kContextualAlternatesType, kContextualAlternatesOffSelector),
+      @"stylistic-one" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltOneOnSelector),
+      @"stylistic-two" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwoOnSelector),
+      @"stylistic-three" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltThreeOnSelector),
+      @"stylistic-four" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFourOnSelector),
+      @"stylistic-five" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFiveOnSelector),
+      @"stylistic-six" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSixOnSelector),
+      @"stylistic-seven" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSevenOnSelector),
+      @"stylistic-eight" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltEightOnSelector),
+      @"stylistic-nine" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltNineOnSelector),
+      @"stylistic-ten" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTenOnSelector),
+      @"stylistic-eleven" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltElevenOnSelector),
+      @"stylistic-twelve" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwelveOnSelector),
+      @"stylistic-thirteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltThirteenOnSelector),
+      @"stylistic-fourteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFourteenOnSelector),
+      @"stylistic-fifteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFifteenOnSelector),
+      @"stylistic-sixteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSixteenOnSelector),
+      @"stylistic-seventeen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSeventeenOnSelector),
+      @"stylistic-eighteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltEighteenOnSelector),
+      @"stylistic-nineteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltNineteenOnSelector),
+      @"stylistic-twenty" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwentyOnSelector),
+    };
+#undef RNPlainTextFeature
+  });
+  return descriptors;
+}
+
+// The feature settings for these variant names, or nil when none of them
+// resolve — the caller skips the descriptor round-trip in that case.
+static NSArray<NSDictionary *> *fontFeatureSettings(const std::vector<std::string> &fontVariant)
+{
+  if (fontVariant.empty()) {
+    return nil;
+  }
+
+  NSDictionary<NSString *, NSDictionary *> *descriptors = fontVariantDescriptors();
+  NSMutableArray<NSDictionary *> *features = [NSMutableArray arrayWithCapacity:fontVariant.size()];
+  for (const std::string &variant : fontVariant) {
+    NSString *name = [NSString stringWithUTF8String:variant.c_str()];
+    NSDictionary *feature = name != nil ? descriptors[name] : nil;
+    if (feature != nil) {
+      [features addObject:feature];
+    }
+  }
+  return features.count > 0 ? features : nil;
+}
+
 static constexpr char kFieldSeparator = '|';
 
-// The four cache inputs joined into one key. Assembled as a std::string and
+// The five cache inputs joined into one key. Assembled as a std::string and
 // bridged once, so a hit costs a single NSString allocation instead of a trip
 // through the font database.
 //
@@ -41,11 +112,16 @@ static constexpr char kFieldSeparator = '|';
 // "bold" keys the same as family "Foo" at weight "|bold". Left unguarded: it
 // takes a fontWeight no real style produces, and the worst case is one wrong
 // font, consistently, since both callers share the key.
+//
+// The variant names go last, where the same ambiguity is unreachable: every
+// name the mapping recognizes is separator-free, so a list that could be
+// misread contains only names that resolve to no feature either way.
 static NSString *fontCacheKey(
     const std::string &fontFamily,
     CGFloat fontSize,
     const std::string &fontWeight,
-    bool italic)
+    bool italic,
+    const std::vector<std::string> &fontVariant)
 {
   std::string key = fontFamily;
   key += kFieldSeparator;
@@ -58,6 +134,10 @@ static NSString *fontCacheKey(
   // one. Sizes closer together than that render identically at any screen
   // scale, so collapsing them onto one entry is correct rather than lossy.
   key += std::to_string(std::lround(fontSize * 100));
+  for (const std::string &variant : fontVariant) {
+    key += kFieldSeparator;
+    key += variant;
+  }
   return [NSString stringWithUTF8String:key.c_str()];
 }
 
@@ -97,7 +177,7 @@ CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseM
 UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSize)
 {
   bool italic = props.fontStyle == RNPlainTextFontStyle::Italic;
-  NSString *key = fontCacheKey(props.fontFamily, fontSize, props.fontWeight, italic);
+  NSString *key = fontCacheKey(props.fontFamily, fontSize, props.fontWeight, italic, props.fontVariant);
 
   NSCache<NSString *, UIFont *> *cache = fontCache();
   UIFont *font = [cache objectForKey:key];
@@ -121,6 +201,15 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSize)
     UIFontDescriptor *italicDescriptor = [font.fontDescriptor
         fontDescriptorWithSymbolicTraits:font.fontDescriptor.symbolicTraits | UIFontDescriptorTraitItalic];
     font = [UIFont fontWithDescriptor:italicDescriptor size:fontSize];
+  }
+
+  // Last, as in RCTFont.mm: the features are added to whatever descriptor the
+  // family/weight/italic resolution ended up with.
+  NSArray<NSDictionary *> *features = fontFeatureSettings(props.fontVariant);
+  if (features != nil && font != nil) {
+    UIFontDescriptor *featureDescriptor = [font.fontDescriptor
+        fontDescriptorByAddingAttributes:@{UIFontDescriptorFeatureSettingsAttribute : features}];
+    font = [UIFont fontWithDescriptor:featureDescriptor size:fontSize];
   }
 
   if (font != nil) {
