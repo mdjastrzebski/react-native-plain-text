@@ -56,10 +56,10 @@ Via `style={{ ... }}`:
 - `fontVariant`: the full RN `<Text>` set — `'small-caps'`, the figure styles
   (`'tabular-nums'`, `'oldstyle-nums'`, …), the ligature sets and
   `'stylistic-one'`…`'stylistic-twenty'`. Each one only does something if the
-  rendered font carries that OpenType feature. On Android it applies in two cases
-  where RN `<Text>` currently drops it: `fontVariant` set on its own, with no
-  other font prop alongside it, and the ligature/contextual values under the New
-  Architecture.
+  rendered font carries that OpenType feature. Two cases where this applies but RN
+  `<Text>` currently drops the value: the ligature and contextual variants, which
+  the New Architecture discards on both platforms, and — on Android only —
+  `fontVariant` set on its own, with no other font prop next to it.
 - `lineHeight`
 - `letterSpacing`
 - `textAlign`

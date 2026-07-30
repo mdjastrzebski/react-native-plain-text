@@ -268,22 +268,22 @@ export default function FeaturesScreen({ navigation }: Props) {
           ones, while small caps and the ligature sets are hit and miss. A row
           that looks like the default one is usually that, not a broken prop.
 
-          On Android the red <Text> overlay is the less capable of the two, for
-          two reasons in RN core. It only attaches the span that carries
-          fontFeatureSettings when fontStyle, fontWeight or fontFamily is set as
-          well (the CustomStyleSpan gate in TextLayoutManager.kt), so fontVariant
-          on its own does nothing; and its Fabric MapBuffer path maps only
-          small-caps, the figure styles and ss01-ss20, dropping the ligature and
-          contextual values (TextAttributeProps.setFontVariant). PlainText sets
-          the features straight on the paint and goes through
-          ReactTypefaceUtils.parseFontVariant, so neither limit applies — expect
-          rows where the gray box changes and the overlay doesn't. */}
+          The red <Text> overlay is the less capable of the two here, for two
+          reasons in RN core. Its New Architecture props layer has no room for the
+          ligature and contextual values at all — the C++ FontVariant bitmask
+          covers only small-caps, the figure styles and ss01-ss20 — so those rows
+          never change on either platform. And on Android it only applies what
+          survives when fontStyle, fontWeight or fontFamily is set as well, which
+          is why these rows pass fontStyle 'normal' (see fontVariantRow below).
+          PlainText has its own mapping and applies it unconditionally, so expect
+          rows where the gray box changes and the overlay doesn't; both are
+          spelled out in docs/agent/native-gotchas.md. */}
       <Section title="Font Variant">
         {FONT_VARIANTS.map(({ label, fontVariant }) => (
           <TextItem
             key={label}
             showText={showText}
-            style={{ fontSize: 18, fontVariant }}
+            style={{ ...fontVariantRow, fontVariant }}
           >{`${label} — Waffle office 0123456789`}</TextItem>
         ))}
         {/* Figure spacing shows up as width: both rows have the same digit
@@ -293,14 +293,14 @@ export default function FeaturesScreen({ navigation }: Props) {
           <TextItem
             key={`tabular-${digits}`}
             showText={showText}
-            style={{ fontSize: 18, fontVariant: ['tabular-nums'] }}
+            style={{ ...fontVariantRow, fontVariant: ['tabular-nums'] }}
           >{`${digits} tabular`}</TextItem>
         ))}
         {TABULAR_FIGURE_ROWS.map((digits) => (
           <TextItem
             key={`proportional-${digits}`}
             showText={showText}
-            style={{ fontSize: 18, fontVariant: ['proportional-nums'] }}
+            style={{ ...fontVariantRow, fontVariant: ['proportional-nums'] }}
           >{`${digits} proportional`}</TextItem>
         ))}
       </Section>
@@ -653,6 +653,17 @@ const TEXT_DECORATION_LINES = [
   'underline line-through',
 ] as const;
 
+// `fontStyle: 'normal'` is not cosmetic — it is what makes the red <Text> overlay
+// show any of this on Android. RN only attaches the span that carries
+// fontFeatureSettings when fontStyle, fontWeight or fontFamily is set too, so
+// fontVariant on its own renders unchanged there (see
+// docs/agent/native-gotchas.md). Applied to both sides rather than to the overlay
+// alone, so the comparison stays apples-to-apples: it is a no-op for PlainText,
+// which already resolves fontStyle 'normal' the same as unset. It does nudge RN's
+// own paint — the span also sets isSubpixelText/isLinearText — which is
+// unavoidable, since that span is RN's only carrier for the features.
+const fontVariantRow: TextStyle = { fontSize: 18, fontStyle: 'normal' };
+
 // Typed against TextStyle rather than inferred: the literal unions are what make
 // each entry assignable to the style prop's FontVariant[].
 const FONT_VARIANTS: { label: string; fontVariant?: TextStyle['fontVariant'] }[] = [
@@ -660,7 +671,13 @@ const FONT_VARIANTS: { label: string; fontVariant?: TextStyle['fontVariant'] }[]
   { label: 'small-caps', fontVariant: ['small-caps'] },
   { label: 'oldstyle-nums', fontVariant: ['oldstyle-nums'] },
   { label: 'lining-nums', fontVariant: ['lining-nums'] },
+  // 'liga'/'clig' are on by default in both system fonts, so this row asks for
+  // what is already there and can't show a difference either way. Kept for
+  // completeness, not as coverage.
   { label: 'common-ligatures', fontVariant: ['common-ligatures'] },
+  // The one ligature row that proves anything: it turns a default-on feature off,
+  // so "Waffle office" loses its ffl/ffi ligatures. PlainText applies it; the RN
+  // <Text> overlay does not, on either platform — see docs/agent/native-gotchas.md.
   { label: 'no-common-ligatures', fontVariant: ['no-common-ligatures'] },
   { label: 'small-caps + oldstyle-nums', fontVariant: ['small-caps', 'oldstyle-nums'] },
 ];

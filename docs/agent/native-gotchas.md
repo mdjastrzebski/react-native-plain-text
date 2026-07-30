@@ -78,6 +78,45 @@ Learned the hard way. Most of these cost an afternoon the first time.
   everywhere else. See
   [performance.md](performance.md#L459-468) for the rejected alternative.
 
+- **Under the New Architecture, RN `<Text>` supports a narrower `fontVariant` set
+  than its own types advertise — on both platforms.** The C++ `FontVariant` enum
+  (`attributedstring/primitives.h`) has members only for `small-caps`, the four
+  figure styles and `ss01`–`ss20`. The ligature and contextual values RN's types
+  list (`common-ligatures`, `no-common-ligatures`, `discretionary-ligatures`,
+  `historical-ligatures`, `contextual`, and their negations) have nowhere to live
+  in that bitmask, so they are dropped at the props layer before either platform
+  sees them. Both input forms lose them: the array form
+  (`parseProcessedFontVariant`) is an if/else-if chain that simply doesn't match
+  the names, and the CSS string form parses them and then discards them outright —
+  `fontVariantFromCSSFontVariant` ends in a `return std::nullopt` covering exactly
+  those eight cases. Both Fabric consumers mirror the same subset: `toMapBuffer`
+  for Android, `RCTFontFeatures` (`RCTFontUtils.mm`) for iOS. The complete table
+  including ligatures is in `RCTFont.mm`, which is the legacy non-Fabric path —
+  easy to mistake for the live one, and the reason to check `RCTFontUtils.mm`
+  instead when asking what Fabric iOS actually does.
+
+  **`no-common-ligatures` is the only one of the eight you can observe**, so it is
+  the row that carries this comparison. The rest are no-ops on the system fonts
+  whether or not RN drops them: `liga`/`clig`/`calt` are already on by default, so
+  `common-ligatures` and `contextual` ask for what is already there, and
+  `dlig`/`hlig` are off by default and largely absent from Roboto and SF, so
+  `discretionary-`/`historical-ligatures` change nothing either. Only turning a
+  default-on feature off is visible. Don't read the other rows agreeing as
+  coverage.
+
+  `PlainText` doesn't go through that bitmask — `fontVariant` is its own codegen
+  prop (`std::vector<std::string>`), mapped per platform in `PlainTextFont.mm` and
+  through `ReactTypefaceUtils.parseFontVariant` — so the ligature values do work.
+  Together with the Android gate below, that makes `fontVariant` the one prop where
+  `PlainText` is knowingly _more_ capable than `<Text>`, the inverse of the usual
+  parity risk. Expect Font Variant rows where the `PlainText` box changes and the
+  `<Text>` overlay does not.
+
+  Already fixed upstream, and worth knowing if the RN floor ever drops:
+  `toMapBuffer` also omitted `ss01`–`ss20`, making the stylistic sets
+  Android-only-broken (react/react-native#55183, landed as
+  facebook/react-native@9353eb5). 0.83.10 includes it.
+
 ## Android
 
 - **`TextView` needs a manual measure pass for prop changes that don't resize
@@ -101,34 +140,23 @@ Learned the hard way. Most of these cost an afternoon the first time.
   black. iOS matches for the same reason — RN's `RCTAttributedTextUtils.mm`
   falls back to `[UIColor blackColor]`, not `labelColor`.
 
-- **RN `<Text>` under-supports `fontVariant` on Android, and `PlainText`
-  deliberately does not match it.** Two independent gaps in RN core, both read
-  from 0.83:
-  1. `fontFeatureSettings` reaches the paint only through `CustomStyleSpan`, and
-     both sites that attach that span (`TextLayoutManager`, in the two span
-     builders) are gated on
-     `fontStyle != UNSET || fontWeight != UNSET || fontFamily != null`. So
-     `fontVariant` set on its own does nothing, while setting any other font prop
-     next to it makes it work. There is no second path:
-     `TextLayoutManager.updateTextPaint`, the other place a paint gets font
-     attributes, never touches `fontFeatureSettings`. The span itself is fine —
-     it takes the value and applies it in both `updateDrawState` and
-     `updateMeasureState`; only the condition deciding whether it exists was
-     never extended.
-  2. `TextAttributeProps` maps the variant names twice.
-     `setFontVariant(ReadableArray)` delegates to
-     `ReactTypefaceUtils.parseFontVariant`, which covers the ligature and
-     contextual values; `setFontVariant(MapBuffer)` — the Fabric path —
-     reimplements the table inline and omits them, mapping only `small-caps`, the
-     figure styles and `ss01`–`ss20`. Fabric Android `<Text>` therefore supports
-     fewer values than iOS or RN's own legacy Android path.
+- **RN `<Text>` on Android ignores `fontVariant` unless another font prop is set
+  alongside it, and `PlainText` deliberately does not match that.**
+  `fontFeatureSettings` reaches the paint only through `CustomStyleSpan`, and both
+  sites that attach that span (`TextLayoutManager`, in its two span builders) are
+  gated on `fontStyle != UNSET || fontWeight != UNSET || fontFamily != null`. So a
+  style of `fontVariant` alone renders unchanged, while adding any other font prop
+  — even `fontStyle: 'normal'` — makes it work. There is no second path:
+  `TextLayoutManager.updateTextPaint`, the other place a paint gets font
+  attributes, never touches `fontFeatureSettings`. The span itself is fine, taking
+  the value and applying it in both `updateDrawState` and `updateMeasureState`;
+  only the condition deciding whether it exists was never extended. Still present
+  in 0.83.
 
-  `PlainTextView.kt` sets `fontFeatureSettings` unconditionally and goes through
-  `parseFontVariant`, so it has neither gap: `fontVariant` works on its own and
-  the ligature values work. This is the one place `PlainText` is knowingly _more_
-  capable than `<Text>` — the inverse of the usual parity risk, so expect rows in
-  the Features screen's Font Variant section where the `PlainText` box changes and
-  the `<Text>` overlay does not. Don't "fix" that by reproducing the gate.
+  `PlainTextView.kt` sets `fontFeatureSettings` unconditionally, so `fontVariant`
+  works on its own. That is deliberate — don't "fix" it by reproducing the gate.
+  The Features screen's Font Variant rows carry a `fontStyle: 'normal'` purely to
+  trip the gate, so that the `<Text>` overlay is comparable at all.
 
 ## iOS
 
