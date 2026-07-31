@@ -1,2 +1,2 @@
 export { PlainText } from './PlainText';
-export type { PlainTextProps } from './PlainText';
+export type { PlainTextProps, PlainTextStyle } from './PlainText';

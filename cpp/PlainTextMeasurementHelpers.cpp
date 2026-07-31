@@ -10,6 +10,7 @@ bool measurementInputsEqual(
   return a.text == b.text && a.fontSize == b.fontSize &&
       a.fontFamily == b.fontFamily && a.fontWeight == b.fontWeight &&
       a.fontStyle == b.fontStyle && a.fontVariant == b.fontVariant &&
+      a.fontVariationSettings == b.fontVariationSettings &&
       a.lineHeight == b.lineHeight &&
       a.letterSpacing == b.letterSpacing &&
       a.numberOfLines == b.numberOfLines &&

@@ -13,6 +13,82 @@ means anything held against the other's — different devices, and in some
 sections a simulator against a phone. Optimization decisions follow from the
 within-device deltas only.
 
+## Prop cost policy
+
+Two rules, both binding on every new prop or style.
+
+- **An unused prop costs a check.** A prop left at its default must not
+  allocate, resolve a font, build a string, force a second pass, or reach a
+  platform setter that does any of those. A comparison and an early return is
+  the whole budget. This is what keeps the component cheap for the common case,
+  where a node sets three or four values out of the seventeen on offer. Every
+  prop today holds to it, so a new one that can't is the exception and needs an
+  argument, not a footnote.
+- **Estimate the cost of a prop that is set, and record it.** Rate it light,
+  medium or heavy by the table below, and if it is medium or heavy say so in a
+  `Cost:` line beside it in `src/PlainTextViewNativeComponent.ts` and add it to
+  the ratings table below. An unrated prop reads as light, so leaving a medium
+  one unmarked is a silent claim that it is free.
+- **Mark the call the cost is actually in**, with `// EXPENSIVE: {reason}` on the line
+  above it. Platform setters do not read as expensive, so a rating in this file is not
+  enough on its own: a reader in the native source has to be able to see which call
+  allocates, derives, or invalidates a layout, and which one only looks like it does.
+  `grep -rn 'EXPENSIVE:'` should return every such call. Where the obvious suspect is
+  in fact cached, say that too, or the next reader will guard the wrong line.
+
+| Tier       | Means                                                                                                                                                    |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **light**  | A comparison and at most one primitive write per apply. No allocation. This is what a prop mapping onto a single platform setter should cost.            |
+| **medium** | Allocates per apply or per content build, or pushes the whole node onto a more expensive path. Acceptable when the cost is cached or paid once per node. |
+| **heavy**  | Scales with text length, runs more than once per commit, or defeats a cache. Needs a measurement before it lands, not after.                             |
+
+Nothing is heavy today. `adjustsFontSizeToFit` would be the first, which is part
+of why it is still in [todo.md](todo.md).
+
+| Prop                    | Cost   | Why                                                                                                                                                                       |
+| ----------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fontFamily`            | medium | First resolution hits the system font database on iOS and the asset lookup on Android. Cached after, per family and size.                                                 |
+| `fontVariant`           | medium | A descriptor round trip on an iOS cache miss, and a fresh string plus an unguarded paint write per apply on Android.                                                      |
+| `fontVariationSettings` | medium | A `CTFont` copy on an iOS cache miss. On Android it derives a new `Typeface`, and any typeface change re-derives it — twice, since clearing the old axes derives as well. |
+| `lineHeight`            | medium | Forces the iOS attributed-string path and an Android `SpannableString` with a span, in place of a plain string.                                                           |
+| `letterSpacing`         | medium | Forces the iOS attributed-string path. The Android side is one paint write.                                                                                               |
+| `textDecorationLine`    | medium | Forces the iOS attributed-string path. The Android side is two paint flags.                                                                                               |
+| everything else         | light  | One write, or one entry in the font cache key.                                                                                                                            |
+
+Three of those are medium for the same reason, and it is worth knowing as one
+fact rather than three: `applyContentFromProps` takes its plain path only when
+`lineHeight`, `letterSpacing` and `textDecorationLine` are all unset. Any one of
+them puts the node on the `NSAttributedString` path for good. A fourth prop that
+needs an attributed-string attribute is therefore free on top of the first, and
+that is the argument for expressing a new iOS text feature as one if it has the
+choice.
+
+### Where the "unused is free" rule gets tested
+
+- **The reused measuring view sets every size-affecting prop on every call**, at
+  its default when absent ([sync-points.md](sync-points.md#the-reused-measuring-view)).
+  So an unused prop is not skipped there the way Fabric skips it on the mounted
+  view. Its setter runs once per node per measure pass with the default value,
+  which is exactly why a setter must early-out on that value without allocating.
+- **iOS diffs the whole prop set on every update.** `updateProps:` compares
+  every content prop whether or not it is used, so the check is already paid.
+  What must not grow is the work behind the check.
+- **Android's flush is dirty-flag driven**, so an unused prop is one flag test.
+  A prop that instead compares its own last-applied value
+  (`fontVariationSettings`) must make that comparison the first thing it does.
+- **The dirty flag is worth nothing on the measuring path.** `measure()` sets every
+  size-affecting prop unconditionally, so every flag is always set and every batched
+  apply always runs. `applyTypeface` therefore carries its own identity guard on the
+  resolved `Typeface` (`appliedBaseTypeface`), which holds because
+  `ReactTypefaceUtils.applyStyles` interns its results — `ReactFontManager`'s caches
+  for a custom family, `Typeface`'s static style and weight caches otherwise. What it
+  actually saves is narrower than it looks, and the call chain is marked in the source
+  at `applyTypeface`: not `applyStyles` (cached) and not `setTypeface` (which
+  early-outs on its own identity check, `TextView.java:4851`), but the
+  `appliedVariationSettings` reset, which made `applyVariationSettings` redo two
+  uncached native `Typeface` derivations per node. The guard's ordering obligations are
+  in [sync-points.md](sync-points.md).
+
 ## Where things stand
 
 ### Android — Pixel 3, physical device
@@ -230,6 +306,51 @@ whole transaction) and before the off-screen measure — never from the view's
 [sync-points.md](sync-points.md#construction-time-state)).
 
 Mirrors how RN's `<Text>` applies a single prebuilt `ReactTextUpdate`.
+
+### Guard `applyTypeface` on the resolved typeface (`PlainTextView.kt`)
+
+**Not measured yet.** The mechanism is clear and the correctness half of it is
+required regardless (see [sync-points.md](sync-points.md)), so it landed without a
+number. It wants a Pixel 3 run per [measuring.md](measuring.md), on a screen setting
+`fontVariationSettings`, which is where nearly all of the saving is.
+
+Batching buys nothing on the measuring path: `measure()` sets `fontFamily`,
+`fontWeight` and `fontStyle` unconditionally, so `dirtyTypeface` is always set and
+`applyTypeface` ran per node.
+
+Be precise about what that cost, because two of the three plausible answers are
+wrong. `applyStyles` is cached. `setTypeface` early-outs on
+`mTextPaint.getTypeface() != tf` (`TextView.java:4851`), so re-assigning the same
+resolved typeface was already nearly free. The real cost was the
+`appliedVariationSettings = null` reset, which made `applyVariationSettings` redo
+both of its `Paint` calls, and **each one derives a `Typeface`** — one to clear the
+old axes, one to apply the new — plus a `fromFontVariationSettings` parse and an
+`isSupportedAxes` call per axis. Both derivations reach
+`nativeCreateFromTypefaceWithVariation` and minikin, and nothing memoizes them until
+API 36 puts an `LruCache` behind `Flags.typefaceCacheForVarSettings`.
+
+That also means the `setTypeface` was only reached by an axis-carrying node in the
+first place: for those, the live typeface is the axis-derived one, so `!= tf` passes
+and it does `nullLayouts()` + `requestLayout()` + `invalidate()`. A node without axes
+gains only `setTypeface`'s preamble, which is one field write plus a cached
+`Typeface.create` when the OS bold-text setting is on. Do not describe the guard as
+a win for every node.
+
+**It also only pays off when consecutive measured nodes carry the _same_ axes**, which
+is the realistic shape (a list of rows all at one weight): there the whole path
+early-outs to a string compare and costs nothing. When the axes differ per node the
+guard saves only a cached `applyStyles` lookup, because `applyVariationSettings` then
+does the same restore, clear and apply that `applyTypeface` used to do. The Features
+screen's variable-font rows each use a different value, so benchmarking there would
+measure the case with no win in it.
+
+`applyTypeface` now compares the resolved `Typeface` against
+`appliedBaseTypeface` by identity and returns early when they match, so consecutive
+measured nodes sharing a font cost one reference compare. Identity is the right
+comparison because `applyStyles` interns everything it returns. It cannot compare
+the live `typeface`, which is the axis-derived one once
+`fontVariationSettings` is in play — the same reason `appliedBaseTypeface` exists
+at all.
 
 ### Share and cache iOS font resolution (`ios/PlainTextFont.{h,mm}`)
 
@@ -499,14 +620,15 @@ So the guard would trade a field, and the field-ordering hazard in
 Nothing here is blocked; each is waiting on a trigger or on evidence that it
 matters. Ordered by expected value if its trigger fires.
 
-| Idea                                                                         | Expected value                                        | Why not yet                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Revisit when                                                                                                      |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **iOS mount path**                                                           | Now the largest known iOS target: ~62% of interaction | **Trigger has fired.** The device split at Large puts ~102 ms of a 161 ms interaction on the UI thread against 59 ms of commit, so the remaining headroom is in mounting, not measuring ([above](#ios--iphone-16-physical-device)). Every mount-path fix so far has been Android-only, and nothing checks whether `applyContentFromProps` rebuilds the attributed string more than once per transaction — the exact problem prop batching solved on Android | Ready now. Start by instrumenting `updateProps:`/`applyContentFromProps` for repeat work within one transaction   |
-| **View recycling**                                                           | Nothing on cold mount; real for list churn            | `enableViewRecycling` defaults false, so not even RN's `<Text>` recycles ([details](#view-recycling))                                                                                                                                                                                                                                                                                                                                                       | The flag flips, or a consuming app enables it. Do it with the flag on locally and a mount/unmount churn benchmark |
-| **Measurement LRU cache** (C++, keyed on size-affecting props + constraints) | Skips the JNI hop entirely on a hit                   | Zero benefit in a benchmark of 1000 unique strings                                                                                                                                                                                                                                                                                                                                                                                                          | A real screen with repeated labels shows measurement cost                                                         |
-| **`StaticLayout` measure path**                                              | Small, now that the view is reused                    | Parity risk, and Minikin shaping sits under both approaches ([details](#measure-via-staticlayoutboringlayout-instead-of-a-textview))                                                                                                                                                                                                                                                                                                                        | Profiling shows measurement dominating again                                                                      |
-| **Custom JNI measure entry** (primitives instead of a `ReadableNativeMap`)   | Removes the per-node map allocation                   | Default-omission already took most of it                                                                                                                                                                                                                                                                                                                                                                                                                    | The remaining serialization shows in a profile                                                                    |
-| **Trim the JS wrapper**                                                      | A few ms per 1000 views                               | Most of the 33 ms is one extra React fiber per item, which trimming can't remove ([details](#trimming-the-js-wrapper))                                                                                                                                                                                                                                                                                                                                      | Only if the wrapper delta grows                                                                                   |
+| Idea                                                                             | Expected value                                                               | Why not yet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Revisit when                                                                                                        |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **iOS mount path**                                                               | Now the largest known iOS target: ~62% of interaction                        | **Trigger has fired.** The device split at Large puts ~102 ms of a 161 ms interaction on the UI thread against 59 ms of commit, so the remaining headroom is in mounting, not measuring ([above](#ios--iphone-16-physical-device)). Every mount-path fix so far has been Android-only, and nothing checks whether `applyContentFromProps` rebuilds the attributed string more than once per transaction — the exact problem prop batching solved on Android                                                 | Ready now. Start by instrumenting `updateProps:`/`applyContentFromProps` for repeat work within one transaction     |
+| **View recycling**                                                               | Nothing on cold mount; real for list churn                                   | `enableViewRecycling` defaults false, so not even RN's `<Text>` recycles ([details](#view-recycling))                                                                                                                                                                                                                                                                                                                                                                                                       | The flag flips, or a consuming app enables it. Do it with the flag on locally and a mount/unmount churn benchmark   |
+| **Measurement LRU cache** (C++, keyed on size-affecting props + constraints)     | Skips the JNI hop entirely on a hit                                          | Zero benefit in a benchmark of 1000 unique strings                                                                                                                                                                                                                                                                                                                                                                                                                                                          | A real screen with repeated labels shows measurement cost                                                           |
+| **`StaticLayout` measure path**                                                  | Small, now that the view is reused                                           | Parity risk, and Minikin shaping sits under both approaches ([details](#measure-via-staticlayoutboringlayout-instead-of-a-textview))                                                                                                                                                                                                                                                                                                                                                                        | Profiling shows measurement dominating again                                                                        |
+| **Custom JNI measure entry** (primitives instead of a `ReadableNativeMap`)       | Removes the per-node map allocation                                          | Default-omission already took most of it                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | The remaining serialization shows in a profile                                                                      |
+| **Trim the JS wrapper**                                                          | A few ms per 1000 views                                                      | Most of the 33 ms is one extra React fiber per item, which trimming can't remove ([details](#trimming-the-js-wrapper))                                                                                                                                                                                                                                                                                                                                                                                      | Only if the wrapper delta grows                                                                                     |
+| **Skip the axis-clearing derivation when the axes changed** (`PlainTextView.kt`) | Halves the axis-change path: one native `Typeface` derivation instead of two | The unconditional `null` clear is only strictly needed when the new settings string _equals_ the one `Paint` is holding while the typeface changed underneath. With the base typeface restored, an unequal string could be applied directly, since `Paint` would not early-out on it. Guarding on `super.getFontVariationSettings()` expresses that, but it adds a branch to the most order-sensitive function in the file and couples us to `Paint`'s early-out being a string compare on that same getter | The guard above gets its number, or an axis-animating screen (per-frame `fontVariationSettings`) shows in a profile |
 
 ## What we don't know yet
 
@@ -537,6 +659,18 @@ stronger claims — or before assuming a change was a win everywhere.
   `commit`/`NativePlainText` table still sitting below the mean-of-3 numbers.
   The mount-level Android and iOS tables above both read `Text` interaction
   directly from Event Timing, no derivation.
+- **The `applyTypeface` identity guard has no number.** It landed on mechanism
+  ([above](#guard-applytypeface-on-the-resolved-typeface-plaintextviewkt)) because
+  its correctness half is mandatory anyway. The claim to close is the commit-side
+  saving on a screen setting `fontVariationSettings`, which is where nearly all of
+  it is. Two ways to measure nothing: a node without axes was already stopped by
+  `TextView.setTypeface`'s own identity check, and a screen whose nodes each use a
+  different axis value keeps paying the same derivations under a different name. The
+  benchmark wants many nodes sharing one axis value.
+- **Nothing about `fontVariationSettings` has been verified on a device below API 36.** The double-derivation cost and the axis-clearing behavior in
+  [native-gotchas.md](native-gotchas.md) are both read off AOSP `main` plus the
+  minikin fallback, not observed. The behavior is version-gated on a flag, so a
+  36-only check proves nothing about the range that matters.
 - **Most published numbers are still single runs.** The mount-level mem/
   interaction tables (Android and iOS, both above) are now a mean of 3, closer
   to but still short of the median-of-5 [measuring.md](measuring.md) asks for.

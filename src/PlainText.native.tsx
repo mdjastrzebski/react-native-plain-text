@@ -1,6 +1,17 @@
 import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } from 'react-native';
 import PlainTextViewNativeComponent from './PlainTextViewNativeComponent';
 
+// RN's TextStyle plus the one text style it has no entry for.
+//
+// - `fontVariationSettings` is a style rather than a prop because that is the
+//   shape RN itself reached for, twice: facebook/react-native#44685 (iOS) and
+//   #44667 (Android) both added it to StyleSheetTypes and threaded it through
+//   TextAttributes. Neither merged, so the key never shipped and the type has to
+//   be widened here.
+// - Widened rather than replaced, so anything already typed as TextStyle stays
+//   assignable, and the key disappears from here without a break if RN adds it.
+export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
+
 // Accessibility, testID, and nativeID/id are all part of RN's ViewProps, which
 // the native component's codegen spec extends — so the base native view
 // (RCTViewComponentView on iOS, BaseViewManager on Android) already applies
@@ -8,7 +19,7 @@ import PlainTextViewNativeComponent from './PlainTextViewNativeComponent';
 // rest below does. This mirrors RN <Text>'s accessibility surface.
 export type PlainTextProps = AccessibilityProps & {
   children?: string;
-  style?: StyleProp<TextStyle>;
+  style?: StyleProp<PlainTextStyle>;
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
@@ -73,6 +84,7 @@ export function PlainText({
     fontWeight,
     fontStyle,
     fontVariant,
+    fontVariationSettings,
     textAlign,
     textAlignVertical,
     verticalAlign,
@@ -91,6 +103,7 @@ export function PlainText({
       fontWeight={fontWeight != null ? String(fontWeight) : undefined}
       fontStyle={fontStyle}
       fontVariant={resolveFontVariant(fontVariant)}
+      fontVariationSettings={fontVariationSettings}
       textAlign={textAlign}
       textAlignVertical={resolveTextAlignVertical(textAlignVertical, verticalAlign)}
       textDecorationLine={textDecorationLine}

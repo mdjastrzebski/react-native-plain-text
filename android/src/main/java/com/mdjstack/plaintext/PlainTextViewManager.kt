@@ -112,6 +112,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setFontVariant(fontVariant)
   }
 
+  @ReactProp(name = "fontVariationSettings")
+  override fun setFontVariationSettings(view: PlainTextView?, fontVariationSettings: String?) {
+    view?.setVariationSettings(fontVariationSettings)
+  }
+
   @ReactProp(name = "textAlign")
   override fun setTextAlign(view: PlainTextView?, textAlign: String?) {
     view?.setTextAlign(textAlign)
@@ -200,6 +205,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // figures, small caps, ligatures — so the measured width depends on it. Absent
     // means the C++ side had an empty list, which maps onto the same null.
     view.setFontVariant(props?.getArray("fontVariant"))
+    // fontVariationSettings interpolates a variable font along its axes, which
+    // changes glyph shapes and advances. A heavier or narrower instance of the
+    // same family measures differently. Absent means the C++ side had an empty
+    // string, which maps onto the same null.
+    view.setVariationSettings(props?.getString("fontVariationSettings")?.ifEmpty { null })
     // letterSpacing widens the text (width) and lineHeight grows each line
     // (height), so both must be applied for the measured size to match.
     view.setLetterSpacingDip(if (props?.hasKey("letterSpacing") == true) props.getDouble("letterSpacing").toFloat() else 0f)

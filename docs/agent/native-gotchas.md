@@ -148,6 +148,98 @@ Learned the hard way. Most of these cost an afternoon the first time.
   Android-only-broken (react/react-native#55183, landed as
   facebook/react-native@9353eb5). 0.83.10 includes it.
 
+- **`fontVariationSettings` has no RN `<Text>` counterpart to match, and the
+  platform APIs for it are asymmetric.** Two upstream PRs implemented it and both
+  went stale unmerged: facebook/react-native#44685 (iOS) and #44667 (Android),
+  the latter with unresolved `TextInput`/`CustomStyleSpan` review comments. So
+  there is no overlay to compare against. Nothing about their fate says the
+  platforms can't do it. Neither stalled on a platform gap.
+
+  **Both PRs made it a style, and so do we**, even though the key never shipped:
+  they each added it to `StyleSheetTypes` and `ReactNativeStyleAttributes` and
+  threaded it through `TextAttributes`/`BaseTextProps`, and their rn-tester
+  examples read `style={{fontVariationSettings: '"wght" 800'}}`. Since RN's
+  `TextStyle` has no such key, `PlainText.native.tsx` widens the style type
+  itself, as `PlainTextStyle`. That is the one place the library adds a style RN
+  does not have, so anything typed against RN's `TextStyle` (`TextItem`'s `<Text>`
+  overlay in `example/src/components/Specimen.tsx`, for one) needs a cast in the
+  other direction.
+
+  Android has it directly: `TextView.setFontVariationSettings(String)`, API 26+,
+  taking the CSS string as-is. iOS has nothing on `UILabel`, `UIFont` or
+  `UIFontDescriptor`; the capability lives one layer down in CoreText, as the
+  `kCTFontVariationAttribute` font-descriptor key, whose axes are keyed by the
+  four-character tag as a number (`'wght'` = `0x77676874`).
+
+  Two traps, one per platform, both silent:
+
+  - **iOS: `-[UIFont fontWithDescriptor:size:]` drops the variation attribute**
+    (regressed around iOS 14, [Apple forums
+    669246](https://developer.apple.com/forums/thread/669246)). Every other font
+    prop in `PlainTextFont.mm` is applied by round-tripping a `UIFontDescriptor`
+    that way, so this is the one that must not be. It goes through
+    `CTFontCreateCopyWithAttributes` instead and bridges the `CTFontRef` back.
+    That is toll-free, so the result is still the `UIFont` the caller wanted.
+  - **Android: clearing the axes takes two steps, and each fixes a different
+    half.** `PlainTextView.applyVariationSettings` does both, and runs after
+    `applyTypeface`, never before.
+
+    1. **`Paint` remembers the settings string across a typeface change.** It
+       early-outs when the new string equals the last one it accepted, and that
+       memory outlives the typeface the axes were baked into, so `setFontFamily`
+       followed by the same `fontVariationSettings` leaves the new font at its
+       default instance. Hence the unconditional clear to `null`.
+    2. **That clear doesn't undo the axes.** `Paint.setFontVariationSettings(null)`
+       re-derives from the typeface it is holding, which is the varied one, and an
+       empty axis list makes minikin's `createCollectionWithVariation` return null,
+       so hwui reuses the same varied collection. Paint's string is cleared, the
+       glyphs are not. So the un-varied typeface has to be put back by hand first,
+       from `appliedBaseTypeface`.
+
+    Step 2 is API 26 through 35, plus 36 with `typefaceCacheForVarSettings` off.
+    API 36's flagged path resolves `Typeface.mDerivedFrom` before deriving
+    (`Typeface.java:1074`), which is upstream fixing exactly this. Without step 2
+    the failure is the shape [sync-points.md](sync-points.md) warns about: right on
+    first render, wrong after an update, because the shadow node re-measures
+    correctly (`measure()` sets all three font props unconditionally, so it always
+    re-derives) while the mounted view keeps the old axes.
+
+    **Toggling the OS Bold text setting hits step 1 from outside our code, and
+    nothing puts the axes back on its own.** `TextView.onConfigurationChanged`
+    calls `setTypeface(getTypeface())` when `Configuration.fontWeightAdjustment`
+    changes (API 31+), resetting the paint to the un-varied base while `Paint`
+    keeps the settings string. `PlainTextView.onConfigurationChanged` calls
+    `super`, so every attached view is affected, and the early-out on the last
+    applied string means the next flush won't re-derive. A variable font sits at
+    its default instance until the next change to `fontVariationSettings` or to
+    any font prop. Accepted, not fixed — cheaper than a per-view configuration
+    listener. `appliedBaseTypeface` itself stays accurate throughout; see
+    [sync-points.md](sync-points.md) for why.
+
+  The grammar is shared rather than per-platform: iOS parses the same
+  quoted-four-character-tag form Android's
+  `FontVariationAxis.fromFontVariationSettings` defines, including its
+  all-or-nothing failure (one bad entry drops the whole string), so one prop
+  value can't mean two things. Android throws `IllegalArgumentException` on a
+  malformed string, which is caught and logged; iOS returns no axes.
+
+  Android is the reference even where it is laxer than CSS, and it is laxer twice.
+  It accepts a trailing comma (`"wght" 700,`), because its scanner reads the comma
+  as the value terminator and then runs off the end, and iOS matches that by
+  treating a whitespace-only final segment as the end of the string rather than an
+  empty entry. It also reads values with `Float.parseFloat`, so `700f`, `Infinity`,
+  `NaN` and hex floats parse there and are rejected by iOS's `strtod` guards. That
+  second one is a real divergence, left open on purpose: closing it means
+  hand-rolling a CSS `<number>` parser in two languages, kept in sync by nothing,
+  for inputs nobody writes. Browsers reject both, which matters only to
+  `react-native-web` and is not a goal.
+
+  Only a font file carrying an `fvar` table can move. No system font usably
+  does. SF's axes are private and Roboto is variable only from Android 12.
+  That is why the Features screen bundles Open Sans (`VARIABLE_FONT_FAMILY`)
+  and why a row rendering as the baseline usually means a missing axis rather
+  than a broken prop.
+
 ## Android
 
 - **`TextView` needs a manual measure pass for prop changes that don't resize

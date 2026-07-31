@@ -69,6 +69,11 @@ Re-measurement is not part of this contract: RN dirties every
 `MeasurableYogaNode` when the surface's `fontSizeMultiplier` changes, so the
 shadow node re-measures on its own. Only the mounted view needs the callback.
 
+Android's override carries a second, unrelated obligation through its `super`
+call: `TextView.onConfigurationChanged` re-applies the OS **Bold text** setting to
+the typeface, which interacts with `fontVariationSettings`. See _Deferred prop
+application_ below.
+
 ¹ Otherwise Android recreates the Activity and the views are rebuilt anyway.
 `example/plugins/withFontScaleConfigChanges.js` declares it so the no-recreate
 path is the one you exercise while developing.
@@ -101,6 +106,52 @@ the props that used to redo the same expensive work several times per transactio
 A new prop feeding any of that must mark the flag it belongs to, and the flush
 must apply it in dependency order. A prop that is set but never flushed silently
 does nothing; a new read path that doesn't flush first sees stale state.
+
+`fontVariationSettings` is the one prop ordered against another rather than
+batched with it: the axes are baked into a `Typeface` derived from the current
+one, so `applyVariationSettings()` must run **after** `applyTypeface()` and is
+invalidated by it. It guards itself by comparing against the last applied
+string instead of a dirty flag, because that comparison is also what
+`applyTypeface` invalidates (by resetting it to `null`). Move the call above the
+typeface block and the axes silently vanish whenever a font prop changes in the
+same transaction.
+
+Three pieces of state carry that between the two, and they only work as a set:
+
+- `appliedVariationSettings` — the last string applied, `null` also meaning "the
+  live typeface has no axes derived onto it".
+- `appliedBaseTypeface` — what `applyStyles` last resolved, which is what the live
+  typeface is only until axes are applied. Both the identity guard in
+  `applyTypeface` and the restore in `applyVariationSettings` read it.
+- The identity guard itself. It exists for the measuring view, where the dirty flag
+  is always set, so `applyTypeface` would otherwise re-derive per node.
+
+`appliedBaseTypeface` being the only record of the un-varied typeface makes
+`typeface` assignable from `applyTypeface` and the restore **and nowhere else**. The
+live `typeface` is the axis-derived one whenever axes are set, so it cannot be read
+back to recover the base. Before the identity guard an assignment from anywhere would
+self-heal on the next flush, because `applyTypeface` re-set the typeface every time.
+It now persists.
+
+One assignment is out of our hands and is documented rather than prevented.
+`TextView.onConfigurationChanged` calls `setTypeface(getTypeface())` when
+`Configuration.fontWeightAdjustment` changes — the OS **Bold text** setting, API 31+
+— and our override calls `super`, so it runs on every attached view. It does not
+desync `appliedBaseTypeface`: `getTypeface()` returns `mOriginalTypeface`, the last
+value handed to `setTypeface`, and `TextView.setFontVariationSettings` writes only
+`mTextPaint`, so the field still holds the un-varied base and the call re-assigns it
+to itself. What it does is drop the axes off the paint while `Paint` keeps the
+settings string that says otherwise, so a **Bold text** toggle leaves a variable font
+at its default instance until the next change to `fontVariationSettings` or to any
+font prop — the `settings == appliedVariationSettings` early-out means an unchanged
+prop will not re-derive it. Known, benign, not worth a per-view listener.
+
+The guard and the restore have to land together. The guard alone stops
+`applyTypeface` from resetting `appliedVariationSettings` for consecutive nodes
+sharing a font, and without the restore the reused measuring view then measures
+node N+1 at node N's axes — a wrong size for every node, not just a wrong render
+for one. Before the guard, `measure()` was correct only because `applyTypeface`
+ran unconditionally. Don't restore that accident by dropping either half.
 
 Props that map onto a single cheap independent write apply inline — there is
 nothing to coalesce, and a dirty flag would only add state to keep in sync. Some

@@ -19,6 +19,7 @@ Run from the repo root:
 | `yarn lint`                                 | ESLint (`--fix` to autofix)                      |
 | `yarn format`                               | oxfmt on JS/TS, md, json and yml                 |
 | `yarn test`                                 | Jest (`yarn test path -t "name"` for one case)   |
+| `yarn test:cpp`                             | C++ unit tests in `tests/cpp/`, no framework     |
 | `yarn example ios` / `yarn example android` | Build & run the example app                      |
 | `yarn example start`                        | Metro only — does **not** rebuild native         |
 | `yarn prepare`                              | Build the shippable library into `lib/`          |
@@ -37,6 +38,8 @@ exists.
 | Read when                                                                     |                                                                                                                                        |
 | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Adding or changing any prop                                                   | [architecture.md](docs/agent/architecture.md) — the four-layer prop flow, naming, prop conventions, example app, RN sources            |
+| Needing an Android API level or the iOS deployment target                     | [architecture.md](docs/agent/architecture.md#platform-versions) — min/compile SDK, and where RN's own values live                      |
+| Adding any prop, for what it is allowed to cost                               | [performance.md](docs/agent/performance.md#prop-cost-policy) — unused is a check, and every prop that is set carries a cost rating     |
 | **Before** adding a size-affecting prop                                       | [sync-points.md](docs/agent/sync-points.md) — the files that must change together and that nothing verifies                            |
 | Implementing a feature                                                        | [workflow.md](docs/agent/workflow.md) — parity policy, order of work, build policy                                                     |
 | Looking for what to work on next                                              | [todo.md](docs/agent/todo.md) — known behavior/API gaps against RN `<Text>`, already investigated                                      |

@@ -31,7 +31,13 @@
     "plugins": [
       "./plugins/withDebugVariant",
       "./plugins/withFontScaleConfigChanges",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/OpenSans.ttf"]
+        }
+      ]
     ]
   }
 }

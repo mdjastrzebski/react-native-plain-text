@@ -8,7 +8,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { PlainText } from 'react-native-plain-text';
+import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { COLOR } from '../theme';
 
 // The specimen-book furniture both screens are set in: the title page, the
@@ -100,7 +100,10 @@ export function TextItem({
   // Omitted by the composite use-case rows: those are whole UI shapes rather than
   // one value, and have nothing to put here.
   label?: string;
-  style?: StyleProp<TextStyle>;
+  // PlainTextStyle, not TextStyle: the Font Variation Settings rows carry
+  // fontVariationSettings, which RN has no style key for. The overlay below casts
+  // it away again.
+  style?: StyleProp<PlainTextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   showText: boolean;
   numberOfLines?: number;
@@ -140,7 +143,10 @@ export function TextItem({
           // the brass box edge comparable to the grey one.
           <View style={styles.overlay}>
             <Text
-              style={[style, styles.overlayText]}
+              // Cast back to what RN accepts. A fontVariationSettings in there is
+              // dropped, which is the gap the Font Variation Settings section
+              // exists to show.
+              style={[style as StyleProp<TextStyle>, styles.overlayText]}
               numberOfLines={numberOfLines}
               ellipsizeMode={ellipsizeMode}
               allowFontScaling={allowFontScaling}

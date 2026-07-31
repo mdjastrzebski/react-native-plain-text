@@ -1,8 +1,12 @@
 #import "PlainTextFont.h"
 
+#import "PlainTextFontVariations.h"
+
 #import <CoreText/CoreText.h>
+#import <React/RCTLog.h>
 
 #import <cmath>
+#import <optional>
 #import <string>
 #import <vector>
 
@@ -101,6 +105,35 @@ static NSArray<NSDictionary *> *fontFeatureSettings(const std::vector<std::strin
   return features.count > 0 ? features : nil;
 }
 
+// The variation axes for a fontVariationSettings string, in the form
+// kCTFontVariationAttribute takes, or nil when it sets none. Parsing lives in
+// PlainTextFontVariations.cpp; this only bridges the result.
+static NSDictionary<NSNumber *, NSNumber *> *fontVariations(const std::string &settings)
+{
+  std::optional<std::vector<PlainTextFontVariationAxis>> axes = parsePlainTextFontVariations(settings);
+  if (!axes.has_value()) {
+    // Returning nil is indistinguishable from "this string sets no axes", so
+    // without this the font silently renders at its default instance. Mirrors
+    // the FLog.w Android emits from the same failure.
+    //
+    // Not per render: plainTextFont returns from the cache before reaching here,
+    // so a given bad string warns once per font configuration it appears with,
+    // and again only if the entry is evicted under memory pressure.
+    RCTLogWarn(@"PlainText: invalid fontVariationSettings: \"%s\"", settings.c_str());
+    return nil;
+  }
+  if (axes->empty()) {
+    return nil;
+  }
+
+  NSMutableDictionary<NSNumber *, NSNumber *> *variations =
+      [NSMutableDictionary dictionaryWithCapacity:axes->size()];
+  for (const PlainTextFontVariationAxis &axis : *axes) {
+    variations[@(axis.tag)] = @(axis.value);
+  }
+  return variations;
+}
+
 static constexpr char kFieldSeparator = '|';
 
 // The five cache inputs joined into one key. Assembled as a std::string and
@@ -113,15 +146,18 @@ static constexpr char kFieldSeparator = '|';
 // takes a fontWeight no real style produces, and the worst case is one wrong
 // font, consistently, since both callers share the key.
 //
-// The variant names go last, where the same ambiguity is unreachable: every
-// name the mapping recognizes is separator-free, so a list that could be
-// misread contains only names that resolve to no feature either way.
+// The variant names and the variation settings go last, where the same
+// ambiguity is unreachable: every name the mapping recognizes is
+// separator-free, and a separator inside the settings string makes it
+// unparseable, so any pair of keys that could be misread for one another
+// resolves to the same font, with no features and no axes.
 static NSString *fontCacheKey(
     const std::string &fontFamily,
     CGFloat fontSize,
     const std::string &fontWeight,
     bool italic,
-    const std::vector<std::string> &fontVariant)
+    const std::vector<std::string> &fontVariant,
+    const std::string &fontVariationSettings)
 {
   std::string key = fontFamily;
   key += kFieldSeparator;
@@ -138,6 +174,8 @@ static NSString *fontCacheKey(
     key += kFieldSeparator;
     key += variant;
   }
+  key += kFieldSeparator;
+  key += fontVariationSettings;
   return [NSString stringWithUTF8String:key.c_str()];
 }
 
@@ -147,6 +185,19 @@ static NSCache<NSString *, UIFont *> *fontCache()
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
     cache = [NSCache new];
+    // Two of the six key inputs are continuous — fontSize, and any axis in
+    // fontVariationSettings — so an animated weight or a size slider mints an
+    // entry per frame value. NSCache auto-evicts under memory pressure, which
+    // makes that growth rather than a leak, and each entry is a UIFont and a short
+    // string, so even hundreds of them are small. The limit is hygiene against the
+    // pathological case, not a fix for a measured problem.
+    //
+    // 128 rather than something tighter because eviction here is pure loss: a
+    // dropped entry costs a family resolution and a CTFont copy to rebuild, and
+    // NSCache's policy is documented as approximate and is not specified to be
+    // LRU, so what goes is not predictable. A design system's worth of text styles
+    // has to stay clear of the limit even with an animation running through it.
+    cache.countLimit = 128;
     // Registering a font at runtime (expo-font, CTFontManagerRegisterFontsForURL)
     // changes what a fontFamily resolves to, so every entry cached before it
     // landed is suspect — in particular the system fallback returned while the
@@ -177,7 +228,13 @@ CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseM
 UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSize)
 {
   bool italic = props.fontStyle == RNPlainTextFontStyle::Italic;
-  NSString *key = fontCacheKey(props.fontFamily, fontSize, props.fontWeight, italic, props.fontVariant);
+  NSString *key = fontCacheKey(
+      props.fontFamily,
+      fontSize,
+      props.fontWeight,
+      italic,
+      props.fontVariant,
+      props.fontVariationSettings);
 
   NSCache<NSString *, UIFont *> *cache = fontCache();
   UIFont *font = [cache objectForKey:key];
@@ -210,6 +267,34 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSize)
     UIFontDescriptor *featureDescriptor = [font.fontDescriptor
         fontDescriptorByAddingAttributes:@{UIFontDescriptorFeatureSettingsAttribute : features}];
     font = [UIFont fontWithDescriptor:featureDescriptor size:fontSize];
+  }
+
+  // Variable-font axes, three things worth knowing:
+  //
+  // - Last of all, so an axis wins over whatever the family/weight resolution
+  //   picked. CSS gives font-variation-settings the same precedence over
+  //   font-weight, and a variable family's 'wght' axis is the more specific
+  //   answer to the same question.
+  // - UILabel, UIFont and UIFontDescriptor have no variations API between them:
+  //   this lives one layer down, in CoreText, as a font descriptor attribute. Set
+  //   through CTFontCreateCopyWithAttributes rather than
+  //   -[UIFont fontWithDescriptor:size:], which has been reported to drop
+  //   kCTFontVariationAttribute since iOS 14
+  //   (developer.apple.com/forums/thread/669246). CTFont and UIFont are toll-free
+  //   bridged, so the result is a UIFont either way.
+  // - Only a font whose file carries an fvar table can move. The system font's
+  //   own axes are private, so this needs a registered variable family to do
+  //   anything, and silently does nothing without one.
+  NSDictionary<NSNumber *, NSNumber *> *variations = fontVariations(props.fontVariationSettings);
+  if (variations != nil && font != nil) {
+    CTFontDescriptorRef variationDescriptor = CTFontDescriptorCreateWithAttributes(
+        (__bridge CFDictionaryRef) @{(__bridge id)kCTFontVariationAttribute : variations});
+    UIFont *variedFont = (__bridge_transfer UIFont *)CTFontCreateCopyWithAttributes(
+        (__bridge CTFontRef)font, font.pointSize, NULL, variationDescriptor);
+    CFRelease(variationDescriptor);
+    if (variedFont != nil) {
+      font = variedFont;
+    }
   }
 
   if (font != nil) {

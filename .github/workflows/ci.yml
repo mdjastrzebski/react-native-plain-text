@@ -44,6 +44,11 @@ jobs:
       - name: Run unit tests
         run: yarn test --maxWorkers=2 --coverage
 
+      # The C++ under test depends on nothing but the standard library, so the
+      # runner's own compiler builds it without a pod install or an NDK.
+      - name: Run C++ unit tests
+        run: yarn test:cpp
+
   build-library:
     runs-on: ubuntu-latest
 

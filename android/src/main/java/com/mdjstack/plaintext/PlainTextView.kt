@@ -15,6 +15,7 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import androidx.appcompat.widget.AppCompatTextView
+import com.facebook.common.logging.FLog
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.uimanager.PixelUtil
@@ -61,10 +62,64 @@ class PlainTextView : AppCompatTextView {
   private var fontWeight: Int = ReactConstants.UNSET
   private var fontStyle: Int = ReactConstants.UNSET
 
+  // Named for the value, not for TextView.setFontVariationSettings, which this
+  // feeds: a `fontVariationSettings` member would sit on top of the synthetic
+  // property Kotlin derives from that method pair.
+  private var variationSettings: String? = null
+  // What was last handed to TextView, so a flush that changes neither the
+  // typeface nor the string does no work. Not derived from the view's own state
+  // TextView.getFontVariationSettings() reports the string the paint last
+  // accepted, which outlives the typeface it was applied to (see
+  // applyVariationSettings) and so can't stand in for this.
+  private var appliedVariationSettings: String? = null
+
   // Never the live typeface: applyStyles derives from whatever it is passed when
   // fontFamily is null, so chaining lets a font that should have been cleared survive
   // — and leak between nodes through the reused measuring view.
   private val baseTypeface: Typeface? = typeface
+
+  // What applyStyles last resolved, before applyVariationSettings derived the axes
+  // onto it. Two jobs, and it can't be read off the view for either: the live
+  // typeface is the *derived* one as soon as axes are applied.
+  //
+  // - The guard that keeps applyTypeface from re-setting an unchanged typeface. Cheap
+  //   because applyStyles interns its results (ReactFontManager's cache, and
+  //   Typeface's own style/weight caches), so equal props give the same instance.
+  // - The un-varied typeface applyVariationSettings has to restore before clearing
+  //   the axes. See there.
+  //
+  // Seeded with baseTypeface, which is what the view already has, so a first flush
+  // resolving to the same instance correctly does nothing. Seeded rather than left
+  // null so the restore below is right even when applyTypeface never runs, which is
+  // the case where fontVariationSettings arrives with no font prop beside it: the
+  // axes were derived onto the theme's typeface, and that is what must come back.
+  //
+  // SYNC: this is now the only record of what the view's un-varied typeface is, so
+  // `typeface` may be assigned from applyTypeface and the restore in
+  // applyVariationSettings and nowhere else. An assignment behind their back used to
+  // self-heal, because applyTypeface re-set the typeface on every flush; with the
+  // identity guard it persists.
+  //
+  // One writer is not ours: TextView.onConfigurationChanged calls
+  // setTypeface(getTypeface()) when Configuration.fontWeightAdjustment changes — the
+  // OS "Bold text" setting — TextView.java:4662, and our override calls super, so it
+  // is reachable on every attached view from API 31. It does not invalidate this
+  // field. getTypeface() returns mOriginalTypeface (TextView.java:4872), the last
+  // value *handed to* setTypeface, and TextView.setFontVariationSettings writes only
+  // mTextPaint (TextView.java:5538) — so mOriginalTypeface is still the un-varied
+  // base and the call re-assigns it to itself. The restore is safe from the other
+  // side for a matching reason: setTypeface re-applies mFontWeightAdjustment to
+  // whatever it is handed (TextView.java:4833), so putting appliedBaseTypeface back
+  // never drops the adjustment.
+  //
+  // What it does drop is the axes. The paint is reset to a Typeface.create of the
+  // un-varied base while Paint keeps the settings string saying otherwise — the same
+  // asymmetry the clear in applyVariationSettings works around — so toggling Bold
+  // text leaves a variable font at its default instance, and the
+  // `settings == appliedVariationSettings` early-out means an unchanged prop will not
+  // re-derive it. It heals on the next change to fontVariationSettings or to any font
+  // prop. Benign enough to live with, not benign enough to leave unrecorded.
+  private var appliedBaseTypeface: Typeface? = baseTypeface
 
   // The instance PlainTextViewManager reuses for measurement. Never attached to a
   // window, so measureAndLayout would queue forever, once per prop set.
@@ -172,6 +227,12 @@ class PlainTextView : AppCompatTextView {
       dirtyTypeface = false
       applyTypeface()
     }
+    // After applyTypeface, always: the axes are baked into a derived Typeface, so
+    // a new base typeface arrives with none of them. Its own guard is the
+    // comparison inside, which applyTypeface invalidates when it actually changed
+    // the typeface — and leaves standing when it didn't, which is the case that
+    // then has to restore the base typeface itself.
+    applyVariationSettings()
     if (dirtyText) {
       dirtyText = false
       applyText()
@@ -318,14 +379,119 @@ class PlainTextView : AppCompatTextView {
     fontFeatureSettings = ReactTypefaceUtils.parseFontVariant(fontVariant)
   }
 
+  // Variable-font axis values, in the `"wght" 700, "wdth" 87.5` form TextView
+  // takes directly (API 26+).
+  //
+  // - Unlike fontVariant this is not a paint feature string: Android resolves the
+  //   axes against the font's fvar table and derives a new Typeface, so it has to
+  //   be applied after the typeface and is invalidated by it. Hence the flush
+  //   ordering rather than an inline write.
+  // - Named setVariationSettings, not setFontVariationSettings, to stay clear of
+  //   TextView's own method, which returns Boolean and would make this an
+  //   accidental override with an incompatible return type.
+  // - Trimmed before the emptiness check, and not only for a tidier comparison key:
+  //   a whitespace-only string reaches Paint.setFontVariationSettings, which only
+  //   short-circuits on "", so it parses to an empty axis list, which
+  //   FontVariationAxis.fromFontVariationSettings turns into null, which Paint then
+  //   iterates. That NPE is not the IllegalArgumentException applyVariationSettings
+  //   catches. iOS treats the same value as "sets no axes" and warns, so this is
+  //   also what keeps the two platforms saying the same thing.
+  fun setVariationSettings(fontVariationSettings: String?) {
+    variationSettings = fontVariationSettings?.trim()?.ifEmpty { null }
+  }
+
+  private fun applyVariationSettings() {
+    // API 26 is where variable fonts arrived; below it the prop is inert, and the
+    // font renders at its default instance.
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+    val settings = variationSettings
+    if (settings == appliedVariationSettings) return
+
+    // The axes were baked into a Typeface derived from the base one, and clearing
+    // them does not undo that: Paint.setFontVariationSettings(null) re-derives from
+    // the typeface it is holding — the varied one — and an empty axis list makes
+    // minikin reuse the same collection, so only Paint's string is cleared and the
+    // glyphs stay put. API 36 resolves Typeface.mDerivedFrom first and so doesn't
+    // need this, but API 26-35 do. Put the un-varied typeface back by hand.
+    //
+    // Nothing to restore when applyTypeface just ran: it set a fresh un-varied
+    // typeface, and the null it reset appliedVariationSettings to is how we know.
+    if (appliedVariationSettings != null) {
+      // EXPENSIVE: TextView.setTypeface, and here it is always a real change (the live
+      // typeface is the axis-derived one), so it clears the text Layout and requests a
+      // new one — nullLayouts() + requestLayout() + invalidate(), TextView.java:4851.
+      typeface = appliedBaseTypeface
+    }
+
+    // Cleared first, unconditionally, rather than only when settings is null.
+    // Paint holds the last settings string it accepted and early-outs on an equal
+    // one, but that string survives setTypeface, so re-applying the same axes to
+    // a typeface that just changed underneath would be dropped, leaving the new
+    // font at its default instance. Passing null makes the next call unequal
+    // whatever it is, and on a view that had no axes it is itself the early-out.
+    //
+    // EXPENSIVE: unless it is that early-out, clearing derives a Typeface too —
+    // Paint.setFontVariationSettings(null) -> setTypeface(
+    // Typeface.createFromTypefaceWithVariation(mTypeface, emptyList())) ->
+    // nativeCreateFromTypefaceWithVariation -> minikin createCollectionWithVariation.
+    // Uncached until API 36 puts an LruCache behind Flags.typefaceCacheForVarSettings.
+    super.setFontVariationSettings(null)
+    appliedVariationSettings = settings
+    if (settings == null) return
+
+    try {
+      // EXPENSIVE: the second native derivation of the pair, plus a
+      // FontVariationAxis.fromFontVariationSettings parse, an ArrayList, and an
+      // isSupportedAxes() call per axis. Same uncached path as the clear above, so a
+      // node whose axes changed pays two derivations. This pair is what the identity
+      // guard in applyTypeface keeps off the per-node measuring path.
+      super.setFontVariationSettings(settings)
+    } catch (e: IllegalArgumentException) {
+      // Thrown by FontVariationAxis.fromFontVariationSettings for a string that
+      // isn't `"tag" value` pairs. A malformed prop, not a broken font, and the
+      // font is left at its default instance. Recorded as applied above so a
+      // stable bad value is parsed and logged once, not on every flush.
+      FLog.w(ReactConstants.TAG, "PlainText: invalid fontVariationSettings: ${e.message}")
+    }
+  }
+
   private fun applyTypeface() {
-    typeface = ReactTypefaceUtils.applyStyles(
+    // Not expensive, despite appearances: every path through applyStyles is interned —
+    // ReactFontManager's customTypefaceCache/fontCache for a named family, and
+    // Typeface's static style and weight caches for the Typeface.create underneath.
+    val resolved = ReactTypefaceUtils.applyStyles(
       baseTypeface,
       if (fontStyle == Typeface.ITALIC) Typeface.ITALIC else Typeface.NORMAL,
       fontWeight,
       fontFamily,
       context.assets
     )
+    // Guarded on identity rather than left to the dirty flag, because the flag is
+    // always set on the measuring path: measure() assigns all three font props per
+    // node, so this ran once per measured node. Interning is what makes equal props a
+    // reference compare; see appliedBaseTypeface.
+    //
+    // What the guard is worth is not obvious, so don't re-argue it from the call
+    // names. It buys nothing on applyStyles above (cached) and little on the
+    // assignment below (TextView.setTypeface early-outs on its own
+    // `mTextPaint.getTypeface() != tf`). It buys the appliedVariationSettings reset at
+    // the bottom, which sends applyVariationSettings back through both of the
+    // EXPENSIVE calls marked there. So the win is concentrated on nodes carrying
+    // fontVariationSettings, and among those on consecutive nodes carrying the *same*
+    // axes, which then cost one string compare instead of two native derivations.
+    if (resolved === appliedBaseTypeface) return
+    appliedBaseTypeface = resolved
+    // EXPENSIVE: TextView.setTypeface clears the text Layout and requests a new one
+    // when the typeface really changed (TextView.java:4851). Reached per node before
+    // the guard above, since the live typeface is the axis-derived one whenever axes
+    // are set and so never equals what applyStyles resolved.
+    typeface = resolved
+    // The axes lived on the typeface that was just replaced. Not simply a dirty
+    // flag: applyVariationSettings has to re-clear Paint's memory of the string
+    // as well, which the null it is reset to here is what forces. It also reads
+    // this null as "no varied typeface to restore".
+    appliedVariationSettings = null
   }
 
   // Mirrors <Text> (TextAttributeProps#getTextAlign): Gravity rather than
@@ -393,6 +559,10 @@ class PlainTextView : AppCompatTextView {
   // Re-measurement is RN's job either way: it dirties every MeasurableYogaNode when the
   // surface's fontSizeMultiplier changes, which is what re-runs
   // PlainTextViewManager.measure and gives this view its new frame.
+  //
+  // The super call does its own font work that has nothing to do with the scale: it
+  // re-applies Configuration.fontWeightAdjustment (the OS "Bold text" setting) to the
+  // typeface, which costs a variable font its axes. See appliedBaseTypeface.
   override fun onConfigurationChanged(newConfig: Configuration?) {
     super.onConfigurationChanged(newConfig)
     // The measuring instance is never attached, so it never gets here — and it re-reads

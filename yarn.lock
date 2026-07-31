@@ -10324,6 +10324,7 @@ __metadata:
     "@react-navigation/native-stack": "npm:^7.18.5"
     expo: "npm:~57.0.9"
     expo-dev-client: "npm:~57.0.10"
+    expo-font: "npm:~57.0.1"
     expo-status-bar: "npm:~57.0.1"
     react: "npm:19.2.3"
     react-dom: "npm:19.2.3"

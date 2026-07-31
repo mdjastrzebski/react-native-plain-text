@@ -33,14 +33,15 @@
   ],
   "scripts": {
     "example": "yarn workspace react-native-plain-text-example",
-    "clean": "del-cli lib",
+    "clean": "del-cli lib tests/cpp/build",
     "prepare": "bob build",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "test": "jest",
-    "validate": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn prepare",
+    "test:cpp": "./scripts/test-cpp.sh",
+    "validate": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn test:cpp && yarn prepare",
     "release": "release-it --only-version"
   },
   "keywords": [

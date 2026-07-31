@@ -70,6 +70,9 @@ Size PlainTextMeasurementsManager::measure(
     }
     serializedProps["fontVariant"] = std::move(fontVariant);
   }
+  if (!props.fontVariationSettings.empty()) {
+    serializedProps["fontVariationSettings"] = props.fontVariationSettings;
+  }
   if (props.lineHeight != 0.0) {
     serializedProps["lineHeight"] = props.lineHeight;
   }

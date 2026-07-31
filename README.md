@@ -54,6 +54,10 @@ Via `style={{ ... }}`:
 - `fontFamily`
 - `fontStyle`: `'normal' | 'italic'`
 - `fontVariant`
+- `fontVariationSettings`: variable-font axes in CSS syntax, e.g.
+  `'"wght" 700, "wdth" 87.5'`. RN `<Text>` has no such style, so the style type
+  is widened (`PlainTextStyle`). Needs a font with an `fvar` table (no system
+  font qualifies), and Android API 26+.
 - `lineHeight`
 - `letterSpacing`
 - `textAlign`
@@ -81,7 +85,6 @@ Via `style={{ ... }}`:
 - `textDecorationColor` / `textDecorationStyle`
 - `textShadowColor` / `textShadowOffset` / `textShadowRadius`
 - `includeFontPadding` (Android)
-- `fontVariationSettings`
 - `adjustsFontSizeToFit` / `minimumFontScale`: the most expensive item on the
   list, and the only one that is more than a prop. Shrinking text to fit needs
   the view's final frame, which the measurement pass — the thing that decides

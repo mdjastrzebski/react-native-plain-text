@@ -42,6 +42,11 @@ prefixed names left are the generated ones we implement:
   `PlainText.native.tsx`): accept a `TextStyle` `style`, `StyleSheet.flatten`
   it, destructure the text-style keys out, pass them as explicit codegen props,
   and forward the remaining layout styles as `style`.
+- **A prop nobody sets must cost a check.** No allocation, no font resolution,
+  no extra pass when it is at its default. A prop that is set gets a
+  light/medium/heavy rating, and medium or heavy is recorded beside it in the
+  spec. Both rules, and the current ratings, are in
+  [performance.md](performance.md#prop-cost-policy).
 - Codegen types come from the **`CodegenTypes` namespace exported by
   `react-native`** (e.g. `CodegenTypes.WithDefault<CodegenTypes.Float, 14>`).
   Do **not** import `react-native/Libraries/Types/CodegenTypes` — this project
@@ -71,6 +76,32 @@ toggle is the same setting on every screen that offers it.
   realistic rows avoid.
 - **Performance** (`src/screens/PerformanceScreen.tsx`) — the benchmark harness.
   See [measuring.md](measuring.md).
+
+## Platform versions
+
+Android: `minSdkVersion 24` (Android 7.0), `compileSdkVersion 36`, set in
+`android/build.gradle`. **API 24 is the floor for every `@RequiresApi` /
+`Build.VERSION.SDK_INT` decision** — anything at or below 24 needs no guard,
+anything above does.
+
+This matches RN itself, which has been on `minSdk 24` since 0.77
+(`references/react-native/packages/react-native/gradle/libs.versions.toml`).
+Check that file rather than assuming when the question comes up again; RN's
+`targetSdk`/`compileSdk` move roughly once per Android release.
+
+iOS: the podspec sets no version of its own, it uses RN's
+`min_ios_version_supported`, currently **iOS 15.1** (minimum Xcode 16.1). So
+**15.1 is the floor for every `@available` / `if (@available(iOS N, *))`
+check** — anything at or below 15.1 needs no guard, anything above does.
+
+The value lives in
+`references/react-native/packages/react-native/scripts/cocoapods/helpers.rb`
+(`Helpers::Constants.min_ios_version_supported`) — check it there rather than
+assuming.
+
+Note the example app is higher: `example/ios/Podfile` pins `16.4` (Expo's
+default). That's the app's floor, not the library's, so never use it to justify
+dropping an `@available` guard.
 
 ## React Native sources
 

@@ -10,17 +10,60 @@ three of:
 - **Both platforms** — iOS and Android, not one "for now".
 - **Example coverage** — a dedicated section on the Features screen
   (`example/src/screens/FeaturesScreen.tsx`), so it's visible and testable.
+- **A cost rating** — free when the prop is unused, and rated light/medium/heavy
+  when it is set ([performance.md](performance.md#prop-cost-policy)). Medium and
+  heavy get a `Cost:` note beside the prop in the codegen spec.
 
 ## Order of work
 
 1. **Add usage/test cases to the Features screen first.**
 2. **Implement iOS, then Android**, across the four-layer prop flow
    ([architecture.md](architecture.md)).
-3. **Run the checks** — `yarn typecheck`, `yarn lint`, `yarn test`.
+3. **Run the checks** — `yarn validate`.
 
 Read [sync-points.md](sync-points.md) before starting. A size-affecting prop
 touches five more files than the four-layer flow suggests, and none of them fail
 loudly when missed.
+
+## Automated tests
+
+There are almost none. `yarn test` runs Jest over `src/`, where the only case is
+`it.todo`, and the Features screen plus a device is how nearly everything is
+verified. That is a deliberate consequence of where the logic lives: almost all
+of it is `UILabel`/`TextView` behavior, which no unit test reaches.
+
+The exception is string parsing, and it does have a test target.
+
+### `yarn test:cpp`
+
+A table of inputs against expected results for
+`parsePlainTextFontVariations`, in `tests/cpp/PlainTextFontVariations.test.cpp`.
+That kind of table would have caught a real bug that review did not: the parser
+rejected the trailing comma Android accepts, so the same prop value varied on
+one platform and not the other.
+
+- **No framework and no include paths.** `scripts/test-cpp.sh` is a `c++`
+  invocation per suite, naming the test file and the sources under test. Add a
+  suite with one more `run_suite` line. It runs in the `test` CI job, which is
+  `ubuntu-latest` with no pod install and no NDK.
+- **Extra arguments reach the compiler**, so `yarn test:cpp -g -O0` or
+  `yarn test:cpp -fsanitize=address,undefined` work for a one-off run.
+- **Failures print the case name, the input, and both sides.** Nonzero exit on
+  the first failing case, which is all `validate` needs.
+- **Tests live in `tests/cpp/`, never in `ios/` or `cpp/`.** The podspec globs
+  the cpp sources under both of those, and the Android `CMakeLists.txt` globs
+  the ones under `cpp/`, so a test file there would compile into the shipped pod
+  and into the Android build.
+
+What makes this cheap is that the unit under test includes nothing but the
+standard library. Keeping it that way is the price of admission: pure logic
+extracted into its own dependency-free file gets a test, logic left inline in a
+`.mm` next to `UIFont` does not. `parsePlainTextFontVariations` sits in `ios/`
+rather than `cpp/` for the separate reason that Android parses the same prop
+with `FontVariationAxis.fromFontVariationSettings` and has no use for it.
+
+For hand-written parsing that is _not_ extracted, review is still the only line
+of defense.
 
 ## Native builds
 

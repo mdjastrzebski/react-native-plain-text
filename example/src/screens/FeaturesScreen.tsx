@@ -1,6 +1,7 @@
 import { Platform, ScrollView, StyleSheet, type TextStyle } from 'react-native';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { PlainTextStyle } from 'react-native-plain-text';
 import { useCompareText } from '../components/CompareText';
 import { Cover, Section, TextItem, screenStyles } from '../components/Specimen';
 import { COLOR } from '../theme';
@@ -377,6 +378,35 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      {/* Three things about this section:
+
+          - It is the one with nothing to compare against. RN <Text> has no
+            fontVariationSettings on either platform, so the brass overlay sits at
+            the font's default instance on every row while the grey box moves.
+            Two PRs tried to add it to core and both went stale unmerged
+            (facebook/react-native#44685 for iOS, #44667 for Android); see
+            docs/agent/native-gotchas.md.
+          - Every row needs a font whose file carries an fvar table, which no
+            system font usably does: SF keeps its axes private, and Roboto is
+            only variable from Android 12. Hence the bundled Open Sans (see
+            VARIABLE_FONT_FAMILY), with wght 300-800 and wdth 75-100.
+          - If every row looks identical, suspect the font before the prop. A
+            family that failed to resolve falls back silently, to SF on iOS (no
+            usable axes, so nothing moves) and to Roboto on Android (variable, so
+            the axes still apply and it looks like it worked). That asymmetry is
+            exactly how this section first read as iOS-only-broken. */}
+      <Section title="Font Variation Settings" footer={FONT_VARIATION_FOOTER}>
+        {FONT_VARIATION_SETTINGS.map(({ label, fontVariationSettings }) => (
+          <TextItem
+            key={label}
+            label={label}
+            showText={showText}
+            style={{ ...variableFontRow, fontVariationSettings }}
+          >
+            {SPECIMEN}
+          </TextItem>
+        ))}
+      </Section>
       {/* Vertical alignment is Android-only (matches RN <Text>); on iOS it's a
           no-op — see VERTICAL_ALIGN_FOOTER. Each box is taller than its text so
           the position is visible. */}
@@ -694,6 +724,52 @@ const FONT_VARIANT_FOOTER = Platform.select({
 
 // Same number of digits per row, differing only in which ones.
 const TABULAR_FIGURE_ROWS = ['1111111111', '0123456789'];
+
+// Bundled at build time by the expo-font config plugin (example/app.json) from
+// assets/fonts/OpenSans.ttf, the variable release, with a wght axis (300-800,
+// default 400) and a wdth axis (75-100, default 100).
+//
+// The name differs per platform because RN resolves a bundled family
+// differently on each: from the asset file name on Android
+// (ReactFontManager.createAssetTypeface), from the family name inside the font
+// file on iOS. They coincide only when the file is named after the family, and
+// "Open Sans" has a space in it.
+//
+// Adding this font is why the section needs a native rebuild rather than a
+// Metro reload.
+const VARIABLE_FONT_FAMILY = Platform.select({ ios: 'Open Sans', default: 'OpenSans' });
+
+const variableFontRow: PlainTextStyle = {
+  fontSize: SHORT_ROW_SIZE,
+  fontFamily: VARIABLE_FONT_FAMILY,
+};
+
+// The value is the label: the point of the section is which string produces
+// which instance, and the CSS syntax is the API.
+const FONT_VARIATION_SETTINGS: { label: string; fontVariationSettings?: string }[] = [
+  // Baseline. The font's default instance, which is what every row below is read
+  // against, and what the <Text> overlay is stuck at on all of them.
+  { label: 'default' },
+  // The weight axis, the one people actually reach for. Interpolated, not
+  // snapped: 550 is a real instance, unlike fontWeight, which can only name the
+  // nine hundred-steps and picks the nearest face.
+  { label: '"wght" 300', fontVariationSettings: '"wght" 300' },
+  { label: '"wght" 550', fontVariationSettings: '"wght" 550' },
+  { label: '"wght" 800', fontVariationSettings: '"wght" 800' },
+  // Width. Open Sans only condenses (75-100), so this axis moves in one
+  // direction; a font with a wider upper bound would move both ways.
+  { label: '"wdth" 87.5', fontVariationSettings: '"wdth" 87.5' },
+  { label: '"wdth" 75', fontVariationSettings: '"wdth" 75' },
+  // Two axes at once, comma-separated. The form both platforms' parsers take.
+  { label: '"wght" 800, "wdth" 75', fontVariationSettings: '"wght" 800, "wdth" 75' },
+];
+
+const FONT_VARIATION_FOOTER = Platform.select({
+  ios: 'RN <Text> has no fontVariationSettings, so the overlay never moves.',
+  default:
+    'RN <Text> has no fontVariationSettings, so the overlay never moves. Variable ' +
+    'fonts need API 26+.',
+});
 
 // The section only has to show that `color` is honored, so these are the screen's
 // own accents in palette order rather than red/green/blue: same job, and the column
