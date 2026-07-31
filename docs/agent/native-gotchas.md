@@ -96,13 +96,44 @@ Learned the hard way. Most of these cost an afternoon the first time.
   instead when asking what Fabric iOS actually does.
 
   **`no-common-ligatures` is the only one of the eight you can observe**, so it is
-  the row that carries this comparison. The rest are no-ops on the system fonts
-  whether or not RN drops them: `liga`/`clig`/`calt` are already on by default, so
-  `common-ligatures` and `contextual` ask for what is already there, and
-  `dlig`/`hlig` are off by default and largely absent from Roboto and SF, so
+  the row that carries this comparison. The rest are no-ops whichever font is in
+  play, whether or not RN drops them: `liga`/`clig`/`calt` are already on by
+  default, so `common-ligatures` and `contextual` ask for what is already there, and
+  `dlig`/`hlig` are off by default and largely absent, so
   `discretionary-`/`historical-ligatures` change nothing either. Only turning a
-  default-on feature off is visible. Don't read the other rows agreeing as
-  coverage.
+  default-on feature off is visible. Don't read the other rows agreeing as coverage.
+
+  **Whether even that row is observable depends on the font, and SF isn't good
+  enough for it.** SF forms no `ff`/`ffi`/`ffl` ligatures and ships no oldstyle
+  figures, so under SF `PlainText` applying the feature and RN dropping it produce
+  the same glyphs. Observed: the Features screen's ligature rows rendered
+  pixel-identical on both sides on iOS, which reads as parity when it is really a
+  font with nothing to switch off. Don't cite an all-matching iOS run as parity
+  without first checking the font carries the feature.
+
+  The section's feature rows therefore run in `Baskerville` on iOS
+  (`FONT_VARIANT_FEATURE_FAMILY`). **Verified on iOS with Baskerville:** small caps,
+  `oldstyle-nums` and the figure spacings all render, `PlainText` applies
+  `no-common-ligatures`, and the `<Text>` overlay ignores it. The bitmask gap is
+  finally visible on iOS.
+
+  Android needs no override, and `Roboto` is better equipped than SF here: it carries
+  the `ff`/`ffi`/`ffl` ligatures **and** `onum`, so `oldstyle-nums` renders there too
+  (observed). Naming a family on Android would be harmless rather than forbidden, so
+  don't justify leaving it alone by the `CustomStyleSpan` gate below. That gate is
+  already satisfied by the `fontStyle: 'normal'` those rows carry.
+
+  `lining-nums` stays flat on both platforms. Only the row asking for the shape the
+  face does not already use can move, and Baskerville and Roboto both default to
+  lining.
+
+  **The override is scoped to the feature rows. The figure-spacing rows are
+  deliberately left on the system font.** SF gets `tnum`/`pnum` right. A serif need
+  not: Hoefler Text was the first pick and had to be dropped for exactly that, since
+  its `tabular-nums` row rendered proportional and its `proportional-nums` row
+  tabular, which turns a working demo into a misleading one. Feature coverage is
+  per-face, so if a row goes flat after a font change, try the next candidate
+  (Palatino, Iowan Old Style, Charter, Didot) before suspecting the prop.
 
   `PlainText` doesn't go through that bitmask — `fontVariant` is its own codegen
   prop (`std::vector<std::string>`), mapped per platform in `PlainTextFont.mm` and

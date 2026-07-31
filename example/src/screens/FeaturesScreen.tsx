@@ -250,9 +250,9 @@ export default function FeaturesScreen({ navigation }: Props) {
         ))}
       </Section>
       {/* Font scaling follows the OS accessibility text-size setting (Dynamic
-          Type on iOS, Font size on Android). Change it in Settings to see the
-          first row grow while the clamped/disabled rows hold their size. */}
-      <Section title="Font Scaling">
+          Type on iOS, Font size on Android); FONT_SCALING_FOOTER names the path
+          for whichever platform is running. */}
+      <Section title="Font Scaling" footer={FONT_SCALING_FOOTER}>
         <TextItem showText={showText} style={{ fontSize: 18 }}>
           Default: scales with the OS text-size setting.
         </TextItem>
@@ -264,9 +264,12 @@ export default function FeaturesScreen({ navigation }: Props) {
         </TextItem>
       </Section>
       {/* fontVariant turns OpenType features on, so a row only changes if the
-          font actually carries the feature: the figure styles are the reliable
-          ones, while small caps and the ligature sets are hit and miss. A row
-          that looks like the default one is usually that, not a broken prop.
+          font actually carries the feature — which is why iOS runs these rows in
+          a serif rather than SF, from the second baseline row down; see
+          FONT_VARIANT_FEATURE_FAMILY. The figure-spacing rows above it stay on the
+          system font, which handles tabular/proportional correctly. A row that
+          looks like its baseline is usually a missing feature, not a broken
+          prop.
 
           The red <Text> overlay is the less capable of the two here, for two
           reasons in RN core. Its New Architecture props layer has no room for the
@@ -275,38 +278,55 @@ export default function FeaturesScreen({ navigation }: Props) {
           never change on either platform. And on Android it only applies what
           survives when fontStyle, fontWeight or fontFamily is set as well, which
           is why these rows pass fontStyle 'normal' (see fontVariantRow below).
-          PlainText has its own mapping and applies it unconditionally, so expect
-          rows where the gray box changes and the overlay doesn't; both are
-          spelled out in docs/agent/native-gotchas.md. */}
-      <Section title="Font Variant">
-        {FONT_VARIANTS.map(({ label, fontVariant }) => (
-          <TextItem
-            key={label}
-            showText={showText}
-            style={{ ...fontVariantRow, fontVariant }}
-          >{`${label} — Waffle office 0123456789`}</TextItem>
-        ))}
-        {/* Figure spacing shows up as width: both rows have the same digit
+          PlainText has its own mapping and applies it unconditionally.
+
+          Where that adds up to a visible difference is no-common-ligatures: the
+          gray box drops the ffl/ffi ligatures and the overlay keeps them, now on
+          both platforms, since the serif and Roboto both carry them. Both
+          reasons are spelled out in docs/agent/native-gotchas.md. */}
+      <Section title="Font Variant" footer={FONT_VARIANT_FOOTER}>
+        {/* Baseline to compare every row below against. */}
+        <TextItem showText={showText} style={fontVariantRow}>
+          default: Waffle office 0123456789
+        </TextItem>
+        {/* Figure spacing first — the pair of values people actually reach for.
+            It shows up as width: the two rows of each pair have the same digit
             count, so tabular figures make them equally wide (each row
-            shrink-wraps to its text) and proportional ones do not. */}
+            shrink-wraps to its text) and proportional ones do not. Compare
+            within a pair, never across: the label prefix is identical inside a
+            pair, which is what makes the right edge a read on the digits alone. */}
         {TABULAR_FIGURE_ROWS.map((digits) => (
           <TextItem
             key={`tabular-${digits}`}
             showText={showText}
             style={{ ...fontVariantRow, fontVariant: ['tabular-nums'] }}
-          >{`${digits} tabular`}</TextItem>
+          >{`tabular-nums: ${digits}`}</TextItem>
         ))}
         {TABULAR_FIGURE_ROWS.map((digits) => (
           <TextItem
             key={`proportional-${digits}`}
             showText={showText}
             style={{ ...fontVariantRow, fontVariant: ['proportional-nums'] }}
-          >{`${digits} proportional`}</TextItem>
+          >{`proportional-nums: ${digits}`}</TextItem>
+        ))}
+        {/* Second baseline, in the serif the feature rows below use, so they have
+            something to differ from. On Android it is the same font as the first
+            baseline — that platform stays on the system font throughout. */}
+        <TextItem showText={showText} style={fontVariantFeatureRow}>
+          default: Waffle office 0123456789
+        </TextItem>
+        {FONT_VARIANTS.map(({ label, fontVariant }) => (
+          <TextItem
+            key={label}
+            showText={showText}
+            style={{ ...fontVariantFeatureRow, fontVariant }}
+          >{`${label}: Waffle office 0123456789`}</TextItem>
         ))}
       </Section>
       {/* Vertical alignment is Android-only (matches RN <Text>); on iOS it's a
-          no-op. Each box is taller than its text so the position is visible. */}
-      <Section title="Vertical Align (Android)">
+          no-op — see VERTICAL_ALIGN_FOOTER. Each box is taller than its text so
+          the position is visible. */}
+      <Section title="Vertical Align (Android)" footer={VERTICAL_ALIGN_FOOTER}>
         {VERTICAL_ALIGNS.map((verticalAlign) => (
           <TextItem
             key={verticalAlign}
@@ -457,11 +477,21 @@ export default function FeaturesScreen({ navigation }: Props) {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({
+  title,
+  footer,
+  children,
+}: {
+  title: string;
+  // Notes about the section's props — caveats, platform gaps, what to look at.
+  footer?: string;
+  children: ReactNode;
+}) {
   return (
     <View style={styles.section}>
       <PlainText style={styles.sectionHeader}>{title}</PlainText>
       {children}
+      {footer != null && <PlainText style={styles.sectionFooter}>{footer}</PlainText>}
     </View>
   );
 }
@@ -545,6 +575,12 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontSize: 22,
+  },
+  sectionFooter: {
+    width: '100%',
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#687076',
   },
   rowContainer: {
     alignSelf: 'stretch',
@@ -642,7 +678,18 @@ const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 
 const LINE_HEIGHTS = [18, 26, 36];
 
+// Name only the path the reader can actually go and change.
+const FONT_SCALING_FOOTER = Platform.select({
+  ios: 'Settings ▸ Accessibility ▸ Display & Text Size ▸ Larger Text. Only the first row follows it.',
+  default: 'Settings ▸ Display ▸ Display size and text ▸ Font size. Only the first row follows it.',
+});
+
 const VERTICAL_ALIGNS = ['top', 'middle', 'bottom'] as const;
+
+const VERTICAL_ALIGN_FOOTER = Platform.select({
+  ios: 'Android-only in RN <Text>. PlainText matches, so all three rows look the same.',
+  default: 'Each box is 72pt tall, so the text has room to move.',
+});
 
 const LETTER_SPACINGS = [-2, 0, 2, 6];
 
@@ -652,6 +699,26 @@ const TEXT_DECORATION_LINES = [
   'line-through',
   'underline line-through',
 ] as const;
+
+// The section needs a font that actually carries the features, and SF does not:
+// it forms no ff/ffi/ffl ligatures and ships no oldstyle figures, so those rows
+// couldn't move on iOS no matter which side applied the value. So the rows that
+// need those features run in a serif on iOS.
+//
+// Scoped to those rows only, and deliberately not to the figure-spacing ones. SF
+// gets tabular/proportional right, whereas a serif can reorganize its figure sets
+// under 'tnum'/'pnum' in ways that make the pair read backwards. Hoefler Text did
+// exactly that, rendering its tabular row proportional and vice versa. Feature
+// coverage varies face to face, so if a row here goes flat after a font change, try
+// the next candidate before suspecting the prop: Palatino, Iowan Old Style, Charter,
+// Didot. Baskerville is verified for small caps, oldstyle figures and the ff/ffi/ffl
+// ligatures.
+//
+// Android needs no override. Roboto carries the ff ligatures and 'onum' both, so
+// every row that can move there does. Naming a family would be harmless rather than
+// forbidden: the CustomStyleSpan gate is already satisfied by the fontStyle 'normal'
+// these rows carry.
+const FONT_VARIANT_FEATURE_FAMILY = Platform.select({ ios: 'Baskerville', default: undefined });
 
 // `fontStyle: 'normal'` is not cosmetic — it is what makes the red <Text> overlay
 // show any of this on Android. RN only attaches the span that carries
@@ -664,23 +731,55 @@ const TEXT_DECORATION_LINES = [
 // unavoidable, since that span is RN's only carrier for the features.
 const fontVariantRow: TextStyle = { fontSize: 18, fontStyle: 'normal' };
 
+// The figure-spacing rows use fontVariantRow above; everything else uses this.
+const fontVariantFeatureRow: TextStyle = {
+  ...fontVariantRow,
+  fontFamily: FONT_VARIANT_FEATURE_FAMILY,
+};
+
 // Typed against TextStyle rather than inferred: the literal unions are what make
 // each entry assignable to the style prop's FontVariant[].
 const FONT_VARIANTS: { label: string; fontVariant?: TextStyle['fontVariant'] }[] = [
-  { label: 'default', fontVariant: undefined },
+  // Ordered by how often the value actually gets used in app UIs, commonest first.
+  // The section renders the baseline row and the two figure-spacing values
+  // (tabular-nums, proportional-nums) ahead of this list — those are the ones
+  // reached for most, and they need paired rows to show anything, so they can't be
+  // driven from here.
+  //
+  // Everyday: headers, labels, acronyms set at text size.
   { label: 'small-caps', fontVariant: ['small-caps'] },
+  // Editorial/serif typography. This is the figure *shape*, not the spacing the
+  // tabular rows cover. Lining figures all sit on the baseline at cap height
+  // (1234567890). Oldstyle ones vary, with 3456789 dropping below it and 68 rising
+  // above, so digits blend into lowercase the way a printed book sets them.
+  //
+  // Only the row asking for the shape the face does not already use can move, and
+  // both faces default to lining, so 'oldstyle-nums' is the row that renders and
+  // 'lining-nums' is flat. Verified on both platforms: Baskerville carries 'onum' on
+  // iOS, and so does Roboto on Android.
   { label: 'oldstyle-nums', fontVariant: ['oldstyle-nums'] },
   { label: 'lining-nums', fontVariant: ['lining-nums'] },
-  // 'liga'/'clig' are on by default in both system fonts, so this row asks for
-  // what is already there and can't show a difference either way. Kept for
-  // completeness, not as coverage.
-  { label: 'common-ligatures', fontVariant: ['common-ligatures'] },
-  // The one ligature row that proves anything: it turns a default-on feature off,
-  // so "Waffle office" loses its ffl/ffi ligatures. PlainText applies it; the RN
-  // <Text> overlay does not, on either platform — see docs/agent/native-gotchas.md.
+  // Niche, but the one row that turns a default-on feature *off*, which is the only
+  // way a ligature value can be seen at all: "Waffle office" loses its ffl/ffi
+  // ligatures. Both fonts here carry them, so this is where PlainText's box should
+  // differ from the <Text> overlay on either platform.
   { label: 'no-common-ligatures', fontVariant: ['no-common-ligatures'] },
+  // Barely ever written by hand: 'liga'/'clig' are on by default in both system
+  // fonts, so this asks for what is already there and can't differ either way.
+  { label: 'common-ligatures', fontVariant: ['common-ligatures'] },
+  // Not a real-world combination; here so the array form is exercised with more
+  // than one entry.
   { label: 'small-caps + oldstyle-nums', fontVariant: ['small-caps', 'oldstyle-nums'] },
 ];
+
+// Per-platform: the RN <Text> gaps and the fonts differ. Detail in
+// docs/agent/native-gotchas.md.
+const FONT_VARIANT_FOOTER = Platform.select({
+  ios: 'RN <Text> ignores the ligature values. (no-common-ligatures row)',
+  default:
+    'RN <Text> ignores the ligature values, and all of fontVariant unless another ' +
+    "font prop is set (hence fontStyle 'normal').",
+});
 
 // Same number of digits per row, differing only in which ones.
 const TABULAR_FIGURE_ROWS = ['1111111111', '0123456789'];
