@@ -476,7 +476,25 @@ before believing it.
 change on a laid-out view whose size doesn't change emits no `updateLayout`, and
 nothing else rebuilds the `TextView`'s draw `Layout`.
 
-## Open opportunities
+### Guarding the `fontFeatureSettings` write (`PlainTextView.kt`)
+
+`setFontVariant` applies inline rather than through a dirty flag, so it runs per node
+per measure pass on the shared measuring view with a string
+`ReactTypefaceUtils.parseFontVariant` allocates fresh each call. That looks like it
+should be guarded, because `TextView.setFontFeatureSettings` compares old against new
+**by reference**, so its early-out never fires for an equal string.
+
+It buys nothing. `Paint.setFontFeatureSettings` compares with `equals` and returns
+before touching `mNativePaint`, so the write and its JNI hop are already skipped, and
+the feature string is parsed during shaping rather than at set time. What the
+reference comparison fails to skip is only `nullLayouts()` + `requestLayout()` +
+`invalidate()`, and on the measuring view the per-node `setText` invalidates the
+layout regardless. On mounted views the re-layout post is already coalesced by
+`relayoutPosted`.
+
+So the guard would trade a field, and the field-ordering hazard in
+[sync-points.md](sync-points.md#construction-time-state), for a saved
+`nullLayouts()`. Revisit only if a profile shows layout invalidation in this path.
 
 Nothing here is blocked; each is waiting on a trigger or on evidence that it
 matters. Ordered by expected value if its trigger fires.

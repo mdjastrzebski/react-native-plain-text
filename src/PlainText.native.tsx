@@ -32,16 +32,25 @@ function resolveTextAlignVertical(
   return textAlignVertical;
 }
 
+// Module scope so the string path doesn't allocate a RegExp per call: a regex
+// literal evaluates to a new object every time control reaches it.
+const FONT_VARIANT_SEPARATORS = /[\s,]+/;
+
 // RN types fontVariant as either an array of variant names or a CSS-style
 // `font-variant` string, and accepts both (ReactCommon's
 // parseUnprocessedFontVariant). The native prop takes only the array, so split
 // the string form on the separators CSS allows — the token names are the same
 // either way, so nothing else has to know which form arrived.
+//
+// The array form is returned as-is rather than copied, so the common case adds no
+// allocation and the prop keeps its identity across renders.
 function resolveFontVariant(fontVariant: TextStyle['fontVariant']): readonly string[] | undefined {
   if (typeof fontVariant !== 'string') {
     return fontVariant;
   }
-  const variants = fontVariant.split(/[\s,]+/).filter((variant) => variant.length > 0);
+  const variants = fontVariant
+    .split(FONT_VARIANT_SEPARATORS)
+    .filter((variant) => variant.length > 0);
   return variants.length > 0 ? variants : undefined;
 }
 
