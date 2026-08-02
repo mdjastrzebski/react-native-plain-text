@@ -246,11 +246,22 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSize)
   UIFontWeight weight = fontWeightFromProp(props.fontWeight);
   if (!props.fontFamily.empty()) {
     NSString *fontFamily = [NSString stringWithUTF8String:props.fontFamily.c_str()];
-    UIFontDescriptor *descriptor = [UIFontDescriptor fontDescriptorWithFontAttributes:@{
-      UIFontDescriptorFamilyAttribute : fontFamily,
-      UIFontDescriptorTraitsAttribute : @{UIFontWeightTrait : @(weight)},
-    }];
-    font = [UIFont fontWithDescriptor:descriptor size:fontSize];
+    // Resolve via the family's font names, as RCTFont.mm does: fontFamily is
+    // usually a face/PostScript name ("OpenRunde-Bold" in family "Open Runde")
+    // or an expo-font alias, and UIFontDescriptorFamilyAttribute matches neither.
+    // A single name is a face, which already picks the cut, so it skips weight.
+    NSArray<NSString *> *fontNames = [UIFont fontNamesForFamilyName:fontFamily];
+    if (fontNames.count == 0) {
+      font = [UIFont fontWithName:fontFamily size:fontSize];
+    } else if (fontNames.count == 1) {
+      font = [UIFont fontWithName:fontNames.firstObject size:fontSize];
+    } else {
+      UIFontDescriptor *descriptor = [UIFontDescriptor fontDescriptorWithFontAttributes:@{
+        UIFontDescriptorFamilyAttribute : fontFamily,
+        UIFontDescriptorTraitsAttribute : @{UIFontWeightTrait : @(weight)},
+      }];
+      font = [UIFont fontWithDescriptor:descriptor size:fontSize];
+    }
   } else {
     font = [UIFont systemFontOfSize:fontSize weight:weight];
   }
