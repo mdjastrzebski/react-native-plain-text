@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { PlainTextStyle } from 'react-native-plain-text';
 import { useCompareText } from '../components/CompareText';
 import { Cover, Section, TextItem, screenStyles } from '../components/Specimen';
-import { COLOR } from '../theme';
+import { COLOR, VARIABLE } from '../theme';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
@@ -389,7 +389,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           - Every row needs a font whose file carries an fvar table, which no
             system font usably does: SF keeps its axes private, and Roboto is
             only variable from Android 12. Hence the bundled Open Sans (see
-            VARIABLE_FONT_FAMILY), with wght 300-800 and wdth 75-100.
+            VARIABLE in ../theme), with wght 300-800 and wdth 75-100.
           - If every row looks identical, suspect the font before the prop. A
             family that failed to resolve falls back silently, to SF on iOS (no
             usable axes, so nothing moves) and to Roboto on Android (variable, so
@@ -725,23 +725,11 @@ const FONT_VARIANT_FOOTER = Platform.select({
 // Same number of digits per row, differing only in which ones.
 const TABULAR_FIGURE_ROWS = ['1111111111', '0123456789'];
 
-// Bundled at build time by the expo-font config plugin (example/app.json) from
-// assets/fonts/OpenSans.ttf, the variable release, with a wght axis (300-800,
-// default 400) and a wdth axis (75-100, default 100).
-//
-// The name differs per platform because RN resolves a bundled family
-// differently on each: from the asset file name on Android
-// (ReactFontManager.createAssetTypeface), from the family name inside the font
-// file on iOS. They coincide only when the file is named after the family, and
-// "Open Sans" has a space in it.
-//
-// Adding this font is why the section needs a native rebuild rather than a
-// Metro reload.
-const VARIABLE_FONT_FAMILY = Platform.select({ ios: 'Open Sans', default: 'OpenSans' });
-
+// VARIABLE, not a system face: only a font file with an fvar table can move, and
+// the theme comment says why none of the built-in ones qualify.
 const variableFontRow: PlainTextStyle = {
   fontSize: SHORT_ROW_SIZE,
-  fontFamily: VARIABLE_FONT_FAMILY,
+  fontFamily: VARIABLE,
 };
 
 // The value is the label: the point of the section is which string produces

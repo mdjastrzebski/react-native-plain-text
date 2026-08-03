@@ -236,9 +236,9 @@ Learned the hard way. Most of these cost an afternoon the first time.
 
   Only a font file carrying an `fvar` table can move. No system font usably
   does. SF's axes are private and Roboto is variable only from Android 12.
-  That is why the Features screen bundles Open Sans (`VARIABLE_FONT_FAMILY`)
-  and why a row rendering as the baseline usually means a missing axis rather
-  than a broken prop.
+  That is why the example app bundles Open Sans (`VARIABLE` in
+  `example/src/theme.ts`) and why a row rendering as the baseline usually means
+  a missing axis rather than a broken prop.
 
 ## Android
 

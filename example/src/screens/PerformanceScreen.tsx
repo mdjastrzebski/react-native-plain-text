@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
@@ -14,10 +15,10 @@ import { unstable_NativeText as NativeText } from 'react-native';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getMemoryFootprint } from 'react-native-memory-footprint';
-import { PlainText } from 'react-native-plain-text';
+import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { Section, screenStyles } from '../components/Specimen';
 import { useSessionState } from '../useSessionState';
-import { COLOR, MONO, SERIF } from '../theme';
+import { COLOR, MONO, SERIF, VARIABLE } from '../theme';
 // The library's bare codegen host component — the analogue of the
 // NativeText-vs-Text pair, which prices the JS wrapper. Imported by path
 // because it is deliberately not public API.
@@ -524,6 +525,10 @@ function renderItems(kind: Kind, applied: Applied) {
   }
 
   const style = [styles.listItem, textStyle, viewStyle];
+  // What RN's own components accept, which is the same array minus the one key
+  // they have no entry for. Dropped rather than translated: there is nothing to
+  // translate it to.
+  const rnStyle = style as StyleProp<TextStyle>;
 
   if (kind === 'plain') {
     return Array.from({ length: COUNT }, (_, n) => (
@@ -535,7 +540,7 @@ function renderItems(kind: Kind, applied: Applied) {
 
   if (kind === 'text') {
     return Array.from({ length: COUNT }, (_, n) => (
-      <Text key={n} style={style} {...extra}>
+      <Text key={n} style={rnStyle} {...extra}>
         {text(n)}
       </Text>
     ));
@@ -543,7 +548,7 @@ function renderItems(kind: Kind, applied: Applied) {
 
   return Array.from({ length: COUNT }, (_, n) => (
     // Bare RCTText host component, bypassing the <Text> JS wrapper.
-    <NativeText key={n} style={style} {...extra}>
+    <NativeText key={n} style={rnStyle} {...extra}>
       {text(n)}
     </NativeText>
   ));
@@ -652,6 +657,10 @@ const ATTRIBUTES: AttrDef[] = [
       { label: '(none)' },
       { label: 'serif', value: SERIF },
       { label: 'mono', value: MONO },
+      // The bundled variable face. Also the only family the fontVariationSettings
+      // row below can move, so the two are meant to be set together: an axis on a
+      // system font costs the same work and shows nothing.
+      { label: 'OpenSans', value: VARIABLE },
     ],
   },
   {
@@ -702,6 +711,27 @@ const ATTRIBUTES: AttrDef[] = [
       { label: 'small-caps', value: ['small-caps'] },
       { label: 'oldstyle', value: ['oldstyle-nums'] },
       { label: 'two', value: ['small-caps', 'oldstyle-nums'] },
+    ],
+  },
+  {
+    // Only moves glyphs when fontFamily is OpenSans, but it costs its work on any
+    // family: both platforms derive a font from the string before the fvar table
+    // gets a say. So (none) -> one axis is the price of the prop, and pairing it
+    // with OpenSans is what makes the re-measure real as well as priced.
+    key: 'fontVariationSettings',
+    section: 'Text',
+    fp: 'fvs',
+    target: 'text',
+    options: [
+      { label: '(none)' },
+      // One axis at both ends of its range: same parse and same derivation either
+      // way, but the heavier instance measures wider, so a run that re-measures
+      // shows it in the layout and not only in the timings.
+      { label: 'wght 300', value: '"wght" 300' },
+      { label: 'wght 800', value: '"wght" 800' },
+      { label: 'wdth 75', value: '"wdth" 75' },
+      // Two axes in one string: one more entry to parse, still one derivation.
+      { label: 'two', value: '"wght" 800, "wdth" 75' },
     ],
   },
   {
@@ -881,7 +911,10 @@ function formatFingerprint(config: AttrConfig) {
 type TextBuilder = (n: number) => string;
 
 type Applied = {
-  textStyle: TextStyle;
+  // PlainTextStyle, not TextStyle: the fontVariationSettings row writes a key RN
+  // has no style entry for. The two <Text> branches below cast it away again,
+  // which is exactly the gap the row is there to price.
+  textStyle: PlainTextStyle;
   viewStyle: ViewStyle;
   // numberOfLines, ellipsizeMode, allowFontScaling, maxFontSizeMultiplier —
   // whichever of them are set. Kept as a bag rather than named fields so adding
@@ -915,7 +948,7 @@ function buildApplied(config: AttrConfig, colorIndex: number, sizeBump: number):
   textStyle.fontSize = (textStyle.fontSize as number) + sizeBump;
 
   return {
-    textStyle: textStyle as TextStyle,
+    textStyle: textStyle as PlainTextStyle,
     viewStyle: viewStyle as ViewStyle,
     props,
     text,
