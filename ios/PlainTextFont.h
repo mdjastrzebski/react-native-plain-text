@@ -39,6 +39,10 @@ CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseM
  * reach UIFont: fontFamily, fontSize, fontWeight, italic, fontVariant and
  * fontVariationSettings.
  *
+ * Never nil: an unresolvable fontFamily falls back to the system font, since
+ * both callers would otherwise silently measure and draw with different
+ * defaults.
+ *
  * Callable from any thread: UIFont and NSCache are both thread-safe, so the
  * shadow thread and the main thread share one cache.
  */

@@ -3,6 +3,7 @@
 #import "PlainTextFontVariations.h"
 
 #import <CoreText/CoreText.h>
+#import <React/RCTFont.h>
 #import <React/RCTLog.h>
 
 #import <cmath>
@@ -33,6 +34,77 @@ static UIFontWeight fontWeightFromProp(const std::string &fontWeight)
   NSString *key = [NSString stringWithUTF8String:fontWeight.c_str()];
   NSNumber *weight = weights[key];
   return weight != nil ? (UIFontWeight)weight.doubleValue : UIFontWeightRegular;
+}
+
+/*
+ * Face selection within a font family, taken from React Native's own
+ * RCTFont.mm, so that a custom fontFamily resolves to exactly the face RN's
+ * <Text> would pick rather than merely a similar one.
+ *
+ * Based on: https://github.com/facebook/react-native/blob/main/packages/react-native/React/Views/RCTFont.mm
+ *
+ * The weight lookup is not copied: RCTGetFontWeight is RCT_EXTERN in
+ * <React/RCTFont.h>, so it is called directly and cannot drift. isItalicFont
+ * and isCondensedFont below are static in RCTFont.mm, and the face loop is
+ * inline in +updateFont:withFamily:size:weight:style:variant:scaleMultiplier:,
+ * so there is nothing to link against for either.
+ */
+
+static BOOL isItalicFont(UIFont *font)
+{
+  return (CTFontGetSymbolicTraits((CTFontRef)font) & kCTFontTraitItalic) != 0;
+}
+
+static BOOL isCondensedFont(UIFont *font)
+{
+  return (CTFontGetSymbolicTraits((CTFontRef)font) & kCTFontTraitCondensed) != 0;
+}
+
+/*
+ * The face in this family closest to the requested weight and slant.
+ *
+ * Based on: https://github.com/facebook/react-native/blob/main/packages/react-native/React/Views/RCTFont.mm
+ *
+ *   - RN's `didFindFont` guard is dropped. It exists so RN can skip the loop
+ *     after its system-font special case, which this function is never reached
+ *     for — an empty fontFamily takes the systemFontOfSize: path in
+ *     plainTextFont instead.
+ *   - `isCondensed` is a local NO rather than a parameter. RN derives it from
+ *     the UIFont it is updating in place and from the "SystemCondensed" family
+ *     name; this library has neither, so RN's value is constant NO here.
+ *
+ * Deliberately not UIFontDescriptorFamilyAttribute + UIFontWeightTrait, which
+ * is what this replaced: descriptor matching leans on the very weight trait
+ * that RCTGetFontWeight goes out of its way to consult last, and an unmatched
+ * descriptor resolves to the system font instead of failing — the silent
+ * fallback this whole path exists to avoid.
+ */
+static UIFont *
+closestFaceInFamily(NSArray<NSString *> *names, CGFloat fontSize, RCTFontWeight fontWeight, BOOL isItalic)
+{
+  BOOL isCondensed = NO;
+  UIFont *font = nil;
+
+  // Get the closest font that matches the given weight for the fontFamily
+  CGFloat closestWeight = INFINITY;
+  for (NSString *name in names) {
+    UIFont *match = [UIFont fontWithName:name size:fontSize];
+    if (isItalic == isItalicFont(match) && isCondensed == isCondensedFont(match)) {
+      CGFloat testWeight = RCTGetFontWeight(match);
+      if (ABS(testWeight - fontWeight) < ABS(closestWeight - fontWeight)) {
+        font = match;
+        closestWeight = testWeight;
+      }
+    }
+  }
+
+  // If we still don't have a match at least return the first font in the fontFamily
+  // This is to support built-in font Zapfino and other custom single font families like Impact
+  if (!font && names.count > 0) {
+    font = [UIFont fontWithName:names[0] size:fontSize];
+  }
+
+  return font;
 }
 
 // Mirrors RCTFont.mm's RCTFontVariantDescriptor map: each fontVariant name
@@ -246,39 +318,50 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSize)
   UIFontWeight weight = fontWeightFromProp(props.fontWeight);
   if (!props.fontFamily.empty()) {
     NSString *fontFamily = [NSString stringWithUTF8String:props.fontFamily.c_str()];
-    // Resolve via the family's font names, as RCTFont.mm does: fontFamily is
-    // usually a face/PostScript name ("OpenRunde-Bold" in family "Open Runde")
-    // or an expo-font alias, and UIFontDescriptorFamilyAttribute matches neither.
-    // A single name is a face, which already picks the cut, so it skips weight.
     NSArray<NSString *> *fontNames = [UIFont fontNamesForFamilyName:fontFamily];
-    if (fontNames.count == 0) {
-      font = [UIFont fontWithName:fontFamily size:fontSize];
-    } else if (fontNames.count == 1) {
-      font = [UIFont fontWithName:fontNames.firstObject size:fontSize];
+    if (fontNames.count > 0) {
+      font = closestFaceInFamily(fontNames, fontSize, weight, italic);
     } else {
-      UIFontDescriptor *descriptor = [UIFontDescriptor fontDescriptorWithFontAttributes:@{
-        UIFontDescriptorFamilyAttribute : fontFamily,
-        UIFontDescriptorTraitsAttribute : @{UIFontWeightTrait : @(weight)},
-      }];
-      font = [UIFont fontWithDescriptor:descriptor size:fontSize];
+      // Not a registered family, so take it for the face / PostScript name it
+      // probably is ("OpenRunde-Bold" rather than "Open Runde"). An expo-font
+      // alias lands in the branch above instead: the swizzled
+      // +fontNamesForFamilyName: answers it with a one-element array.
+      font = [UIFont fontWithName:fontFamily size:fontSize];
+      if (font == nil) {
+        // Same message and same level as RCTFont.mm, from the same branch, so a
+        // typo reads identically whether it hit <PlainText> or <Text>. Info
+        // rather than warn keeps it out of LogBox, which is RN's call, not ours
+        // — the substitution is cosmetic, and this fires once per cache miss
+        // (so once per distinct fontSize, not once per commit).
+        RCTLogInfo(@"Unrecognized font family '%@'", fontFamily);
+      }
     }
-  } else {
+  }
+
+  // No fontFamily, or one naming neither a known family nor a known face — the
+  // latter is RCTFont.mm's fallback too. Everything downstream needs a real
+  // font: the italic round-trip below, and both callers, which read
+  // font.lineHeight to cap numberOfLines and would otherwise measure and draw
+  // with different defaults.
+  if (font == nil) {
     font = [UIFont systemFontOfSize:fontSize weight:weight];
   }
 
-  if (italic) {
+  // Only when the resolved face isn't already italic — closestFaceInFamily
+  // prefers the family's real italic cut, which beats a synthesized slant.
+  if (italic && !isItalicFont(font)) {
     UIFontDescriptor *italicDescriptor = [font.fontDescriptor
         fontDescriptorWithSymbolicTraits:font.fontDescriptor.symbolicTraits | UIFontDescriptorTraitItalic];
-    font = [UIFont fontWithDescriptor:italicDescriptor size:fontSize];
+    font = [UIFont fontWithDescriptor:italicDescriptor size:fontSize] ?: font;
   }
 
   // Last, as in RCTFont.mm: the features are added to whatever descriptor the
   // family/weight/italic resolution ended up with.
   NSArray<NSDictionary *> *features = fontFeatureSettings(props.fontVariant);
-  if (features != nil && font != nil) {
+  if (features != nil) {
     UIFontDescriptor *featureDescriptor = [font.fontDescriptor
         fontDescriptorByAddingAttributes:@{UIFontDescriptorFeatureSettingsAttribute : features}];
-    font = [UIFont fontWithDescriptor:featureDescriptor size:fontSize];
+    font = [UIFont fontWithDescriptor:featureDescriptor size:fontSize] ?: font;
   }
 
   // Variable-font axes, three things worth knowing:
@@ -298,7 +381,7 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSize)
   //   own axes are private, so this needs a registered variable family to do
   //   anything, and silently does nothing without one.
   NSDictionary<NSNumber *, NSNumber *> *variations = fontVariations(props.fontVariationSettings);
-  if (variations != nil && font != nil) {
+  if (variations != nil) {
     CTFontDescriptorRef variationDescriptor = CTFontDescriptorCreateWithAttributes(
         (__bridge CFDictionaryRef) @{(__bridge id)kCTFontVariationAttribute : variations});
     UIFont *variedFont = (__bridge_transfer UIFont *)CTFontCreateCopyWithAttributes(
@@ -309,9 +392,10 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSize)
     }
   }
 
-  if (font != nil) {
-    [cache setObject:font forKey:key];
-  }
+  // Every round-trip above keeps the font it started from if the descriptor
+  // fails to resolve, so `font` is non-nil from the fallback onwards — no guard
+  // needed here, and NSCache would raise on a nil object.
+  [cache setObject:font forKey:key];
   return font;
 }
 
