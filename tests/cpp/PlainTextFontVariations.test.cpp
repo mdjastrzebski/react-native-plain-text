@@ -1,5 +1,5 @@
 /*
- * A table of inputs against expected results for parsePlainTextFontVariations.
+ * A table of inputs against expected results for parseFontVariations.
  *
  * Lives outside ios/ and cpp/ on purpose: the podspec globs the cpp sources
  * under both of those directories, and android/src/main/jni/CMakeLists.txt
@@ -11,10 +11,11 @@
  *
  * What this pins is our parser's behavior, not parity with Android's. The
  * grammar is meant to be the one FontVariationAxis.fromFontVariationSettings
- * accepts, and the cases below say which side of the line each input falls on,
- * but nothing here executes the Java parser. Those expectations were read off
- * android-36's FontVariationAxis.java, and the last section lists the inputs
- * where the two are known to disagree.
+ * accepts, plus the "normal" keyword that RN's Android wrapper recognizes one
+ * layer above that grammar, and the cases below say which side of the line
+ * each input falls on — but nothing here executes the Java parser. Those
+ * expectations were read off android-36's FontVariationAxis.java, and the
+ * "known divergences" section lists the inputs where the two disagree.
  */
 
 #include "../../ios/PlainTextFontVariations.h"
@@ -25,7 +26,7 @@
 #include <string>
 #include <vector>
 
-using facebook::react::parsePlainTextFontVariations;
+using facebook::react::parseFontVariations;
 using facebook::react::PlainTextFontVariationAxis;
 
 namespace {
@@ -83,9 +84,26 @@ const Case kCases[] = {
     {"a tag padded with spaces, as the Android docs write it", "'AX  ' 2.0", {{{tag("AX  "), 2}}}},
     {"a double-quoted tag may contain a single quote", "\"a'b'\" 1", {{{tag("a'b'"), 1}}}},
 
+    // "normal" is CSS's own spelling of "sets no axes" — not a shape
+    // fromFontVariationSettings itself recognizes, but one parseFontVariations
+    // special-cases the same way RN's Android wrapper does, one layer above
+    // the raw grammar.
+    {"normal sets no axes", "normal", std::vector<PlainTextFontVariationAxis>{}},
+    {"normal is case-insensitive", "NoRmAl", std::vector<PlainTextFontVariationAxis>{}},
+    {"normal is trimmed before the comparison", "  normal  ", std::vector<PlainTextFontVariationAxis>{}},
+
     // Rejected, and refused by Android too, so the prop cannot mean two
     // different things across the two platforms.
+    //
+    // Whitespace-only is rejected rather than treated as "normal": the
+    // comparison above only ever matches the literal word, and the string
+    // that reaches the grammar below when it doesn't is the original,
+    // un-trimmed one — so this stays a rejection rather than silently
+    // becoming "" and passing as no axes.
     {"whitespace only", "   ", kInvalid},
+    {"normal is only recognized as the whole string, not one entry among others",
+     "'wght' 700, normal",
+     kInvalid},
     {"tag without quotes", "wght 700", kInvalid},
     {"no closing quote", "'wght 700", kInvalid},
     {"mismatched quotes", "'wght\" 700", kInvalid},
@@ -177,7 +195,7 @@ int main()
 {
   int failures = 0;
   for (const Case &testCase : kCases) {
-    std::optional<std::vector<PlainTextFontVariationAxis>> actual = parsePlainTextFontVariations(testCase.input);
+    std::optional<std::vector<PlainTextFontVariationAxis>> actual = parseFontVariations(testCase.input);
     if (equal(actual, testCase.expected)) {
       continue;
     }
@@ -196,9 +214,9 @@ int main()
 
   int total = static_cast<int>(sizeof(kCases) / sizeof(kCases[0]));
   if (failures > 0) {
-    std::printf("\nparsePlainTextFontVariations: %d of %d cases failed\n", failures, total);
+    std::printf("\nparseFontVariations: %d of %d cases failed\n", failures, total);
     return 1;
   }
-  std::printf("parsePlainTextFontVariations: %d cases passed\n", total);
+  std::printf("parseFontVariations: %d cases passed\n", total);
   return 0;
 }

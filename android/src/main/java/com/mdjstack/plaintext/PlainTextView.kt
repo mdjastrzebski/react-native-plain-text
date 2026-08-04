@@ -396,8 +396,19 @@ class PlainTextView : AppCompatTextView {
   //   iterates. That NPE is not the IllegalArgumentException applyVariationSettings
   //   catches. iOS treats the same value as "sets no axes" and warns, so this is
   //   also what keeps the two platforms saying the same thing.
+  // - "normal" is CSS's own way of writing "sets no axes" (the initial value of
+  //   font-variation-settings), so it is special-cased here, ahead of the parser
+  //   that mirrors Android's fromFontVariationSettings grammar and does not know
+  //   it. Left to that parser, "normal" would fail to parse like any other bad
+  //   string and log a spurious "invalid fontVariationSettings" warning for a
+  //   value that isn't invalid.
   fun setVariationSettings(fontVariationSettings: String?) {
-    variationSettings = fontVariationSettings?.trim()?.ifEmpty { null }
+    val trimmed = fontVariationSettings?.trim()
+    variationSettings = if (trimmed.isNullOrEmpty() || trimmed.equals("normal", ignoreCase = true)) {
+      null
+    } else {
+      trimmed
+    }
   }
 
   private fun applyVariationSettings() {

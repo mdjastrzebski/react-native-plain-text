@@ -1,5 +1,7 @@
 #include "PlainTextFontVariations.h"
 
+#include "PlainTextStringUtils.h"
+
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
@@ -66,8 +68,22 @@ bool parseEntry(const std::string &entry, PlainTextFontVariationAxis &axis)
 
 } // namespace
 
-std::optional<std::vector<PlainTextFontVariationAxis>> parsePlainTextFontVariations(const std::string &settings)
+std::optional<std::vector<PlainTextFontVariationAxis>> parseFontVariations(const std::string &settings)
 {
+  // "normal" is CSS's own spelling of "sets no axes" (the property's initial
+  // value), not a shape fromFontVariationSettings itself recognizes — RN's
+  // own Android wrapper (ReactTypefaceUtils.parseFontVariationSettings)
+  // special-cases it the same way, one layer above the raw parser. Compared
+  // trimmed, but the comparison is the only thing that sees the trimmed
+  // form: the string this goes on to parse below is always the original,
+  // un-trimmed one. parseEntry already tolerates surrounding whitespace on a
+  // real entry, so pre-trimming there would buy nothing and would cost
+  // something elsewhere — it would turn a whitespace-only string, which the
+  // grammar below rejects, into "", which it accepts as no axes.
+  if (caseInsensitiveEquals(trim(settings), "normal")) {
+    return std::vector<PlainTextFontVariationAxis>{};
+  }
+
   std::vector<PlainTextFontVariationAxis> axes;
   if (settings.empty()) {
     return axes;

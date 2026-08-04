@@ -106,11 +106,12 @@ static NSArray<NSDictionary *> *fontFeatureSettings(const std::vector<std::strin
 }
 
 // The variation axes for a fontVariationSettings string, in the form
-// kCTFontVariationAttribute takes, or nil when it sets none. Parsing lives in
-// PlainTextFontVariations.cpp; this only bridges the result.
+// kCTFontVariationAttribute takes, or nil when it sets none. Parsing (including
+// the "normal" special case) lives in PlainTextFontVariations.cpp; this only
+// bridges the result.
 static NSDictionary<NSNumber *, NSNumber *> *fontVariations(const std::string &settings)
 {
-  std::optional<std::vector<PlainTextFontVariationAxis>> axes = parsePlainTextFontVariations(settings);
+  std::optional<std::vector<PlainTextFontVariationAxis>> axes = parseFontVariations(settings);
   if (!axes.has_value()) {
     // Returning nil is indistinguishable from "this string sets no axes", so
     // without this the font silently renders at its default instance. Mirrors

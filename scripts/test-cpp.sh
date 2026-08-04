@@ -32,4 +32,5 @@ run_suite() {
 
 run_suite font-variations \
   tests/cpp/PlainTextFontVariations.test.cpp \
-  ios/PlainTextFontVariations.cpp
+  ios/PlainTextFontVariations.cpp \
+  ios/PlainTextStringUtils.cpp

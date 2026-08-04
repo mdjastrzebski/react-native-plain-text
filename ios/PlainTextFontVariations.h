@@ -35,7 +35,13 @@ struct PlainTextFontVariationAxis {
  * malformed: it parses to no axes, hence the distinction between an empty
  * vector and nullopt. Callers are expected to surface nullopt, since applying
  * no axes otherwise looks exactly like a font with none.
+ *
+ * "normal" — CSS's own spelling of "sets no axes" — is also accepted, trimmed
+ * and case-insensitively, as an alias for the empty string. Android's own
+ * fromFontVariationSettings has no such case; RN's Android wrapper adds it
+ * one layer above that raw parser, and this does the same one layer above
+ * this one.
  */
-std::optional<std::vector<PlainTextFontVariationAxis>> parsePlainTextFontVariations(const std::string &settings);
+std::optional<std::vector<PlainTextFontVariationAxis>> parseFontVariations(const std::string &settings);
 
 } // namespace facebook::react
