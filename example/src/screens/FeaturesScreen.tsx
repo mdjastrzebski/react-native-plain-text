@@ -47,6 +47,13 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      <Section title="Font Family Resolution" footer={FONT_FAMILY_RESOLUTION_FOOTER}>
+        {FONT_FAMILY_RESOLUTION.map(({ label, style }) => (
+          <TextItem key={label} label={label} showText={showText} style={style}>
+            {style.fontFamily}
+          </TextItem>
+        ))}
+      </Section>
       <Section title="Color">
         {COLORS.map(({ label, color }) => (
           <TextItem
@@ -788,4 +795,139 @@ const FONT_FAMILIES = Platform.select({
     { label: 'monospace', fontFamily: 'monospace' },
     { label: 'sans-serif-condensed', fontFamily: 'sans-serif-condensed' },
   ],
+});
+
+// The rows above take family names that resolve the easy way. These take the
+// ones that don't, a row per branch of the iOS resolution in
+// ios/PlainTextFont.mm: weight matching inside a family, a family carrying a
+// single cut, a name that is neither family nor face, a face the family path
+// can't reach, a weight met by a real cut, the same cut named outright, a slant
+// met by none, and a face name.
+//
+// Every face and family here is verified present in the iOS 26.5 simulator
+// runtime, and the PostScript names are read from its font files rather than
+// guessed. A name that isn't installed renders as the system font — which is
+// what the Unresolvable row is for, so a wrong name elsewhere would quietly read
+// as a passing row.
+//
+// The Face name and Unresolvable rows are the pair worth watching together.
+// Resolution used to match UIFontDescriptorFamilyAttribute, which takes a
+// registered family name and nothing else, so a face name silently produced the
+// system font — the very thing an unresolvable name produces, which is what made
+// the bug hard to see: a loaded custom font and a typo rendered identically.
+// They should look different now, and both should match the brass <Text> overlay.
+//
+// Android resolves fontFamily through Typeface family names, with no PostScript
+// names and no weight matching to do, so its rows are the nearest analogs rather
+// than the same cases.
+
+// Each row renders its own fontFamily value as its content, so what you read is
+// what was passed. There is no second copy of the name to fall out of step with
+// the style, and fontFamily is required rather than optional so the content
+// can't come out empty.
+type FontFamilyRow = { label: string; style: TextStyle & { fontFamily: string } };
+
+const FONT_FAMILY_RESOLUTION: FontFamilyRow[] = Platform.select({
+  ios: [
+    {
+      // Renders in the Ultra Light cut, not a system font at weight 100.
+      label: 'Family and weight',
+      style: { fontSize: 20, fontFamily: 'Avenir Next', fontWeight: '100' },
+    },
+    {
+      // One cut in the family, so the bold has nothing to resolve to and must
+      // leave the row in Zapfino rather than fall back.
+      label: 'Single-cut family',
+      style: { fontSize: 16, fontFamily: 'Zapfino', fontWeight: 'bold' },
+    },
+    {
+      // HelveticaNeue-Thin, picked because RCTGetFontWeight reads the name suffix
+      // — a weight trait alone would not have singled it out. Also the order in
+      // that suffix list earning its keep: the family carries UltraLight, Thin
+      // and Light, and "ultralight" has to be tested before "light" or the
+      // UltraLight face would answer to weight 300.
+      label: 'Weight with a real cut',
+      style: { fontSize: 20, fontFamily: 'Helvetica Neue', fontWeight: '200' },
+    },
+    {
+      // The same cut, asked for by name instead of by weight. Renders identically
+      // to the row above, by a different branch: no family matches this string, so
+      // it resolves as a face.
+      label: 'Weight suffix in the name',
+      style: { fontSize: 20, fontFamily: 'HelveticaNeue-Thin' },
+    },
+    {
+      // Copperplate ships Regular, Light and Bold, and no italic. So the slant
+      // filter rejects every cut, the first face is taken instead, and the slant
+      // on top of it is synthesized. Contrast with the Georgia row, which has a
+      // real italic to find.
+      label: 'Slant with no cut',
+      style: { fontSize: 24, fontFamily: 'Copperplate', fontStyle: 'italic' },
+    },
+    {
+      // A face carries its own slant, so fontStyle stays out of this row:
+      // nothing in it is synthesized.
+      label: 'Face name',
+      style: { fontSize: 20, fontFamily: 'Georgia-BoldItalic' },
+    },
+    {
+      // Both Condensed cuts sit in family "Helvetica Neue", but the family path
+      // filters condensed faces out, so no weight reaches them there — a face
+      // name is the only way in. The two branches are not interchangeable.
+      label: 'Condensed face',
+      style: { fontSize: 20, fontFamily: 'HelveticaNeue-CondensedBlack' },
+    },
+    {
+      label: 'Unresolvable name',
+      style: { fontSize: 18, fontFamily: 'NoSuchFont-Regular' },
+    },
+  ],
+  default: [
+    {
+      // Renders in the Thin cut.
+      label: 'Family and weight',
+      style: { fontSize: 18, fontFamily: 'sans-serif', fontWeight: '100' },
+    },
+    {
+      label: 'Single-cut family',
+      style: { fontSize: 18, fontFamily: 'cursive' },
+    },
+    {
+      label: 'Unresolvable name',
+      style: { fontSize: 18, fontFamily: 'NoSuchFont-Regular' },
+    },
+    {
+      label: 'Condensed face',
+      style: { fontSize: 18, fontFamily: 'sans-serif-condensed-light' },
+    },
+    {
+      // Light rather than Thin, so this pair stays distinguishable from the
+      // family-and-weight row above.
+      label: 'Weight with a real cut',
+      style: { fontSize: 18, fontFamily: 'sans-serif', fontWeight: '300' },
+    },
+    {
+      label: 'Weight suffix in the name',
+      style: { fontSize: 18, fontFamily: 'sans-serif-light' },
+    },
+    {
+      // Android synthesizes the slant here too, for the same reason: the family
+      // carries no italic cut.
+      label: 'Slant with no cut',
+      style: { fontSize: 18, fontFamily: 'monospace', fontStyle: 'italic' },
+    },
+    {
+      label: 'Named cut',
+      style: { fontSize: 18, fontFamily: 'sans-serif-medium' },
+    },
+  ],
+});
+
+const FONT_FAMILY_RESOLUTION_FOOTER = Platform.select({
+  ios:
+    'Compare Text should agree on every row. The last one also logs ' +
+    '"Unrecognized font family" to the console, at info level, as RN <Text> does.',
+  default:
+    'The iOS resolution these rows target has no Android counterpart, so they are ' +
+    "analogs: nearest-weight matching is the platform's own here, not ours.",
 });
