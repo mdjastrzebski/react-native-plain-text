@@ -35,19 +35,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
-      <Section title="Font Family">
-        {FONT_FAMILIES.map(({ label, fontFamily }) => (
-          <TextItem
-            key={label}
-            label={label}
-            showText={showText}
-            style={{ fontSize: SHORT_ROW_SIZE, fontFamily }}
-          >
-            {SPECIMEN_DIGITS}
-          </TextItem>
-        ))}
-      </Section>
-      <Section title="Font Family Resolution" footer={FONT_FAMILY_RESOLUTION_FOOTER}>
+      <Section title="Font Family" footer={FONT_FAMILY_RESOLUTION_FOOTER}>
         {FONT_FAMILY_RESOLUTION.map(({ label, style }) => (
           <TextItem key={label} label={label} showText={showText} style={style}>
             {style.fontFamily}
@@ -610,7 +598,6 @@ const styles = StyleSheet.create({
 // outruns every clamp in the screen without introducing a second sentence to
 // read.
 const SPECIMEN = 'Quick brown fox';
-const SPECIMEN_DIGITS = 'Quick brown fox 0123';
 const PARAGRAPH = 'The quick brown fox jumps over the lazy dog.';
 const PARAGRAPH_LONG = `${PARAGRAPH} ${PARAGRAPH} ${PARAGRAPH}`;
 
@@ -780,25 +767,8 @@ const COLORS = [
 
 const FONT_WEIGHTS = ['normal', 'bold', '100', '300', '500', '700', '900'] as const;
 
-// Font family names aren't portable across platforms, so pick the equivalent
-// built-in for each — mirrors how RN's own <Text> docs demo fontFamily.
-const FONT_FAMILIES = Platform.select({
-  ios: [
-    { label: 'System', fontFamily: undefined },
-    { label: 'Georgia', fontFamily: 'Georgia' },
-    { label: 'Menlo', fontFamily: 'Menlo' },
-    { label: 'Courier', fontFamily: 'Courier' },
-  ],
-  default: [
-    { label: 'System', fontFamily: undefined },
-    { label: 'serif', fontFamily: 'serif' },
-    { label: 'monospace', fontFamily: 'monospace' },
-    { label: 'sans-serif-condensed', fontFamily: 'sans-serif-condensed' },
-  ],
-});
-
-// The rows above take family names that resolve the easy way. These take the
-// ones that don't, a row per branch of the iOS resolution in
+// The first rows are plain registered family names, which resolve the easy way.
+// The rest take the names that don't, a row per branch of the iOS resolution in
 // ios/PlainTextFont.mm: weight matching inside a family, a family carrying a
 // single cut, a name that is neither family nor face, a face the family path
 // can't reach, a weight met by a real cut, the same cut named outright, a slant
@@ -829,6 +799,12 @@ type FontFamilyRow = { label: string; style: TextStyle & { fontFamily: string } 
 
 const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
   ios: [
+    // The straightforward ones first: a registered family name, which is the
+    // only thing the resolution this section exercises never had trouble with.
+    { label: 'System', style: { fontSize: 18, fontFamily: 'System' } },
+    { label: 'Georgia', style: { fontSize: 18, fontFamily: 'Georgia' } },
+    { label: 'Menlo', style: { fontSize: 18, fontFamily: 'Menlo' } },
+    { label: 'Courier', style: { fontSize: 18, fontFamily: 'Courier' } },
     {
       // Renders in the Ultra Light cut, not a system font at weight 100.
       label: 'Family and weight',
@@ -879,6 +855,13 @@ const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
     },
   ],
   default: [
+    { label: 'System', style: { fontSize: 18, fontFamily: 'System' } },
+    { label: 'serif', style: { fontSize: 18, fontFamily: 'serif' } },
+    { label: 'monospace', style: { fontSize: 18, fontFamily: 'monospace' } },
+    {
+      label: 'sans-serif-condensed',
+      style: { fontSize: 18, fontFamily: 'sans-serif-condensed' },
+    },
     {
       // Renders in the Thin cut.
       label: 'Family and weight',
