@@ -1702,6 +1702,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo-google-fonts/inter@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "@expo-google-fonts/inter@npm:0.4.2"
+  checksum: 10c0/a88e6d1321584055d2fa265861795d55ec04b64d9726ecb60fd11a970252d23a1fd8c1febab7b587eb8ec699071d35c38c591625e44a2826c1e0e18bb1aa1946
+  languageName: node
+  linkType: hard
+
 "@expo/cli@npm:^57.0.11":
   version: 57.0.11
   resolution: "@expo/cli@npm:57.0.11"
@@ -10317,6 +10324,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "react-native-plain-text-example@workspace:example"
   dependencies:
+    "@expo-google-fonts/inter": "npm:^0.4.2"
     "@expo/metro-runtime": "npm:~57.0.8"
     "@expo/vector-icons": "npm:^15.0.2"
     "@react-navigation/bottom-tabs": "npm:^7.18.13"

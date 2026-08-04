@@ -1,5 +1,11 @@
 import { useCallback } from 'react';
 import { Platform, StyleSheet } from 'react-native';
+import {
+  useFonts,
+  Inter_300Light_Italic,
+  Inter_400Regular,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer, type NavigationState } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -107,7 +113,22 @@ const TAB_SCREENS = TABS.map(({ title, route, icon, screen }) => ({
   ),
 }));
 
+// The keys are the names FeaturesScreen passes as fontFamily, and expo-font
+// registers each one as an alias for the face's real PostScript name
+// ("Inter_400Regular" ▸ "Inter-Regular"). One family, same names on both
+// platforms, which is what makes those rows comparable at all — every other font
+// in that section is a platform built-in.
+//
+// Gated rather than rendered through: an alias that hasn't been registered yet
+// resolves to the system font, which is precisely the failure the section exists
+// to show, so those rows would lie for as long as the load took.
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Inter_300Light_Italic,
+    Inter_400Regular,
+    Inter_600SemiBold,
+  });
+
   // Which tab was selected, kept across app kills for the rest of the session.
   const [initialTabName, setSelectedTab] = useSessionState<string | undefined>(
     'selected-tab',
@@ -122,6 +143,10 @@ export default function App() {
     },
     [setSelectedTab]
   );
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <SafeAreaProvider>

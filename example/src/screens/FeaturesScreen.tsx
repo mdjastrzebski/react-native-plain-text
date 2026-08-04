@@ -827,7 +827,7 @@ const FONT_FAMILIES = Platform.select({
 // can't come out empty.
 type FontFamilyRow = { label: string; style: TextStyle & { fontFamily: string } };
 
-const FONT_FAMILY_RESOLUTION: FontFamilyRow[] = Platform.select({
+const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
   ios: [
     {
       // Renders in the Ultra Light cut, not a system font at weight 100.
@@ -877,10 +877,6 @@ const FONT_FAMILY_RESOLUTION: FontFamilyRow[] = Platform.select({
       label: 'Condensed face',
       style: { fontSize: 20, fontFamily: 'HelveticaNeue-CondensedBlack' },
     },
-    {
-      label: 'Unresolvable name',
-      style: { fontSize: 18, fontFamily: 'NoSuchFont-Regular' },
-    },
   ],
   default: [
     {
@@ -891,10 +887,6 @@ const FONT_FAMILY_RESOLUTION: FontFamilyRow[] = Platform.select({
     {
       label: 'Single-cut family',
       style: { fontSize: 18, fontFamily: 'cursive' },
-    },
-    {
-      label: 'Unresolvable name',
-      style: { fontSize: 18, fontFamily: 'NoSuchFont-Regular' },
     },
     {
       label: 'Condensed face',
@@ -923,11 +915,59 @@ const FONT_FAMILY_RESOLUTION: FontFamilyRow[] = Platform.select({
   ],
 });
 
+// Custom fonts, as against the platform built-ins above — and the only rows in
+// this screen that are the same on iOS and Android, because the name is ours
+// rather than the platform's. Loaded in App.tsx via expo-font, which is how most
+// apps get a custom font, and the reason this section exists: it is the case the
+// old resolution failed on hardest.
+//
+// What expo-font does on iOS, in its own words (ios/UIFont+FontFamilyAlias.swift):
+// it swizzles +fontNames(forFamilyName:) so that an unknown family name gets
+// retried as an alias, and when the alias resolves to a PostScript name that is
+// not itself a family, it answers with that one name in a one-element array.
+// So resolution reaches the face only if it goes through that method —
+// UIFontDescriptorFamilyAttribute matching does not call it, which is why every
+// row here used to come out as the system font.
+//
+// It is also why the earlier attempt at this fix, which special-cased
+// `fontNamesForFamilyName:.count == 0`, could never have worked in an Expo app:
+// the swizzle returns one name, not none.
+//
+// On Android the same aliases resolve without any of this — expo-font registers
+// them into ReactFontManager (android FontLoaderModule.kt), which is what
+// PlainTextView.applyTypeface already resolves through.
+const CUSTOM_FONT_ROWS: FontFamilyRow[] = [
+  {
+    label: 'expo-font alias',
+    style: { fontSize: 18, fontFamily: 'Inter_400Regular' },
+  },
+  {
+    // Each cut is loaded under its own alias, so weight lives in the name here
+    // rather than in fontWeight — one alias is a one-face family, and there is
+    // no sibling cut for a weight to match against.
+    label: 'expo-font alias, heavier cut',
+    style: { fontSize: 18, fontFamily: 'Inter_600SemiBold' },
+  },
+  {
+    // Slant in the name too, and for the same reason. Nothing synthesized: the
+    // face is already italic, so plainTextFont's italic round-trip is skipped.
+    label: 'expo-font alias, light italic',
+    style: { fontSize: 18, fontFamily: 'Inter_300Light_Italic' },
+  },
+];
+
+const UNRESOLVABLE_FONT_ROW: FontFamilyRow = {
+  label: 'Unresolvable name',
+  style: { fontSize: 18, fontFamily: 'NoSuchFont-Regular' },
+};
+
+const FONT_FAMILY_RESOLUTION: FontFamilyRow[] = [
+  ...PLATFORM_FONT_ROWS,
+  ...CUSTOM_FONT_ROWS,
+  UNRESOLVABLE_FONT_ROW,
+];
+
 const FONT_FAMILY_RESOLUTION_FOOTER = Platform.select({
-  ios:
-    'Compare Text should agree on every row. The last one also logs ' +
-    '"Unrecognized font family" to the console, at info level, as RN <Text> does.',
-  default:
-    'The iOS resolution these rows target has no Android counterpart, so they are ' +
-    "analogs: nearest-weight matching is the platform's own here, not ours.",
+  ios: 'Compare Text should agree on every row. Inter_* are expo-font aliases, one per cut.',
+  default: 'The built-in rows are Android analogs. Inter_* are expo-font aliases, one per cut.',
 });
