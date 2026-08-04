@@ -973,8 +973,6 @@ function PropsSheet({
             </Section>
           ))}
         </ScrollView>
-
-        <PlainText style={styles.sheetFingerprint}>{formatFingerprint(config)}</PlainText>
       </View>
     </Modal>
   );
@@ -1335,15 +1333,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  sheetFingerprint: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: MONO,
-    color: COLOR.muted,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLOR.line,
   },
 });
