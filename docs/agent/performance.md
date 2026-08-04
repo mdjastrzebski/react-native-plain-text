@@ -358,14 +358,32 @@ at all.
 `PlainTextShadowNode::measureContent` resolved the same `UIFont` from the same
 props — so mounting 1000 items ran 2000 uncached resolutions for what is usually
 a single distinct font. Both now call `plainTextFont`, backed by an `NSCache`
-keyed on the only four inputs that reach `UIFont`: family, size, weight, italic.
+keyed on the only six inputs that reach `UIFont`: family, size, weight, italic,
+variants and variation settings.
 
 Resolution is not free, which is why RN caches its own system fonts the same way
-(`RCTFont.mm`, `cachedSystemFont`). The custom-family path is the expensive one:
-`fontDescriptorWithFontAttributes:` + `fontWithDescriptor:` matches against the
-font database, and italic adds a second descriptor round-trip. `UIFont` and
-`NSCache` are both thread-safe, so the shadow thread and the main thread share
-one cache.
+(`RCTFont.mm`, `cachedSystemFont`). `UIFont` and `NSCache` are both thread-safe,
+so the shadow thread and the main thread share one cache.
+
+The custom-family path is the expensive one, and got more so when face selection
+started mirroring `RCTFont.mm` face by face (for the parity reasons in that file's
+comments) instead of matching one font descriptor: a miss over N faces
+instantiates N fonts, queries 2N symbolic traits and runs N `RCTGetFontWeight`
+calls. Two more caches and a short-circuit keep that off the hot path:
+
+- **The family's face names, per family.** `+[UIFont fontNamesForFamilyName:]`
+  enumerates the font database — RN calls it expensive and wraps it identically.
+- **The winning face, per family/weight/style rather than per size.** Every input
+  the comparison reads belongs to the face, so the scan runs at a fixed probe size
+  and only the instantiation uses the real one. Without this, each new size re-ran
+  the scan to reach a name it already knew, and a type scale or a Dynamic Type
+  step is several new sizes.
+- **A single-face family skips the scan**, since the loop's result is provably
+  that one name. That is the shape of most custom and expo-registered fonts.
+
+The font cache has a `countLimit` because its key includes two continuous inputs,
+`fontSize` and the axis values in `fontVariationSettings`, which an app animating
+either would otherwise walk through without bound.
 
 This is the iOS counterpart to Android's batched typeface resolution, and unlike
 the changes above it _removes_ a sync point rather than adding one — the two
