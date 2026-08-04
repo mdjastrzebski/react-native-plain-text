@@ -30,7 +30,7 @@ Size PlainTextShadowNode::measureContent(
   // mounted view reads directly); the clamping on top of it is shared with that
   // view, so the measured size matches.
   CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
-  UIFont *font = plainTextFont(props, props.fontSize * fontSizeMultiplier);
+  UIFont *font = plainTextFont(props, plainTextScaledFontSize(props.fontSize, fontSizeMultiplier));
 
   // Build the same attributes the mounted UILabel renders with, so the measured
   // size matches. Kerning (letterSpacing) widens the text; a pinned line height

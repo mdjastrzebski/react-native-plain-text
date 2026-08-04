@@ -157,7 +157,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 - (void)applyContentFromProps:(const RNPlainTextProps &)props
 {
     CGFloat fontSizeMultiplier = RNPlainTextFontSizeMultiplier(props);
-    UIFont *font = plainTextFont(props, props.fontSize * fontSizeMultiplier);
+    UIFont *font = plainTextFont(props, plainTextScaledFontSize(props.fontSize, fontSizeMultiplier));
     UIColor *color = props.color ? RCTUIColorFromSharedColor(props.color) : [UIColor blackColor];
     NSTextAlignment alignment = RNPlainTextAlignmentFromProp(props.textAlign);
     NSString *text = [NSString stringWithUTF8String:props.text.c_str()] ?: @"";
