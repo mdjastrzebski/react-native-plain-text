@@ -25,6 +25,11 @@ RCTFontWeight fontWeightFromProp(const std::string &fontWeight)
   return weight != nil ? (RCTFontWeight)weight.doubleValue : UIFontWeightRegular;
 }
 
+bool isItalicFromProp(const std::string &fontStyle)
+{
+  return fontStyle == "italic" || fontStyle == "oblique";
+}
+
 NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors(void)
 {
 #define RNPlainTextFeature(type, selector) \

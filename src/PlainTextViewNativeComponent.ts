@@ -27,7 +27,15 @@ export interface NativeProps extends ViewProps {
   // instead (mirrors how RN's own <Text> types AndroidTextInputNativeComponent's
   // fontWeight as plain `string`).
   fontWeight?: string;
-  fontStyle?: CodegenTypes.WithDefault<'normal' | 'italic', 'normal'>;
+  // A free string rather than WithDefault<enum>, for the same reason as
+  // fontWeight above but a different symptom: codegen collapses "not passed"
+  // and the default value into the same C++ enum member, so native code has
+  // no way to tell "fontStyle: normal" apart from "fontStyle" never set at
+  // all. iOS's face-fallback path needs that distinction — RN's own
+  // RCTFont.mm keeps it by branching on the raw (possibly nil) style string
+  // rather than on the converted bool — so it's threaded through as a raw
+  // string the same way fontWeightProp is (see PlainTextFont.mm).
+  fontStyle?: string;
   // OpenType feature toggles, as RN <Text>'s fontVariant: variant names, each
   // mapping to one or more font features. Strings rather than a literal union
   // because codegen turns an array of enums into a bitmask enum; plain strings

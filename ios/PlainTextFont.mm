@@ -202,6 +202,7 @@ static NSString *computeFaceName(
     const std::string &fontFamily,
     const std::string &fontWeightProp,
     RCTFontWeight fontWeight,
+    const std::string &fontStyleProp,
     BOOL isItalic)
 {
   NSString *familyName = [NSString stringWithUTF8String:fontFamily.c_str()];
@@ -235,16 +236,15 @@ static NSString *computeFaceName(
   //
   // A prop that wasn't set inherits the matched face's own trait rather than
   // a hardcoded default, exactly as RCTFont.mm's `style ? isItalic :
-  // isItalicFont(font)` / `weight ? fontWeight : RCTGetFontWeight(font)` do —
-  // isItalic has no "unset" of its own to check (fontStyle's codegen default
-  // collapses "not passed" and "normal" into the same enum value, see
-  // PlainTextViewNativeComponent.ts), so a caller-true isItalic wins and a
-  // caller-false one falls through to the face.
+  // isItalicFont(font)` / `weight ? fontWeight : RCTGetFontWeight(font)` do.
+  // Both branch on whether the *raw* prop was passed, not on the converted
+  // value, so fontStyleProp/fontWeightProp (empty means "not passed") decide
+  // the fallback rather than isItalic/fontWeight themselves.
   NSString *realFamilyName = namedFont.familyName;
   BOOL faceIsItalic = isItalicFont(namedFont);
   BOOL faceIsCondensed = isCondensedFont(namedFont);
   RCTFontWeight faceWeight = RCTGetFontWeight(namedFont);
-  BOOL effectiveIsItalic = isItalic || faceIsItalic;
+  BOOL effectiveIsItalic = fontStyleProp.empty() ? faceIsItalic : isItalic;
   RCTFontWeight effectiveWeight = fontWeightProp.empty() ? faceWeight : fontWeight;
   return closestFaceNameInFamily(
              cachedFontNamesForFamilyName(realFamilyName), effectiveWeight, effectiveIsItalic, faceIsCondensed)
@@ -259,6 +259,7 @@ static NSString *resolvedFaceName(
     const std::string &faceKey,
     const std::string &fontWeightProp,
     RCTFontWeight fontWeight,
+    const std::string &fontStyleProp,
     BOOL isItalic)
 {
   static PlainTextFontCache<NSString *, NSString *> *faceNamesCache =
@@ -266,11 +267,11 @@ static NSString *resolvedFaceName(
 
   NSString *key = [NSString stringWithUTF8String:faceKey.c_str()];
   if (key == nil) {
-    return computeFaceName(fontFamily, fontWeightProp, fontWeight, isItalic);
+    return computeFaceName(fontFamily, fontWeightProp, fontWeight, fontStyleProp, isItalic);
   }
   return [faceNamesCache objectForKey:key
                                  orSet:^NSString * {
-                                   return computeFaceName(fontFamily, fontWeightProp, fontWeight, isItalic);
+                                   return computeFaceName(fontFamily, fontWeightProp, fontWeight, fontStyleProp, isItalic);
                                  }];
 }
 
@@ -292,7 +293,7 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
   // sent through the family lookup below, where no family is actually
   // registered as "System" and it would only fail and log.
   if (!props.fontFamily.empty() && props.fontFamily != "System") {
-    NSString *faceName = resolvedFaceName(props.fontFamily, faceKey, props.fontWeight, weight, italic);
+    NSString *faceName = resolvedFaceName(props.fontFamily, faceKey, props.fontWeight, weight, props.fontStyle, italic);
     if (faceName != nil) {
       font = [UIFont fontWithName:faceName size:fontSize];
     }
@@ -360,8 +361,8 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
       [[PlainTextFontCache alloc] initWithCountLimit:kFontCacheCountLimit];
 
   CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
-  bool italic = props.fontStyle == RNPlainTextFontStyle::Italic;
-  std::string faceKey = faceCacheKey(props.fontFamily, props.fontWeight, italic);
+  bool italic = isItalicFromProp(props.fontStyle);
+  std::string faceKey = faceCacheKey(props.fontFamily, props.fontWeight, props.fontStyle);
   std::string cacheKey = fontCacheKey(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
   NSString *key = [NSString stringWithUTF8String:cacheKey.c_str()];
 

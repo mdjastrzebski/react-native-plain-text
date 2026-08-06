@@ -21,6 +21,16 @@ namespace facebook::react {
 RCTFontWeight fontWeightFromProp(const std::string &fontWeight);
 
 /*
+ * Mirrors RCTFont.mm's RCTFontStyle map (RCTConvert RCTFontStyle): "italic"
+ * and "oblique" are italic, everything else — including an empty string,
+ * which is codegen's stand-in for fontStyle not being passed at all — isn't.
+ * Callers that need to tell "not passed" apart from an explicit "normal"
+ * check the raw string themselves (see computeFaceName in PlainTextFont.mm);
+ * this only answers the simpler "should this render slanted" question.
+ */
+bool isItalicFromProp(const std::string &fontStyle);
+
+/*
  * Mirrors RCTFont.mm's RCTFontVariantDescriptor map: each fontVariant name
  * names one OpenType feature, expressed as the type/selector identifier pair
  * UIFontDescriptor takes. Unrecognized names have no entry, as RN drops them.

@@ -58,8 +58,8 @@ Size PlainTextMeasurementsManager::measure(
   if (!props.fontWeight.empty()) {
     serializedProps["fontWeight"] = props.fontWeight;
   }
-  if (props.fontStyle != RNPlainTextFontStyle::Normal) {
-    serializedProps["fontStyle"] = toString(props.fontStyle);
+  if (!props.fontStyle.empty()) {
+    serializedProps["fontStyle"] = props.fontStyle;
   }
   if (!props.fontVariant.empty()) {
     // A dynamic array, so it arrives as a ReadableArray — what RN's own

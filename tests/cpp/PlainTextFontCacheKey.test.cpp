@@ -39,19 +39,23 @@ void expectEqual(const std::string &what, bool expected, bool actual)
 
 void testFaceCacheKey()
 {
-  expectEqual("distinct families don't collide", true, faceCacheKey("Foo", "bold", false) != faceCacheKey("Bar", "bold", false));
-  expectEqual("distinct weights don't collide", true, faceCacheKey("Foo", "bold", false) != faceCacheKey("Foo", "400", false));
-  expectEqual("italic changes the key", true, faceCacheKey("Foo", "bold", false) != faceCacheKey("Foo", "bold", true));
+  expectEqual("distinct families don't collide", true, faceCacheKey("Foo", "bold", "") != faceCacheKey("Bar", "bold", ""));
+  expectEqual("distinct weights don't collide", true, faceCacheKey("Foo", "bold", "") != faceCacheKey("Foo", "400", ""));
+  expectEqual("italic changes the key", true, faceCacheKey("Foo", "bold", "") != faceCacheKey("Foo", "bold", "italic"));
+  expectEqual(
+      "an unset fontStyle and an explicit \"normal\" don't collide",
+      true,
+      faceCacheKey("Foo", "bold", "") != faceCacheKey("Foo", "bold", "normal"));
   expectEqual(
       "same inputs produce the same key",
-      faceCacheKey("Foo", "bold", true),
-      faceCacheKey("Foo", "bold", true));
+      faceCacheKey("Foo", "bold", "italic"),
+      faceCacheKey("Foo", "bold", "italic"));
   // A separator inside a free-form field shifts the family/weight boundary,
   // so this pair is documented to collide rather than crash or misparse.
   expectEqual(
       "a separator inside fontFamily shifts into fontWeight",
-      faceCacheKey("Foo|", "bold", false),
-      faceCacheKey("Foo", "|bold", false));
+      faceCacheKey("Foo|", "bold", ""),
+      faceCacheKey("Foo", "|bold", ""));
 }
 
 void testFontCacheKey()

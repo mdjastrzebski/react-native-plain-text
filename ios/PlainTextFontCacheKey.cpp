@@ -8,13 +8,13 @@ namespace {
 constexpr char kFieldSeparator = '|';
 } // namespace
 
-std::string faceCacheKey(const std::string &fontFamily, const std::string &fontWeight, bool italic)
+std::string faceCacheKey(const std::string &fontFamily, const std::string &fontWeight, const std::string &fontStyle)
 {
   std::string key = fontFamily;
   key += kFieldSeparator;
   key += fontWeight;
   key += kFieldSeparator;
-  key += italic ? 'i' : 'n';
+  key += fontStyle;
   return key;
 }
 

@@ -14,16 +14,22 @@ namespace facebook::react {
 
 /*
  * The three inputs that decide which face of a family to use: fontFamily,
- * fontWeight and italic. Also the leading fields of fontCacheKey below, so one
- * string serves both and the shared part is built once.
+ * fontWeight and fontStyle. Also the leading fields of fontCacheKey below, so
+ * one string serves both and the shared part is built once.
  *
- * fontFamily and fontWeight are adjacent free-form strings, so a separator
- * inside either shifts the boundary between them — family "Foo|" at weight
- * "bold" keys the same as family "Foo" at weight "|bold". Left unguarded: it
- * takes a fontWeight no real style produces, and the worst case is one wrong
- * font, consistently, since both callers share the key.
+ * fontStyle is the raw prop string (possibly empty, meaning "not passed"),
+ * not a converted bool: an empty string and "normal" both mean "not italic"
+ * but resolve differently once a fontFamily turns out to name a face rather
+ * than a family (see computeFaceName's fallback in PlainTextFont.mm), so they
+ * need distinct cache entries.
+ *
+ * fontFamily, fontWeight and fontStyle are adjacent free-form strings, so a
+ * separator inside any of them shifts the boundary between fields — family
+ * "Foo|" at weight "bold" keys the same as family "Foo" at weight "|bold".
+ * Left unguarded: it takes a fontWeight no real style produces, and the worst
+ * case is one wrong font, consistently, since both callers share the key.
  */
-std::string faceCacheKey(const std::string &fontFamily, const std::string &fontWeight, bool italic);
+std::string faceCacheKey(const std::string &fontFamily, const std::string &fontWeight, const std::string &fontStyle);
 
 /*
  * The face key plus the three inputs that don't affect face selection:
