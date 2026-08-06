@@ -184,13 +184,6 @@ static NSDictionary<NSNumber *, NSNumber *> *fontVariations(const std::string &s
 // weights, styles and variants.
 static constexpr NSUInteger kFontCacheCountLimit = 256;
 
-static PlainTextFontCache<NSString *, UIFont *> *fontCache()
-{
-  static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache =
-      [[PlainTextFontCache alloc] initWithCountLimit:kFontCacheCountLimit];
-  return resolvedFontsCache;
-}
-
 /*
  * The face name to instantiate for this fontFamily, or nil if it resolves to
  * nothing and the caller should fall back to the system font.
@@ -359,16 +352,19 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
 
 UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
 {
+  static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache =
+      [[PlainTextFontCache alloc] initWithCountLimit:kFontCacheCountLimit];
+
   CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
   bool italic = props.fontStyle == RNPlainTextFontStyle::Italic;
   std::string faceKey = faceCacheKey(props.fontFamily, props.fontWeight, italic);
   std::string cacheKey = fontCacheKey(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
   NSString *key = [NSString stringWithUTF8String:cacheKey.c_str()];
 
-  return [fontCache() objectForKey:key
-                              orSet:^UIFont * {
-                                return resolvedFont(props, faceKey, fontSize, italic);
-                              }];
+  return [resolvedFontsCache objectForKey:key
+                                     orSet:^UIFont * {
+                                       return resolvedFont(props, faceKey, fontSize, italic);
+                                     }];
 }
 
 } // namespace facebook::react
