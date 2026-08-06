@@ -10,7 +10,6 @@
 #import <React/RCTFont.h>
 #import <React/RCTLog.h>
 
-#import <cmath>
 #import <optional>
 #import <string>
 #import <vector>
@@ -176,20 +175,6 @@ static NSDictionary<NSNumber *, NSNumber *> *fontVariations(const std::string &s
     variations[@(axis.tag)] = @(axis.value);
   }
   return variations;
-}
-
-// Bridges fontCacheKey's std::string result to NSString, so a hit costs a
-// single NSString allocation instead of a trip through the font database.
-// The key-building logic itself lives in PlainTextFontCacheKey.cpp, where it
-// can be tested without an ObjC round-trip.
-static NSString *fontCacheKeyString(
-    const std::string &faceKey,
-    CGFloat fontSize,
-    const std::vector<std::string> &fontVariant,
-    const std::string &fontVariationSettings)
-{
-  std::string key = fontCacheKey(faceKey, fontSize, fontVariant, fontVariationSettings);
-  return [NSString stringWithUTF8String:key.c_str()];
 }
 
 // The key carries two continuous inputs — fontSize, and any axis in
@@ -377,7 +362,8 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
   CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
   bool italic = props.fontStyle == RNPlainTextFontStyle::Italic;
   std::string faceKey = faceCacheKey(props.fontFamily, props.fontWeight, italic);
-  NSString *key = fontCacheKeyString(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
+  std::string cacheKey = fontCacheKey(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
+  NSString *key = [NSString stringWithUTF8String:cacheKey.c_str()];
 
   return [fontCache() objectForKey:key
                               orSet:^UIFont * {

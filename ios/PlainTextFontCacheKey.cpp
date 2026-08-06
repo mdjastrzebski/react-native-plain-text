@@ -1,5 +1,7 @@
 #include "PlainTextFontCacheKey.h"
 
+#include <cmath>
+
 namespace facebook::react {
 
 namespace {
