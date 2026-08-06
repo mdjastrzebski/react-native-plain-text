@@ -428,18 +428,22 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
   }
 
   UIFontWeight weight = fontWeightFromProp(props.fontWeight);
-  if (!props.fontFamily.empty()) {
+  // "System" is RCTFont.mm's own special case for the system font by name
+  // (RN's <Text> accepts it the same way), so it's excluded here rather than
+  // sent through the family lookup below, where no family is actually
+  // registered as "System" and it would only fail and log.
+  if (!props.fontFamily.empty() && props.fontFamily != "System") {
     NSString *faceName = resolvedFaceName(props.fontFamily, faceKey, weight, italic);
     if (faceName != nil) {
       font = [UIFont fontWithName:faceName size:fontSize];
     }
   }
 
-  // No fontFamily, or one naming neither a known family nor a known face — the
-  // latter is RCTFont.mm's fallback too. Everything downstream needs a real
-  // font: the italic round-trip below, and both callers, which read
-  // font.lineHeight to cap numberOfLines and would otherwise measure and draw
-  // with different defaults.
+  // No fontFamily (or "System"), or one naming neither a known family nor a
+  // known face — the latter is RCTFont.mm's fallback too. Everything
+  // downstream needs a real font: the italic round-trip below, and both
+  // callers, which read font.lineHeight to cap numberOfLines and would
+  // otherwise measure and draw with different defaults.
   if (font == nil) {
     font = [UIFont systemFontOfSize:fontSize weight:weight];
   }
