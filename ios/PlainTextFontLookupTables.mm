@@ -26,12 +26,9 @@ UIFontWeight fontWeightFromProp(const std::string &fontWeight)
 
 NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors(void)
 {
-  static NSDictionary<NSString *, NSDictionary *> *descriptors;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
 #define RNPlainTextFeature(type, selector) \
   @{UIFontFeatureTypeIdentifierKey : @(type), UIFontFeatureSelectorIdentifierKey : @(selector)}
-    descriptors = @{
+  static NSDictionary<NSString *, NSDictionary *> *descriptors = @{
       @"small-caps" : RNPlainTextFeature(kLowerCaseType, kLowerCaseSmallCapsSelector),
       @"oldstyle-nums" : RNPlainTextFeature(kNumberCaseType, kLowerCaseNumbersSelector),
       @"lining-nums" : RNPlainTextFeature(kNumberCaseType, kUpperCaseNumbersSelector),
@@ -65,9 +62,8 @@ NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors(void)
       @"stylistic-eighteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltEighteenOnSelector),
       @"stylistic-nineteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltNineteenOnSelector),
       @"stylistic-twenty" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwentyOnSelector),
-    };
+  };
 #undef RNPlainTextFeature
-  });
   return descriptors;
 }
 

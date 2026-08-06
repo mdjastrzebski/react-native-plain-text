@@ -23,11 +23,8 @@ namespace facebook::react {
 // ("OpenRunde-Bold") never produces a list, and would ask on every lookup.
 static NSArray<NSString *> *cachedFontNamesForFamilyName(NSString *familyName)
 {
-  static PlainTextFontCache<NSString *, NSArray<NSString *> *> *familyNamesCache;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    familyNamesCache = [[PlainTextFontCache alloc] initWithCountLimit:0];
-  });
+  static PlainTextFontCache<NSString *, NSArray<NSString *> *> *familyNamesCache =
+      [[PlainTextFontCache alloc] initWithCountLimit:0];
 
   return [familyNamesCache objectForKey:familyName
                                    orSet:^NSArray<NSString *> * {
@@ -204,11 +201,8 @@ static constexpr NSUInteger kFontCacheCountLimit = 256;
 
 static PlainTextFontCache<NSString *, UIFont *> *fontCache()
 {
-  static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    resolvedFontsCache = [[PlainTextFontCache alloc] initWithCountLimit:kFontCacheCountLimit];
-  });
+  static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache =
+      [[PlainTextFontCache alloc] initWithCountLimit:kFontCacheCountLimit];
   return resolvedFontsCache;
 }
 
@@ -285,11 +279,8 @@ static NSString *resolvedFaceName(
     RCTFontWeight fontWeight,
     BOOL isItalic)
 {
-  static PlainTextFontCache<NSString *, NSString *> *faceNamesCache;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    faceNamesCache = [[PlainTextFontCache alloc] initWithCountLimit:0];
-  });
+  static PlainTextFontCache<NSString *, NSString *> *faceNamesCache =
+      [[PlainTextFontCache alloc] initWithCountLimit:0];
 
   NSString *key = [NSString stringWithUTF8String:faceKey.c_str()];
   if (key == nil) {
@@ -297,8 +288,8 @@ static NSString *resolvedFaceName(
   }
   return [faceNamesCache objectForKey:key
                                  orSet:^NSString * {
-                          return computeFaceName(fontFamily, fontWeightProp, fontWeight, isItalic);
-                        }];
+                                   return computeFaceName(fontFamily, fontWeightProp, fontWeight, isItalic);
+                                 }];
 }
 
 CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier)
