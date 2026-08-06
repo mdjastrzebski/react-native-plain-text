@@ -202,14 +202,14 @@ static NSString *computeFaceName(
     const std::string &fontFamily,
     const std::string &fontWeightProp,
     RCTFontWeight fontWeight,
-    const std::string &fontStyleProp,
-    BOOL isItalic)
+    const std::string &fontStyleProp)
 {
   NSString *familyName = [NSString stringWithUTF8String:fontFamily.c_str()];
   if (familyName == nil) {
     return nil;
   }
 
+  BOOL isItalic = isItalicFromProp(fontStyleProp);
   NSString *faceName = closestFaceNameInFamily(cachedFontNamesForFamilyName(familyName), fontWeight, isItalic, NO);
   if (faceName != nil) {
     return faceName;
@@ -259,19 +259,18 @@ static NSString *resolvedFaceName(
     const std::string &faceKey,
     const std::string &fontWeightProp,
     RCTFontWeight fontWeight,
-    const std::string &fontStyleProp,
-    BOOL isItalic)
+    const std::string &fontStyleProp)
 {
   static PlainTextFontCache<NSString *, NSString *> *faceNamesCache =
       [[PlainTextFontCache alloc] initWithCountLimit:0];
 
   NSString *key = [NSString stringWithUTF8String:faceKey.c_str()];
   if (key == nil) {
-    return computeFaceName(fontFamily, fontWeightProp, fontWeight, fontStyleProp, isItalic);
+    return computeFaceName(fontFamily, fontWeightProp, fontWeight, fontStyleProp);
   }
   return [faceNamesCache objectForKey:key
                                  orSet:^NSString * {
-                                   return computeFaceName(fontFamily, fontWeightProp, fontWeight, fontStyleProp, isItalic);
+                                   return computeFaceName(fontFamily, fontWeightProp, fontWeight, fontStyleProp);
                                  }];
 }
 
@@ -293,7 +292,7 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
   // sent through the family lookup below, where no family is actually
   // registered as "System" and it would only fail and log.
   if (!props.fontFamily.empty() && props.fontFamily != "System") {
-    NSString *faceName = resolvedFaceName(props.fontFamily, faceKey, props.fontWeight, weight, props.fontStyle, italic);
+    NSString *faceName = resolvedFaceName(props.fontFamily, faceKey, props.fontWeight, weight, props.fontStyle);
     if (faceName != nil) {
       font = [UIFont fontWithName:faceName size:fontSize];
     }
