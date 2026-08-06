@@ -104,6 +104,10 @@ static NSString *closestFaceNameInFamily(
 
   NSString *name = nil;
 
+  // EXPENSIVE: instantiates a UIFont, queries two symbolic traits and computes a
+  // weight for every candidate face — scales with family size. Not per node:
+  // resolvedFaceName caches the result per family/weight/style, so this only runs
+  // on a cache miss.
   // Get the closest font that matches the given weight for the fontFamily
   CGFloat closestWeight = INFINITY;
   for (NSString *candidate in names) {

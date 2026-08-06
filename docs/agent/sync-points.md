@@ -40,6 +40,20 @@ why it takes the multiplier rather than an already-scaled size: the rounding
 `RCTFont.mm` applies is then in one place instead of two. `lineHeight` scales in
 the callers (RN doesn't round it), so it stays a sync point between them.
 
+## The iOS font cache key
+
+`ios/PlainTextFontCacheKey.cpp` builds the keys behind `resolvedFaceName`'s and
+`plainTextFont`'s caches (`ios/PlainTextFont.mm`) from a fixed list of inputs:
+`faceCacheKey` takes `fontFamily`, `fontWeight` and italic; `fontCacheKey` adds
+`fontSize`, `fontVariant` and `fontVariationSettings` on top. That list has to
+name every input `computeFaceName`/`resolvedFont` read to pick a face or build
+the `UIFont` — a new one read there and left out of the key doesn't fail to
+apply, it applies once and then serves that first value back for every other
+one, keyed as if nothing had changed. Both caches are unbounded
+(`familyNamesCache`, `faceNamesCache`) or bounded only by count
+(`resolvedFontsCache`, `kFontCacheCountLimit`), so nothing evicts the stale
+entry on its own.
+
 ## The three-way default contract
 
 These must all agree, per prop:
