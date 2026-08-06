@@ -23,13 +23,16 @@ export type PlainTextProps = AccessibilityProps & {
 };
 
 // RN <Text> supports both the Android-specific `textAlignVertical` and the
-// cross-platform `verticalAlign` style, and applies both only on Android since
-// its iOS text has no vertical-alignment knob at all. PlainText's iOS native
-// side closes that gap (see PlainTextViewNativeComponent.ts), so resolving
-// this now picks the value for both platforms rather than one. When both
-// props are set, `verticalAlign` wins (matching RN's own override order), and
-// its 'middle' value maps to the native prop's 'center'. Mirror that here so
-// the native side sees one value.
+// CSS-standard `verticalAlign` style — but despite the cross-platform name,
+// `verticalAlign` is Android-only too: RN's own Text.js maps it onto
+// `textAlignVertical` in JS, before either ever reaches native, so it was
+// never a second gap, just an alias for the same one (see
+// docs/agent/workflow.md#when-rn-itself-has-the-platform-gap). Mirroring that
+// JS-side mapping here means PlainText's iOS native side closing
+// `textAlignVertical` (PlainTextViewNativeComponent.ts) closes `verticalAlign`
+// on iOS for free, with no native change of its own. When both props are set,
+// `verticalAlign` wins (matching RN's own override order), and its 'middle'
+// value maps to the native prop's 'center'.
 function resolveTextAlignVertical(
   textAlignVertical: TextStyle['textAlignVertical'],
   verticalAlign: TextStyle['verticalAlign']

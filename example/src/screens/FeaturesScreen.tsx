@@ -416,7 +416,12 @@ export default function FeaturesScreen({ navigation }: Props) {
           closes it on iOS too (see
           docs/agent/workflow.md#when-rn-itself-has-the-platform-gap). Each box
           is taller than its text so the position is visible on both
-          platforms. */}
+          platforms.
+
+          Rows drive this through `verticalAlign`, not `textAlignVertical`
+          directly — RN's own CSS-standard-named style is itself just a JS
+          alias for `textAlignVertical` (never touches native), so this also
+          demonstrates that alias closing on iOS for free. */}
       <Section title="Vertical Align" footer={VERTICAL_ALIGN_FOOTER}>
         {VERTICAL_ALIGNS.map((verticalAlign) => (
           <TextItem

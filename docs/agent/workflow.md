@@ -33,6 +33,18 @@ This is a deliberate divergence from "match RN's shape", so say so where the
 prop is declared and where it's applied. The reader needs to know the prop is
 intentionally ahead of RN, not that RN was checked and found wanting.
 
+**Check for JS-level aliases before declaring the gap closed.** RN's own
+`Text.js` maps the CSS-standard `verticalAlign` style onto `textAlignVertical`
+purely in JS (`verticalAlignToTextAlignVerticalMap`, applied before anything
+reaches native) — so despite its cross-platform-sounding name, `verticalAlign`
+was exactly as Android-only as `textAlignVertical`, for the same underlying
+reason, and was never a second gap. `PlainText.native.tsx`'s
+`resolveTextAlignVertical` mirrors that same shim, so closing
+`textAlignVertical` on iOS closed `verticalAlign` too, for free, with no native
+change of its own. The lesson generalizes: before scoping a second
+implementation for what looks like a related prop, check whether it's actually
+JS sugar over the one you already fixed.
+
 ## Order of work
 
 1. **Add usage/test cases to the Features screen first.**

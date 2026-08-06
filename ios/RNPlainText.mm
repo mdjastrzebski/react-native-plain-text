@@ -85,19 +85,19 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 @implementation RNPlainTextLabel
 - (CGRect)textRectForBounds:(CGRect)bounds limitedToNumberOfLines:(NSInteger)numberOfLines
 {
-    // UIKit's own answer already centers the content rect within bounds, which
-    // is the behavior the Top case below overrides. Reusing it instead of
-    // recomputing the same delta means Center costs nothing beyond a branch,
-    // and Bottom just mirrors Top's offset to the opposite edge.
+    // UIKit's default answer is top-anchored at bounds.origin.y regardless of
+    // how much taller bounds is than the text, so it does not center. The extra
+    // room has to be computed from the height delta rather than read off
+    // rect.origin.y.
     CGRect rect = [super textRectForBounds:bounds limitedToNumberOfLines:numberOfLines];
-    CGFloat centerOffset = rect.origin.y - bounds.origin.y;
+    CGFloat centerOffset = (bounds.size.height - rect.size.height) / 2.0;
     switch (self.verticalAlignment) {
         case RNPlainTextTextAlignVertical::Auto:
         case RNPlainTextTextAlignVertical::Top:
             rect.origin.y = bounds.origin.y;
             break;
         case RNPlainTextTextAlignVertical::Center:
-            // rect.origin.y is already bounds.origin.y + centerOffset.
+            rect.origin.y = bounds.origin.y + centerOffset;
             break;
         case RNPlainTextTextAlignVertical::Bottom:
             rect.origin.y = bounds.origin.y + 2 * centerOffset;
