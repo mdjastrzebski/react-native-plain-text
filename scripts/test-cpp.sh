@@ -34,3 +34,11 @@ run_suite font-variations \
   tests/cpp/PlainTextFontVariations.test.cpp \
   ios/PlainTextFontVariations.cpp \
   ios/PlainTextStringUtils.cpp
+
+run_suite font-cache-key \
+  tests/cpp/PlainTextFontCacheKey.test.cpp \
+  ios/PlainTextFontCacheKey.cpp
+
+run_suite font-sizing \
+  tests/cpp/PlainTextFontSizing.test.cpp \
+  ios/PlainTextFontSizing.cpp

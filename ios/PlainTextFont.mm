@@ -1,5 +1,7 @@
 #import "PlainTextFont.h"
 
+#import "PlainTextFontCacheKey.h"
+#import "PlainTextFontSizing.h"
 #import "PlainTextFontVariations.h"
 
 #import <CoreText/CoreText.h>
@@ -268,56 +270,17 @@ static NSDictionary<NSNumber *, NSNumber *> *fontVariations(const std::string &s
   return variations;
 }
 
-static constexpr char kFieldSeparator = '|';
-
-// The three inputs that decide which face of a family to use: fontFamily,
-// fontWeight and italic. Also the leading fields of the full font key below, so
-// one string serves both and the shared part is built once.
-//
-// fontFamily and fontWeight are adjacent free-form strings, so a separator
-// inside either shifts the boundary between them — family "Foo|" at weight
-// "bold" keys the same as family "Foo" at weight "|bold". Left unguarded: it
-// takes a fontWeight no real style produces, and the worst case is one wrong
-// font, consistently, since both callers share the key.
-static std::string faceCacheKey(const std::string &fontFamily, const std::string &fontWeight, bool italic)
-{
-  std::string key = fontFamily;
-  key += kFieldSeparator;
-  key += fontWeight;
-  key += kFieldSeparator;
-  key += italic ? 'i' : 'n';
-  return key;
-}
-
-// The face key plus the three inputs that don't affect face selection: fontSize,
-// fontVariant and fontVariationSettings. Assembled as a std::string and bridged
-// once, so a hit costs a single NSString allocation instead of a trip through the
-// font database.
-//
-// The variant names and the variation settings go last, where the separator
-// ambiguity above is unreachable: every name the mapping recognizes is
-// separator-free, and a separator inside the settings string makes it
-// unparseable, so any pair of keys that could be misread for one another resolves
-// to the same font, with no features and no axes.
-static NSString *fontCacheKey(
+// Bridges fontCacheKey's std::string result to NSString, so a hit costs a
+// single NSString allocation instead of a trip through the font database.
+// The key-building logic itself lives in PlainTextFontCacheKey.cpp, where it
+// can be tested without an ObjC round-trip.
+static NSString *fontCacheKeyString(
     const std::string &faceKey,
     CGFloat fontSize,
     const std::vector<std::string> &fontVariant,
     const std::string &fontVariationSettings)
 {
-  std::string key = faceKey;
-  key += kFieldSeparator;
-  // Hundredths of a point, as an integer — sidestepping the padded
-  // "17.000000" that std::to_string gives a double, and the cost of formatting
-  // one. Sizes closer together than that render identically at any screen
-  // scale, so collapsing them onto one entry is correct rather than lossy.
-  key += std::to_string(std::lround(fontSize * 100));
-  for (const std::string &variant : fontVariant) {
-    key += kFieldSeparator;
-    key += variant;
-  }
-  key += kFieldSeparator;
-  key += fontVariationSettings;
+  std::string key = fontCacheKey(faceKey, fontSize, fontVariant, fontVariationSettings);
   return [NSString stringWithUTF8String:key.c_str()];
 }
 
@@ -429,24 +392,7 @@ static NSString *resolvedFaceName(
 
 CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier)
 {
-  if (!props.allowFontScaling) {
-    return 1.0;
-  }
-  if (props.maxFontSizeMultiplier >= 1.0) {
-    return fminf((CGFloat)props.maxFontSizeMultiplier, baseMultiplier);
-  }
-  return baseMultiplier;
-}
-
-// Rounded to whole points when a multiplier applies and left alone when none
-// does, both as in RCTFont.mm — so a Dynamic Type setting lands on the same size
-// RN's <Text> uses, and a fractional fontSize prop keeps its fraction.
-static CGFloat scaledFontSize(CGFloat fontSize, CGFloat fontSizeMultiplier)
-{
-  if (fontSizeMultiplier <= 0.0 || fontSizeMultiplier == 1.0) {
-    return fontSize;
-  }
-  return std::round(fontSize * fontSizeMultiplier);
+  return clampFontSizeMultiplier(props.allowFontScaling, props.maxFontSizeMultiplier, baseMultiplier);
 }
 
 UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
@@ -454,7 +400,7 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
   CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
   bool italic = props.fontStyle == RNPlainTextFontStyle::Italic;
   std::string faceKey = faceCacheKey(props.fontFamily, props.fontWeight, italic);
-  NSString *key = fontCacheKey(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
+  NSString *key = fontCacheKeyString(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
 
   NSCache<NSString *, UIFont *> *cache = fontCache();
   UIFont *font = [cache objectForKey:key];
