@@ -112,9 +112,11 @@ static constexpr CGFloat kFaceProbeFontSize = 12;
  *     after its system-font special case, which this function is never reached
  *     for — an empty fontFamily takes the systemFontOfSize: path in
  *     plainTextFont instead.
- *   - RN's `isCondensed` is inlined as NO. It derives the value from the UIFont
- *     it is updating in place and from the "SystemCondensed" family name; this
- *     library has neither.
+ *   - `isCondensed` is a parameter rather than derived from a "SystemCondensed"
+ *     family name, which this library has no equivalent of. The top-level
+ *     family lookup in resolvedFaceName passes NO, matching RN's own default
+ *     for a fresh (font == nil) update; the face-name fallback below passes
+ *     the matched face's actual trait, as RN derives it from that same face.
  *   - RN keeps the winning UIFont; this keeps its name, and the caller
  *     instantiates it at the size actually wanted.
  *
@@ -124,7 +126,11 @@ static constexpr CGFloat kFaceProbeFontSize = 12;
  * descriptor resolves to the system font instead of failing — the silent
  * fallback this whole path exists to avoid.
  */
-static NSString *closestFaceNameInFamily(NSArray<NSString *> *names, RCTFontWeight fontWeight, BOOL isItalic)
+static NSString *closestFaceNameInFamily(
+    NSArray<NSString *> *names,
+    RCTFontWeight fontWeight,
+    BOOL isItalic,
+    BOOL isCondensed)
 {
   if (names.count == 0) {
     return nil;
@@ -148,7 +154,7 @@ static NSString *closestFaceNameInFamily(NSArray<NSString *> *names, RCTFontWeig
     if (match == nil) {
       continue;
     }
-    if (isItalic == isItalicFont(match) && !isCondensedFont(match)) {
+    if (isItalic == isItalicFont(match) && isCondensed == isCondensedFont(match)) {
       CGFloat testWeight = RCTGetFontWeight(match);
       if (ABS(testWeight - fontWeight) < ABS(closestWeight - fontWeight)) {
         name = candidate;
@@ -346,10 +352,17 @@ static NSString *const kUnresolvableFace = @"";
  * Cached apart from the font itself because the answer doesn't depend on fontSize
  * (see kFaceProbeFontSize), so a new size costs one font instantiation instead of
  * another scan of the family.
+ *
+ * `fontWeightProp` is the raw prop string, not just the weight it maps to: an
+ * empty string is RN's own signal that fontWeight wasn't set (RCTFont.mm reads
+ * it from a possibly-nil JSON value), and the face-name fallback below needs
+ * that signal to know whether to keep the caller's weight or take the matched
+ * face's own.
  */
 static NSString *resolvedFaceName(
     const std::string &fontFamily,
     const std::string &faceKey,
+    const std::string &fontWeightProp,
     RCTFontWeight fontWeight,
     BOOL isItalic)
 {
@@ -369,14 +382,36 @@ static NSString *resolvedFaceName(
   NSString *familyName = [NSString stringWithUTF8String:fontFamily.c_str()];
   NSString *faceName = nil;
   if (familyName != nil) {
-    faceName = closestFaceNameInFamily(cachedFontNamesForFamilyName(familyName), fontWeight, isItalic);
+    faceName = closestFaceNameInFamily(cachedFontNamesForFamilyName(familyName), fontWeight, isItalic, NO);
     if (faceName == nil) {
       // Not a registered family, so take it for the face / PostScript name it
       // probably is ("OpenRunde-Bold" rather than "Open Runde"). An expo-font
       // alias lands in the branch above instead: the swizzled
       // +fontNamesForFamilyName: answers it with a one-element array.
-      if ([UIFont fontWithName:familyName size:kFaceProbeFontSize] != nil) {
-        faceName = familyName;
+      UIFont *namedFont = [UIFont fontWithName:familyName size:kFaceProbeFontSize];
+      if (namedFont != nil) {
+        // RN doesn't stop here either ("we'll do what was meant, not what was
+        // said"): it re-derives the real family from this face and searches
+        // that family for the closest match to what the props actually ask
+        // for, so "Georgia-Bold" + fontStyle: "italic" lands on the family's
+        // real BoldItalic face instead of a synthesized slant on Georgia-Bold.
+        //
+        // A prop that wasn't set inherits the matched face's own trait rather
+        // than a hardcoded default, exactly as RCTFont.mm's `style ? isItalic
+        // : isItalicFont(font)` / `weight ? fontWeight : RCTGetFontWeight(font)`
+        // do — isItalic has no "unset" of its own to check (fontStyle's
+        // codegen default collapses "not passed" and "normal" into the same
+        // enum value, see PlainTextViewNativeComponent.ts), so a caller-true
+        // isItalic wins and a caller-false one falls through to the face.
+        NSString *realFamilyName = namedFont.familyName;
+        BOOL faceIsItalic = isItalicFont(namedFont);
+        BOOL faceIsCondensed = isCondensedFont(namedFont);
+        RCTFontWeight faceWeight = RCTGetFontWeight(namedFont);
+        BOOL effectiveIsItalic = isItalic || faceIsItalic;
+        RCTFontWeight effectiveWeight = fontWeightProp.empty() ? faceWeight : fontWeight;
+        faceName = closestFaceNameInFamily(
+                       cachedFontNamesForFamilyName(realFamilyName), effectiveWeight, effectiveIsItalic, faceIsCondensed)
+            ?: familyName;
       } else {
         // Same message and same level as RCTFont.mm, from the same branch, so a
         // typo reads identically whether it hit <PlainText> or <Text>. Info
@@ -433,7 +468,7 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
   // sent through the family lookup below, where no family is actually
   // registered as "System" and it would only fail and log.
   if (!props.fontFamily.empty() && props.fontFamily != "System") {
-    NSString *faceName = resolvedFaceName(props.fontFamily, faceKey, weight, italic);
+    NSString *faceName = resolvedFaceName(props.fontFamily, faceKey, props.fontWeight, weight, italic);
     if (faceName != nil) {
       font = [UIFont fontWithName:faceName size:fontSize];
     }
