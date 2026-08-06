@@ -1,10 +1,11 @@
 #import "PlainTextFontLookupTables.h"
 
 #import <CoreText/CoreText.h>
+#import <React/RCTFont.h>
 
 namespace facebook::react {
 
-UIFontWeight fontWeightFromProp(const std::string &fontWeight)
+RCTFontWeight fontWeightFromProp(const std::string &fontWeight)
 {
   static NSDictionary<NSString *, NSNumber *> *weights = @{
     @"normal" : @(UIFontWeightRegular),
@@ -21,7 +22,7 @@ UIFontWeight fontWeightFromProp(const std::string &fontWeight)
   };
   NSString *key = [NSString stringWithUTF8String:fontWeight.c_str()];
   NSNumber *weight = weights[key];
-  return weight != nil ? (UIFontWeight)weight.doubleValue : UIFontWeightRegular;
+  return weight != nil ? (RCTFontWeight)weight.doubleValue : UIFontWeightRegular;
 }
 
 NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors(void)

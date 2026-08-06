@@ -285,7 +285,7 @@ CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseM
 // callers would otherwise silently measure and draw with different defaults.
 static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &faceKey, CGFloat fontSize, bool italic)
 {
-  UIFontWeight weight = fontWeightFromProp(props.fontWeight);
+  RCTFontWeight weight = fontWeightFromProp(props.fontWeight);
   UIFont *font = nil;
   // "System" is RCTFont.mm's own special case for the system font by name
   // (RN's <Text> accepts it the same way), so it's excluded here rather than

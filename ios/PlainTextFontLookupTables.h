@@ -5,6 +5,7 @@
  */
 
 #import <UIKit/UIKit.h>
+#import <React/RCTFont.h>
 
 #import <string>
 
@@ -17,7 +18,7 @@ namespace facebook::react {
  * PlainTextViewNativeComponent.ts). Unrecognized or empty input maps to
  * UIFontWeightRegular, RCTFont.mm's own default.
  */
-UIFontWeight fontWeightFromProp(const std::string &fontWeight);
+RCTFontWeight fontWeightFromProp(const std::string &fontWeight);
 
 /*
  * Mirrors RCTFont.mm's RCTFontVariantDescriptor map: each fontVariant name
