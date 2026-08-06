@@ -44,8 +44,11 @@ the callers (RN doesn't round it), so it stays a sync point between them.
 
 `ios/PlainTextFontCacheKey.cpp` builds the keys behind `resolvedFaceName`'s and
 `plainTextFont`'s caches (`ios/PlainTextFont.mm`) from a fixed list of inputs:
-`faceCacheKey` takes `fontFamily`, `fontWeight` and italic; `fontCacheKey` adds
-`fontSize`, `fontVariant` and `fontVariationSettings` on top. That list has to
+`faceCacheKey` takes `fontFamily`, `fontWeight` and the raw `fontStyle` string
+(not a converted bool — an empty string and `"normal"` both mean "not italic"
+but must key separately, since `computeFaceName`'s face-name fallback tells
+them apart); `fontCacheKey` adds `fontSize`, `fontVariant` and
+`fontVariationSettings` on top. That list has to
 name every input `computeFaceName`/`resolvedFont` read to pick a face or build
 the `UIFont` — a new one read there and left out of the key doesn't fail to
 apply, it applies once and then serves that first value back for every other
