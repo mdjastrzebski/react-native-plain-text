@@ -1,6 +1,8 @@
 #import "PlainTextFont.h"
 
+#import "PlainTextFontCache.h"
 #import "PlainTextFontCacheKey.h"
+#import "PlainTextFontLookupTables.h"
 #import "PlainTextFontSizing.h"
 #import "PlainTextFontVariations.h"
 
@@ -15,63 +17,22 @@
 
 namespace facebook::react {
 
-// Mirrors RCTFont.mm's core weight map (RCTConvert RCTFontWeight): the named
-// aliases beyond "normal"/"bold" (e.g. "ultralight", "condensed") are dropped
-// since codegen can't type fontWeight as an enum (see PlainTextViewNativeComponent.ts).
-static UIFontWeight fontWeightFromProp(const std::string &fontWeight)
-{
-  static NSDictionary<NSString *, NSNumber *> *weights = @{
-    @"normal" : @(UIFontWeightRegular),
-    @"bold" : @(UIFontWeightBold),
-    @"100" : @(UIFontWeightUltraLight),
-    @"200" : @(UIFontWeightThin),
-    @"300" : @(UIFontWeightLight),
-    @"400" : @(UIFontWeightRegular),
-    @"500" : @(UIFontWeightMedium),
-    @"600" : @(UIFontWeightSemibold),
-    @"700" : @(UIFontWeightBold),
-    @"800" : @(UIFontWeightHeavy),
-    @"900" : @(UIFontWeightBlack),
-  };
-  NSString *key = [NSString stringWithUTF8String:fontWeight.c_str()];
-  NSNumber *weight = weights[key];
-  return weight != nil ? (UIFontWeight)weight.doubleValue : UIFontWeightRegular;
-}
-
-// Registering a font at runtime (expo-font, CTFontManagerRegisterFontsForURL)
-// changes what a fontFamily resolves to, so every cache here is stale after it —
-// in particular an entry that resolved while the family was still unknown.
-// RCTFont.mm clears its own family-name cache on the same notification.
-static void clearOnFontRegistration(NSCache *cache)
-{
-  [NSNotificationCenter.defaultCenter
-      addObserverForName:(NSNotificationName)kCTFontManagerRegisteredFontsChangedNotification
-                  object:nil
-                   queue:nil
-              usingBlock:^(NSNotification *) {
-                [cache removeAllObjects];
-              }];
-}
-
 // Caching wrapper around +[UIFont fontNamesForFamilyName:], which enumerates the
 // font database — RCTFont.mm calls it expensive and wraps it the same way. The
 // empty answer is cached too: a fontFamily naming a face rather than a family
 // ("OpenRunde-Bold") never produces a list, and would ask on every lookup.
 static NSArray<NSString *> *cachedFontNamesForFamilyName(NSString *familyName)
 {
-  static NSCache<NSString *, NSArray<NSString *> *> *cache;
+  static PlainTextFontCache<NSString *, NSArray<NSString *> *> *familyNamesCache;
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    cache = [NSCache new];
-    clearOnFontRegistration(cache);
+    familyNamesCache = [[PlainTextFontCache alloc] initWithCountLimit:0];
   });
 
-  NSArray<NSString *> *names = [cache objectForKey:familyName];
-  if (names == nil) {
-    names = [UIFont fontNamesForFamilyName:familyName] ?: @[];
-    [cache setObject:names forKey:familyName];
-  }
-  return names;
+  return [familyNamesCache objectForKey:familyName
+                                   orSet:^NSArray<NSString *> * {
+                                     return [UIFont fontNamesForFamilyName:familyName] ?: @[];
+                                   }];
 }
 
 /*
@@ -170,56 +131,6 @@ static NSString *closestFaceNameInFamily(
   return name ?: names[0];
 }
 
-// Mirrors RCTFont.mm's RCTFontVariantDescriptor map: each fontVariant name
-// names one OpenType feature, expressed as the type/selector identifier pair
-// UIFontDescriptor takes. Unrecognized names are dropped, as RN drops them.
-static NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors()
-{
-  static NSDictionary<NSString *, NSDictionary *> *descriptors;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-#define RNPlainTextFeature(type, selector) \
-  @{UIFontFeatureTypeIdentifierKey : @(type), UIFontFeatureSelectorIdentifierKey : @(selector)}
-    descriptors = @{
-      @"small-caps" : RNPlainTextFeature(kLowerCaseType, kLowerCaseSmallCapsSelector),
-      @"oldstyle-nums" : RNPlainTextFeature(kNumberCaseType, kLowerCaseNumbersSelector),
-      @"lining-nums" : RNPlainTextFeature(kNumberCaseType, kUpperCaseNumbersSelector),
-      @"tabular-nums" : RNPlainTextFeature(kNumberSpacingType, kMonospacedNumbersSelector),
-      @"proportional-nums" : RNPlainTextFeature(kNumberSpacingType, kProportionalNumbersSelector),
-      @"common-ligatures" : RNPlainTextFeature(kLigaturesType, kCommonLigaturesOnSelector),
-      @"no-common-ligatures" : RNPlainTextFeature(kLigaturesType, kCommonLigaturesOffSelector),
-      @"discretionary-ligatures" : RNPlainTextFeature(kLigaturesType, kRareLigaturesOnSelector),
-      @"no-discretionary-ligatures" : RNPlainTextFeature(kLigaturesType, kRareLigaturesOffSelector),
-      @"historical-ligatures" : RNPlainTextFeature(kLigaturesType, kHistoricalLigaturesOnSelector),
-      @"no-historical-ligatures" : RNPlainTextFeature(kLigaturesType, kHistoricalLigaturesOffSelector),
-      @"contextual" : RNPlainTextFeature(kContextualAlternatesType, kContextualAlternatesOnSelector),
-      @"no-contextual" : RNPlainTextFeature(kContextualAlternatesType, kContextualAlternatesOffSelector),
-      @"stylistic-one" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltOneOnSelector),
-      @"stylistic-two" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwoOnSelector),
-      @"stylistic-three" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltThreeOnSelector),
-      @"stylistic-four" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFourOnSelector),
-      @"stylistic-five" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFiveOnSelector),
-      @"stylistic-six" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSixOnSelector),
-      @"stylistic-seven" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSevenOnSelector),
-      @"stylistic-eight" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltEightOnSelector),
-      @"stylistic-nine" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltNineOnSelector),
-      @"stylistic-ten" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTenOnSelector),
-      @"stylistic-eleven" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltElevenOnSelector),
-      @"stylistic-twelve" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwelveOnSelector),
-      @"stylistic-thirteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltThirteenOnSelector),
-      @"stylistic-fourteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFourteenOnSelector),
-      @"stylistic-fifteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFifteenOnSelector),
-      @"stylistic-sixteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSixteenOnSelector),
-      @"stylistic-seventeen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSeventeenOnSelector),
-      @"stylistic-eighteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltEighteenOnSelector),
-      @"stylistic-nineteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltNineteenOnSelector),
-      @"stylistic-twenty" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwentyOnSelector),
-    };
-#undef RNPlainTextFeature
-  });
-  return descriptors;
-}
-
 // The feature settings for these variant names, or nil when none of them
 // resolve — the caller skips the descriptor round-trip in that case.
 static NSArray<NSDictionary *> *fontFeatureSettings(const std::vector<std::string> &fontVariant)
@@ -291,30 +202,19 @@ static NSString *fontCacheKeyString(
 // weights, styles and variants.
 static constexpr NSUInteger kFontCacheCountLimit = 256;
 
-static NSCache<NSString *, UIFont *> *fontCache()
+static PlainTextFontCache<NSString *, UIFont *> *fontCache()
 {
-  static NSCache<NSString *, UIFont *> *cache;
+  static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache;
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    cache = [NSCache new];
-    cache.countLimit = kFontCacheCountLimit;
-    clearOnFontRegistration(cache);
+    resolvedFontsCache = [[PlainTextFontCache alloc] initWithCountLimit:kFontCacheCountLimit];
   });
-  return cache;
+  return resolvedFontsCache;
 }
-
-// Cached in place of a face name for a fontFamily that names neither a known
-// family nor a known face, since NSCache can't hold nil and re-deriving "still
-// unresolvable" costs a walk of the font database and another log line.
-static NSString *const kUnresolvableFace = @"";
 
 /*
  * The face name to instantiate for this fontFamily, or nil if it resolves to
  * nothing and the caller should fall back to the system font.
- *
- * Cached apart from the font itself because the answer doesn't depend on fontSize
- * (see kFaceProbeFontSize), so a new size costs one font instantiation instead of
- * another scan of the family.
  *
  * `fontWeightProp` is the raw prop string, not just the weight it maps to: an
  * empty string is RN's own signal that fontWeight wasn't set (RCTFont.mm reads
@@ -322,6 +222,62 @@ static NSString *const kUnresolvableFace = @"";
  * that signal to know whether to keep the caller's weight or take the matched
  * face's own.
  */
+static NSString *computeFaceName(
+    const std::string &fontFamily,
+    const std::string &fontWeightProp,
+    RCTFontWeight fontWeight,
+    BOOL isItalic)
+{
+  NSString *familyName = [NSString stringWithUTF8String:fontFamily.c_str()];
+  if (familyName == nil) {
+    return nil;
+  }
+
+  NSString *faceName = closestFaceNameInFamily(cachedFontNamesForFamilyName(familyName), fontWeight, isItalic, NO);
+  if (faceName != nil) {
+    return faceName;
+  }
+
+  // Not a registered family, so take it for the face / PostScript name it
+  // probably is ("OpenRunde-Bold" rather than "Open Runde"). An expo-font
+  // alias lands in the branch above instead: the swizzled
+  // +fontNamesForFamilyName: answers it with a one-element array.
+  UIFont *namedFont = [UIFont fontWithName:familyName size:kFaceProbeFontSize];
+  if (namedFont == nil) {
+    // Same message and same level as RCTFont.mm, from the same branch, so a
+    // typo reads identically whether it hit <PlainText> or <Text>. Info
+    // rather than warn keeps it out of LogBox, which is RN's call, not ours.
+    RCTLogInfo(@"Unrecognized font family '%@'", familyName);
+    return nil;
+  }
+
+  // RN doesn't stop here either ("we'll do what was meant, not what was
+  // said"): it re-derives the real family from this face and searches that
+  // family for the closest match to what the props actually ask for, so
+  // "Georgia-Bold" + fontStyle: "italic" lands on the family's real
+  // BoldItalic face instead of a synthesized slant on Georgia-Bold.
+  //
+  // A prop that wasn't set inherits the matched face's own trait rather than
+  // a hardcoded default, exactly as RCTFont.mm's `style ? isItalic :
+  // isItalicFont(font)` / `weight ? fontWeight : RCTGetFontWeight(font)` do —
+  // isItalic has no "unset" of its own to check (fontStyle's codegen default
+  // collapses "not passed" and "normal" into the same enum value, see
+  // PlainTextViewNativeComponent.ts), so a caller-true isItalic wins and a
+  // caller-false one falls through to the face.
+  NSString *realFamilyName = namedFont.familyName;
+  BOOL faceIsItalic = isItalicFont(namedFont);
+  BOOL faceIsCondensed = isCondensedFont(namedFont);
+  RCTFontWeight faceWeight = RCTGetFontWeight(namedFont);
+  BOOL effectiveIsItalic = isItalic || faceIsItalic;
+  RCTFontWeight effectiveWeight = fontWeightProp.empty() ? faceWeight : fontWeight;
+  return closestFaceNameInFamily(
+             cachedFontNamesForFamilyName(realFamilyName), effectiveWeight, effectiveIsItalic, faceIsCondensed)
+      ?: familyName;
+}
+
+// Cached apart from the font itself because the answer doesn't depend on
+// fontSize (see kFaceProbeFontSize), so a new size costs one font
+// instantiation instead of another scan of the family.
 static NSString *resolvedFaceName(
     const std::string &fontFamily,
     const std::string &faceKey,
@@ -329,65 +285,20 @@ static NSString *resolvedFaceName(
     RCTFontWeight fontWeight,
     BOOL isItalic)
 {
-  static NSCache<NSString *, NSString *> *cache;
+  static PlainTextFontCache<NSString *, NSString *> *faceNamesCache;
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    cache = [NSCache new];
-    clearOnFontRegistration(cache);
+    faceNamesCache = [[PlainTextFontCache alloc] initWithCountLimit:0];
   });
 
   NSString *key = [NSString stringWithUTF8String:faceKey.c_str()];
-  NSString *cached = key != nil ? [cache objectForKey:key] : nil;
-  if (cached != nil) {
-    return cached.length > 0 ? cached : nil;
+  if (key == nil) {
+    return computeFaceName(fontFamily, fontWeightProp, fontWeight, isItalic);
   }
-
-  NSString *familyName = [NSString stringWithUTF8String:fontFamily.c_str()];
-  NSString *faceName = nil;
-  if (familyName != nil) {
-    faceName = closestFaceNameInFamily(cachedFontNamesForFamilyName(familyName), fontWeight, isItalic, NO);
-    if (faceName == nil) {
-      // Not a registered family, so take it for the face / PostScript name it
-      // probably is ("OpenRunde-Bold" rather than "Open Runde"). An expo-font
-      // alias lands in the branch above instead: the swizzled
-      // +fontNamesForFamilyName: answers it with a one-element array.
-      UIFont *namedFont = [UIFont fontWithName:familyName size:kFaceProbeFontSize];
-      if (namedFont != nil) {
-        // RN doesn't stop here either ("we'll do what was meant, not what was
-        // said"): it re-derives the real family from this face and searches
-        // that family for the closest match to what the props actually ask
-        // for, so "Georgia-Bold" + fontStyle: "italic" lands on the family's
-        // real BoldItalic face instead of a synthesized slant on Georgia-Bold.
-        //
-        // A prop that wasn't set inherits the matched face's own trait rather
-        // than a hardcoded default, exactly as RCTFont.mm's `style ? isItalic
-        // : isItalicFont(font)` / `weight ? fontWeight : RCTGetFontWeight(font)`
-        // do — isItalic has no "unset" of its own to check (fontStyle's
-        // codegen default collapses "not passed" and "normal" into the same
-        // enum value, see PlainTextViewNativeComponent.ts), so a caller-true
-        // isItalic wins and a caller-false one falls through to the face.
-        NSString *realFamilyName = namedFont.familyName;
-        BOOL faceIsItalic = isItalicFont(namedFont);
-        BOOL faceIsCondensed = isCondensedFont(namedFont);
-        RCTFontWeight faceWeight = RCTGetFontWeight(namedFont);
-        BOOL effectiveIsItalic = isItalic || faceIsItalic;
-        RCTFontWeight effectiveWeight = fontWeightProp.empty() ? faceWeight : fontWeight;
-        faceName = closestFaceNameInFamily(
-                       cachedFontNamesForFamilyName(realFamilyName), effectiveWeight, effectiveIsItalic, faceIsCondensed)
-            ?: familyName;
-      } else {
-        // Same message and same level as RCTFont.mm, from the same branch, so a
-        // typo reads identically whether it hit <PlainText> or <Text>. Info
-        // rather than warn keeps it out of LogBox, which is RN's call, not ours.
-        RCTLogInfo(@"Unrecognized font family '%@'", familyName);
-      }
-    }
-  }
-
-  if (key != nil) {
-    [cache setObject:(faceName ?: kUnresolvableFace) forKey:key];
-  }
-  return faceName;
+  return [faceNamesCache objectForKey:key
+                                 orSet:^NSString * {
+                          return computeFaceName(fontFamily, fontWeightProp, fontWeight, isItalic);
+                        }];
 }
 
 CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier)
@@ -395,20 +306,14 @@ CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseM
   return clampFontSizeMultiplier(props.allowFontScaling, props.maxFontSizeMultiplier, baseMultiplier);
 }
 
-UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
+// The UIFont for these props at this already-scaled fontSize and faceKey —
+// the resolution plainTextFont's cache wraps. Never nil: an unresolvable
+// fontFamily falls back to the system font, since both of plainTextFont's
+// callers would otherwise silently measure and draw with different defaults.
+static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &faceKey, CGFloat fontSize, bool italic)
 {
-  CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
-  bool italic = props.fontStyle == RNPlainTextFontStyle::Italic;
-  std::string faceKey = faceCacheKey(props.fontFamily, props.fontWeight, italic);
-  NSString *key = fontCacheKeyString(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
-
-  NSCache<NSString *, UIFont *> *cache = fontCache();
-  UIFont *font = [cache objectForKey:key];
-  if (font != nil) {
-    return font;
-  }
-
   UIFontWeight weight = fontWeightFromProp(props.fontWeight);
+  UIFont *font = nil;
   // "System" is RCTFont.mm's own special case for the system font by name
   // (RN's <Text> accepts it the same way), so it's excluded here rather than
   // sent through the family lookup below, where no family is actually
@@ -422,9 +327,8 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
 
   // No fontFamily (or "System"), or one naming neither a known family nor a
   // known face — the latter is RCTFont.mm's fallback too. Everything
-  // downstream needs a real font: the italic round-trip below, and both
-  // callers, which read font.lineHeight to cap numberOfLines and would
-  // otherwise measure and draw with different defaults.
+  // downstream needs a real font: the italic round-trip below, and both of
+  // plainTextFont's callers, which read font.lineHeight to cap numberOfLines.
   if (font == nil) {
     font = [UIFont systemFontOfSize:fontSize weight:weight];
   }
@@ -474,11 +378,20 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
     }
   }
 
-  // Every round-trip above keeps the font it started from if the descriptor
-  // fails to resolve, so `font` is non-nil from the fallback onwards — no guard
-  // needed here, and NSCache would raise on a nil object.
-  [cache setObject:font forKey:key];
   return font;
+}
+
+UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
+{
+  CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
+  bool italic = props.fontStyle == RNPlainTextFontStyle::Italic;
+  std::string faceKey = faceCacheKey(props.fontFamily, props.fontWeight, italic);
+  NSString *key = fontCacheKeyString(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
+
+  return [fontCache() objectForKey:key
+                              orSet:^UIFont * {
+                                return resolvedFont(props, faceKey, fontSize, italic);
+                              }];
 }
 
 } // namespace facebook::react
