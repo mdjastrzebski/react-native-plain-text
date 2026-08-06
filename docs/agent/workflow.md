@@ -14,6 +14,25 @@ three of:
   when it is set ([performance.md](performance.md#prop-cost-policy)). Medium and
   heavy get a `Cost:` note beside the prop in the codegen spec.
 
+### When RN itself has the platform gap
+
+"API parity with RN `<Text>`" means matching RN, not necessarily matching RN's
+own asymmetry. When a prop or behavior exists on one platform in RN core and not
+the other, that is a gap in RN rather than a platform difference to preserve.
+Default to closing it on the platform RN lacks, provided it can be done without
+the cost that presumably kept RN from doing it.
+
+The first case is `textAlignVertical`, which is Android-only in RN core with no
+`ios/` implementation anywhere in Fabric's text-attributes code. Its iOS
+implementation in `ios/RNPlainText.mm` shows the shape this usually takes: a
+`UILabel` subclass already overriding
+`-textRectForBounds:limitedToNumberOfLines:` for one reason can absorb a second
+one for free. Reach for anything heavier only after that kind of option is out.
+
+This is a deliberate divergence from "match RN's shape", so say so where the
+prop is declared and where it's applied. The reader needs to know the prop is
+intentionally ahead of RN, not that RN was checked and found wanting.
+
 ## Order of work
 
 1. **Add usage/test cases to the Features screen first.**

@@ -411,10 +411,13 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
-      {/* Vertical alignment is Android-only (matches RN <Text>). On iOS it's a
-          no-op, see VERTICAL_ALIGN_FOOTER. Each box is taller than its text so
-          the position is visible. */}
-      <Section title="Vertical Align (Android)" footer={VERTICAL_ALIGN_FOOTER}>
+      {/* Vertical alignment is Android-only in RN <Text>. That is a gap in RN
+          itself rather than a platform difference to preserve, so PlainText
+          closes it on iOS too (see
+          docs/agent/workflow.md#when-rn-itself-has-the-platform-gap). Each box
+          is taller than its text so the position is visible on both
+          platforms. */}
+      <Section title="Vertical Align" footer={VERTICAL_ALIGN_FOOTER}>
         {VERTICAL_ALIGNS.map((verticalAlign) => (
           <TextItem
             key={verticalAlign}
@@ -635,7 +638,10 @@ const FONT_SCALING_FOOTER = Platform.select({
 const VERTICAL_ALIGNS = ['top', 'middle', 'bottom'] as const;
 
 const VERTICAL_ALIGN_FOOTER = Platform.select({
-  ios: 'Android-only in RN <Text>. PlainText matches, so all three rows look the same.',
+  ios:
+    'Android-only in RN <Text> — PlainText closes that gap on iOS, so with ' +
+    '"Compare Text" on, the brass RN overlay stays pinned to the top while ' +
+    'PlainText moves.',
   default: 'Each box is 72pt tall, so the text has room to move.',
 });
 

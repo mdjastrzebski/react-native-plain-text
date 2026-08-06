@@ -22,8 +22,11 @@ there is just no way to turn it off. Turning it off is the standard fix for
 "the text sits too low inside its box", which is what someone hits right after
 setting `padding` and finding the optical spacing wrong.
 
-Android-only, like `textAlignVertical`: `UILabel` has no equivalent, and RN's own
-prop is Android-only, so parity is preserved by _not_ adding it on iOS.
+Android-only. `UILabel` has no equivalent. `textAlignVertical` closed its
+RN-side platform gap on iOS (see
+[workflow.md](workflow.md#when-rn-itself-has-the-platform-gap)), but this one
+cannot follow it: there is no cheap way to synthesize font-padding removal from
+an existing drawing hook, so it stays a real gap for now.
 
 It is size-affecting, so it needs the full treatment in
 [sync-points.md](sync-points.md): the `measure()` fallback has to match the

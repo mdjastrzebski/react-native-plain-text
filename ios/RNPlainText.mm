@@ -58,17 +58,52 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     }
 }
 
-// UILabel vertically centers an overtall frame, but RN <Text> on iOS always top-aligns, so this subclass forces top alignment (textAlignVertical is Android-only).
+// UILabel vertically centers its text when its frame is taller than the text
+// (e.g. an explicit height). RN's <Text> on iOS top-aligns instead and has no
+// vertical-alignment knob at all: textAlignVertical is Android-only in RN core,
+// with no ios/ implementation anywhere in Fabric's text-attributes code. That
+// is a platform gap in RN rather than a difference to preserve (see
+// docs/agent/workflow.md#when-rn-itself-has-the-platform-gap), and it closes
+// cheaply here. The same override already needed to force top-alignment can
+// resolve top/center/bottom directly from what -textRectForBounds: already
+// computes, with no extra layout pass and no attributed-string requirement.
 @interface RNPlainTextLabel : UILabel
-// When lineHeight exceeds the font's line height, TextKit's extra per-line space falls below the glyphs; verticalTextShift moves the whole drawn block (glyphs plus underline/strikethrough) up by half that extra, unlike NSBaselineOffsetAttributeName which shifts only glyphs.
+// 'auto' maps to Top, matching RN <Text>'s existing top-pinned iOS behavior, so
+// a view that never sets textAlignVertical renders exactly as before.
+@property (nonatomic) RNPlainTextTextAlignVertical verticalAlignment;
+// When lineHeight is larger than the font's natural line height, the extra
+// space UILabel/TextKit adds per line falls entirely below the glyphs, so the
+// text sits high in its line box. verticalTextShift (set in
+// applyContentFromProps) moves the whole drawn block, glyphs and underline and
+// strikethrough together, up by half that extra, centering each line without
+// touching NSBaselineOffsetAttributeName (which only shifts glyphs, leaving
+// decorations drawn at the untouched line-fragment baseline). It applies on
+// top of, not instead of, the vertical-alignment placement below.
 @property (nonatomic) CGFloat verticalTextShift;
 @end
 
 @implementation RNPlainTextLabel
 - (CGRect)textRectForBounds:(CGRect)bounds limitedToNumberOfLines:(NSInteger)numberOfLines
 {
+    // UIKit's own answer already centers the content rect within bounds, which
+    // is the behavior the Top case below overrides. Reusing it instead of
+    // recomputing the same delta means Center costs nothing beyond a branch,
+    // and Bottom just mirrors Top's offset to the opposite edge.
     CGRect rect = [super textRectForBounds:bounds limitedToNumberOfLines:numberOfLines];
-    rect.origin.y = bounds.origin.y - self.verticalTextShift;
+    CGFloat centerOffset = rect.origin.y - bounds.origin.y;
+    switch (self.verticalAlignment) {
+        case RNPlainTextTextAlignVertical::Auto:
+        case RNPlainTextTextAlignVertical::Top:
+            rect.origin.y = bounds.origin.y;
+            break;
+        case RNPlainTextTextAlignVertical::Center:
+            // rect.origin.y is already bounds.origin.y + centerOffset.
+            break;
+        case RNPlainTextTextAlignVertical::Bottom:
+            rect.origin.y = bounds.origin.y + 2 * centerOffset;
+            break;
+    }
+    rect.origin.y -= self.verticalTextShift;
     return rect;
 }
 
@@ -132,6 +167,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         _label.textAlignment = alignment;
         _label.text = text;
         _label.verticalTextShift = 0;
+        _label.verticalAlignment = props.textAlignVertical;
         return;
     }
 
@@ -168,6 +204,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         }
     }
     _label.verticalTextShift = verticalTextShift;
+    _label.verticalAlignment = props.textAlignVertical;
 
     attributes[NSParagraphStyleAttributeName] = paragraphStyle;
     _label.attributedText = [[NSAttributedString alloc] initWithString:text attributes:attributes];
@@ -205,6 +242,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         oldViewProps.fontVariant != newViewProps.fontVariant ||
         oldViewProps.fontVariationSettings != newViewProps.fontVariationSettings ||
         oldViewProps.textAlign != newViewProps.textAlign ||
+        oldViewProps.textAlignVertical != newViewProps.textAlignVertical ||
         oldViewProps.color != newViewProps.color ||
         oldViewProps.lineHeight != newViewProps.lineHeight ||
         oldViewProps.letterSpacing != newViewProps.letterSpacing ||
