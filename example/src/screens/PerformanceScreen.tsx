@@ -123,6 +123,12 @@ const PerformanceObserverGlobal = (
   }
 ).PerformanceObserver;
 
+// Hermes only, and only when it's built with GC exposed to JS. Called before
+// sampling memory on unmount, so a run's own garbage doesn't count toward
+// "retained" — never on the other scenarios, where a GC pause would otherwise
+// land inside the commit/interaction measurement instead of after it.
+const forceGC = (globalThis as unknown as { gc?: () => void }).gc;
+
 type Props = NativeStackScreenProps<ParamListBase>;
 
 export default function PerformanceScreen({ navigation }: Props) {
@@ -344,6 +350,11 @@ export default function PerformanceScreen({ navigation }: Props) {
     const commitMs = performance.measure(`${START_MARK}:${run.scenario}`, START_MARK).duration;
 
     const timer = setTimeout(() => {
+      // commitMs is already fixed above and interactionMs already latched by
+      // the observer effect, so a GC pause here only delays this callback —
+      // it can't skew either timing number.
+      if (run.scenario === 'unmount') forceGC?.();
+
       const memAfter = getMemoryFootprint();
       const deltaBytes = memAfter - run.memBefore;
       const result: RunStats = {
