@@ -168,8 +168,8 @@ export default function PerformanceScreen({ navigation }: Props) {
   const [running, setRunning] = useState<Scenario | null>(null);
   const settling = running != null;
 
-  // The three update scenarios. `rerenders` is rendered into its own button
-  // label on purpose — see runParentRerender.
+  // The three update scenarios. `rerenders` is fed into the No-op Update
+  // button's `testID` on purpose — see runParentRerender.
   const [rerenders, setRerenders] = useState(0);
   const [colorIndex, setColorIndex] = useState(0);
   const [sizeBump, setSizeBump] = useState(0);
