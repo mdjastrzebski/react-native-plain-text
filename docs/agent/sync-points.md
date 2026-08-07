@@ -118,6 +118,12 @@ must hold because of that:
   never-attached view), and `TextView.checkForRelayout()` dereferences the
   LayoutParams from the second measurement onward.
 
+`PlainTextFeatureFlags.sharedMeasuringInstance` (set from JS via
+`FeatureFlags.override`, `src/internal/FeatureFlags.ts`) can turn this off for
+perf-suite comparisons — `false` measures every node with a fresh view instead.
+Android only; iOS has no measuring view to toggle (`PlainTextShadowNode`
+measures via CoreText directly).
+
 ## Deferred prop application
 
 Setters on `PlainTextView` whose work is **shared with other props** record state

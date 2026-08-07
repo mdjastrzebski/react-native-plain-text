@@ -224,6 +224,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   private val measureViews = ThreadLocal<WeakReference<PlainTextView>>()
 
   private fun measureView(context: Context): PlainTextView {
+    // Perf-suite escape hatch: PlainTextFeatureFlags.sharedMeasuringInstance=false
+    // measures with a fresh view every call, for comparison against the reused one
+    // below. See docs/agent/sync-points.md#the-reused-measuring-view.
+    if (!PlainTextFeatureFlags.sharedMeasuringInstance) return newMeasureView(context)
+
     // The Context is the surface's ThemedReactContext, so it dies with the surface; a
     // cached view would resolve fonts against a torn-down theme. Two live surfaces can
     // alternate through this check, but per commit, not per node.
@@ -231,6 +236,12 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
 
     // EXPENSIVE: constructing an AppCompatTextView — theme attribute resolution, tint/emoji
     // helpers — only reached on a cache miss (Context change or GC of the weak reference).
+    val view = newMeasureView(context)
+    measureViews.set(WeakReference(view))
+    return view
+  }
+
+  private fun newMeasureView(context: Context): PlainTextView {
     val view = PlainTextView(context)
     view.isMeasureOnly = true
     // From the second measurement on, setText() reaches checkForRelayout(), which
@@ -241,7 +252,6 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
       ViewGroup.LayoutParams.WRAP_CONTENT,
       ViewGroup.LayoutParams.WRAP_CONTENT
     )
-    measureViews.set(WeakReference(view))
     return view
   }
 
