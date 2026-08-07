@@ -32,11 +32,12 @@ const COUNT = 1000;
 // observe the way the timings do. An unmount needs it at least as much as a
 // mount: releasing is lazier than allocating.
 //
-// One value for both platforms, deliberately generous. Neither platform's
-// settle curve has been sampled, and undercounting memory fails *silently* —
-// a short window yields a plausible-looking smaller number, not a visible gap.
-// Too long only costs waiting.
-const SETTLE_MS = 10_000;
+// Default for both platforms, deliberately generous — adjustable per run from
+// the Props sheet (the 'settleMs' row below) for a faster iteration loop once
+// a platform's settle curve is known. Undercounting memory fails *silently* —
+// a short window yields a plausible-looking smaller number, not a visible gap
+// — so shortening it is a deliberate choice, not the default.
+const DEFAULT_SETTLE_MS = 10_000;
 
 type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
 
@@ -585,7 +586,9 @@ const pad = (n: number) => String(n).padStart(3, '0');
 // on NativePlainText, style entries everywhere else), `view` values are view
 // styles Yoga lays out around the self-measured text, `prop` values are
 // component props, `content` picks the string.
-type Target = 'text' | 'view' | 'prop' | 'content';
+// 'settle' isn't rendered onto anything — it's read separately, see
+// settleMsFor below.
+type Target = 'text' | 'view' | 'prop' | 'content' | 'settle';
 
 type AttrOption = {
   label: string;
@@ -873,6 +876,26 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
+    // How long a run waits before sampling memory — see DEFAULT_SETTLE_MS.
+    // Always in the fingerprint, since it changes whether a recorded memory
+    // number is trustworthy.
+    key: 'settleMs',
+    label: 'Settle Time',
+    section: 'Timing',
+    fp: 'settle',
+    target: 'settle',
+    options: [
+      { label: '2s', value: 2_000 },
+      { label: '4s', value: 4_000 },
+      { label: '6s', value: 6_000 },
+      { label: '8s', value: 8_000 },
+      { label: '10s', value: 10_000 },
+      { label: '15s', value: 15_000 },
+    ],
+    defaultIndex: 4,
+    alwaysInFingerprint: true,
+  },
+  {
     key: 'content',
     label: 'text length',
     section: 'Content',
@@ -962,6 +985,7 @@ function buildApplied(config: AttrConfig, colorIndex: number, sizeBump: number):
     if (attr.target === 'text') textStyle[attr.key] = option.value;
     else if (attr.target === 'view') viewStyle[attr.key] = option.value;
     else if (attr.target === 'prop') props[attr.key] = option.value;
+    else if (attr.target === 'settle') continue; // read separately, see settleMsFor
     else text = option.value as TextBuilder;
   }
 
