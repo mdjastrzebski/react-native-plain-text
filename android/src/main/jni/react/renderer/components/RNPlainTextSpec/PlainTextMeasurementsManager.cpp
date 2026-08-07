@@ -86,6 +86,9 @@ Size PlainTextMeasurementsManager::measure(
   if (props.maxFontSizeMultiplier != 0.0) {
     serializedProps["maxFontSizeMultiplier"] = props.maxFontSizeMultiplier;
   }
+  if (props.experiment) {
+    serializedProps["experiment"] = true;
+  }
 
   local_ref<ReadableNativeMap::javaobject> propsRNM =
       ReadableNativeMap::newObjectCxxArgs(serializedProps);

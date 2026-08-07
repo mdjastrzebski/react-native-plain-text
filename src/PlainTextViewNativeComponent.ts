@@ -53,6 +53,12 @@ export interface NativeProps extends ViewProps {
   allowFontScaling?: CodegenTypes.WithDefault<boolean, true>;
   // Caps the accessibility scale when allowFontScaling is on; 0 or values in (0, 1) mean no cap.
   maxFontSizeMultiplier?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
+  // Internal, not part of PlainText's public props. One generic on/off switch
+  // for the perf suite's current A/B test — false is baseline, true is
+  // whatever is being tried. What it does is platform- and experiment-
+  // specific; a platform with no experiment wired up ignores it. Currently
+  // read only by Android's measure() — see docs/agent/sync-points.md.
+  experiment?: CodegenTypes.WithDefault<boolean, false>;
 }
 
 export default codegenNativeComponent<NativeProps>('RNPlainText');

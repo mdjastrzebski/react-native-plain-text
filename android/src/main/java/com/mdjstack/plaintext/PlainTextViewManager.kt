@@ -150,6 +150,12 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setMaxFontSizeMultiplier(maxFontSizeMultiplier)
   }
 
+  // No-op on the mounted view: `experiment` only selects which off-screen view
+  // measure() below uses, so the committed view has nothing to do with it.
+  @ReactProp(name = "experiment", defaultBoolean = false)
+  override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
+  }
+
   // Called from C++ (PlainTextMeasurementsManager, via FabricUIManager.measure) on the
   // Fabric layout thread — this is where text is actually measured, since Fabric never
   // runs Android's normal onMeasure for our view. `props` carries the size-affecting
@@ -170,7 +176,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     heightMode: YogaMeasureMode,
     attachmentsPositions: FloatArray?
   ): Long {
-    val view = measureView(context)
+    val experiment = props?.hasKey("experiment") == true && props.getBoolean("experiment")
+    val view = measureView(context, experiment)
     view.setAllowFontScaling(
       if (props?.hasKey("allowFontScaling") == true) props.getBoolean("allowFontScaling") else true
     )
@@ -223,11 +230,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // one per node.
   private val measureViews = ThreadLocal<WeakReference<PlainTextView>>()
 
-  private fun measureView(context: Context): PlainTextView {
-    // Perf-suite escape hatch: PlainTextFeatureFlags.sharedMeasuringInstance=false
-    // measures with a fresh view every call, for comparison against the reused one
-    // below. See docs/agent/sync-points.md#the-reused-measuring-view.
-    if (!PlainTextFeatureFlags.sharedMeasuringInstance) return newMeasureView(context)
+  private fun measureView(context: Context, experiment: Boolean): PlainTextView {
+    // Perf-suite escape hatch: the `experiment` prop, baseline (false, the
+    // default) reuses the view below; experiment (true) measures every node
+    // with a fresh one instead. See docs/agent/sync-points.md.
+    if (experiment) return newMeasureView(context)
 
     // The Context is the surface's ThemedReactContext, so it dies with the surface; a
     // cached view would resolve fonts against a torn-down theme. Two live surfaces can

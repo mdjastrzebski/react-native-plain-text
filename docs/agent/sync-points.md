@@ -118,11 +118,14 @@ must hold because of that:
   never-attached view), and `TextView.checkForRelayout()` dereferences the
   LayoutParams from the second measurement onward.
 
-`PlainTextFeatureFlags.sharedMeasuringInstance` (set from JS via
-`FeatureFlags.override`, `src/internal/FeatureFlags.ts`) can turn this off for
-perf-suite comparisons — `false` measures every node with a fresh view instead.
-Android only; iOS has no measuring view to toggle (`PlainTextShadowNode`
-measures via CoreText directly).
+The internal `experiment` prop (not part of `PlainText`'s public props, one
+generic on/off switch for whatever the perf suite is currently A/B testing —
+see `src/PlainTextViewNativeComponent.ts`) turns this off per node when true:
+a fresh view instead of the reused one. Currently the only platform reading it
+— iOS has no measuring view to toggle (`PlainTextShadowNode` measures via
+CoreText directly) and ignores the prop for now, like `textAlignVertical`. A
+future iOS experiment would read it in `RNPlainText.mm`/`PlainTextShadowNode.mm`
+the same way.
 
 ## Deferred prop application
 

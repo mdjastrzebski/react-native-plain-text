@@ -23,10 +23,6 @@ import { COLOR, MONO, SERIF, VARIABLE } from '../theme';
 // NativeText-vs-Text pair, which prices the JS wrapper. Imported by path
 // because it is deliberately not public API.
 import NativePlainText from '../../../src/PlainTextViewNativeComponent';
-// Also not public API — the perf-only flag toggling PlainTextViewManager's
-// reused off-screen measuring view. Android only; see
-// docs/agent/sync-points.md#the-reused-measuring-view.
-import { FeatureFlags } from '../../../src/internal/FeatureFlags';
 
 const COUNT = 1000;
 
@@ -282,7 +278,6 @@ export default function PerformanceScreen({ navigation }: Props) {
 
   const runMount = useCallback(
     (kind: Kind) => {
-      FeatureFlags.override('androidSharedMeasuringInstance', measuringInstanceEnabled(config));
       mountBaseline.current = beginRun('mount');
       // Every number on screen belongs to the previous mount, which may have
       // used a different variant or config.
@@ -290,7 +285,7 @@ export default function PerformanceScreen({ navigation }: Props) {
       setCaptured(`${labelFor(kind)} · ${fingerprint}`);
       setMounted(kind);
     },
-    [beginRun, fingerprint, config]
+    [beginRun, fingerprint]
   );
 
   const runUnmount = useCallback(() => {
@@ -580,10 +575,7 @@ const pad = (n: number) => String(n).padStart(3, '0');
 // on NativePlainText, style entries everywhere else), `view` values are view
 // styles Yoga lays out around the self-measured text, `prop` values are
 // component props, `content` picks the string.
-// 'flag' values go nowhere near the rendered tree — they're read out of config
-// at mount time and pushed to FeatureFlags.override instead. See
-// measuringInstanceEnabled below.
-type Target = 'text' | 'view' | 'prop' | 'content' | 'flag';
+type Target = 'text' | 'view' | 'prop' | 'content';
 
 type AttrOption = {
   label: string;
@@ -855,18 +847,19 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
-    // Android only — PlainTextViewManager.measureView() reuses one off-screen
-    // view per thread when true (the default); false measures every node with
-    // a fresh view, for perf comparison. No-op on iOS, which has no measuring
-    // view to toggle. See docs/agent/sync-points.md#the-reused-measuring-view.
-    key: 'androidSharedMeasuringInstance',
-    label: 'Measuring Instance',
+    // The library's internal `experiment` prop (src/PlainTextViewNativeComponent.ts)
+    // — one generic on/off switch for whatever the perf suite is currently A/B
+    // testing. `(none)`/`false` is baseline; `true` is the experiment. Meaning
+    // is platform- and experiment-specific — currently only Android's
+    // measure() reads it. See docs/agent/sync-points.md.
+    key: 'experiment',
     section: 'Flags',
-    fp: 'mi',
-    target: 'flag',
+    fp: 'exp',
+    target: 'prop',
     options: [
-      { label: 'shared', value: true },
-      { label: 'fresh', value: false },
+      { label: '(none)' },
+      { label: 'baseline', value: false },
+      { label: 'experiment', value: true },
     ],
   },
   {
@@ -909,15 +902,6 @@ function selectedIndex(config: AttrConfig, attr: AttrDef) {
 // unreachable; it is here because noUncheckedIndexedAccess cannot see that.
 function selectedOption(config: AttrConfig, attr: AttrDef): AttrOption {
   return attr.options[selectedIndex(config, attr)] ?? { label: '(none)' };
-}
-
-const MEASURING_INSTANCE_ATTR = ATTRIBUTES.find(
-  (attr) => attr.key === 'androidSharedMeasuringInstance'
-);
-
-function measuringInstanceEnabled(config: AttrConfig): boolean {
-  if (MEASURING_INSTANCE_ATTR == null) return true;
-  return selectedOption(config, MEASURING_INSTANCE_ATTR).value as boolean;
 }
 
 // What the header badge counts. Rows that always name themselves in the
@@ -968,8 +952,6 @@ function buildApplied(config: AttrConfig, colorIndex: number, sizeBump: number):
     if (attr.target === 'text') textStyle[attr.key] = option.value;
     else if (attr.target === 'view') viewStyle[attr.key] = option.value;
     else if (attr.target === 'prop') props[attr.key] = option.value;
-    else if (attr.target === 'flag')
-      continue; // read separately, see measuringInstanceEnabled
     else text = option.value as TextBuilder;
   }
 
