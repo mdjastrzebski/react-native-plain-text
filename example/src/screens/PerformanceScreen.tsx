@@ -890,8 +890,9 @@ const ATTRIBUTES: AttrDef[] = [
     // The library's internal `experiment` prop (src/PlainTextViewNativeComponent.ts)
     // — one generic on/off switch for whatever the perf suite is currently A/B
     // testing. `(none)`/`false` is baseline; `true` is the experiment. Meaning
-    // is platform- and experiment-specific — currently only Android's
-    // measure() reads it. See docs/agent/sync-points.md.
+    // is platform- and experiment-specific; currently unread on both — the
+    // shared-vs-fresh measuring view it once gated is settled (shared won) and
+    // no longer conditional. See docs/agent/sync-points.md.
     key: 'experiment',
     section: 'Params',
     fp: 'exp',

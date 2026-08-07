@@ -150,8 +150,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setMaxFontSizeMultiplier(maxFontSizeMultiplier)
   }
 
-  // No-op on the mounted view: `experiment` only selects which off-screen view
-  // measure() below uses, so the committed view has nothing to do with it.
+  // No-op: nothing on Android currently reads `experiment` (measureView()
+  // always shares the off-screen view below — the alternative it once gated
+  // measured slower). Declared for a future perf-suite A/B test, like iOS.
   @ReactProp(name = "experiment", defaultBoolean = false)
   override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
   }
@@ -176,8 +177,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     heightMode: YogaMeasureMode,
     attachmentsPositions: FloatArray?
   ): Long {
-    val experiment = props?.hasKey("experiment") == true && props.getBoolean("experiment")
-    val view = measureView(context, experiment)
+    val view = measureView(context)
     view.setAllowFontScaling(
       if (props?.hasKey("allowFontScaling") == true) props.getBoolean("allowFontScaling") else true
     )
@@ -230,12 +230,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // one per node.
   private val measureViews = ThreadLocal<WeakReference<PlainTextView>>()
 
-  private fun measureView(context: Context, experiment: Boolean): PlainTextView {
-    // Perf-suite escape hatch: baseline (false, the default) measures every
-    // node with a fresh view; experiment (true) shares the one view below.
-    // See docs/agent/sync-points.md.
-    if (!experiment) return newMeasureView(context)
-
+  private fun measureView(context: Context): PlainTextView {
     // The Context is the surface's ThemedReactContext, so it dies with the surface; a
     // cached view would resolve fonts against a torn-down theme. Two live surfaces can
     // alternate through this check, but per commit, not per node.

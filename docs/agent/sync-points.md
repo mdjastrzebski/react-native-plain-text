@@ -118,15 +118,14 @@ must hold because of that:
   never-attached view), and `TextView.checkForRelayout()` dereferences the
   LayoutParams from the second measurement onward.
 
-The internal `experiment` prop (not part of `PlainText`'s public props, one
-generic on/off switch for whatever the perf suite is currently A/B testing —
-see `src/PlainTextViewNativeComponent.ts`) gates this per node: `false`
-(baseline, the default) measures with a fresh view every time; `true`
-(experiment) shares the one view described above. Android is currently the
-only platform reading it — iOS has no measuring view to toggle
-(`PlainTextShadowNode` measures via CoreText directly) and ignores the prop
-for now, like `textAlignVertical`. A future iOS experiment would read it in
-`RNPlainText.mm`/`PlainTextShadowNode.mm` the same way.
+This is now unconditional — measuring with a fresh view every time was the
+alternative an earlier perf-suite A/B test measured against, and it lost, so
+`measureView()` always shares the one view above. The internal `experiment`
+prop (not part of `PlainText`'s public props, one generic on/off switch for
+whatever the perf suite is currently A/B testing — see
+`src/PlainTextViewNativeComponent.ts`) is declared but unread on both
+platforms for now, the same as `textAlignVertical` on iOS, ready for whatever
+gets A/B tested next.
 
 ## Deferred prop application
 
