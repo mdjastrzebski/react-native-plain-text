@@ -40,12 +40,11 @@ const SETTLE_MS = 10_000;
 
 type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
 
-// `short` is what the selector shows: the four full names do not fit on one
-// line of a phone, and a wrapped selector reads as two groups. The full name
-// still goes in the fingerprint line, which is what gets recorded.
+// `short` is what the selector shows; the full name still goes in the
+// fingerprint line, which is what gets recorded.
 const VARIANTS: { kind: Kind; label: string; short: string }[] = [
-  { kind: 'plain', label: 'PlainText', short: 'Plain' },
-  { kind: 'nativePlain', label: 'NativePlainText', short: 'NativePlain' },
+  { kind: 'plain', label: 'PlainText', short: 'PlainText' },
+  { kind: 'nativePlain', label: 'NativePlainText', short: 'NativePlainText' },
   { kind: 'text', label: 'Text', short: 'Text' },
   { kind: 'nativeText', label: 'NativeText', short: 'NativeText' },
 ];
@@ -67,9 +66,9 @@ type Scenario = 'mount' | 'unmount' | 'parent' | 'color' | 'layout';
 
 // The two colors the "Color" scenario alternates between. A toggle rather than
 // an absolute value so every press commits something, and so the run never
-// needs a value picker. Both from the palette: the page's ink, and the pigment
-// the rest of the app already uses when something has to read as changed.
-const COLORS = [COLOR.ink, COLOR.oxblood];
+// needs a value picker. Both from the palette: the page's ink, and the indigo
+// accent the rest of the app already uses for its own interactive elements.
+const COLORS = [COLOR.ink, COLOR.indigo];
 
 // The "Layout" scenario alternates fontSize by half a point: every item has to
 // re-measure, while the drawn area changes by ~2%. That isolates measurement
@@ -451,7 +450,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               onPress={() => runMount(variant)}
             />
             <Action
-              title={`Parent Re-render (${rerenders})`}
+              title={`No-op Update (${rerenders})`}
               scenario="parent"
               stats={stats}
               running={running}
@@ -459,7 +458,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               onPress={runParentRerender}
             />
             <Action
-              title="Re-render Color"
+              title="Color Update"
               scenario="color"
               stats={stats}
               running={running}
@@ -467,7 +466,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               onPress={runColorChange}
             />
             <Action
-              title="Re-render Layout"
+              title="Layout Update"
               scenario="layout"
               stats={stats}
               running={running}
