@@ -41,13 +41,11 @@ const DEFAULT_SETTLE_MS = 3_000;
 
 type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
 
-// `short` is what the selector shows; the full name still goes in the
-// fingerprint line, which is what gets recorded.
-const VARIANTS: { kind: Kind; label: string; short: string }[] = [
-  { kind: 'plain', label: 'PlainText', short: 'PlainText' },
-  { kind: 'nativePlain', label: 'NativePlainText', short: 'NativePlainText' },
-  { kind: 'text', label: 'Text', short: 'Text' },
-  { kind: 'nativeText', label: 'NativeText', short: 'NativeText' },
+const VARIANTS: { kind: Kind; label: string }[] = [
+  { kind: 'plain', label: 'PlainText' },
+  { kind: 'nativePlain', label: 'NativePlainText' },
+  { kind: 'text', label: 'Text' },
+  { kind: 'nativeText', label: 'NativeText' },
 ];
 
 function labelFor(kind: Kind) {
@@ -438,10 +436,10 @@ export default function PerformanceScreen({ navigation }: Props) {
             {/* Selecting a variant is only meaningful for the next mount, so the
                 chips lock as soon as one is on screen. */}
             <View style={styles.row}>
-              {VARIANTS.map(({ kind, short }) => (
+              {VARIANTS.map(({ kind, label }) => (
                 <Chip
                   key={kind}
-                  label={short}
+                  label={label}
                   selected={kind === variant}
                   disabled={settling || mounted != null}
                   onPress={() => setVariant(kind)}
