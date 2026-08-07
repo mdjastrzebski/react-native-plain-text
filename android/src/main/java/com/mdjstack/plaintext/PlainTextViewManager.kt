@@ -231,10 +231,10 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   private val measureViews = ThreadLocal<WeakReference<PlainTextView>>()
 
   private fun measureView(context: Context, experiment: Boolean): PlainTextView {
-    // Perf-suite escape hatch: the `experiment` prop, baseline (false, the
-    // default) reuses the view below; experiment (true) measures every node
-    // with a fresh one instead. See docs/agent/sync-points.md.
-    if (experiment) return newMeasureView(context)
+    // Perf-suite escape hatch: baseline (false, the default) measures every
+    // node with a fresh view; experiment (true) shares the one view below.
+    // See docs/agent/sync-points.md.
+    if (!experiment) return newMeasureView(context)
 
     // The Context is the surface's ThemedReactContext, so it dies with the surface; a
     // cached view would resolve fonts against a torn-down theme. Two live surfaces can
