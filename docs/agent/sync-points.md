@@ -122,11 +122,11 @@ The internal `experiment` prop (not part of `PlainText`'s public props, one
 generic on/off switch for whatever the perf suite is currently A/B testing —
 see `src/PlainTextViewNativeComponent.ts`) gates this per node: `false`
 (baseline, the default) measures with a fresh view every time; `true`
-(experiment) shares the one view described above. Currently the only platform
-reading it — iOS has no measuring view to toggle (`PlainTextShadowNode` measures via
-CoreText directly) and ignores the prop for now, like `textAlignVertical`. A
-future iOS experiment would read it in `RNPlainText.mm`/`PlainTextShadowNode.mm`
-the same way.
+(experiment) shares the one view described above. Android is currently the
+only platform reading it — iOS has no measuring view to toggle
+(`PlainTextShadowNode` measures via CoreText directly) and ignores the prop
+for now, like `textAlignVertical`. A future iOS experiment would read it in
+`RNPlainText.mm`/`PlainTextShadowNode.mm` the same way.
 
 ## Deferred prop application
 

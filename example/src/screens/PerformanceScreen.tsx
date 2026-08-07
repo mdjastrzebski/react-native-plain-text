@@ -32,12 +32,12 @@ const COUNT = 1000;
 // observe the way the timings do. An unmount needs it at least as much as a
 // mount: releasing is lazier than allocating.
 //
-// Default for both platforms, deliberately generous — adjustable per run from
-// the Props sheet (the 'settleMs' row below) for a faster iteration loop once
-// a platform's settle curve is known. Undercounting memory fails *silently* —
+// Default for both platforms — adjustable per run from the Props sheet (the
+// 'settleMs' row below) up to 15s, for whenever a platform's settle curve
+// turns out to need longer than this. Undercounting memory fails *silently* —
 // a short window yields a plausible-looking smaller number, not a visible gap
-// — so shortening it is a deliberate choice, not the default.
-const DEFAULT_SETTLE_MS = 10_000;
+// — so lengthening it is the safer direction to reach for when in doubt.
+const DEFAULT_SETTLE_MS = 3_000;
 
 type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
 
@@ -125,9 +125,10 @@ const PerformanceObserverGlobal = (
 ).PerformanceObserver;
 
 // Hermes only, and only when it's built with GC exposed to JS. Called before
-// sampling memory on unmount, so a run's own garbage doesn't count toward
-// "retained" — never on the other scenarios, where a GC pause would otherwise
-// land inside the commit/interaction measurement instead of after it.
+// sampling memory on mount and unmount, so a run's own garbage doesn't count
+// toward its delta/retained numbers — never on the other scenarios, where a
+// GC pause would otherwise land inside the commit/interaction measurement
+// instead of after it.
 const forceGC = (globalThis as unknown as { gc?: () => void }).gc;
 
 type Props = NativeStackScreenProps<ParamListBase>;
@@ -354,8 +355,11 @@ export default function PerformanceScreen({ navigation }: Props) {
     const timer = setTimeout(() => {
       // commitMs is already fixed above and interactionMs already latched by
       // the observer effect, so a GC pause here only delays this callback —
-      // it can't skew either timing number.
-      if (run.scenario === 'unmount') forceGC?.();
+      // it can't skew either timing number. Mount and unmount only: those are
+      // the two scenarios whose memory number is supposed to reflect COUNT
+      // views' worth of allocation, so a run's own garbage shouldn't count
+      // toward it either way.
+      if (run.scenario === 'mount' || run.scenario === 'unmount') forceGC?.();
 
       const memAfter = getMemoryFootprint();
       const deltaBytes = memAfter - run.memBefore;
@@ -464,7 +468,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               onPress={() => runMount(variant)}
             />
             <Action
-              title={`No-op Update (${rerenders})`}
+              title="No-op Update"
               scenario="parent"
               stats={stats}
               running={running}
@@ -866,13 +870,26 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
+    key: 'content',
+    label: 'text length',
+    section: 'Content',
+    fp: 'text',
+    target: 'content',
+    // The builder itself rather than a name for it, so nothing downstream has to
+    // map one to the other.
+    options: [
+      { label: 'short', value: SHORT_TEXT },
+      { label: 'wrapping', value: WRAPPING_TEXT },
+    ],
+  },
+  {
     // The library's internal `experiment` prop (src/PlainTextViewNativeComponent.ts)
     // — one generic on/off switch for whatever the perf suite is currently A/B
     // testing. `(none)`/`false` is baseline; `true` is the experiment. Meaning
     // is platform- and experiment-specific — currently only Android's
     // measure() reads it. See docs/agent/sync-points.md.
     key: 'experiment',
-    section: 'Flags',
+    section: 'Params',
     fp: 'exp',
     target: 'prop',
     options: [
@@ -887,32 +904,17 @@ const ATTRIBUTES: AttrDef[] = [
     // number is trustworthy.
     key: 'settleMs',
     label: 'Settle Time',
-    section: 'Timing',
+    section: 'Params',
     fp: 'settle',
     target: 'settle',
     options: [
-      { label: '2s', value: 2_000 },
-      { label: '4s', value: 4_000 },
-      { label: '6s', value: 6_000 },
+      { label: '3s', value: 3_000 },
+      { label: '5s', value: 5_000 },
       { label: '8s', value: 8_000 },
       { label: '10s', value: 10_000 },
       { label: '15s', value: 15_000 },
     ],
-    defaultIndex: 4,
     alwaysInFingerprint: true,
-  },
-  {
-    key: 'content',
-    label: 'text length',
-    section: 'Content',
-    fp: 'text',
-    target: 'content',
-    // The builder itself rather than a name for it, so nothing downstream has to
-    // map one to the other.
-    options: [
-      { label: 'short', value: SHORT_TEXT },
-      { label: 'wrapping', value: WRAPPING_TEXT },
-    ],
   },
 ];
 
