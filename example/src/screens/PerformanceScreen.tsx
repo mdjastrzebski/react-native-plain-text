@@ -313,12 +313,14 @@ export default function PerformanceScreen({ navigation }: Props) {
   // The counter has to be *rendered* somewhere for this to test anything: a
   // state change that produces an identical tree makes React bail out, Fabric
   // commits no clones, and the run measures nothing at all rather than
-  // measuring a cheap re-own. Showing it in the button label changes something
-  // inside the same content container as the items, which forces that container
-  // to be cloned with a new children list — and that is what re-owns all ~1000
-  // mounted items. Keep the counter somewhere under that container; how deeply
-  // nested does not matter. Moving it into the header or into a view outside the
-  // ScrollView silently turns this run into a no-op.
+  // measuring a cheap re-own. Feeding it into the No-op Update button's
+  // `testID` changes a real prop inside the same content container as the
+  // items, which forces that container to be cloned with a new children list
+  // — and that is what re-owns all ~1000 mounted items. Keep the counter
+  // reaching some real prop under that container; how deeply nested, or
+  // whether it's user-visible, does not matter. Moving it into the header or
+  // into a view outside the ScrollView, or dropping it, silently turns this
+  // run into a no-op.
   const runParentRerender = useCallback(() => {
     beginRun('parent');
     setRerenders((n) => n + 1);
@@ -454,8 +456,9 @@ export default function PerformanceScreen({ navigation }: Props) {
             are already there. Which ones are enabled is the whole state
             machine: mount when nothing is up, the other four when something is.
 
-            `rerenders` is in its own label deliberately: it is what makes that
-            press commit anything at all. See runParentRerender.
+            `rerenders` is in the No-op Update button's `testID` deliberately:
+            it is what makes that press commit anything at all. See
+            runParentRerender.
           */}
           <Section title="Scenarios" spacedRows>
             <Action
@@ -469,6 +472,7 @@ export default function PerformanceScreen({ navigation }: Props) {
             />
             <Action
               title="No-op Update"
+              testID={`no-op-update-${rerenders}`}
               scenario="parent"
               stats={stats}
               running={running}
@@ -1110,6 +1114,7 @@ function Chip({
 // or changes height.
 function Action({
   title,
+  testID,
   scenario,
   stats,
   running,
@@ -1118,6 +1123,8 @@ function Action({
   onPress,
 }: {
   title: string;
+  // Not user-visible; a real prop for a real diff. See runParentRerender.
+  testID?: string;
   scenario: Scenario;
   stats: Partial<Record<Scenario, RunStats>>;
   running: Scenario | null;
@@ -1139,7 +1146,10 @@ function Action({
         disabled={disabled}
         style={[styles.button, disabled && styles.buttonDisabled]}
       >
-        <PlainText style={[styles.buttonLabel, disabled && styles.buttonLabelDisabled]}>
+        <PlainText
+          testID={testID}
+          style={[styles.buttonLabel, disabled && styles.buttonLabelDisabled]}
+        >
           {title}
         </PlainText>
       </Pressable>
