@@ -190,6 +190,7 @@ export default function PerformanceScreen({ navigation }: Props) {
   // Not memoized: every render rebuilds all COUNT elements anyway, so a stable
   // object here would save nothing.
   const applied = buildApplied(config, colorIndex, sizeBump);
+  const settleDelayMs = settleMsFor(config);
   const fingerprint = formatFingerprint(config);
   // What the next mount would run.
   const live = `${labelFor(variant)} · ${fingerprint}`;
@@ -333,12 +334,12 @@ export default function PerformanceScreen({ navigation }: Props) {
   }, [beginRun]);
 
   // One pipeline for all five scenarios. Runs after React has committed; memory
-  // is sampled SETTLE_MS later, once native allocation (or release) has caught
-  // up, and the interaction number is read at the same moment because every
-  // Event Timing entry for that press has landed well before then.
+  // is sampled settleDelayMs later, once native allocation (or release) has
+  // caught up, and the interaction number is read at the same moment because
+  // every Event Timing entry for that press has landed well before then.
   //
-  // The dependency list is every piece of state a scenario touches, so exactly
-  // one of them changing is what runs this.
+  // The dependency list is every piece of state a scenario touches, plus
+  // settleDelayMs itself, so exactly one of them changing is what runs this.
   useEffect(() => {
     const run = pending.current;
     if (!run) return;
@@ -369,10 +370,10 @@ export default function PerformanceScreen({ navigation }: Props) {
       };
       setRunning(null);
       setStats((prev) => ({ ...prev, [run.scenario]: result }));
-    }, SETTLE_MS);
+    }, settleDelayMs);
 
     return () => clearTimeout(timer);
-  }, [mounted, rerenders, colorIndex, sizeBump]);
+  }, [mounted, rerenders, colorIndex, sizeBump, settleDelayMs]);
 
   return (
     <>
@@ -458,6 +459,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               scenario="mount"
               stats={stats}
               running={running}
+              settleMs={settleDelayMs}
               disabled={settling || mounted != null}
               onPress={() => runMount(variant)}
             />
@@ -466,6 +468,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               scenario="parent"
               stats={stats}
               running={running}
+              settleMs={settleDelayMs}
               disabled={settling || mounted == null}
               onPress={runParentRerender}
             />
@@ -474,6 +477,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               scenario="color"
               stats={stats}
               running={running}
+              settleMs={settleDelayMs}
               disabled={settling || mounted == null}
               onPress={runColorChange}
             />
@@ -482,6 +486,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               scenario="layout"
               stats={stats}
               running={running}
+              settleMs={settleDelayMs}
               disabled={settling || mounted == null}
               onPress={runLayoutChange}
             />
@@ -490,6 +495,7 @@ export default function PerformanceScreen({ navigation }: Props) {
               scenario="unmount"
               stats={stats}
               running={running}
+              settleMs={settleDelayMs}
               disabled={settling || mounted == null}
               onPress={runUnmount}
             />
@@ -937,6 +943,13 @@ function selectedOption(config: AttrConfig, attr: AttrDef): AttrOption {
   return attr.options[selectedIndex(config, attr)] ?? { label: '(none)' };
 }
 
+const SETTLE_ATTR = ATTRIBUTES.find((attr) => attr.key === 'settleMs');
+
+function settleMsFor(config: AttrConfig): number {
+  if (SETTLE_ATTR == null) return DEFAULT_SETTLE_MS;
+  return selectedOption(config, SETTLE_ATTR).value as number;
+}
+
 // What the header badge counts. Rows that always name themselves in the
 // fingerprint are excluded: they are visible on the line whatever their value,
 // so counting them too would double-report them.
@@ -985,7 +998,8 @@ function buildApplied(config: AttrConfig, colorIndex: number, sizeBump: number):
     if (attr.target === 'text') textStyle[attr.key] = option.value;
     else if (attr.target === 'view') viewStyle[attr.key] = option.value;
     else if (attr.target === 'prop') props[attr.key] = option.value;
-    else if (attr.target === 'settle') continue; // read separately, see settleMsFor
+    else if (attr.target === 'settle')
+      continue; // read separately, see settleMsFor
     else text = option.value as TextBuilder;
   }
 
@@ -1089,8 +1103,6 @@ function Chip({
 // Actions and readouts
 // ---------------------------------------------------------------------------
 
-const SETTLING_LABEL = `Settling ${SETTLE_MS / 1000}s…`;
-
 // One action and the result it produced, as a unit. Grouping them means the
 // result cannot drift away from its own button when a sibling's result appears
 // or changes height.
@@ -1099,6 +1111,7 @@ function Action({
   scenario,
   stats,
   running,
+  settleMs,
   disabled,
   onPress,
 }: {
@@ -1106,6 +1119,7 @@ function Action({
   scenario: Scenario;
   stats: Partial<Record<Scenario, RunStats>>;
   running: Scenario | null;
+  settleMs: number;
   disabled?: boolean;
   onPress: () => void;
 }) {
@@ -1128,7 +1142,9 @@ function Action({
         </PlainText>
       </Pressable>
       {running === scenario ? (
-        <PlainText style={[styles.readout, styles.settling]}>{SETTLING_LABEL}</PlainText>
+        <PlainText style={[styles.readout, styles.settling]}>
+          {`Settling ${settleMs / 1000}s…`}
+        </PlainText>
       ) : result != null ? (
         <StatsBlock stats={result} />
       ) : null}
