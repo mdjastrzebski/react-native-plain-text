@@ -12,6 +12,7 @@ import android.text.SpannableString
 import android.text.TextUtils
 import android.text.style.LineHeightSpan
 import android.util.AttributeSet
+import android.util.LruCache
 import android.util.TypedValue
 import android.view.Gravity
 import androidx.appcompat.widget.AppCompatTextView
@@ -317,10 +318,34 @@ class PlainTextView : AppCompatTextView {
     val settings = variationSettings
     if (settings == appliedVariationSettings) return
 
+    // Cross-view cache: appliedVariationSettings and applyTypeface's identity check
+    // only catch one view redoing its own work. N mounted views at the same font +
+    // axes each start uncached, so each pays for its own native derivation. See
+    // docs/agent/performance.md.
+    val base = appliedBaseTypeface
+    if (settings != null && base != null) {
+      val cached = variationTypefaceCache.get(VariationCacheKey(base, settings))
+      if (cached != null) {
+        // One setTypeface instead of the clear-then-derive dance below.
+        //
+        // EXPENSIVE, same as the block below: clears the text Layout and requests a
+        // new one (TextView.java:4851).
+        //
+        // Accepted divergence: this goes through TextView.setTypeface, which (unlike
+        // the derive-it-yourself path) updates the base getTypeface() reports. Only
+        // shows on the OS Bold-text toggle: a cache-missed view drops its axes, a
+        // cache-hit view keeps them. Not worth a field to keep the two in sync.
+        typeface = cached
+        appliedVariationSettings = settings
+        return
+      }
+    }
+
     // Paint.setFontVariationSettings(null) doesn't undo axes on API 26-35 — minikin
-    // reuses the varied typeface's collection despite the cleared string — so the base
-    // typeface must be restored manually; API 36 fixes this via Typeface.mDerivedFrom.
-    // Nothing to restore if applyTypeface just ran (it already reset this to null).
+    // reuses the varied typeface's collection despite the cleared string — so the
+    // base typeface must be restored manually; API 36 fixes this via
+    // Typeface.mDerivedFrom. Nothing to restore if applyTypeface just ran (it
+    // already reset this to null).
     if (appliedVariationSettings != null) {
       // EXPENSIVE: TextView.setTypeface, always a real change here, clears the text
       // Layout and requests a new one (TextView.java:4851).
@@ -341,6 +366,12 @@ class PlainTextView : AppCompatTextView {
       // clear above; applyTypeface's identity guard keeps this pair off the
       // per-node measuring path.
       super.setFontVariationSettings(settings)
+      // Read off `paint`, not `typeface`: setFontVariationSettings only writes
+      // mTextPaint, so `paint.typeface` is the only place the derived, axis-carrying
+      // Typeface is observable.
+      if (base != null) {
+        variationTypefaceCache.put(VariationCacheKey(base, settings), paint.typeface)
+      }
     } catch (e: IllegalArgumentException) {
       // A malformed prop string, not a broken font; recording it as applied means a
       // stable bad value logs once, not every flush.
@@ -468,8 +499,23 @@ private fun toEffectivePixel(
   }
 }
 
-// Mirrors <Text> (TextAttributeProps#letterSpacing): px divided by font size, since
-// TextView.letterSpacing is in em unlike iOS's absolute kerning.
+// Key for variationTypefaceCache. Typeface has no equals override, so identity on
+// baseTypeface is a reference compare — fine, since applyStyles already interns it.
+// Structural equality on settings, which arrives fresh off the bridge per node.
+private data class VariationCacheKey(val baseTypeface: Typeface, val settings: String)
+
+// Shared across every PlainTextView, including the measuring view. Bounded since
+// settings is a continuous value an animating screen could grow without limit — same
+// reasoning as the iOS font cache's countLimit
+// (docs/agent/performance.md#share-and-cache-ios-font-resolution).
+//
+// LruCache synchronizes internally, needed since measure() runs on the layout thread
+// and mount on the UI thread, and both reach this.
+private val variationTypefaceCache = LruCache<VariationCacheKey, Typeface>(64)
+
+// Mirrors <Text> (TextAttributeProps#letterSpacing): px divided by the font size,
+// because TextView.letterSpacing is in em unlike iOS's absolute kerning. Pure and
+// top-level for the same reason as toEffectivePixel.
 private fun calculateLetterSpacing(
   letterSpacingDip: Float,
   fontSizePx: Float,

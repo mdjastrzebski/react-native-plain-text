@@ -308,6 +308,35 @@ whole transaction) and before the off-screen measure — never from the view's
 
 Mirrors how RN's `<Text>` applies a single prebuilt `ReactTextUpdate`.
 
+### Cache the derived `fontVariationSettings` `Typeface` across views (`PlainTextView.kt`)
+
+**Not measured yet**, opened by a real-device report: mounting 1000 `PlainText`
+at the bundled variable font plus one shared axis value went from ~580 ms to
+~5163 ms and 39.3 KB/view to 421 KB/view on a Pixel 3, release build — far past
+what the per-node cost in the ratings table above predicts. Wants the same
+Pixel 3 run per [measuring.md](measuring.md) to close.
+
+`appliedVariationSettings` and `applyTypeface`'s identity guard each stop only
+one view from redoing its own work. N mounted views at the same font and axes
+(a list of rows at one weight) each start uncached, so each pays for its own
+native `Typeface` derivation — the cost
+[native-gotchas.md](native-gotchas.md#L151-242) flags as unmemoized below API 36.
+
+`applyVariationSettings()` now checks a small `LruCache<VariationCacheKey,
+Typeface>` keyed on `(appliedBaseTypeface, settings)` first. A hit assigns the
+cached `Typeface` directly — one `setTypeface`, not two native derivations. A
+miss pays the existing cost once, then populates the cache by reading `paint`
+(not `typeface` — `setFontVariationSettings` only writes `mTextPaint`).
+Bounded the same way as the iOS font cache
+([above](#share-and-cache-ios-font-resolution-iosplaintextfonthmm)), since axis
+strings are a continuous value an animating screen could otherwise grow this
+without limit.
+
+Accepted divergence: a cache-hit assignment goes through
+`TextView.setTypeface`, which (unlike deriving it yourself) updates the base
+`getTypeface()` reports. Only shows on the OS Bold-text toggle: a cache-missed
+view drops its axes, a cache-hit view keeps them.
+
 ### Guard `applyTypeface` on the resolved typeface (`PlainTextView.kt`)
 
 **Not measured yet.** The mechanism is clear and the correctness half of it is
