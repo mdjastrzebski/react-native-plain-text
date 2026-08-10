@@ -16,34 +16,25 @@ three of:
 
 ### When RN itself has the platform gap
 
-"API parity with RN `<Text>`" means matching RN, not necessarily matching RN's
-own asymmetry. When a prop or behavior exists on one platform in RN core and not
-the other, that is a gap in RN rather than a platform difference to preserve.
-Default to closing it on the platform RN lacks, provided it can be done without
-the cost that presumably kept RN from doing it.
+Parity means matching RN, not matching RN's own asymmetry. A prop that exists on
+one platform in RN core and not the other is a gap in RN rather than a platform
+difference to preserve, so default to closing it, provided that can be done
+without the cost that presumably stopped RN.
 
-The first case is `textAlignVertical`, which is Android-only in RN core with no
-`ios/` implementation anywhere in Fabric's text-attributes code. Its iOS
-implementation in `ios/RNPlainText.mm` shows the shape this usually takes: a
-`UILabel` subclass already overriding
-`-textRectForBounds:limitedToNumberOfLines:` for one reason can absorb a second
-one for free. Reach for anything heavier only after that kind of option is out.
+`textAlignVertical` is the first case, Android-only in RN core with no `ios/`
+implementation in Fabric at all. Closing it on iOS cost nothing because a
+`UILabel` subclass was already overriding
+`-textRectForBounds:limitedToNumberOfLines:` for another reason
+(`ios/RNPlainText.mm`). Look for that kind of free ride before anything heavier.
 
-This is a deliberate divergence from "match RN's shape", so say so where the
-prop is declared and where it's applied. The reader needs to know the prop is
-intentionally ahead of RN, not that RN was checked and found wanting.
+Say so where the prop is declared and applied, so the next reader knows the
+divergence is deliberate.
 
-**Check for JS-level aliases before declaring the gap closed.** RN's own
-`Text.js` maps the CSS-standard `verticalAlign` style onto `textAlignVertical`
-purely in JS (`verticalAlignToTextAlignVerticalMap`, applied before anything
-reaches native) — so despite its cross-platform-sounding name, `verticalAlign`
-was exactly as Android-only as `textAlignVertical`, for the same underlying
-reason, and was never a second gap. `PlainText.native.tsx`'s
-`resolveTextAlignVertical` mirrors that same shim, so closing
-`textAlignVertical` on iOS closed `verticalAlign` too, for free, with no native
-change of its own. The lesson generalizes: before scoping a second
-implementation for what looks like a related prop, check whether it's actually
-JS sugar over the one you already fixed.
+**Check for JS-level aliases first.** RN's `Text.js` maps `verticalAlign` onto
+`textAlignVertical` in JS (`verticalAlignToTextAlignVerticalMap`), so despite
+the CSS name it was never a second gap.
+`PlainText.native.tsx`'s `resolveTextAlignVertical` mirrors that alias, and
+closing `textAlignVertical` on iOS closed `verticalAlign` with it.
 
 ## Order of work
 

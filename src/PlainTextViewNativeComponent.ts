@@ -40,13 +40,9 @@ export interface NativeProps extends ViewProps {
   // Cost: medium. Forces iOS's attributed-string path, plus one paint write on Android.
   letterSpacing?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
   textAlign?: CodegenTypes.WithDefault<'auto' | 'left' | 'right' | 'center' | 'justify', 'auto'>;
-  // Vertical alignment of the text within the view's box. Android-only in RN
-  // <Text>, but that is a gap in RN rather than a platform difference to
-  // preserve, so PlainText closes it on iOS too (see
-  // docs/agent/workflow.md#when-rn-itself-has-the-platform-gap). RN's
-  // cross-platform `verticalAlign` style maps onto this on the JS side
-  // ('middle' -> 'center'), so the native prop only ever sees the
-  // textAlignVertical value set.
+  // Android-only in RN <Text>, but PlainText closes that gap on iOS too (see
+  // docs/agent/workflow.md#when-rn-itself-has-the-platform-gap). JS maps the
+  // cross-platform verticalAlign style onto this ('middle' -> 'center').
   textAlignVertical?: CodegenTypes.WithDefault<'auto' | 'top' | 'bottom' | 'center', 'auto'>;
   // Free string: 'underline line-through' has a space, which codegen enums can't represent.
   //

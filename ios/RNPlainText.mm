@@ -58,37 +58,23 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     }
 }
 
-// UILabel vertically centers its text when its frame is taller than the text
-// (e.g. an explicit height). RN's <Text> on iOS top-aligns instead and has no
-// vertical-alignment knob at all: textAlignVertical is Android-only in RN core,
-// with no ios/ implementation anywhere in Fabric's text-attributes code. That
-// is a platform gap in RN rather than a difference to preserve (see
-// docs/agent/workflow.md#when-rn-itself-has-the-platform-gap), and it closes
-// cheaply here. The same override already needed to force top-alignment can
-// resolve top/center/bottom directly from what -textRectForBounds: already
-// computes, with no extra layout pass and no attributed-string requirement.
+// textAlignVertical is Android-only in RN core, so RN's <Text> on iOS always
+// top-aligns. That is a gap in RN rather than a difference to preserve (see
+// docs/agent/workflow.md#when-rn-itself-has-the-platform-gap), and the override
+// UILabel already needs (it would otherwise center an overtall frame) resolves
+// all three values at no extra cost.
 @interface RNPlainTextLabel : UILabel
-// 'auto' maps to Top, matching RN <Text>'s existing top-pinned iOS behavior, so
-// a view that never sets textAlignVertical renders exactly as before.
+// 'auto' maps to Top, matching RN <Text> on iOS.
 @property (nonatomic) RNPlainTextTextAlignVertical verticalAlignment;
-// When lineHeight is larger than the font's natural line height, the extra
-// space UILabel/TextKit adds per line falls entirely below the glyphs, so the
-// text sits high in its line box. verticalTextShift (set in
-// applyContentFromProps) moves the whole drawn block, glyphs and underline and
-// strikethrough together, up by half that extra, centering each line without
-// touching NSBaselineOffsetAttributeName (which only shifts glyphs, leaving
-// decorations drawn at the untouched line-fragment baseline). It applies on
-// top of, not instead of, the vertical-alignment placement below.
+// When lineHeight exceeds the font's line height, TextKit's extra per-line space falls below the glyphs; verticalTextShift moves the whole drawn block (glyphs plus underline/strikethrough) up by half that extra, unlike NSBaselineOffsetAttributeName which shifts only glyphs.
 @property (nonatomic) CGFloat verticalTextShift;
 @end
 
 @implementation RNPlainTextLabel
 - (CGRect)textRectForBounds:(CGRect)bounds limitedToNumberOfLines:(NSInteger)numberOfLines
 {
-    // UIKit's default answer is top-anchored at bounds.origin.y regardless of
-    // how much taller bounds is than the text, so it does not center. The extra
-    // room has to be computed from the height delta rather than read off
-    // rect.origin.y.
+    // super's rect is top-anchored at bounds.origin.y and never centered, so the
+    // spare room has to come from the height delta.
     CGRect rect = [super textRectForBounds:bounds limitedToNumberOfLines:numberOfLines];
     CGFloat centerOffset = (bounds.size.height - rect.size.height) / 2.0;
     switch (self.verticalAlignment) {
