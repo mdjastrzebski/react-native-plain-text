@@ -802,6 +802,24 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
+    // Keyed on the native prop name rather than the `verticalAlign` alias, so
+    // the nativePlain variant can still spread it straight through. Costs its
+    // work on any row, but only moves glyphs where the box is taller than the
+    // text, so pair it with the Layout `height` row to see it as well as price
+    // it.
+    key: 'textAlignVertical',
+    section: 'Text',
+    fp: 'tav',
+    target: 'text',
+    options: [
+      { label: '(none)' },
+      { label: 'auto', value: 'auto' },
+      { label: 'top', value: 'top' },
+      { label: 'center', value: 'center' },
+      { label: 'bottom', value: 'bottom' },
+    ],
+  },
+  {
     key: 'numberOfLines',
     section: 'Layout',
     fp: 'nol',
