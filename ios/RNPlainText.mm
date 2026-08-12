@@ -66,7 +66,12 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 @interface RNPlainTextLabel : UILabel
 // 'auto' maps to Top, matching RN <Text> on iOS.
 @property (nonatomic) RNPlainTextTextAlignVertical verticalAlignment;
-// When lineHeight exceeds the font's line height, TextKit's extra per-line space falls below the glyphs; verticalTextShift moves the whole drawn block (glyphs plus underline/strikethrough) up by half that extra, unlike NSBaselineOffsetAttributeName which shifts only glyphs.
+// TextKit puts all the slack/deficit between a pinned lineHeight and the
+// font's natural line height on one side of the glyphs (extra space below,
+// or ascent clipped first). verticalTextShift (set in applyContentFromProps)
+// shifts the whole drawn block — glyphs plus decorations — by half that
+// amount to center it; NSBaselineOffsetAttributeName can't do this since it
+// only moves glyphs.
 @property (nonatomic) CGFloat verticalTextShift;
 @end
 
@@ -184,9 +189,14 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         CGFloat lineHeight = props.lineHeight * fontSizeMultiplier;
         paragraphStyle.minimumLineHeight = lineHeight;
         paragraphStyle.maximumLineHeight = lineHeight;
-        // Shift the drawn block up by half the extra space to center it in the enlarged line box (see verticalTextShift).
+        // Below font.lineHeight, TextKit clips ascent only (RN#29507); shift by
+        // half the deficit against the glyphs' real extent to clip evenly
+        // instead (RN#46884's algorithm).
         if (lineHeight >= font.lineHeight) {
             verticalTextShift = (lineHeight - font.lineHeight) / 2.0;
+        } else {
+            CGFloat textHeight = font.ascender + fabs(font.descender);
+            verticalTextShift = (lineHeight - textHeight) / 2.0;
         }
     }
     _label.verticalTextShift = verticalTextShift;

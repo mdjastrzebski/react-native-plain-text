@@ -249,6 +249,27 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      {/* Repro for RN issue #29507: tight lineHeight clipped by the row's box, across a few font families. */}
+      <Section
+        title="Line Height Clipping (Real-World)"
+        footer="Line height clipping on iOS is broken. See RN issue #29507."
+      >
+        {REALWORLD_FONTS.map((font, index) => {
+          const fontSize = REALWORLD_FONT_SIZES[index]!;
+          const lineHeight = Math.round(fontSize * 0.8);
+          return (
+            <TextItem
+              key={font.label}
+              label={`${lineHeight} / ${fontSize}`}
+              showText={showText}
+              style={[font.style, { fontSize, lineHeight }]}
+              containerStyle={[screenStyles.wideRow, styles.clippingRow]}
+            >
+              {font.label}
+            </TextItem>
+          );
+        })}
+      </Section>
       <Section title="Letter Spacing">
         {LETTER_SPACINGS.map((letterSpacing) => (
           <TextItem
@@ -567,6 +588,9 @@ const styles = StyleSheet.create({
     width: '100%',
     fontSize: 18,
   },
+  // iOS needs explicit clipping to reproduce the bug (clipsToBounds is off by
+  // default); Android's TextView already clips to its bounds.
+  clippingRow: Platform.select({ ios: { overflow: 'hidden' }, default: {} }),
   // Indigo rather than ink for the border sections: at 4pt a near-black stroke
   // outweighed the 18pt type inside it. Set once here so the whole section is drawn
   // in one ink and the rows differ only in the geometry.
@@ -627,6 +651,28 @@ const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'] as const;
 const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 
 const LINE_HEIGHTS = [18, 26, 36];
+
+// Same lineHeight/fontSize ratio (0.8) at each size, paired 1:1 with REALWORLD_FONTS.
+const REALWORLD_FONT_SIZES = [16, 20, 24, 32, 40];
+
+// Families with varied ascender/descender/leading, to exercise the shift
+// formula in applyContentFromProps beyond the one font it was written against.
+const REALWORLD_FONTS: { label: string; style: PlainTextStyle }[] = Platform.select({
+  ios: [
+    { label: 'System', style: {} },
+    { label: 'Georgia', style: { fontFamily: 'Georgia' } },
+    { label: 'Helvetica Neue', style: { fontFamily: 'Helvetica Neue' } },
+    { label: 'Baskerville', style: { fontFamily: 'Baskerville' } },
+    { label: 'Inter SemiBold', style: { fontFamily: 'Inter_600SemiBold' } },
+  ],
+  default: [
+    { label: 'System', style: {} },
+    { label: 'serif', style: { fontFamily: 'serif' } },
+    { label: 'sans-serif-medium', style: { fontFamily: 'sans-serif-medium' } },
+    { label: 'cursive', style: { fontFamily: 'cursive' } },
+    { label: 'Inter SemiBold', style: { fontFamily: 'Inter_600SemiBold' } },
+  ],
+});
 
 // Name only the path the reader can actually go and change.
 const FONT_SCALING_FOOTER = Platform.select({
