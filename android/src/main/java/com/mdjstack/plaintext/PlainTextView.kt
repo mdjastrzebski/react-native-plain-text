@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
+import android.os.LocaleList
 import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
@@ -105,6 +106,8 @@ class PlainTextView : AppCompatTextView {
   // onConfigurationChanged (API 31+) without invalidating this field, silently
   // resetting a variable font's axes, benign, self-heals on the next font/axis change.
   private var appliedBaseTypeface: Typeface? = baseTypeface
+
+  private var appliedLang: String? = null
 
   // Reused by PlainTextViewManager for measurement. Never attached to a window, so
   // posting measureAndLayout would queue forever.
@@ -554,6 +557,37 @@ class PlainTextView : AppCompatTextView {
       else -> Gravity.TOP
     }
     gravity = (gravity and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
+  }
+
+  // No counterpart in RN <Text>: lang drives the hyphenation
+  // patterns and locale-sensitive line breaking/glyph selection. Null/empty restores
+  // the default.
+  fun setLang(lang: String?) {
+    val normalized = if (lang.isNullOrEmpty()) null else lang
+    if (normalized == appliedLang) return
+    appliedLang = normalized
+
+    textLocales = if (normalized == null) {
+      LocaleList.getAdjustedDefault()
+    } else {
+      LocaleList(Locale.forLanguageTag(normalized))
+    }
+  }
+
+  // Mirrors <Text> (ReactTextViewManager#setAndroidHyphenationFrequency). Android-only, like RN.
+  fun setAndroidHyphenationFrequency(frequency: String?) {
+    val value = when (frequency) {
+      null, "none" -> Layout.HYPHENATION_FREQUENCY_NONE
+      "normal" -> Layout.HYPHENATION_FREQUENCY_NORMAL
+      "full" -> Layout.HYPHENATION_FREQUENCY_FULL
+      else -> {
+        FLog.w(ReactConstants.TAG, "Invalid android_hyphenationFrequency: $frequency")
+        Layout.HYPHENATION_FREQUENCY_NONE
+      }
+    }
+    
+    if (hyphenationFrequency == value) return
+    hyphenationFrequency = value
   }
 
   // 0 means unlimited, matching <Text>. It also bounds the off-screen measure pass.

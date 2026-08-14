@@ -205,6 +205,25 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.includeFontPadding = includeFontPadding
   }
 
+  // No-op: iOS-only (NSParagraphStyle's hyphenationFactor). Android's hyphenation
+  // control is android_hyphenationFrequency below, a different enum-shaped API,
+  // matching how RN <Text> splits the two platforms. Declared because the generated
+  // interface requires it. Not serialized for measure() either, so no fallback
+  // belongs there.
+  @ReactProp(name = "ios_hyphenationFactor")
+  override fun setIos_hyphenationFactor(view: PlainTextView?, value: Float) {
+  }
+
+  @ReactProp(name = "android_hyphenationFrequency")
+  override fun setAndroid_hyphenationFrequency(view: PlainTextView?, value: String?) {
+    view?.setAndroidHyphenationFrequency(value)
+  }
+
+  @ReactProp(name = "lang")
+  override fun setLang(view: PlainTextView?, lang: String?) {
+    view?.setLang(lang)
+  }
+
   // Unread: no experiment is currently using it. See docs/contributing/perf-experiments.md.
   @ReactProp(name = "experiment", defaultBoolean = false)
   override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
@@ -260,6 +279,12 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // applied for the measured size to match.
     view.setLetterSpacingDip(props.getFloatOr("letterSpacing", 0f))
     view.setLineHeight(props.getFloatOr("lineHeight", 0f))
+    // Hyphenation moves the soft line breaks, so the wrapped height depends on it.
+    // An absent key means the default: the setter maps null to NONE.
+    view.setAndroidHyphenationFrequency(props?.getString("android_hyphenationFrequency"))
+    // The locale picks the hyphenation patterns, so it moves the breaks too. Absent
+    // or "" means the default locale: the setter restores it.
+    view.setLang(props?.getString("lang")?.ifEmpty { null })
     // Transforms the measured string itself (case changes can change width), so it
     // must be applied before setPlainText below.
     view.setTextTransform(props?.getString("textTransform"))

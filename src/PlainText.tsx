@@ -24,6 +24,16 @@ export type PlainTextProps = AccessibilityProps & {
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  // iOS-only: NSParagraphStyle's hyphenationFactor, 0 (off, the default) through
+  // 1 (hyphenate whenever possible). RN <Text> has no iOS hyphenation control.
+  // Android ignores it.
+  ios_hyphenationFactor?: number;
+  // Android-only, like RN <Text>'s prop of the same name. iOS ignores it
+  // (ios_hyphenationFactor above is the iOS control).
+  android_hyphenationFrequency?: 'none' | 'normal' | 'full';
+  // BCP-47 language tag (e.g. 'de', 'de-DE') for the text, driving the
+  // hyphenation dictionary and locale-sensitive line breaking/glyph selection.
+  lang?: string;
   // When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
   // ascent-clipping behavior (RN#29507) for this instance. Unset uses
   // PlainText's fix. `unstable_` marks that its shape/default may change
@@ -67,6 +77,9 @@ export function mapPlainTextProps({
   ellipsizeMode,
   allowFontScaling,
   maxFontSizeMultiplier,
+  ios_hyphenationFactor,
+  android_hyphenationFrequency,
+  lang,
   unstable_lineHeightClippingIos,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
@@ -126,6 +139,9 @@ export function mapPlainTextProps({
     ellipsizeMode,
     allowFontScaling,
     maxFontSizeMultiplier,
+    ios_hyphenationFactor,
+    android_hyphenationFrequency,
+    lang,
     includeFontPadding,
     lineHeightClippingIos: unstable_lineHeightClippingIos,
     style: viewStyle,

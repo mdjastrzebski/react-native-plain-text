@@ -264,6 +264,37 @@ export default function FeaturesScreen({ navigation }: Props) {
           {PARAGRAPH_LONG}
         </TextItem>
       </Section>
+
+      <Section title="Hyphenation" footer={HYPHENATION_FOOTER}>
+        <TextItem
+          label={Platform.OS === 'android' ? 'none' : '0 (off)'}
+          showText={showText}
+          ios_hyphenationFactor={0}
+          android_hyphenationFrequency="none"
+          style={styles.hyphenationProbe}
+        >
+          {HYPHENATION_LANG_SPECIMEN}
+        </TextItem>
+        <TextItem
+          label={Platform.OS === 'android' ? 'full, no lang' : 'factor 1, no lang'}
+          showText={showText}
+          ios_hyphenationFactor={1}
+          android_hyphenationFrequency="full"
+          style={styles.hyphenationProbe}
+        >
+          {HYPHENATION_LANG_SPECIMEN}
+        </TextItem>
+        <TextItem
+          label={Platform.OS === 'android' ? 'full, lang="de"' : 'factor 1, lang="de"'}
+          showText={showText}
+          lang="de"
+          ios_hyphenationFactor={1}
+          android_hyphenationFrequency="full"
+          style={styles.hyphenationProbe}
+        >
+          {HYPHENATION_LANG_SPECIMEN}
+        </TextItem>
+      </Section>
       <Section title="Number of Lines">
         {[1, 2, 3].map((numberOfLines) => (
           <TextItem
@@ -882,6 +913,14 @@ const styles = StyleSheet.create({
   wrapProbe: {
     fontSize: 18,
   },
+  // A fixed narrow measure rather than `body`'s full width: hyphenation only
+  // happens where a word doesn't fit its line, and at screen width this
+  // specimen never breaks one. Explicit points, not a percentage, so no
+  // `wideRow` is needed and both boxes resolve the same width.
+  hyphenationProbe: {
+    width: 200,
+    fontSize: 22,
+  },
   // Accessibility rows carry no visual difference at all, so they are set below
   // body size: the label above the row is the content here.
   //
@@ -938,6 +977,17 @@ const PARAGRAPH_LONG = `${PARAGRAPH} ${PARAGRAPH} ${PARAGRAPH}`;
 // Its own specimen: the Font Variant rows need the ff/ffl ligature pairs and a
 // full run of figures in one string, and the pangram carries neither.
 const FONT_VARIANT_SPECIMEN = 'Waffle office 0123456789';
+
+// Its own specimen too: the pangram's words are all short, and a word that
+// fits its line never hyphenates. A German compound, so the lang="de" row has
+// a dictionary difference to show.
+const HYPHENATION_LANG_SPECIMEN = 'Strandkorbvermietung';
+
+const HYPHENATION_FOOTER = Platform.select({
+  ios: 'ios_hyphenationFactor, iOS-only. RN <Text> has no iOS hyphenation control, so the overlay never hyphenates.',
+  default:
+    "android_hyphenationFrequency, as in RN <Text>. The overlay gets the same value but can't take lang, so it only matches on a German-locale device.",
+});
 
 const EMOJI_SPECIMEN = 'Quick brown 🦊 jumps over the lazy 🐶';
 

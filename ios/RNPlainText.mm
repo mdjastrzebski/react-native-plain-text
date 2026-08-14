@@ -175,7 +175,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
   return self;
 }
 
-// Once lineHeight or letterSpacing is set, text/font/color/alignment must go through an NSAttributedString since UILabel has no plain properties for them.
+// Once lineHeight, letterSpacing, a decoration or hyphenation is set, text/font/color/alignment must go through an NSAttributedString since UILabel has no plain properties for them.
 // SYNC: PlainTextShadowNode::measureContent must mirror every attribute set here (font excepted, both go through plainTextFont) or measured size won't match drawn text.
 - (void)applyContentFromProps:(const RNPlainTextProps &)props
 {
@@ -197,8 +197,12 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     }
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
+    // Hyphenation lives only on NSParagraphStyle, so it forces the attributed path too.
+    BOOL hasHyphenation = props.ios_hyphenationFactor > 0;
+    // The language is an attributed-string attribute too (NSLanguageIdentifierAttributeName).
+    BOOL hasLang = !props.lang.empty();
 
-    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow) {
+    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasHyphenation && !hasLang) {
         // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
         _label.attributedText = nil;
         _label.font = font;
@@ -240,10 +244,23 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         attributes[NSShadowAttributeName] = shadow;
     }
 
+    // BCP-47 tag driving the hyphenation dictionary and locale-sensitive line
+    // breaking. Foundation's constant.
+    if (hasLang) {
+        NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
+        if (lang != nil) {
+            attributes[NSLanguageIdentifierAttributeName] = lang;
+        }
+    }
+
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     paragraphStyle.alignment = alignment;
     // A paragraph style overrides the label's own lineBreakMode, so carry ellipsizeMode into it too.
     paragraphStyle.lineBreakMode = RNPlainTextLineBreakModeFromProp(props.ellipsizeMode);
+
+    if (hasHyphenation) {
+        paragraphStyle.hyphenationFactor = props.ios_hyphenationFactor;
+    }
 
     CGFloat verticalTextShift = 0;
     if (hasLineHeight) {
@@ -313,6 +330,8 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         oldViewProps.textShadowOffsetHeight != newViewProps.textShadowOffsetHeight ||
         oldViewProps.textShadowRadius != newViewProps.textShadowRadius ||
         oldViewProps.textTransform != newViewProps.textTransform ||
+        oldViewProps.ios_hyphenationFactor != newViewProps.ios_hyphenationFactor ||
+        oldViewProps.lang != newViewProps.lang ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||
         oldViewProps.maxFontSizeMultiplier != newViewProps.maxFontSizeMultiplier ||
