@@ -913,10 +913,6 @@ const styles = StyleSheet.create({
   wrapProbe: {
     fontSize: 18,
   },
-  // A fixed narrow measure rather than `body`'s full width: hyphenation only
-  // happens where a word doesn't fit its line, and at screen width this
-  // specimen never breaks one. Explicit points, not a percentage, so no
-  // `wideRow` is needed and both boxes resolve the same width.
   hyphenationProbe: {
     width: 200,
     fontSize: 22,
@@ -978,9 +974,6 @@ const PARAGRAPH_LONG = `${PARAGRAPH} ${PARAGRAPH} ${PARAGRAPH}`;
 // full run of figures in one string, and the pangram carries neither.
 const FONT_VARIANT_SPECIMEN = 'Waffle office 0123456789';
 
-// Its own specimen too: the pangram's words are all short, and a word that
-// fits its line never hyphenates. A German compound, so the lang="de" row has
-// a dictionary difference to show.
 const HYPHENATION_LANG_SPECIMEN = 'Strandkorbvermietung';
 
 const HYPHENATION_FOOTER = Platform.select({
