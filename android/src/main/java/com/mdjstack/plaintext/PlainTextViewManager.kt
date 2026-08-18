@@ -1,7 +1,9 @@
 package com.mdjstack.plaintext
 
 import android.content.Context
+import android.text.Layout
 import android.view.View
+import kotlin.math.ceil
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
@@ -161,7 +163,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setLetterSpacingDip(letterSpacing)
   }
 
-  // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as `experiment`.
+  // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as
+  // `lineHeightClippingIos` below.
   @ReactProp(name = "hasLetterSpacing", defaultBoolean = false)
   override fun setHasLetterSpacing(view: PlainTextView?, hasLetterSpacing: Boolean) {
   }
@@ -192,11 +195,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.includeFontPadding = includeFontPadding
   }
 
-  // No-op: nothing on Android currently reads `experiment` (measureView()
-  // always shares the off-screen view below, since the alternative it once gated
-  // measured slower). Declared for a future perf-suite A/B test, like iOS.
+  // Gates PlainTextView.applyTypeface()'s isSubpixelText/isLinearText fix. See
+  // docs/agent/perf-experiments.md.
   @ReactProp(name = "experiment", defaultBoolean = false)
   override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
+    view?.setExperiment(experiment)
   }
 
   // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as
@@ -260,6 +263,10 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setNumberOfLines(props.getIntOr("numberOfLines", 0))
     // Adds extra ascent/descent padding per line, so it affects the measured height.
     view.includeFontPadding = props.getBooleanOr("includeFontPadding", true)
+    // Gates applyTypeface()'s isSubpixelText/isLinearText fix, which changes the
+    // measured width for custom fontFamily/fontWeight/fontStyle text. See
+    // docs/agent/perf-experiments.md.
+    view.setExperiment(props.getBooleanOr("experiment", false))
     view.setPlainText(props?.getString("text") ?: "")
     // Applies the state the setters above marked dirty, in dependency order, so their
     // call order here doesn't matter.
@@ -281,8 +288,26 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
       return YogaMeasureOutput.make(0f, PixelUtil.toDIPFromPixel(view.baseline.toFloat()))
     }
 
+    // Intrinsic width straight from Layout.getDesiredWidth, RN's own
+    // TextLayoutManager.createLayout entry point, instead of TextView.onMeasure's
+    // private getDesiredWidth() (compound drawables, mMaxWidth/mMinWidth, gravity,
+    // autosize). The two agree for most strings but drift apart by typeface, only
+    // visible when width isn't EXACTLY (an EXACTLY box takes its width from Yoga on
+    // both sides, never from either engine's own measurement).
+    val rawDesiredWidth =
+      if (widthMode != YogaMeasureMode.EXACTLY) {
+        ceil(Layout.getDesiredWidth(view.text, view.paint).toDouble()).toInt()
+      } else null
+    val measuredWidth =
+      if (rawDesiredWidth != null) {
+        if (widthMode == YogaMeasureMode.AT_MOST) minOf(rawDesiredWidth, width.toInt())
+        else rawDesiredWidth
+      } else {
+        view.measuredWidth
+      }
+
     return YogaMeasureOutput.make(
-      PixelUtil.toDIPFromPixel(view.measuredWidth.toFloat()),
+      PixelUtil.toDIPFromPixel(measuredWidth.toFloat()),
       PixelUtil.toDIPFromPixel(view.measuredHeight.toFloat())
     )
   }

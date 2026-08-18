@@ -1,15 +1,16 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   type AccessibilityProps,
+  type LayoutChangeEvent,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
 import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
-import { useCompatOn } from './CompareText';
+import { useCompatOn, useExperimentOn } from './CompareText';
 import { COLOR } from '../theme';
 
 // The specimen-book furniture both screens are set in: the title page, the
@@ -117,6 +118,44 @@ export function TextItem({
   children: string;
 }) {
   const compatOn = useCompatOn();
+  const experimentOn = useExperimentOn();
+
+  // Real onLayout widths from both trees, not either one's internal measure()
+  // value, logged as a pair once both are known for this row, so the
+  // `experiment` A/B (docs/agent/perf-experiments.md) can be checked live
+  // against RN's <Text> overlay via `[SpecimenDiff]` in Metro's console.
+  const ptWidthRef = useRef<number | null>(null);
+  const rnWidthRef = useRef<number | null>(null);
+  const logWidthDiff = () => {
+    if (ptWidthRef.current == null || rnWidthRef.current == null) return;
+    const flat = (StyleSheet.flatten(style) ?? {}) as PlainTextStyle;
+    const pt = ptWidthRef.current;
+    const rn = rnWidthRef.current;
+    console.log(
+      '[SpecimenDiff]',
+      JSON.stringify({
+        label,
+        text: children,
+        fontFamily: flat.fontFamily,
+        fontSize: flat.fontSize,
+        fontWeight: flat.fontWeight,
+        fontStyle: flat.fontStyle,
+        letterSpacing: flat.letterSpacing,
+        experiment: experimentOn,
+        ptWidth: pt,
+        rnWidth: rn,
+        delta: Math.round((pt - rn) * 100) / 100,
+      })
+    );
+  };
+  const onPtLayout = (e: LayoutChangeEvent) => {
+    ptWidthRef.current = e.nativeEvent.layout.width;
+    logWidthDiff();
+  };
+  const onRnLayout = (e: LayoutChangeEvent) => {
+    rnWidthRef.current = e.nativeEvent.layout.width;
+    logWidthDiff();
+  };
 
   return (
     <View style={styles.rowContainer}>
@@ -141,16 +180,14 @@ export function TextItem({
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             unstable_lineHeightClippingIos={compatOn}
+            unstable_experiment={experimentOn}
+            {...(showText ? ({ onLayout: onPtLayout } as object) : null)}
             {...accessibilityProps}
           >
             {children}
           </PlainText>
         </View>
         {showText && (
-          // `alignItems: flex-start` leaves the Text a normal flex child, so it
-          // shrink-wraps to its own measured width but still wraps at the same
-          // available width PlainText was measured against, which is what makes
-          // the scarlet box edge comparable to the grey one.
           <View style={styles.overlay}>
             <Text
               // Cast back to what RN accepts. A fontVariationSettings in there is
@@ -162,6 +199,7 @@ export function TextItem({
               ellipsizeMode={ellipsizeMode}
               allowFontScaling={allowFontScaling}
               maxFontSizeMultiplier={maxFontSizeMultiplier}
+              onLayout={onRnLayout}
               {...accessibilityProps}
             >
               {children}

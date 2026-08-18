@@ -1047,8 +1047,7 @@ const ATTRIBUTES: AttrDef[] = [
     // one generic on/off switch for whatever the perf suite is currently A/B
     // testing. `(none)`/`false` is baseline, and `true` is the experiment.
     // Meaning is platform- and experiment-specific, and currently unread on
-    // both: the shared-vs-fresh measuring view it once gated is settled
-    // (shared won) and no longer conditional. See docs/agent/sync-points.md.
+    // both. See docs/agent/perf-experiments.md.
     key: 'experiment',
     section: 'Params',
     fp: 'exp',

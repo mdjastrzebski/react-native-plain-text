@@ -17,10 +17,19 @@ It is **not** part of `PlainText`'s public props: `PlainText.native.tsx` never
 destructures it, so it only reaches a node through the bare codegen component
 (`PlainTextViewNativeComponent`/`NativePlainText`) or through a prop spread
 that bypasses the wrapper's type, which is exactly how the perf suite sets it
-(see below). It is deliberately generic: `false` means baseline, `true` means
-"whatever is currently being tried." What `true` actually _does_ is entirely
-up to the experiment wired up at the time: the prop itself carries no fixed
-meaning, only a comment in the codegen spec describing the current one.
+(see below). It is deliberately generic: `true` means "whatever is currently
+being tried" and `false` means the old baseline kept only for comparison.
+What `true` actually _does_ is entirely up to the experiment wired up at the
+time: the prop itself carries no fixed meaning, only a comment in the codegen
+spec describing the current one.
+
+The default flips per experiment too: the running experiment defaults to
+`true` so it's live without every call site opting in, and flips back to
+`false` (see "Wiring up a new experiment" below) once the next one starts.
+Whichever way it's set, keep the **three-way default contract** in sync: the
+codegen spec's `WithDefault`, `PlainTextViewManager`'s `@ReactProp
+defaultBoolean`, and the fallback `measure()`/`serializeProps` use when the
+key is absent.
 
 **One experiment at a time.** This is a single flag, not a registry: that was
 a deliberate simplification (a generic multi-flag mechanism was built and then
@@ -29,13 +38,226 @@ experiments simultaneously. Finish and unwire one before starting the next.
 
 ## Current state
 
-Unread on both platforms. The prop was last used to A/B Android's off-screen
-measuring view: `PlainTextViewManager.measureView()` reusing one `ThreadLocal`
-view (baseline) vs. constructing a fresh one per node (experiment). Baseline
-won, `measureView()` is unconditional again, and nothing currently reads
-`experiment`, same as `textAlignVertical` on iOS, declared but inert until
-something needs it. See [sync-points.md](sync-points.md#the-reused-measuring-view)
-for that experiment's history.
+**Active on Android** (unread on iOS): gates `PlainTextView.applyTypeface()`
+setting `paint.isSubpixelText`/`isLinearText` to match RN's
+`CustomStyleSpan`. `false` (the default) is the old behavior, never setting
+either flag; `true` is the fix. Drive it live via the Features/Use Cases
+screens' "Exp" header toggle (`example/src/components/CompareText.tsx`,
+`useExperimentOn`) alongside "Vs `<Text>`" — `Specimen.tsx`'s `TextItem`
+forwards it as `unstable_experiment` and logs a `[SpecimenDiff]` line per row
+with the current `experiment` state included, so a real device run can
+confirm which state produced which numbers directly from the log instead of
+inferring it from when the toggle was last tapped. Root cause and how it was
+found, below; once confirmed stable, this should be concluded (see
+"Concluding an experiment") and made unconditional rather than left running
+indefinitely.
+
+RN attaches a `CustomStyleSpan` (a `MetricAffectingSpan`,
+`.../views/text/internal/span/CustomStyleSpan.kt`) whenever
+`fontStyle != UNSET || fontWeight != UNSET || fontFamily != null`
+(`TextLayoutManager.kt:477-494`, both the single-fragment and multi-fragment
+branches) — i.e. whenever any of the three is set at all, regardless of what
+it resolves to (an explicit `fontStyle="normal"` still attaches it). That
+span's `apply()` does more than resolve the typeface:
+
+```kotlin
+paint.apply {
+  fontFeatureSettings = fontFeatureSettingsParam
+  setTypeface(typeface)
+  isSubpixelText = true
+  isLinearText = true
+}
+```
+
+`isLinearText` (`LINEAR_TEXT_FLAG`) disables font hinting, measuring against
+un-hinted/linear glyph outlines instead; `isSubpixelText`
+(`SUBPIXEL_TEXT_FLAG`) changes subpixel positioning. Both shift measured
+glyph advance widths by a sub-pixel amount per glyph relative to the default
+hinted measurement — invisible on default-styled text (RN never attaches the
+span there, so never sets these either — matching the "both `false`" finding
+in item 1 below, which was correct but incomplete: it only checked the
+_default_-styled case) and visible only once `fontFamily`/`fontWeight`/
+`fontStyle` is customized, which is exactly the pattern the drift showed:
+`delta: 0` on every plain row, ~0.3-2dp (occasionally ~5dp on font-feature
+combinations like small-caps+ligatures) on every customized one.
+
+Fixed in `PlainTextView.applyTypeface()`: computes the identical condition
+(`fontStyle != ReactConstants.UNSET || fontWeight != ReactConstants.UNSET ||
+fontFamily != null`, using the same `ReactConstants.UNSET`-sentineled fields
+RN's own check uses) and sets both flags on `paint` to match — gated behind
+`experiment` for now (see "Current state" above) rather than made
+unconditional immediately, so it can keep being A/B'd against the old
+behavior before committing to it. Confirmed via the same real-device
+`onLayout`-based `[SpecimenDiff]` logging this whole investigation used (see
+below): with `experiment: true`, every previously-drifting row reads
+`delta: 0`; with `experiment: false`, the original drift reproduces exactly
+as before.
+
+**Dead end, corrected: a "build a real `StaticLayout` when non-boring"
+experiment, based on a wrong theory.** Before finding the actual cause
+above, the hypothesis was that RN's `CustomStyleSpan` disqualifies
+`BoringLayout.isBoring()` (being a `MetricAffectingSpan`), forcing RN onto
+`createLayout`'s `static` branch (a real `StaticLayout`, whose
+`getLineWidth(0)` can differ from `Layout.getDesiredWidth()` for the same
+text/paint — confirmed as a real, separate phenomenon from patched
+`TextLayoutManager.kt` logs, e.g. a `lineHeight`-bearing row showing
+`desiredWidth=114` vs `resultWidth=118.19531`) while `PlainTextView` stayed
+boring (no such span, typeface set directly on the paint). `experiment: true`
+was wired to add a `PlainTextViewManager.refineWidthWithStaticLayout()` that
+built a real `StaticLayout` and read `getLineWidth(0)`, gated by an "Exp"
+toggle in `example/src/components/CompareText.tsx`. It changed nothing,
+confirmed with `experiment: true` visible in the `[SpecimenDiff]` log itself.
+Re-reading the same patched-RN logs this theory was based on showed why: the
+drifting `fontFamily`/`fontWeight` rows are themselves logged as
+`RNText createLayout(boring)` on RN's side, not `static` — a plain
+`CustomStyleSpan`, without an accompanying `lineHeight` span, does **not**
+disqualify `isBoring()` after all. Both RN and `PlainTextView` take the exact
+same boring branch for these rows; the divergence was never about which
+branch either side takes. This is now understood as a leftover, unrelated,
+correctly-negative result — same shape as the `isBoring()`-first experiment
+two entries below, not a second instance of it.
+
+For non-`EXACTLY` width, `PlainTextViewManager.measure()` used to trust a real
+`AppCompatTextView`'s `measuredWidth` from `view.measure(...)`, resolved
+through `TextView.onMeasure`'s private `getDesiredWidth()`. That was replaced
+(unconditionally, not behind this flag) with RN's own
+`TextLayoutManager.createLayout` fallback branch: build a bare `Paint` and
+call the public static `Layout.getDesiredWidth(text, paint)` directly. An
+on-device check (release build, perf-suite screen, `PTDebug` logs) confirmed
+this fires only for non-`EXACTLY` width as intended, the `AT_MOST` clamp holds
+even when the raw desired width wildly overshoots, and it matches the old
+value almost everywhere — with small (1-6dp) drift on some `serif`/`cursive`
+samples and on italic/bold-italic text, not specifically monospace or
+condensed faces as first suspected. That drift is expected: it's
+`oldMeasuredWidth` (the real `TextView.onMeasure()` value) vs
+`newMeasuredWidth` (the `getDesiredWidth`-based fix), and closing exactly that
+gap was the point of the fix.
+
+**Tried and dropped: gating `getDesiredWidth` behind `BoringLayout.isBoring()`
+first.** `createLayout` actually reaches `getDesiredWidth` only as a
+fallback — its primary branch, for simple/single-direction/non-wrapping text,
+uses `BoringLayout.isBoring(text, paint).width` instead, measured from
+per-glyph advances rather than a throwaway `StaticLayout`. The hypothesis was
+that the two disagree once font fallback is involved, which seemed to fit the
+serif/cursive/italic drift above. `experiment: true` was wired to try
+`isBoring()` first (same guard as `createLayout`:
+`widthMode == UNDEFINED || boring.width <= floor(width)`), falling back to
+`getDesiredWidth` otherwise, with a `usedBoring` field added to the `PTDebug`
+log to tell which branch ran. A second on-device pass disproved the
+hypothesis: every sample where `isBoring()` qualified produced the exact same
+`rawDesiredWidth` as the plain-`getDesiredWidth` run had for that same text,
+and toggling the perf screen's `Boring: On`/`Off` header buttons (added for
+this test, in `example/src/components/CompareText.tsx`, and since removed)
+showed no visible difference on either the Features or Use Cases screen.
+`BoringLayout.isBoring()` and `getDesiredWidth` simply agree in this app's
+content, so trying `isBoring()` first changed zero measured widths and cost
+an extra call per non-`EXACTLY` measure for no benefit. Reverted: `measure()`
+is back to the unconditional `getDesiredWidth` call, the `isBoring()` helper
+and the two toggle buttons are removed, and `experiment` is unread again.
+
+**The serif/cursive/italic/weight drift itself, chased down as far as this
+library's own code goes, without finding a cause here.** Real-device
+comparisons of `PlainText`'s actual `onLayout` width against the RN `<Text>`
+overlay's (via a temporary per-row logger in
+`example/src/components/Specimen.tsx`, `[SpecimenDiff]` in Metro's console)
+confirmed the drift is real, small (mostly 1-2dp, a few samples higher), and
+**bidirectional**: `PlainText` lands wider than RN on some samples, narrower
+on others, which rules out a single one-directional cause (a fixed padding
+offset, a min-width floor, a consistently-missing adjustment) and points at
+two measurement paths independently landing on slightly different sub-pixel
+totals. Two categories in that data are **not** this drift and should be
+ignored when looking at it:
+
+- `textTransform` rows: RN's `<Text>` doesn't apply the transform to its own
+  layout box at all here (matches the row's own footer note about a known
+  capitalize bug) — its width is identical to the untransformed row every
+  time, a documented RN gap, not measurement noise.
+- `fontVariationSettings` rows: RN `<Text>` has no support for the prop at
+  all (also documented on that row) — its width is pinned to the same value
+  across every axis variant regardless of what's requested.
+
+Chasing the real remainder, each hypothesis below was checked with actual
+on-device data (via temporary `PTDebug` logs in
+`PlainTextViewManager.measure()`, since removed) rather than reasoned from
+source. Three came back negative; item 1 turned out to be the answer, just
+checked against the wrong sample at the time (see the fix above):
+
+1. **Paint flags** (`subpixelText`, `linearText`, `antiAlias`): logged
+   `view.paint.flags` — decodes to `ANTI_ALIAS_FLAG | FILTER_BITMAP_FLAG |
+DEV_KERN_TEXT_FLAG | EMBEDDED_BITMAP_TEXT_FLAG` (`raw=1283`).
+   `subpixelText`/`linearText` are both `false`, matching RN's own minimal
+   `TextPaint(TextPaint.ANTI_ALIAS_FLAG)` (`TextLayoutManager.kt:106,940`) on
+   that axis. The three flags PlainTextView's paint carries beyond RN's are
+   all draw-time (bitmap filtering, embedded-bitmap glyph strikes, an
+   Android legacy no-op) and don't affect glyph advances.
+   **This conclusion was correct but incomplete**, and turned out to be the
+   actual cause once the gap was closed: it only checked `subpixelText`/
+   `linearText` on _default_-styled rows, where both really do stay `false`
+   on both sides. The samples that were actually drifting (`serif`,
+   `cursive`, custom weights) all have `fontFamily`/`fontWeight`/`fontStyle`
+   set, which is exactly when RN's `CustomStyleSpan` turns both flags `true`
+   — never checked against a drifting sample at the time. See the fix
+   above.
+2. **`fontWeightAdjustment`** (Android's "Bold text" accessibility setting,
+   which RN applies to every resolved typeface via
+   `ReactTypefaceUtils.applyFontWeightAdjustment`, `PlainTextView` never
+   does): `adb shell settings get secure font_weight_adjustment` returned
+   `null` on the test device, i.e. `Configuration.FONT_WEIGHT_ADJUSTMENT_UNDEFINED`,
+   which that function explicitly treats as a no-op. Inert on this device
+   either way, so it can't explain what's observed here (still a real,
+   separate correctness gap worth closing for devices where it isn't unset).
+3. **Typeface identity**: logged, per node, a freshly-computed
+   `ReactTypefaceUtils.applyStyles(null, style, weight, family, assets)` —
+   the exact call RN's `TextLayoutManager.updateTextPaint` makes
+   (`TextLayoutManager.kt:889`) — next to what `view.paint.typeface` actually
+   ended up with. `sameInstance=true` on every single drifting sample
+   (`serif`, `cursive`, `monospace`, `sans-serif-condensed`, every numeric
+   weight, every `Inter_*` cut, italic/bold-italic). `PlainTextView` resolves
+   the identical `Typeface` object RN would for the same request. (The
+   `fontVariationSettings`/`OpenSans` rows show `sameInstance=false`, but
+   that's expected — a fresh call without the axis derivation always makes a
+   new instance — and is the already-excluded category above, not this
+   drift.)
+4. **Other paint properties beyond the typeface** (`letterSpacing`,
+   `fontFeatureSettings`, `textScaleX`) and **whether `Layout.getDesiredWidth`
+   itself returns something different given `view.paint`'s other quirks**:
+   built a from-scratch `TextPaint(TextPaint.ANTI_ALIAS_FLAG)` per node,
+   copied over the (now-proven-identical) typeface, text size, letter
+   spacing, and font feature settings, and called
+   `Layout.getDesiredWidth(text, freshPaint)` right next to
+   `Layout.getDesiredWidth(text, view.paint)`. **Identical on every single
+   sample**, including every drifting one (`serif`: 148.0/148.0, `monospace`:
+   369.0/369.0, `sans-serif-condensed-light`: 712.0/712.0, every weight
+   variant). Also confirmed the `Spannable` carries no metric-affecting spans
+   beyond an unrelated `CustomLineHeightSpan`.
+
+That closes off everything reachable from this side except the one thing
+that turned out to matter: typeface, weight, style, letter spacing, font
+features, and the `getDesiredWidth` call itself were all proven identical,
+but item 1's paint-flags check compared `PlainTextView`'s paint against RN's
+_unspanned_ minimal `TextPaint`, not against what RN's own `CustomStyleSpan`
+mutates that same paint into once fontFamily/fontWeight/fontStyle is set —
+`isSubpixelText`/`isLinearText` both flip to `true` there, and nothing here
+had checked that state. Getting an actual RN-internal cross-check required
+patching `node_modules/react-native`'s real `TextLayoutManager.kt` with its
+own `PTDebug`-style logging and rebuilding the example app against that
+patched source (via a temporary composite-build `includeBuild`/
+`dependencySubstitution` in `example/android/settings.gradle`, since the
+prebuilt `com.facebook.react:react-android` Maven artifact can't be patched)
+rather than reasoning from the vendored source alone — that's what surfaced
+`RNText createLayout(boring)`/`(static)` logs to compare against, and
+eventually pointed at `CustomStyleSpan.kt` directly. See the fix above for
+the fix; both the settings.gradle composite-build block and the patched
+`TextLayoutManager.kt` copies (root and `example/node_modules`) are
+reverted/removed as unpublished local edits to a dependency once this was
+found.
+
+Before this, the prop was used to A/B Android's off-screen measuring view:
+`PlainTextViewManager.measureView()` reusing one `ThreadLocal` view (baseline)
+vs. constructing a fresh one per node (experiment). Baseline won, and
+`measureView()` is unconditional again. See
+[sync-points.md](sync-points.md#the-reused-measuring-view) for that
+experiment's history.
 
 ## Wiring up a new experiment
 
