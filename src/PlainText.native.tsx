@@ -21,6 +21,18 @@ export type PlainTextProps = AccessibilityProps & {
   // Per-instance override for unstable_configureTextCompat's lineHeightClippingIos.
   // Unset defers to the global config. Set here, it wins regardless of it.
   unstable_lineHeightClippingIos?: boolean;
+  // iOS-only: NSParagraphStyle's hyphenationFactor, 0 (off, the default)
+  // through 1 (hyphenate whenever possible). A prop rather than a style because
+  // RN's TextStyle has no hyphenation key on any platform, and its own
+  // hyphenation control (android_hyphenationFrequency) is a prop too, hence
+  // also the platform prefix. Android ignores it.
+  ios_hyphenationFactor?: number;
+  // Android-only, same name and values as RN <Text>'s prop. iOS ignores it.
+  android_hyphenationFrequency?: 'none' | 'normal' | 'full';
+  // BCP-47 language tag for the text, driving hyphenation and locale-sensitive
+  // line breaking. RN <Text> has no such prop on native; named after HTML's
+  // lang, which the web fallback's <Text> (react-native-web) accepts directly.
+  lang?: string;
   testID?: string;
   nativeID?: string;
   id?: string;
@@ -64,6 +76,9 @@ export function PlainText({
   allowFontScaling,
   maxFontSizeMultiplier,
   unstable_lineHeightClippingIos,
+  ios_hyphenationFactor,
+  android_hyphenationFrequency,
+  lang,
   ...accessibilityProps
 }: PlainTextProps) {
   // Text-style props don't flow through the native ViewProps, so pull them
@@ -108,6 +123,9 @@ export function PlainText({
       lineHeightClippingIos={
         unstable_lineHeightClippingIos ?? getTextCompatConfig().lineHeightClippingIos
       }
+      ios_hyphenationFactor={ios_hyphenationFactor}
+      android_hyphenationFrequency={android_hyphenationFrequency}
+      lang={lang}
       style={viewStyle}
       {...accessibilityProps}
     />

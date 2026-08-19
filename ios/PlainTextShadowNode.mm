@@ -37,17 +37,39 @@ Size PlainTextShadowNode::measureContent(
     attributes[NSKernAttributeName] = @(props.letterSpacing);
   }
 
+  // The language picks the hyphenation dictionary and locale-sensitive line
+  // breaking, so where lines break (and the wrapped height) depends on it.
+  if (!props.lang.empty()) {
+    NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
+    if (lang != nil) {
+      attributes[NSLanguageIdentifierAttributeName] = lang;
+    }
+  }
+
   // The per-line height used to cap numberOfLines: the pinned lineHeight when
   // set, otherwise the font's natural line height.
   Float perLineHeight = static_cast<Float>(font.lineHeight);
+  NSMutableParagraphStyle *paragraphStyle = nil;
   if (props.lineHeight > 0) {
     // Scaled by the same multiplier as the font (mirrors RNPlainText.mm).
     CGFloat lineHeight = props.lineHeight * fontSizeMultiplier;
-    NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
+    paragraphStyle = [NSMutableParagraphStyle new];
     paragraphStyle.minimumLineHeight = lineHeight;
     paragraphStyle.maximumLineHeight = lineHeight;
-    attributes[NSParagraphStyleAttributeName] = paragraphStyle;
     perLineHeight = static_cast<Float>(lineHeight);
+  }
+
+  // Hyphenation moves the soft line breaks, so the wrapped height depends on it.
+  // The unconstrained pass below never wraps and is unaffected either way.
+  if (props.ios_hyphenationFactor > 0) {
+    if (paragraphStyle == nil) {
+      paragraphStyle = [NSMutableParagraphStyle new];
+    }
+    paragraphStyle.hyphenationFactor = props.ios_hyphenationFactor;
+  }
+
+  if (paragraphStyle != nil) {
+    attributes[NSParagraphStyleAttributeName] = paragraphStyle;
   }
 
   // Measured with the same engine that renders the UILabel (CoreText via

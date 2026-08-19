@@ -53,6 +53,25 @@ export interface NativeProps extends ViewProps {
   //
   // Cost: medium. Forces iOS's attributed-string path and two Android paint flags.
   textDecorationLine?: string;
+  // iOS-only: NSParagraphStyle's hyphenationFactor, 0 (off, the platform default)
+  // through 1 (hyphenate whenever possible). RN <Text> has no iOS hyphenation
+  // control (its android_hyphenationFrequency is a different, enum-shaped API),
+  // so this closes that gap under the UIKit name, behind the same platform
+  // prefix RN uses for one-platform props. Android ignores it.
+  //
+  // Cost: medium. Forces iOS's attributed-string path.
+  ios_hyphenationFactor?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
+  // Android-only, like RN <Text>'s prop of the same name: TextView's
+  // hyphenationFrequency presets. iOS ignores it (ios_hyphenationFactor above
+  // is the iOS control).
+  android_hyphenationFrequency?: CodegenTypes.WithDefault<'none' | 'normal' | 'full', 'none'>;
+  // BCP-47 language tag (e.g. 'de', 'de-DE') for the text itself, driving the
+  // hyphenation dictionary and locale-sensitive line breaking/glyph selection.
+  // RN <Text> has no counterpart on either native platform. Empty means unset:
+  // the platform infers (iOS) or uses the view's default locale (Android).
+  //
+  // Cost: medium. Forces iOS's attributed-string path.
+  lang?: string;
   // 0 means unlimited. Caps rendered lines and the shadow node's measured intrinsic height.
   numberOfLines?: CodegenTypes.WithDefault<CodegenTypes.Int32, 0>;
   ellipsizeMode?: CodegenTypes.WithDefault<'head' | 'middle' | 'tail' | 'clip', 'tail'>;

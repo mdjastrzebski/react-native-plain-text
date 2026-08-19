@@ -100,6 +100,14 @@ Via `style={{ ... }}`:
 - `ellipsizeMode`: `'head' | 'middle' | 'tail' | 'clip'`
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
+- `ios_hyphenationFactor`: iOS only, `NSParagraphStyle`'s `hyphenationFactor`. `0`
+  (the default) disables hyphenation, values up to `1` hyphenate more readily.
+  RN `<Text>` has no iOS hyphenation control, so this is a PlainText extension
+- `android_hyphenationFrequency`: Android only, like RN `<Text>`:
+  `'none' | 'normal' | 'full'`
+- `lang`: BCP-47 language tag for the text (e.g. `'de'`), picking the
+  hyphenation dictionary and locale-sensitive line breaking. RN `<Text>` has no
+  such prop on native, so this is a PlainText extension.
 - `testID`
 - `nativeID` / `id`
 - All of RN's accessibility props (`accessible`, `accessibilityLabel`,

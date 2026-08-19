@@ -21,7 +21,7 @@ Two rules, both binding on every new prop or style.
   allocate, resolve a font, build a string, force a second pass, or reach a
   platform setter that does any of those. A comparison and an early return is
   the whole budget. This is what keeps the component cheap for the common case,
-  where a node sets three or four values out of the seventeen on offer. Every
+  where a node sets three or four values out of the twenty on offer. Every
   prop today holds to it, so a new one that can't is the exception and needs an
   argument, not a footnote.
 - **Estimate the cost of a prop that is set, and record it.** Rate it light,
@@ -53,15 +53,17 @@ of why it is still in [todo.md](todo.md).
 | `lineHeight`            | medium | Forces the iOS attributed-string path and an Android `SpannableString` with a span, in place of a plain string.                                                          |
 | `letterSpacing`         | medium | Forces the iOS attributed-string path. The Android side is one paint write.                                                                                              |
 | `textDecorationLine`    | medium | Forces the iOS attributed-string path. The Android side is two paint flags.                                                                                              |
+| `ios_hyphenationFactor` | medium | Forces the iOS attributed-string path. Android ignores it entirely.                                                                                                      |
+| `lang`                  | medium | Forces the iOS attributed-string path. The Android side is one guarded locale write.                                                                                     |
 | everything else         | light  | One write, or one entry in the font cache key.                                                                                                                           |
 
-Three of those are medium for the same reason, and it is worth knowing as one
-fact rather than three: `applyContentFromProps` takes its plain path only when
-`lineHeight`, `letterSpacing` and `textDecorationLine` are all unset. Any one of
-them puts the node on the `NSAttributedString` path for good. A fourth prop that
-needs an attributed-string attribute is therefore free on top of the first, and
-that is the argument for expressing a new iOS text feature as one if it has the
-choice.
+Five of those are medium for the same reason, and it is worth knowing as one
+fact rather than five: `applyContentFromProps` takes its plain path only when
+`lineHeight`, `letterSpacing`, `textDecorationLine`, `ios_hyphenationFactor` and
+`lang` are all unset. Any one of them puts the node on the `NSAttributedString`
+path for good. Another prop that needs an attributed-string attribute is therefore free
+on top of the first, and that is the argument for expressing a new iOS text
+feature as one if it has the choice.
 
 ### Where the "unused is free" rule gets tested
 

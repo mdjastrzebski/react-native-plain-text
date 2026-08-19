@@ -155,6 +155,25 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setMaxFontSizeMultiplier(maxFontSizeMultiplier)
   }
 
+  // No-op: iOS-only (NSParagraphStyle's hyphenationFactor). Android's hyphenation
+  // control is android_hyphenationFrequency below, a different enum-shaped API,
+  // matching how RN <Text> splits the two platforms. Declared because the generated
+  // interface requires it. Not serialized for measure() either, so no fallback
+  // belongs there.
+  @ReactProp(name = "ios_hyphenationFactor")
+  override fun setIos_hyphenationFactor(view: PlainTextView?, value: Float) {
+  }
+
+  @ReactProp(name = "android_hyphenationFrequency")
+  override fun setAndroid_hyphenationFrequency(view: PlainTextView?, value: String?) {
+    view?.setAndroidHyphenationFrequency(value)
+  }
+
+  @ReactProp(name = "lang")
+  override fun setLang(view: PlainTextView?, lang: String?) {
+    view?.setLang(lang)
+  }
+
   // No-op: nothing on Android currently reads `experiment` (measureView()
   // always shares the off-screen view below, since the alternative it once gated
   // measured slower). Declared for a future perf-suite A/B test, like iOS.
@@ -211,6 +230,12 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // applied for the measured size to match.
     view.setLetterSpacingDip(if (props?.hasKey("letterSpacing") == true) props.getDouble("letterSpacing").toFloat() else 0f)
     view.setLineHeight(if (props?.hasKey("lineHeight") == true) props.getDouble("lineHeight").toFloat() else 0f)
+    // Hyphenation moves the soft line breaks, so the wrapped height depends on it.
+    // An absent key means the default: the setter maps null to NONE.
+    view.setAndroidHyphenationFrequency(props?.getString("android_hyphenationFrequency"))
+    // The locale picks the hyphenation patterns, so it moves the breaks too. Absent
+    // or "" means the default locale: the setter restores it.
+    view.setLang(props?.getString("lang")?.ifEmpty { null })
     // numberOfLines caps the measured height. ellipsizeMode only changes where the
     // ellipsis lands, so it isn't serialized for measure.
     view.setNumberOfLines(if (props?.hasKey("numberOfLines") == true) props.getInt("numberOfLines") else 0)

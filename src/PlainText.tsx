@@ -10,6 +10,11 @@ export type PlainTextProps = Omit<TextProps, 'children' | 'style'> & {
   // nothing for it to override on web. Kept in the type so call sites don't
   // need a platform branch just to pass it.
   unstable_lineHeightClippingIos?: boolean;
+  // Type-level only, no runtime handling: iOS-only
+  ios_hyphenationFactor?: number;
+  // Not in RN's TextProps type, but react-native-web's <Text> accepts it and
+  // renders the HTML lang attribute
+  lang?: string;
 };
 
 // Web / fallback implementation. No translation needed: CSS supports
@@ -19,6 +24,7 @@ export function PlainText({
   children,
   style,
   unstable_lineHeightClippingIos: _unstable_lineHeightClippingIos,
+  ios_hyphenationFactor: _ios_hyphenationFactor,
   ...rest
 }: PlainTextProps) {
   return (
