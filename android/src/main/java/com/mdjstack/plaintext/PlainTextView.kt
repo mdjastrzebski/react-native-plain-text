@@ -510,15 +510,11 @@ private fun toEffectivePixel(
   }
 }
 
-// Uppercase/lowercase mirror <Text> (com.facebook.react.views.text.TextTransform,
-// reimplemented here since that one is internal to RN's own module and not visible
-// outside it). Capitalize already matches CSS `text-transform: capitalize` and RN's
-// own Android behavior as-is: only the first character of each word is uppercased,
-// the rest is untouched. See ios/PlainTextTextTransform.h for why iOS deliberately
-// does not mirror RN's iOS capitalize, which force-lowercases the rest of each word.
+// Mirrors <Text> (com.facebook.react.views.text.TextTransform, reimplemented here
+// since that one is internal to RN's own module). Capitalize already matches CSS
+// here; see ios/PlainTextTextTransform.h for why iOS needs its own implementation.
 private fun applyTextTransform(text: String, textTransform: String?): String {
-  // EXPENSIVE: allocates a transformed copy of the string per call (docs/agent/performance.md);
-  // capitalize additionally walks word boundaries via BreakIterator below.
+  // EXPENSIVE: allocates a transformed copy per call (docs/agent/performance.md).
   return when (textTransform) {
     "uppercase" -> text.uppercase(Locale.getDefault())
     "lowercase" -> text.lowercase(Locale.getDefault())

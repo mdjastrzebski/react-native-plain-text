@@ -2,10 +2,7 @@
 
 namespace facebook::react {
 
-// CSS `text-transform: capitalize` (and PlainTextView.kt's applyTextTransform on
-// Android): uppercase only each Unicode word's first character, leave the rest of
-// the word untouched. Deliberately not RN's iOS capitalizedString-based behavior
-// (see PlainTextTextTransform.h) since that force-lowercases the rest of every word.
+// See PlainTextTextTransform.h: uppercases only each word's first character.
 static NSString *capitalizedString(NSString *text)
 {
     NSMutableString *result = [text mutableCopy];
@@ -25,8 +22,7 @@ static NSString *capitalizedString(NSString *text)
 
 NSString *plainTextApplyTextTransform(NSString *text, RNPlainTextTextTransform textTransform)
 {
-    // EXPENSIVE: allocates a transformed copy of the string per call (docs/agent/performance.md);
-    // Capitalize additionally enumerates Unicode word boundaries via capitalizedString above.
+    // EXPENSIVE: allocates a transformed copy per call (docs/agent/performance.md).
     switch (textTransform) {
         case RNPlainTextTextTransform::Uppercase:
             return text.uppercaseString;

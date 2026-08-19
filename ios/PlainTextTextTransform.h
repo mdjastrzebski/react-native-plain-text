@@ -12,15 +12,12 @@
 namespace facebook::react {
 
 /*
- * Applies `textTransform` to `text`. Uppercase/lowercase mirror RN <Text>'s own
+ * Applies `textTransform` to `text`. Uppercase/lowercase mirror RN's own
  * RCTNSStringFromStringApplyingTextTransform (RCTAttributedTextUtils.mm),
- * reimplemented here since that function lives in a private RN target.
- * Capitalize deliberately does not: RN's iOS capitalize force-lowercases the
- * rest of each word (e.g. "PSYCHED" -> "Psyched"), which is RN's own known
- * divergence from CSS `text-transform: capitalize` (facebook/react-native#34117)
- * and from Android's Fabric implementation, which never touches anything past
- * a word's first character. This uppercases only the first character of each
- * Unicode word, matching CSS and Android instead of RN's iOS quirk.
+ * reimplemented here since it lives in a private RN target. Capitalize does
+ * not: RN's iOS capitalize also lowercases the rest of each word, diverging
+ * from CSS and from Android (facebook/react-native#34117). This matches CSS
+ * and Android instead, uppercasing only each word's first character.
  */
 NSString *plainTextApplyTextTransform(NSString *text, RNPlainTextTextTransform textTransform);
 
