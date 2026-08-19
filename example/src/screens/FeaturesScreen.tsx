@@ -824,7 +824,9 @@ const TEXT_DECORATION_LINES = [
 
 const TEXT_TRANSFORMS = ['none', 'lowercase', 'uppercase', 'capitalize'] as const;
 
-const TEXT_TRANSFORM_SPECIMEN = 'Quick brown fox';
+// Mid-word caps ("BROWN") make capitalize's row visibly diverge from the
+// scarlet <Text> overlay on iOS: see TEXT_TRANSFORM_FOOTER.
+const TEXT_TRANSFORM_SPECIMEN = 'Quick BROWN fox';
 
 // A digit has no uppercase form, so capitalize leaves it alone.
 const TEXT_TRANSFORM_ORDINAL_SPECIMEN = '3rd place winner';
@@ -833,13 +835,7 @@ const TEXT_TRANSFORM_ORDINAL_SPECIMEN = '3rd place winner';
 const TEXT_TRANSFORM_CONTRACTION_SPECIMEN = "it's a trap, don't panic";
 
 const TEXT_TRANSFORM_FOOTER =
-  "capitalize matches CSS: only each word's first character is uppercased. " +
-  "RN <Text>'s iOS capitalize also lowercases the rest of the word " +
-  '(facebook/react-native#34117), so a mid-word capital (e.g. "PSYCHED") ' +
-  "won't match the scarlet overlay there, by design. On uppercase/capitalize, " +
-  "RN <Text> also sizes its box to the untransformed string, so the overlay's " +
-  'edge can fall short of its own glyphs. PlainText measures the transformed ' +
-  'string, so its box always matches what it draws.';
+  "RN <Text>'s capitalize has a bug on iOS (facebook/react-native#34117).";
 
 // The section needs a font that actually carries the features, and SF does not:
 // it forms no ff/ffi/ffl ligatures and ships no oldstyle figures, so those rows
