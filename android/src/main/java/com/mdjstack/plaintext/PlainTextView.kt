@@ -21,6 +21,8 @@ import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.views.text.ReactTypefaceUtils
+import java.text.BreakIterator
+import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -52,6 +54,9 @@ class PlainTextView : AppCompatTextView {
   private var rawText: CharSequence? = null
   // NaN means unset, as in RN's TextAttributes.
   private var lineHeightSp: Float = Float.NaN
+  // null/"none" means unset. Applied inside applyText, since it transforms rawText
+  // before it reaches TextView.
+  private var textTransform: String? = null
 
   private var fontFamily: String? = null
   private var fontWeight: Int = ReactConstants.UNSET
@@ -226,9 +231,15 @@ class PlainTextView : AppCompatTextView {
     dirtyText = true
   }
 
+  // Mirrors <Text> (TextTransform.kt). null/"none" leaves the text untouched.
+  fun setTextTransform(value: String?) {
+    textTransform = value
+    dirtyText = true
+  }
+
   // The single place text reaches TextView, since a lineHeight span must be layered on.
   private fun applyText() {
-    val value = rawText ?: ""
+    val value = applyTextTransform(rawText?.toString() ?: "", textTransform)
     if (lineHeightSp.isNaN()) {
       setText(value)
       return
@@ -496,6 +507,35 @@ private fun toEffectivePixel(
     PixelUtil.toPixelFromSP(sp, maxFontSizeMultiplier)
   } else {
     PixelUtil.toPixelFromDIP(sp)
+  }
+}
+
+// Uppercase/lowercase mirror <Text> (com.facebook.react.views.text.TextTransform,
+// reimplemented here since that one is internal to RN's own module and not visible
+// outside it). Capitalize already matches CSS `text-transform: capitalize` and RN's
+// own Android behavior as-is: only the first character of each word is uppercased,
+// the rest is untouched. See ios/PlainTextTextTransform.h for why iOS deliberately
+// does not mirror RN's iOS capitalize, which force-lowercases the rest of each word.
+private fun applyTextTransform(text: String, textTransform: String?): String {
+  // EXPENSIVE: allocates a transformed copy of the string per call (docs/agent/performance.md);
+  // capitalize additionally walks word boundaries via BreakIterator below.
+  return when (textTransform) {
+    "uppercase" -> text.uppercase(Locale.getDefault())
+    "lowercase" -> text.lowercase(Locale.getDefault())
+    "capitalize" -> {
+      val wordIterator = BreakIterator.getWordInstance()
+      wordIterator.setText(text)
+      val result = StringBuilder(text.length)
+      var start = wordIterator.first()
+      var end = wordIterator.next()
+      while (end != BreakIterator.DONE) {
+        result.append(text.substring(start, end).replaceFirstChar { it.uppercaseChar() })
+        start = end
+        end = wordIterator.next()
+      }
+      result.toString()
+    }
+    else -> text
   }
 }
 

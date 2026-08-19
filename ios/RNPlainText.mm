@@ -7,6 +7,7 @@
 
 #import "PlainTextComponentDescriptor.h"
 #import "PlainTextFont.h"
+#import "PlainTextTextTransform.h"
 #import "RCTFabricComponentsPlugins.h"
 
 using namespace facebook::react;
@@ -158,6 +159,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     UIColor *color = props.color ? RCTUIColorFromSharedColor(props.color) : [UIColor blackColor];
     NSTextAlignment alignment = RNPlainTextAlignmentFromProp(props.textAlign);
     NSString *text = [NSString stringWithUTF8String:props.text.c_str()] ?: @"";
+    text = plainTextApplyTextTransform(text, props.textTransform);
 
     BOOL hasLineHeight = props.lineHeight > 0;
     BOOL hasLetterSpacing = props.hasLetterSpacing;
@@ -262,6 +264,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         oldViewProps.letterSpacing != newViewProps.letterSpacing ||
         oldViewProps.hasLetterSpacing != newViewProps.hasLetterSpacing ||
         oldViewProps.textDecorationLine != newViewProps.textDecorationLine ||
+        oldViewProps.textTransform != newViewProps.textTransform ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||
         oldViewProps.maxFontSizeMultiplier != newViewProps.maxFontSizeMultiplier ||

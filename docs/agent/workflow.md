@@ -36,6 +36,26 @@ the CSS name it was never a second gap.
 `PlainText.native.tsx`'s `resolveTextAlignVertical` mirrors that alias, and
 closing `textAlignVertical` on iOS closed `verticalAlign` with it.
 
+### When RN itself is wrong
+
+The same reasoning applies when RN's own behavior is a known bug rather than a
+platform gap: parity means matching CSS/web (what RN is trying to implement),
+not reproducing RN's bug on top of it.
+
+`textTransform: 'capitalize'` is this case on iOS. RN's iOS implementation
+force-lowercases every character in a word past the first ("PSYCHED" ->
+"Psyched"), which is RN's own known divergence from CSS
+`text-transform: capitalize` and from RN's own Android behavior
+(facebook/react-native#34117, open since 2022 with no fix attempted).
+`ios/PlainTextTextTransform.mm`'s `capitalizedString` does not mirror this: it
+uppercases only each Unicode word's first character, matching CSS and
+Android's Fabric `TextTransform` behavior instead.
+
+Say so where the divergence is implemented (`PlainTextTextTransform.h` and
+`.mm`, and `PlainTextView.kt`'s `applyTextTransform` comment) and in the
+example section's footer, so a reader comparing against a real RN `<Text>`
+overlay understands why a word with a mid-word capital won't match on iOS.
+
 ## Order of work
 
 1. **Add usage/test cases to the Features screen first.**

@@ -53,6 +53,14 @@ export interface NativeProps extends ViewProps {
   //
   // Cost: medium. Forces iOS's attributed-string path and two Android paint flags.
   textDecorationLine?: string;
+  // Transforms the text content itself, so it feeds both what's drawn and what's
+  // measured (case changes can change width).
+  //
+  // Cost: medium. Allocates a transformed copy of the string per apply on both platforms.
+  textTransform?: CodegenTypes.WithDefault<
+    'none' | 'uppercase' | 'lowercase' | 'capitalize',
+    'none'
+  >;
   // 0 means unlimited. Caps rendered lines and the shadow node's measured intrinsic height.
   numberOfLines?: CodegenTypes.WithDefault<CodegenTypes.Int32, 0>;
   ellipsizeMode?: CodegenTypes.WithDefault<'head' | 'middle' | 'tail' | 'clip', 'tail'>;

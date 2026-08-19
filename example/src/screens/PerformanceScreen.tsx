@@ -788,6 +788,19 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
+    key: 'textTransform',
+    section: 'Text',
+    fp: 'tt',
+    target: 'text',
+    options: [
+      { label: '(none)' },
+      { label: 'none', value: 'none' },
+      { label: 'uppercase', value: 'uppercase' },
+      { label: 'lowercase', value: 'lowercase' },
+      { label: 'capitalize', value: 'capitalize' },
+    ],
+  },
+  {
     key: 'textAlign',
     section: 'Text',
     fp: 'ta',

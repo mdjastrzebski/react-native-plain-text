@@ -58,6 +58,9 @@ folly::dynamic serializeProps(const RNPlainTextProps &props) {
   if (props.letterSpacing != 0.0) {
     serializedProps["letterSpacing"] = props.letterSpacing;
   }
+  if (props.textTransform != RNPlainTextTextTransform::None) {
+    serializedProps["textTransform"] = toString(props.textTransform);
+  }
   if (props.numberOfLines != 0) {
     serializedProps["numberOfLines"] = props.numberOfLines;
   }

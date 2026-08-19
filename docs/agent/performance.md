@@ -53,6 +53,7 @@ of why it is still in [todo.md](todo.md).
 | `lineHeight`            | medium | Forces the iOS attributed-string path and an Android `SpannableString` with a span, in place of a plain string.                                                          |
 | `letterSpacing`         | medium | Forces the iOS attributed-string path. The Android side is one paint write.                                                                                              |
 | `textDecorationLine`    | medium | Forces the iOS attributed-string path. The Android side is two paint flags.                                                                                              |
+| `textTransform`         | medium | Allocates a transformed copy of the string per apply on both platforms; `capitalize` additionally walks word boundaries.                                                 |
 | everything else         | light  | One write, or one entry in the font cache key.                                                                                                                           |
 
 Three of those are medium for the same reason, and it is worth knowing as one

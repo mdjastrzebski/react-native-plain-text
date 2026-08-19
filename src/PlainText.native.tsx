@@ -80,6 +80,7 @@ export function PlainText({
     textAlignVertical,
     verticalAlign,
     textDecorationLine,
+    textTransform,
     lineHeight,
     letterSpacing,
     ...viewStyle
@@ -98,6 +99,7 @@ export function PlainText({
       textAlign={textAlign}
       textAlignVertical={resolveTextAlignVertical(textAlignVertical, verticalAlign)}
       textDecorationLine={textDecorationLine}
+      textTransform={textTransform}
       lineHeight={lineHeight}
       letterSpacing={letterSpacing}
       hasLetterSpacing={letterSpacing !== undefined}

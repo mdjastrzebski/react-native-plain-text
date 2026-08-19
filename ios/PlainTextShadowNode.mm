@@ -7,6 +7,7 @@
 #import <cmath>
 
 #import "PlainTextFont.h"
+#import "PlainTextTextTransform.h"
 
 namespace facebook::react {
 
@@ -23,6 +24,7 @@ Size PlainTextShadowNode::measureContent(
   if (text == nil) {
     text = @"";
   }
+  text = plainTextApplyTextTransform(text, props.textTransform);
 
   // Base scale comes from the layout context (Fabric seeds it from
   // RCTFontSizeMultiplier, same as the mounted view). Clamping matches the

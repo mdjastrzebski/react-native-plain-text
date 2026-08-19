@@ -120,6 +120,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setTextDecorationLine(textDecorationLine)
   }
 
+  @ReactProp(name = "textTransform")
+  override fun setTextTransform(view: PlainTextView?, textTransform: String?) {
+    view?.setTextTransform(textTransform)
+  }
+
   @ReactProp(name = "lineHeight")
   override fun setLineHeight(view: PlainTextView?, lineHeight: Float) {
     view?.setLineHeight(lineHeight)
@@ -211,6 +216,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // applied for the measured size to match.
     view.setLetterSpacingDip(if (props?.hasKey("letterSpacing") == true) props.getDouble("letterSpacing").toFloat() else 0f)
     view.setLineHeight(if (props?.hasKey("lineHeight") == true) props.getDouble("lineHeight").toFloat() else 0f)
+    // Transforms the measured string itself (case changes can change width), so it
+    // must be applied before setPlainText below.
+    view.setTextTransform(props?.getString("textTransform"))
     // numberOfLines caps the measured height. ellipsizeMode only changes where the
     // ellipsis lands, so it isn't serialized for measure.
     view.setNumberOfLines(if (props?.hasKey("numberOfLines") == true) props.getInt("numberOfLines") else 0)

@@ -369,6 +369,38 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      <Section title="Text Transform" footer={TEXT_TRANSFORM_FOOTER}>
+        {TEXT_TRANSFORMS.map((textTransform) => (
+          <TextItem
+            key={textTransform}
+            label={textTransform}
+            showText={showText}
+            style={{ fontSize: SHORT_ROW_SIZE, textTransform }}
+          >
+            {TEXT_TRANSFORM_SPECIMEN}
+          </TextItem>
+        ))}
+        {/* capitalize's two gotchas (see ios/PlainTextTextTransform.mm and
+            PlainTextView.kt's applyTextTransform): a digit-led word and a
+            contraction, both of which a naive per-word titlecase would get
+            wrong. Chosen so they still match the RN <Text> overlay even
+            though PlainText's capitalize intentionally does not mirror RN's
+            iOS behavior in general (see the section footer). */}
+        <TextItem
+          label="capitalize, digit-led word"
+          showText={showText}
+          style={{ fontSize: SHORT_ROW_SIZE, textTransform: 'capitalize' }}
+        >
+          {TEXT_TRANSFORM_ORDINAL_SPECIMEN}
+        </TextItem>
+        <TextItem
+          label="capitalize, contraction"
+          showText={showText}
+          style={{ fontSize: SHORT_ROW_SIZE, textTransform: 'capitalize' }}
+        >
+          {TEXT_TRANSFORM_CONTRACTION_SPECIMEN}
+        </TextItem>
+      </Section>
       {/* Font scaling follows the OS accessibility text-size setting (Dynamic
           Type on iOS, Font size on Android). FONT_SCALING_FOOTER names the path
           for whichever platform is running. */}
@@ -794,6 +826,36 @@ const TEXT_DECORATION_LINES = [
   'line-through',
   'underline line-through',
 ] as const;
+
+const TEXT_TRANSFORMS = ['none', 'lowercase', 'uppercase', 'capitalize'] as const;
+
+const TEXT_TRANSFORM_SPECIMEN = 'Quick brown fox';
+
+// A digit has no uppercase form, so capitalize leaves a digit-led word alone
+// ("3rd", not "3Rd") with no special-casing needed: only each word's first
+// character is ever touched. The two words around it show the ordinary
+// per-word capitalization still applying everywhere else.
+const TEXT_TRANSFORM_ORDINAL_SPECIMEN = '3rd place winner';
+
+// Apostrophes stay inside the word rather than starting a new one (Unicode
+// word-boundary rules, both platforms), so capitalize touches only each
+// word's true first letter ("It's a trap, don't panic"), not the letter
+// right after the apostrophe.
+const TEXT_TRANSFORM_CONTRACTION_SPECIMEN = "it's a trap, don't panic";
+
+const TEXT_TRANSFORM_FOOTER =
+  "capitalize's two extra rows below: a digit-led word stays untouched past " +
+  'its first character, and an apostrophe stays inside its word instead of ' +
+  'starting a new one. Both match the RN <Text> overlay on either platform, ' +
+  "though PlainText's capitalize intentionally diverges from RN <Text> on iOS " +
+  'for a word that already has an uppercase letter past its first character ' +
+  '(e.g. "PSYCHED"): RN <Text> force-lowercases the rest of the word there ' +
+  "(facebook/react-native#34117, RN's own divergence from CSS " +
+  '`text-transform: capitalize`), PlainText does not. ' +
+  'On uppercase/capitalize, RN <Text> can size its own box to the untransformed ' +
+  "string rather than the transformed one it paints, so the scarlet overlay's " +
+  'edge can fall short of its own glyphs. PlainText measures the transformed ' +
+  'string, so its box always matches what it draws.';
 
 // The section needs a font that actually carries the features, and SF does not:
 // it forms no ff/ffi/ffl ligatures and ships no oldstyle figures, so those rows
