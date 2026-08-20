@@ -383,12 +383,15 @@ carrying the `lineHeight` span), but both branches go through the single
 `setText()` entry point rather than two separate properties, so there's no
 second backing store for a stale span to hide in. It has no recycling reset of
 any kind either: `PlainTextView`/`PlainTextViewManager` reset nothing on reuse,
-where RN's own `ReactTextView` has `recycleView()` (called from
-`ReactTextViewManager.createViewInstance` when a view comes from the pool). That
-costs nothing while `setupViewRecycling()` goes uncalled, and it is the first
-thing opting in has to bring: a pooled view arrives carrying the previous
-instance's text, font and color, and `init`'s seeding only runs for a genuinely
-new one.
+where RN's own `ReactTextViewManager` overrides `prepareToRecycleView` and calls
+`ReactTextView.recycleView()` from there, resetting at unmount on the way _into_
+the pool. Reset at that end, not the other: `ViewManager.recycleView(reactContext,
+view)` is a differently-scoped hook with a confusingly identical name, called from
+`createViewInstance` on the way back _out_ of the pool, and RN's text manager
+leaves it alone. Either way the reset costs nothing while `setupViewRecycling()`
+goes uncalled, and it is the first thing opting in has to bring: a pooled view
+arrives carrying the previous instance's text, font and color, and `init`'s
+seeding only runs for a genuinely new one.
 
 ## Both platforms' shadow nodes
 
