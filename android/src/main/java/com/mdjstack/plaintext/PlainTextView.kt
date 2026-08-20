@@ -15,6 +15,7 @@ import android.util.AttributeSet
 import android.util.LruCache
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.ViewGroup
 import androidx.appcompat.widget.AppCompatTextView
 import com.facebook.common.logging.FLog
 import com.facebook.react.bridge.ReadableArray
@@ -174,6 +175,17 @@ class PlainTextView : AppCompatTextView {
   }
 
   init {
+    // Seed non-null LayoutParams at construction, before Fabric assigns the real ones
+    // via the parent's INSERT mount item. TextView.setText() -> checkForRelayout()
+    // dereferences layoutParams.width unconditionally, so a freshly-mounted view whose
+    // onAfterUpdateTransaction (CREATE + UPDATE PROPS) runs ahead of that INSERT would
+    // NPE the first time applyText() sets text. RN's own ReactTextView guards the same
+    // crash with EMPTY_LAYOUT_PARAMS. Fabric overwrites these with the real values, so
+    // WRAP_CONTENT is only a placeholder. See docs/agent/sync-points.md.
+    layoutParams = ViewGroup.LayoutParams(
+      ViewGroup.LayoutParams.WRAP_CONTENT,
+      ViewGroup.LayoutParams.WRAP_CONTENT
+    )
     setTextColor(Color.BLACK) // Matches iOS's UILabel; the theme's TextView gray would differ.
     // Fabric skips setters for props at default, so seed textSize/letterSpacing here or
     // the view keeps the theme's values, mismatching what the shadow node measured.

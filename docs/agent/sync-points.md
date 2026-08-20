@@ -147,10 +147,19 @@ must hold because of that:
   reason: `ReactTypefaceUtils.applyStyles` derives from the typeface passed in
   when `fontFamily` is null, so chaining off the live value let one node's font
   survive into the next.
-- **The scratch view needs `isMeasureOnly` and non-null `LayoutParams`**: it
-  skips the `requestLayout` re-layout post (which would queue forever on a
-  never-attached view), and `TextView.checkForRelayout()` dereferences the
-  LayoutParams from the second measurement onward.
+- **The scratch view needs `isMeasureOnly`**: it skips the `requestLayout`
+  re-layout post, which would queue forever on a never-attached view.
+
+Every `PlainTextView` (mounted or scratch) also needs non-null `LayoutParams`,
+now seeded in the constructor rather than only on the scratch view.
+`TextView.setText()` -> `checkForRelayout()` dereferences `layoutParams.width`
+unconditionally. Two paths hit null LayoutParams: the scratch view from the
+second measurement onward, and a freshly-mounted view whose
+`onAfterUpdateTransaction` (CREATE + UPDATE PROPS) runs before the parent's
+INSERT assigns the real LayoutParams under Fabric. RN's own `ReactTextView`
+guards the same crash with `EMPTY_LAYOUT_PARAMS`. Fabric overwrites the
+placeholder with the real values, so the seeded WRAP_CONTENT never affects
+layout.
 
 This is now unconditional: measuring with a fresh view every time was the
 alternative an earlier perf-suite A/B test measured against, and it lost, so

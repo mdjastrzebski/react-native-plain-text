@@ -2,7 +2,6 @@ package com.mdjstack.plaintext
 
 import android.content.Context
 import android.view.View
-import android.view.ViewGroup
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
@@ -277,14 +276,10 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   private fun newMeasureView(context: Context): PlainTextView {
     val view = PlainTextView(context)
     view.isMeasureOnly = true
-    // From the second measurement on, setText() reaches checkForRelayout(), which
-    // dereferences LayoutParams and crashes when they're null. RN works around the
-    // same crash in ReactTextView (EMPTY_LAYOUT_PARAMS). Never attached, so the
-    // values don't matter.
-    view.layoutParams = ViewGroup.LayoutParams(
-      ViewGroup.LayoutParams.WRAP_CONTENT,
-      ViewGroup.LayoutParams.WRAP_CONTENT
-    )
+    // setText() reaches checkForRelayout(), which dereferences LayoutParams and
+    // crashes when they're null. PlainTextView's constructor seeds non-null
+    // LayoutParams for this exact reason (mirroring RN's ReactTextView
+    // EMPTY_LAYOUT_PARAMS), so this never-attached measuring view is covered too.
     return view
   }
 
