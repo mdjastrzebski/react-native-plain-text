@@ -2,7 +2,6 @@ package com.mdjstack.plaintext
 
 import android.content.Context
 import android.view.View.MeasureSpec
-import androidx.test.core.app.ApplicationProvider
 import com.facebook.react.uimanager.DisplayMetricsHolder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -10,26 +9,23 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-// Regression test for the Fabric mount NPE: TextView.setText() reaches
-// checkForRelayout(), which dereferences layoutParams.width unconditionally
-// (AOSP TextView.java), and a PlainTextView that was never added to a parent has
-// no LayoutParams unless the constructor seeds them.
+// A view that was measured but never added to a parent reaches checkForRelayout() from
+// setText(), which dereferences layoutParams.width. See docs/agent/sync-points.md.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class PlainTextViewLayoutParamsTest {
   private val context: Context
-    get() = ApplicationProvider.getApplicationContext()
+    get() = RuntimeEnvironment.getApplication()
 
   @Before
   fun setUp() {
     DisplayMetricsHolder.initDisplayMetricsIfNotInitialized(context)
   }
 
-  // TextView builds the text Layout it draws during measure, and measure works on a
-  // parentless view. That is the whole crash precondition: from the first measure on,
-  // setText() stops being a no-op relayout and calls checkForRelayout().
+  // TextView builds its text Layout during measure, and measure needs no parent.
   private fun measuredParentlessView(): PlainTextView {
     val view = PlainTextView(context)
     view.measure(
@@ -37,7 +33,6 @@ class PlainTextViewLayoutParamsTest {
       MeasureSpec.makeMeasureSpec(100, MeasureSpec.EXACTLY)
     )
     assertNotNull("precondition: measure must have built the text Layout", view.layout)
-    assertEquals("precondition: the view must have no parent", null, view.parent)
     return view
   }
 
@@ -56,15 +51,11 @@ class PlainTextViewLayoutParamsTest {
     assertEquals("hello", view.text.toString())
   }
 
-  // Pins the precondition the two tests above rely on, and rules out the mechanism the
-  // crash was first attributed to: setText() only reaches checkForRelayout() once a text
-  // Layout exists (TextView.setText guards the call on mLayout != null), so the *first*
-  // setText on a never-measured view cannot NPE, seeded LayoutParams or not. Anything
-  // claiming a freshly-created view crashes on its first applyText() is wrong.
+  // Passes with or without the seeding: setText guards checkForRelayout on mLayout.
   @Test
   fun setsTextOnAnUnmeasuredParentlessViewWithoutReachingCheckForRelayout() {
     val view = PlainTextView(context)
-    assertEquals("precondition: no text Layout before the first measure", null, view.layout)
+    assertEquals(null, view.layout)
 
     view.setPlainText("hello")
     view.flushPendingUpdates()
@@ -72,8 +63,7 @@ class PlainTextViewLayoutParamsTest {
     assertEquals("hello", view.text.toString())
   }
 
-  // The reported stack trace crashed on the spannable branch of applyText, which is
-  // only taken when lineHeight is set, so cover it explicitly.
+  // The reported trace crashed on applyText's spannable branch.
   @Test
   fun setsTextWithLineHeightOnAMeasuredParentlessView() {
     val view = measuredParentlessView()

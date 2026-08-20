@@ -150,16 +150,11 @@ must hold because of that:
 - **The scratch view needs `isMeasureOnly`**: it skips the `requestLayout`
   re-layout post, which would queue forever on a never-attached view.
 
-Every `PlainTextView` (mounted or scratch) also needs non-null `LayoutParams`,
-now seeded in the constructor rather than only on the scratch view.
-`TextView.setText()` -> `checkForRelayout()` dereferences `layoutParams.width`
-unconditionally. Two paths hit null LayoutParams: the scratch view from the
-second measurement onward, and a freshly-mounted view whose
-`onAfterUpdateTransaction` (CREATE + UPDATE PROPS) runs before the parent's
-INSERT assigns the real LayoutParams under Fabric. RN's own `ReactTextView`
-guards the same crash with `EMPTY_LAYOUT_PARAMS`. Fabric overwrites the
-placeholder with the real values, so the seeded WRAP_CONTENT never affects
-layout.
+Every `PlainTextView` also needs non-null `LayoutParams`, seeded in the
+constructor: a view that was measured but never added to a parent reaches
+`checkForRelayout()` from `setText()`, which dereferences `layoutParams.width`.
+That covers the scratch view and any mounted view whose insert was dropped. It
+is not about mount ordering, and `PlainTextViewLayoutParamsTest` pins it.
 
 This is now unconditional: measuring with a fresh view every time was the
 alternative an earlier perf-suite A/B test measured against, and it lost, so

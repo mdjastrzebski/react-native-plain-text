@@ -175,13 +175,10 @@ class PlainTextView : AppCompatTextView {
   }
 
   init {
-    // Seed non-null LayoutParams at construction, before Fabric assigns the real ones
-    // via the parent's INSERT mount item. TextView.setText() -> checkForRelayout()
-    // dereferences layoutParams.width unconditionally, so a freshly-mounted view whose
-    // onAfterUpdateTransaction (CREATE + UPDATE PROPS) runs ahead of that INSERT would
-    // NPE the first time applyText() sets text. RN's own ReactTextView guards the same
-    // crash with EMPTY_LAYOUT_PARAMS. Fabric overwrites these with the real values, so
-    // WRAP_CONTENT is only a placeholder. See docs/agent/sync-points.md.
+    // A measured but never-parented view reaches checkForRelayout() from setText(),
+    // which dereferences layoutParams.width. Seeded here, not in applyText, since
+    // setText is only one of checkForRelayout's three callers. WRAP_CONTENT is what the
+    // parent would have generated anyway, while 0 would take its inline fast path.
     layoutParams = ViewGroup.LayoutParams(
       ViewGroup.LayoutParams.WRAP_CONTENT,
       ViewGroup.LayoutParams.WRAP_CONTENT

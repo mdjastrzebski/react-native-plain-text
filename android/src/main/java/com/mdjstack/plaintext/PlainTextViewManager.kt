@@ -268,18 +268,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
 
     // EXPENSIVE: constructing an AppCompatTextView (theme attribute resolution, tint/emoji
     // helpers), only reached on a cache miss (Context change or GC of the weak reference).
-    val view = newMeasureView(context)
-    measureViews.set(WeakReference(view))
-    return view
-  }
-
-  private fun newMeasureView(context: Context): PlainTextView {
     val view = PlainTextView(context)
     view.isMeasureOnly = true
-    // setText() reaches checkForRelayout(), which dereferences LayoutParams and
-    // crashes when they're null. PlainTextView's constructor seeds non-null
-    // LayoutParams for this exact reason (mirroring RN's ReactTextView
-    // EMPTY_LAYOUT_PARAMS), so this never-attached measuring view is covered too.
+    measureViews.set(WeakReference(view))
     return view
   }
 
