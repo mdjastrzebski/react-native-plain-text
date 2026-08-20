@@ -163,8 +163,7 @@ alternative an earlier perf-suite A/B test measured against, and it lost, so
 prop (not part of `PlainText`'s public props, one generic on/off switch for
 whatever the perf suite is currently A/B testing, see
 `src/PlainTextViewNativeComponent.ts`) is declared but unread on both
-platforms for now, the same as `textAlignVertical` on iOS, ready for whatever
-gets A/B tested next.
+platforms for now, ready for whatever gets A/B tested next.
 
 ## Deferred prop application
 
@@ -225,13 +224,14 @@ ran unconditionally. Don't restore that accident by dropping either half.
 
 Props that map onto a single cheap independent write apply inline: there is
 nothing to coalesce, and a dirty flag would only add state to keep in sync. Some
-of them (`maxLines`, `justificationMode`) call `requestLayout()` unconditionally,
-which the `relayoutPosted` guard in `PlainTextView.requestLayout()` collapses to
+of them relayout on their own (`setMaxLines` always, `setJustificationMode` once
+the view has a text Layout), which the `relayoutPosted` guard in `PlainTextView.requestLayout()` collapses to
 one re-layout per transaction, and often to none, since the posted runnable
 drops out when Fabric re-laid-out the view itself.
 
-Flush happens in `PlainTextViewManager.onAfterUpdateTransaction` and before the
-off-screen `measure`, never in the view's `init`, for the reason below.
+Flush happens in `PlainTextViewManager.onAfterUpdateTransaction`, before the
+off-screen `measure`, and in the `reapplyScaledSizes` runnable after an OS
+text-size change, never in the view's `init`, for the reason below.
 
 ## Construction-time state
 
@@ -297,18 +297,26 @@ has to be set on every call.
 
 ## Recycled view state
 
-Fabric recycles component views by type (`RCTComponentViewRegistry` on iOS,
-`enableViewRecyclingForText`/`ForView`, on by default, on Android): an unmounted
-view is handed straight back out to back an unrelated component instance's first
-mount.
+Fabric recycles component views by type: an unmounted view is handed straight
+back out to back an unrelated component instance's first mount. iOS does that
+unconditionally, through `RCTComponentViewRegistry`. Android makes it per view
+manager: a concrete `ViewManager` has to call `setupViewRecycling()` in its
+constructor, and that call is itself gated on `enableViewRecycling()`, which
+defaults to false. `enableViewRecyclingForText`/`ForView`, both default true, are
+extra conditions read inside RN's own `ReactTextViewManager`/`ReactViewManager`
+constructors, not a pool a third-party manager is enrolled in.
+`PlainTextViewManager` never calls `setupViewRecycling()`, so nothing recycles a
+`PlainTextView` today and everything below describes iOS.
 
 `RNPlainText.mm`'s `updateProps` diffs against `_props` (the ivar), not the
 `oldProps` parameter, matching the base `RCTViewComponentView`. `_props` is
 supposed to describe what `_label` is _actually_ showing. On construction it
-doesn't: the base class seeds `_props` with a plain `ViewProps`, and separately
-`_label` itself starts out with UILabel's own factory defaults (e.g. its
-built-in 17pt font), which don't match what `RNPlainTextProps`' defaults render
-as. A first-mount view whose real props happen to equal those defaults would
+doesn't: the base class seeds `_props` with a plain `ViewProps`, which
+`-initWithFrame:` replaces with default `RNPlainTextProps` (both `-updateProps`
+and `-traitCollectionDidChange` `static_pointer_cast` it, so the concrete type
+has to be there from the start), while `_label` separately starts out with
+UILabel's own factory defaults (e.g. its built-in 17pt font), which are not what
+those prop defaults render as. A first-mount view whose real props happen to equal those defaults would
 diff as "no change" and never apply, keeping UILabel's mismatched look: the
 exact "correct on first render, wrong after an update, silent in between" shape
 this whole document is about, just triggered on construction instead of by a
@@ -369,17 +377,18 @@ rewrite of `applyContentFromProps` must keep doing this: the failure is
 invisible until something is recycled from the attributed path into the plain
 one.
 
-**Android likely doesn't share this specific hazard**: `PlainTextView.applyText()`
+**Android likely wouldn't share this specific hazard**: `PlainTextView.applyText()`
 has the same plain-vs-spanned duality (`setText(value)` vs a `SpannableString`
 carrying the `lineHeight` span), but both branches go through the single
 `setText()` entry point rather than two separate properties, so there's no
-second backing store for a stale span to hide in. **It still has no recycling
-reset of any kind, though**: `PlainTextView`/`PlainTextViewManager` reset
-nothing on reuse. RN's own `ReactTextView` does (`recycleView()`, called from
-`ReactTextViewManager.createViewInstance` when a view comes from the pool), ours
-doesn't yet, so the construction-time hazard above (a first-mount view at
-all-default props never getting seeded) is reachable there. Not yet
-implemented.
+second backing store for a stale span to hide in. It has no recycling reset of
+any kind either: `PlainTextView`/`PlainTextViewManager` reset nothing on reuse,
+where RN's own `ReactTextView` has `recycleView()` (called from
+`ReactTextViewManager.createViewInstance` when a view comes from the pool). That
+costs nothing while `setupViewRecycling()` goes uncalled, and it is the first
+thing opting in has to bring: a pooled view arrives carrying the previous
+instance's text, font and color, and `init`'s seeding only runs for a genuinely
+new one.
 
 ## Both platforms' shadow nodes
 
