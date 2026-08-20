@@ -1,0 +1,49 @@
+// Standalone build, so `yarn test:android` and CI can run the Kotlin unit tests without the
+// generated example app. A consuming app includes this module from its own root project,
+// which is where everything below normally comes from, and never reads this file.
+//
+// There is no wrapper here on purpose: `yarn test:android` drives the one shipped by
+// @react-native/gradle-plugin, so the Gradle version follows React Native's and the repo
+// keeps no committed jar.
+pluginManagement {
+  repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}
+
+// Substitutes the version-less react-native-gradle-plugin on the buildscript classpath, the
+// same composite-build trick the app template uses.
+def reactNativeGradlePlugin = new File(
+  providers.exec {
+    workingDir(rootDir)
+    commandLine(
+      "node",
+      "--print",
+      "require.resolve('@react-native/gradle-plugin/package.json', { paths: [require.resolve('react-native/package.json')] })"
+    )
+  }.standardOutput.asText.get().trim()
+).parentFile.absolutePath
+includeBuild(reactNativeGradlePlugin)
+
+dependencyResolutionManagement {
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+
+// `implementation "com.facebook.react:react-android"` carries no version. React Native's
+// plugin pins one, but only for the app project, which a standalone build has none of.
+def reactNativeVersion = providers.exec {
+  workingDir(rootDir)
+  commandLine("node", "--print", "require('react-native/package.json').version")
+}.standardOutput.asText.get().trim()
+gradle.beforeProject { project ->
+  project.configurations.all {
+    resolutionStrategy.force "com.facebook.react:react-android:${reactNativeVersion}"
+  }
+}
+
+rootProject.name = "react-native-plain-text"

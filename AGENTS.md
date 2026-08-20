@@ -12,19 +12,22 @@ Architecture) native component**.
 
 Run from the repo root:
 
-|                                             |                                                  |
-| ------------------------------------------- | ------------------------------------------------ |
-| `yarn validate`                             | All checks: lint, format, typecheck, test, build |
-| `yarn typecheck`                            | TypeScript                                       |
-| `yarn lint`                                 | ESLint (`--fix` to autofix)                      |
-| `yarn format`                               | oxfmt on JS/TS, md, json and yml                 |
-| `yarn test`                                 | Jest (`yarn test path -t "name"` for one case)   |
-| `yarn test:cpp`                             | C++ unit tests in `tests/cpp/`, no framework     |
-| `yarn example ios` / `yarn example android` | Build & run the example app                      |
-| `yarn example start`                        | Metro only (no native rebuild)                   |
-| `yarn prepare`                              | Build the shippable library into `lib/`          |
+|                                             |                                                        |
+| ------------------------------------------- | ------------------------------------------------------ |
+| `yarn validate`                             | All checks: lint, format, typecheck, test, build       |
+| `yarn typecheck`                            | TypeScript                                             |
+| `yarn lint`                                 | ESLint (`--fix` to autofix)                            |
+| `yarn format`                               | oxfmt on JS/TS, md, json and yml                       |
+| `yarn test`                                 | Jest (`yarn test path -t "name"` for one case)         |
+| `yarn test:cpp`                             | C++ unit tests in `tests/cpp/`, no framework           |
+| `yarn test:android`                         | Kotlin unit tests in `android/src/test/` (Robolectric) |
+| `yarn example ios` / `yarn example android` | Build & run the example app                            |
+| `yarn example start`                        | Metro only (no native rebuild)                         |
+| `yarn prepare`                              | Build the shippable library into `lib/`                |
 
-**After every change run `yarn validate`.**
+**After every change run `yarn validate`.** It leaves out `yarn test:android`, which needs
+a JDK and the Android SDK, so run that one yourself after touching `android/src/main/`. CI
+runs both.
 
 **Do not build the native binaries yourself** (`yarn example ios|android`) unless
 explicitly asked to.

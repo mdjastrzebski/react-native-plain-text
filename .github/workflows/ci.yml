@@ -50,6 +50,30 @@ jobs:
       - name: Run C++ unit tests
         run: yarn test:cpp
 
+  test-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # Robolectric, so no emulator and no NDK. android/ is a standalone Gradle build
+      # (android/settings.gradle), so this needs no prebuilt example app.
+      - name: Run Android unit tests
+        run: yarn test:android
+
   build-library:
     runs-on: ubuntu-latest
 

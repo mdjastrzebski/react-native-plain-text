@@ -154,7 +154,8 @@ Every `PlainTextView` also needs non-null `LayoutParams`, seeded in the
 constructor: a view that was measured but never added to a parent reaches
 `checkForRelayout()` from `setText()`, which dereferences `layoutParams.width`.
 That covers the scratch view and any mounted view whose insert was dropped. It
-is not about mount ordering, and `PlainTextViewLayoutParamsTest` pins it.
+is not about mount ordering, and `PlainTextViewLayoutParamsTest` pins it
+(`yarn test:android`, which CI runs but `yarn validate` does not).
 
 This is now unconditional: measuring with a fresh view every time was the
 alternative an earlier perf-suite A/B test measured against, and it lost, so

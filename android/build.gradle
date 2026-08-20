@@ -22,6 +22,12 @@ buildscript {
     classpath "com.android.tools.build:gradle:8.7.2"
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
+    // Standalone build (see settings.gradle): this module is its own root project, so
+    // nothing above it has put React Native's plugin on the classpath yet. In an app
+    // build the app's root project does, and substitutes the version.
+    if (project == project.rootProject) {
+      classpath "com.facebook.react:react-native-gradle-plugin"
+    }
   }
 }
 
@@ -38,6 +44,12 @@ android {
 
   defaultConfig {
     minSdkVersion getExtOrDefault("minSdkVersion")
+  }
+
+  // Robolectric reads the module's merged manifest and resources. Without this it runs
+  // against a stub R and fails on anything that resolves a theme attribute.
+  testOptions {
+    unitTests.includeAndroidResources = true
   }
 
   compileOptions {

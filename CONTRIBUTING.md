@@ -106,6 +106,7 @@ The `package.json` file contains various scripts for common tasks:
   - `yarn lint`: lint files with [ESLint](https://eslint.org/).
   - `yarn format`: format files with [oxfmt](https://oxc.rs/docs/guide/usage/formatter).
     - `yarn test`: run unit tests with [Jest](https://jestjs.io/).
+    - `yarn test:android`: run the Kotlin unit tests with [Robolectric](https://robolectric.org/) (needs a JDK and the Android SDK).
   - `yarn example start`: start the Metro server for the example app.
 - `yarn example android`: run the example app on Android.
 - `yarn example ios`: run the example app on iOS.

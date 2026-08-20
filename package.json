@@ -22,7 +22,10 @@
     "react-native.config.js",
     "!ios/build",
     "!android/build",
+    "!android/src/test",
     "!android/gradle",
+    "!android/gradle.properties",
+    "!android/settings.gradle",
     "!android/gradlew",
     "!android/gradlew.bat",
     "!android/local.properties",
@@ -41,6 +44,7 @@
     "format:check": "oxfmt --check .",
     "test": "jest",
     "test:cpp": "./scripts/test-cpp.sh",
+    "test:android": "node_modules/@react-native/gradle-plugin/gradlew -p android testDebugUnitTest",
     "validate": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn test:cpp && yarn prepare",
     "release": "release-it --only-version"
   },
