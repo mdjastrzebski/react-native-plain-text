@@ -175,11 +175,12 @@ class PlainTextView : AppCompatTextView {
   }
 
   init {
-    // A measured but never-parented view reaches checkForRelayout() from setText(),
-    // which dereferences layoutParams.width. Seeded here, not in applyText, since
-    // setText is only one of checkForRelayout's three callers. WRAP_CONTENT is what the
-    // parent would have generated anyway. RN's ReactTextView passes 0 instead, which only
-    // differs once the view has a frame (it then takes checkForRelayout's inline path).
+    // A measured but never-parented view reaches checkForRelayout() from setText(), which
+    // dereferences layoutParams.width. Seeded here, not in applyText, since setText is only
+    // one of checkForRelayout's three callers. WRAP_CONTENT is what the parent would have
+    // generated anyway. RN's ReactTextView passes (0, 0), which for a view with a frame
+    // takes checkForRelayout's inline branch rather than nullLayouts() + requestLayout(),
+    // so this one pays an extra layout build through the measureAndLayout post below.
     layoutParams = ViewGroup.LayoutParams(
       ViewGroup.LayoutParams.WRAP_CONTENT,
       ViewGroup.LayoutParams.WRAP_CONTENT

@@ -15,9 +15,8 @@ import org.robolectric.annotation.Config
 // A view that was measured but never added to a parent reaches checkForRelayout() from
 // setText(), which dereferences layoutParams.width. See docs/agent/sync-points.md.
 @RunWith(RobolectricTestRunner::class)
-// Robolectric 4.14.1 ships no image past 35, so this trails compileSdkVersion. Raise it
-// only alongside the Robolectric version.
-@Config(sdk = [34])
+// Robolectric has no image for compileSdkVersion 36, so run on the newest it ships.
+@Config(sdk = [Config.NEWEST_SDK])
 class PlainTextViewLayoutParamsTest {
   private val context: Context
     get() = RuntimeEnvironment.getApplication()
