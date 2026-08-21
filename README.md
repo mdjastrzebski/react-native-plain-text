@@ -88,6 +88,10 @@ Via `style={{ ... }}`:
 - `letterSpacing`
 - `textAlign`
 - `textDecorationLine`: `'none' | 'underline' | 'line-through' | 'underline line-through'`
+- `textShadowColor` / `textShadowOffset` / `textShadowRadius`: like RN `<Text>`,
+  iOS only draws a shadow when `textShadowOffset` itself is set, regardless of
+  the other two; Android draws one whenever any of the three would produce a
+  visible effect.
 - `verticalAlign`: Android only, like RN `<Text>`
 - `textAlignVertical`: Android only, like RN `<Text>`
 - `includeFontPadding`: Android only, like RN `<Text>`
@@ -110,7 +114,6 @@ Via `style={{ ... }}`:
 ## Planned
 
 - `textDecorationColor` / `textDecorationStyle`
-- `textShadowColor` / `textShadowOffset` / `textShadowRadius`
 - `adjustsFontSizeToFit` / `minimumFontScale`: the most expensive item on the
   list, and the only one that is more than a prop. Shrinking text to fit needs
   the view's final frame, which the measurement pass (the thing that decides
