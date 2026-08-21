@@ -166,8 +166,9 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     BOOL hasUnderline = RNPlainTextHasUnderline(props.textDecorationLine);
     BOOL hasLineThrough = RNPlainTextHasLineThrough(props.textDecorationLine);
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
+    BOOL hasTextShadow = props.hasTextShadow;
 
-    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration) {
+    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow) {
         // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
         _label.attributedText = nil;
         _label.font = font;
@@ -194,6 +195,19 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     }
     if (hasLineThrough) {
         attributes[NSStrikethroughStyleAttributeName] = @(NSUnderlineStyleSingle);
+    }
+
+    // Mirrors RN <Text> (RCTAttributedTextUtils.mm): a shadow is drawn whenever
+    // textShadowOffset was provided, regardless of textShadowRadius/textShadowColor.
+    // Unset radius/color fall back to NSShadow's own defaults.
+    if (hasTextShadow) {
+        NSShadow *shadow = [NSShadow new];
+        shadow.shadowOffset = CGSizeMake(props.textShadowOffsetWidth, props.textShadowOffsetHeight);
+        shadow.shadowBlurRadius = props.textShadowRadius;
+        if (props.textShadowColor) {
+            shadow.shadowColor = RCTUIColorFromSharedColor(props.textShadowColor);
+        }
+        attributes[NSShadowAttributeName] = shadow;
     }
 
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
@@ -264,6 +278,11 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         oldViewProps.letterSpacing != newViewProps.letterSpacing ||
         oldViewProps.hasLetterSpacing != newViewProps.hasLetterSpacing ||
         oldViewProps.textDecorationLine != newViewProps.textDecorationLine ||
+        oldViewProps.textShadowColor != newViewProps.textShadowColor ||
+        oldViewProps.textShadowOffsetWidth != newViewProps.textShadowOffsetWidth ||
+        oldViewProps.textShadowOffsetHeight != newViewProps.textShadowOffsetHeight ||
+        oldViewProps.hasTextShadow != newViewProps.hasTextShadow ||
+        oldViewProps.textShadowRadius != newViewProps.textShadowRadius ||
         oldViewProps.textTransform != newViewProps.textTransform ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||

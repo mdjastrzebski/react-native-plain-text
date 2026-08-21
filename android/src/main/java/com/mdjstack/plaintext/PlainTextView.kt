@@ -59,6 +59,14 @@ class PlainTextView : AppCompatTextView {
   // before it reaches TextView.
   private var textTransform: String? = null
 
+  // Applied directly to `paint` rather than through a dirty flag: this view always
+  // renders a single uniform run, like textDecorationLine, so there's nothing to
+  // coalesce. DEFAULT_TEXT_SHADOW_COLOR matches <Text> (TextAttributeProps.kt).
+  private var textShadowColor: Int = DEFAULT_TEXT_SHADOW_COLOR
+  private var textShadowOffsetDx: Float = 0f
+  private var textShadowOffsetDy: Float = 0f
+  private var textShadowRadius: Float = 0f
+
   private var fontFamily: String? = null
   private var fontWeight: Int = ReactConstants.UNSET
   private var fontStyle: Int = ReactConstants.UNSET
@@ -288,6 +296,42 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
+  // Mirrors <Text> (TextLayoutManager's ShadowStyleSpan): a shadow paints only when
+  // there's something to draw, matching RN's gate exactly (unlike iOS, which gates
+  // on textShadowOffset alone, see hasTextShadow in PlainTextViewNativeComponent.ts).
+  private fun applyTextShadow() {
+    if ((textShadowOffsetDx != 0f || textShadowOffsetDy != 0f || textShadowRadius != 0f) &&
+      Color.alpha(textShadowColor) != 0
+    ) {
+      paint.setShadowLayer(textShadowRadius, textShadowOffsetDx, textShadowOffsetDy, textShadowColor)
+    } else {
+      paint.clearShadowLayer()
+    }
+    invalidate()
+  }
+
+  fun setTextShadowColor(color: Int?) {
+    textShadowColor = color ?: DEFAULT_TEXT_SHADOW_COLOR
+    applyTextShadow()
+  }
+
+  fun setTextShadowOffsetWidth(width: Float) {
+    textShadowOffsetDx = PixelUtil.toPixelFromDIP(width)
+    applyTextShadow()
+  }
+
+  fun setTextShadowOffsetHeight(height: Float) {
+    textShadowOffsetDy = PixelUtil.toPixelFromDIP(height)
+    applyTextShadow()
+  }
+
+  // Not converted from DIP, matching <Text> (TextAttributeProps#textShadowRadius),
+  // unlike the offset above: RN takes it as raw pixels for setShadowLayer.
+  fun setTextShadowRadius(radius: Float) {
+    textShadowRadius = radius
+    applyTextShadow()
+  }
+
   // Mirrors <Text> (TextAttributeProps#fontFamily): resolved via ReactFontManager, so
   // fonts bundled the RN way (assets/fonts, or registered natively) work here too.
   fun setFontFamily(fontFamily: String?) {
@@ -505,6 +549,10 @@ class PlainTextView : AppCompatTextView {
     post(measureAndLayout)
   }
 }
+
+// Mirrors <Text> (TextAttributeProps.DEFAULT_TEXT_SHADOW_COLOR): translucent black,
+// used when textShadowColor is unset but the shadow is otherwise enabled.
+private const val DEFAULT_TEXT_SHADOW_COLOR = 0x55000000
 
 // Mirrors <Text> (TextAttributes#getEffective*): sp -> px through the OS setting,
 // clamped by maxFontSizeMultiplier; raw DIP when scaling is off. Pure and top-level

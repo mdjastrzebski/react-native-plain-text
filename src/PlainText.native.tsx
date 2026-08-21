@@ -84,6 +84,9 @@ export function PlainText({
     lineHeight,
     letterSpacing,
     includeFontPadding,
+    textShadowColor,
+    textShadowOffset,
+    textShadowRadius,
     ...viewStyle
   } = StyleSheet.flatten(style) ?? {};
 
@@ -101,6 +104,11 @@ export function PlainText({
       textAlignVertical={resolveTextAlignVertical(textAlignVertical, verticalAlign)}
       textDecorationLine={textDecorationLine}
       textTransform={textTransform}
+      textShadowColor={textShadowColor}
+      textShadowOffsetWidth={textShadowOffset?.width}
+      textShadowOffsetHeight={textShadowOffset?.height}
+      hasTextShadow={textShadowOffset !== undefined}
+      textShadowRadius={textShadowRadius}
       lineHeight={lineHeight}
       letterSpacing={letterSpacing}
       hasLetterSpacing={letterSpacing !== undefined}

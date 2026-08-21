@@ -535,13 +535,22 @@ function renderItems(kind: Kind, applied: Applied) {
     // Same rendered result as the PlainText branch, but with props already in
     // native shape: no StyleSheet.flatten, no rest destructure, and only the
     // props actually set. The delta is the JS wrapper's cost. Every key in
-    // textStyle is also a native prop name, so it spreads straight through.
+    // textStyle is also a native prop name, so it spreads straight through,
+    // except textShadowOffset: PlainText.native.tsx flattens that one object
+    // into textShadowOffsetWidth/Height plus hasTextShadow, so it needs the
+    // same translation here rather than a raw spread.
+    const { textShadowOffset, ...nativeTextStyle } = textStyle as PlainTextStyle;
+    if (textShadowOffset != null) {
+      (nativeTextStyle as Record<string, unknown>).textShadowOffsetWidth = textShadowOffset.width;
+      (nativeTextStyle as Record<string, unknown>).textShadowOffsetHeight = textShadowOffset.height;
+      (nativeTextStyle as Record<string, unknown>).hasTextShadow = true;
+    }
     return Array.from({ length: COUNT }, (_, n) => (
       <NativePlainText
         key={n}
         text={text(n)}
         style={[styles.listItem, viewStyle]}
-        {...(textStyle as object)}
+        {...(nativeTextStyle as object)}
         {...extra}
       />
     ));
@@ -785,6 +794,45 @@ const ATTRIBUTES: AttrDef[] = [
       { label: 'underline', value: 'underline' },
       { label: 'line-through', value: 'line-through' },
       { label: 'both', value: 'underline line-through' },
+    ],
+  },
+  {
+    // Only draws once textShadowOffset is also set (or, on Android alone,
+    // textShadowRadius), same as the border rows below need borderWidth. Left
+    // separate rather than folded into one combined row so each half of the
+    // cost (the color write vs. forcing the attributed-string path) can be
+    // priced on its own.
+    key: 'textShadowColor',
+    section: 'Text',
+    fp: 'tsc',
+    target: 'text',
+    options: [
+      { label: '(none)' },
+      // The same indigo the border rows below default to.
+      { label: 'indigo', value: COLOR.indigo },
+    ],
+  },
+  {
+    key: 'textShadowOffset',
+    section: 'Text',
+    fp: 'tso',
+    target: 'text',
+    options: [
+      { label: '(none)' },
+      { label: '1,1', value: { width: 1, height: 1 } },
+      { label: '2,2', value: { width: 2, height: 2 } },
+    ],
+  },
+  {
+    key: 'textShadowRadius',
+    section: 'Text',
+    fp: 'tsr',
+    target: 'text',
+    options: [
+      { label: '(none)' },
+      { label: '0', value: 0 },
+      { label: '2', value: 2 },
+      { label: '6', value: 6 },
     ],
   },
   {

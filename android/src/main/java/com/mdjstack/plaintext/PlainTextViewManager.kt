@@ -120,6 +120,32 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setTextDecorationLine(textDecorationLine)
   }
 
+  @ReactProp(name = "textShadowColor", customType = "Color")
+  override fun setTextShadowColor(view: PlainTextView?, textShadowColor: Int?) {
+    view?.setTextShadowColor(textShadowColor)
+  }
+
+  @ReactProp(name = "textShadowOffsetWidth")
+  override fun setTextShadowOffsetWidth(view: PlainTextView?, textShadowOffsetWidth: Float) {
+    view?.setTextShadowOffsetWidth(textShadowOffsetWidth)
+  }
+
+  @ReactProp(name = "textShadowOffsetHeight")
+  override fun setTextShadowOffsetHeight(view: PlainTextView?, textShadowOffsetHeight: Float) {
+    view?.setTextShadowOffsetHeight(textShadowOffsetHeight)
+  }
+
+  // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as
+  // `hasLetterSpacing`.
+  @ReactProp(name = "hasTextShadow", defaultBoolean = false)
+  override fun setHasTextShadow(view: PlainTextView?, hasTextShadow: Boolean) {
+  }
+
+  @ReactProp(name = "textShadowRadius")
+  override fun setTextShadowRadius(view: PlainTextView?, textShadowRadius: Float) {
+    view?.setTextShadowRadius(textShadowRadius)
+  }
+
   @ReactProp(name = "textTransform")
   override fun setTextTransform(view: PlainTextView?, textTransform: String?) {
     view?.setTextTransform(textTransform)

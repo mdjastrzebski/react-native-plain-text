@@ -53,6 +53,22 @@ export interface NativeProps extends ViewProps {
   //
   // Cost: medium. Forces iOS's attributed-string path and two Android paint flags.
   textDecorationLine?: string;
+  // Undefined falls back to RN <Text>'s native per-platform default (a
+  // translucent black), matching NSShadow/DEFAULT_TEXT_SHADOW_COLOR.
+  //
+  // Cost: medium. Forces the iOS attributed-string path; the Android side is one paint write.
+  textShadowColor?: ColorValue;
+  // DIP each. Flattened rather than a single {width, height} object, matching
+  // this spec's other flat-scalar props.
+  textShadowOffsetWidth?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
+  textShadowOffsetHeight?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
+  // "Set or not" for textShadowOffset, carried separately since {0, 0} is a
+  // legitimate offset distinct from unset. RN <Text> on iOS only draws a
+  // shadow when textShadowOffset itself was provided, regardless of
+  // textShadowRadius/textShadowColor; Android has no such distinction and
+  // ignores this, like hasLetterSpacing.
+  hasTextShadow?: CodegenTypes.WithDefault<boolean, false>;
+  textShadowRadius?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
   // Transforms the text content itself, so it feeds both what's drawn and what's
   // measured (case changes can change width).
   //

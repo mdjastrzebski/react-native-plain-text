@@ -369,6 +369,18 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      <Section title="Text Shadow">
+        {TEXT_SHADOWS.map(({ label, style }) => (
+          <TextItem
+            key={label}
+            label={label}
+            showText={showText}
+            style={{ fontSize: SHORT_ROW_SIZE, ...style }}
+          >
+            {SPECIMEN}
+          </TextItem>
+        ))}
+      </Section>
       <Section title="Text Transform" footer={TEXT_TRANSFORM_FOOTER}>
         {TEXT_TRANSFORMS.map((textTransform) => (
           <TextItem
@@ -840,6 +852,36 @@ const TEXT_DECORATION_LINES = [
   'line-through',
   'underline line-through',
 ] as const;
+
+// "offset only" covers the iOS gap: RN <Text> draws a shadow there (translucent
+// black, matching the unset-color default) even with no radius set, since iOS
+// gates on textShadowOffset alone. "radius only" (no offset) is the opposite
+// case: no shadow at all on iOS, but Android still draws one, since it gates on
+// offset/radius/color independently. See hasTextShadow in
+// PlainTextViewNativeComponent.ts.
+//
+// Unlike color/borderColor, textShadowColor is not part of compareText/
+// overlayText (Specimen.tsx): the shadow is drawn behind the glyphs rather
+// than tinting them, so flattening it to cobalt/scarlet would fight the
+// overlay's own multiply blend instead of joining it. "colored" keeps its own
+// indigo shadow (the same accent the Color section's swatches and the border
+// rows use) with comparison on or off.
+const TEXT_SHADOWS: { label: string; style: TextStyle }[] = [
+  { label: 'offset only', style: { textShadowOffset: { width: 2, height: 2 } } },
+  {
+    label: 'blurred',
+    style: { textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 4 },
+  },
+  {
+    label: 'colored',
+    style: {
+      textShadowOffset: { width: 2, height: 2 },
+      textShadowRadius: 2,
+      textShadowColor: COLOR.indigo,
+    },
+  },
+  { label: 'radius only (no iOS shadow)', style: { textShadowRadius: 4 } },
+];
 
 const TEXT_TRANSFORMS = ['none', 'lowercase', 'uppercase', 'capitalize'] as const;
 
