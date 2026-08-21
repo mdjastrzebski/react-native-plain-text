@@ -46,10 +46,10 @@ import { PlainText } from 'react-native-plain-text';
 
 ## RN Text compatibility wrapper
 
-`PlainText` is API-compatible with React Native `<Text>`, so a wrapper can pick
-one or the other automatically. The one below renders `PlainText` in supported
-cases and falls back to RN `<Text>` for anything more advanced (e.g. nested
-text).
+`PlainText` is API-compatible with the subset of React Native `<Text>` it
+supports, so a wrapper can choose one or the other. The example below only
+guards child shape and nesting. Use it when call sites do not pass Text-only
+props. The Tamagui recipe below shows a more conservative version.
 
 ```tsx
 import { use } from 'react';
@@ -179,6 +179,104 @@ Memory per mounted view:
 Each figure is a mean of 3 runs.
 
 </details>
+
+## Tamagui support
+
+`PlainText` only handles flat, single-style string children. The `CompatText`
+component below routes to `PlainText` only for an explicit, supported prop set.
+It falls back to RN `<Text>` for nested text, interactive props, selection,
+auto-shrink, unsupported styles, and any unlisted prop.
+
+```tsx
+import React, { use } from 'react';
+import {
+  StyleSheet,
+  Text as RnText,
+  type TextProps,
+  unstable_TextAncestorContext,
+} from 'react-native';
+import { PlainText, type PlainTextProps } from 'react-native-plain-text';
+
+// Start with the props your app uses. Add a key only after confirming that
+// PlainText supports it. Unlisted props deliberately use RN <Text>.
+const plainTextPropKeys = new Set<keyof PlainTextProps>([
+  'style',
+  'numberOfLines',
+  'ellipsizeMode',
+  'allowFontScaling',
+  'maxFontSizeMultiplier',
+  'testID',
+  'nativeID',
+  'id',
+]);
+
+const unsupportedTextStyleKeys = [
+  'textDecorationColor',
+  'textDecorationStyle',
+  'textShadowColor',
+  'textShadowOffset',
+  'textShadowRadius',
+] as const;
+
+function canUsePlainText(props: Omit<TextProps, 'children'>) {
+  const flattenedStyle = (StyleSheet.flatten(props.style) ?? {}) as Record<string, unknown>;
+
+  return (
+    Object.keys(props).every((key) => plainTextPropKeys.has(key as keyof PlainTextProps)) &&
+    unsupportedTextStyleKeys.every((key) => flattenedStyle[key] === undefined)
+  );
+}
+
+export const CompatText = React.forwardRef<React.ElementRef<typeof RnText>, TextProps>(
+  ({ children, ...rest }, ref) => {
+    const isNestedText = use(unstable_TextAncestorContext);
+
+    if (!isNestedText && ref == null && typeof children === 'string' && canUsePlainText(rest)) {
+      return <PlainText {...(rest as PlainTextProps)}>{children}</PlainText>;
+    }
+
+    return (
+      <RnText {...rest} ref={ref}>
+        {children}
+      </RnText>
+    );
+  }
+);
+
+CompatText.displayName = 'CompatText';
+```
+
+Override Tamagui's base `Text` view on native so Tamagui components that resolve
+their base through this hook use `CompatText`:
+
+```tsx
+// path/to/your/Text.tsx
+import {
+  PixelRatio,
+  Pressable,
+  StyleSheet,
+  unstable_TextAncestorContext,
+  View,
+} from 'react-native';
+import { isWeb } from '@tamagui/core';
+import { setupHooks } from '@tamagui/web';
+import { CompatText } from './CompatText';
+
+if (!isWeb) {
+  setupHooks({
+    getBaseViews: () => ({
+      View,
+      Text: CompatText,
+      TextAncestor: unstable_TextAncestorContext,
+      StyleSheet,
+      Pressable,
+    }),
+  });
+}
+```
+
+This replaces that Tamagui `Text` base with `CompatText` on native only, leaving
+the web path untouched.
 
 ## Contributing
 
