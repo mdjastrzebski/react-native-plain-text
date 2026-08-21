@@ -43,3 +43,33 @@ You can also apply this conditional rendering inside an existing centralized Tex
 (e.g. design system) instead of adding a separate component.
 
 RN's `unstable_TextAncestorContext` is `true` when the text renders inside another `<Text>`.
+
+<details>
+<summary>Using with Tamagui</summary>
+
+Tamagui resolves its base `Text` view through `setupHooks`. Point that at the unified `Text`
+component above so Tamagui text renders through `<PlainText>` where it applies. Native only,
+the web path is left untouched.
+
+```tsx
+import { Pressable, StyleSheet, unstable_TextAncestorContext, View } from 'react-native';
+import { isWeb } from '@tamagui/core';
+import { setupHooks } from '@tamagui/web';
+import { Text } from './Text';
+
+if (!isWeb) {
+  setupHooks({
+    getBaseViews: () => ({
+      View,
+      Text,
+      TextAncestor: unstable_TextAncestorContext,
+      StyleSheet,
+      Pressable,
+    }),
+  });
+}
+```
+
+Import this module once during app startup, before any Tamagui text renders.
+
+</details>
