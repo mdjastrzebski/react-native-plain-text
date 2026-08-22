@@ -538,7 +538,10 @@ function renderItems(kind: Kind, applied: Applied) {
     // textStyle is also a native prop name, so it spreads straight through,
     // except textShadowOffset: PlainText.native.tsx flattens that one object
     // into textShadowOffsetWidth/Height plus hasTextShadow, so it needs the
-    // same translation here rather than a raw spread.
+    // same translation here rather than a raw spread. Not factored into a
+    // shared helper: this branch exists specifically to measure the
+    // wrapper's own cost, so it has to redo the wrapper's work rather than
+    // call into it.
     const { textShadowOffset, ...nativeTextStyle } = textStyle as PlainTextStyle;
     if (textShadowOffset != null) {
       (nativeTextStyle as Record<string, unknown>).textShadowOffsetWidth = textShadowOffset.width;

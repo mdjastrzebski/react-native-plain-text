@@ -59,9 +59,9 @@ class PlainTextView : AppCompatTextView {
   // before it reaches TextView.
   private var textTransform: String? = null
 
-  // Applied directly to `paint` rather than through a dirty flag: this view always
-  // renders a single uniform run, like textDecorationLine, so there's nothing to
-  // coalesce. DEFAULT_TEXT_SHADOW_COLOR matches <Text> (TextAttributeProps.kt).
+  // Applied directly to `paint` rather than through a dirty flag: like
+  // textDecorationLine, this view always renders a single uniform run, so there's
+  // nothing to coalesce.
   private var textShadowColor: Int = DEFAULT_TEXT_SHADOW_COLOR
   private var textShadowOffsetDx: Float = 0f
   private var textShadowOffsetDy: Float = 0f
@@ -296,9 +296,9 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
-  // Mirrors <Text> (TextLayoutManager's ShadowStyleSpan): a shadow paints only when
-  // there's something to draw, matching RN's gate exactly (unlike iOS, which gates
-  // on textShadowOffset alone, see hasTextShadow in PlainTextViewNativeComponent.ts).
+  // Mirrors <Text> (ShadowStyleSpan): paints only when there's something to draw,
+  // unlike iOS which gates on textShadowOffset alone (see hasTextShadow in
+  // PlainTextViewNativeComponent.ts).
   private fun applyTextShadow() {
     if ((textShadowOffsetDx != 0f || textShadowOffsetDy != 0f || textShadowRadius != 0f) &&
       Color.alpha(textShadowColor) != 0
@@ -325,8 +325,8 @@ class PlainTextView : AppCompatTextView {
     applyTextShadow()
   }
 
-  // Not converted from DIP, matching <Text> (TextAttributeProps#textShadowRadius),
-  // unlike the offset above: RN takes it as raw pixels for setShadowLayer.
+  // Unlike the offset above, not converted from DIP: RN takes textShadowRadius as
+  // raw pixels for setShadowLayer.
   fun setTextShadowRadius(radius: Float) {
     textShadowRadius = radius
     applyTextShadow()

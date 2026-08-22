@@ -853,19 +853,14 @@ const TEXT_DECORATION_LINES = [
   'underline line-through',
 ] as const;
 
-// "offset only" covers the iOS gap: RN <Text> draws a shadow there (translucent
-// black, matching the unset-color default) even with no radius set, since iOS
-// gates on textShadowOffset alone. "radius only" (no offset) is the opposite
-// case: no shadow at all on iOS, but Android still draws one, since it gates on
-// offset/radius/color independently. See hasTextShadow in
-// PlainTextViewNativeComponent.ts.
+// "offset only" shows iOS drawing with no radius set, since its gate is
+// textShadowOffset alone. "radius only" is the asymmetric case: no shadow on
+// iOS, but Android still draws (see hasTextShadow in
+// PlainTextViewNativeComponent.ts).
 //
-// Unlike color/borderColor, textShadowColor is not part of compareText/
-// overlayText (Specimen.tsx): the shadow is drawn behind the glyphs rather
-// than tinting them, so flattening it to cobalt/scarlet would fight the
-// overlay's own multiply blend instead of joining it. "colored" keeps its own
-// indigo shadow (the same accent the Color section's swatches and the border
-// rows use) with comparison on or off.
+// textShadowColor is excluded from compareText/overlayText (Specimen.tsx): a
+// shadow sits behind the glyphs, so flattening it there would fight the
+// overlay's multiply blend. "colored" keeps its own indigo instead.
 const TEXT_SHADOWS: { label: string; style: TextStyle }[] = [
   { label: 'offset only', style: { textShadowOffset: { width: 2, height: 2 } } },
   {
