@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.Layout
 import android.view.View
 import kotlin.math.ceil
+import com.facebook.common.logging.FLog
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
@@ -266,11 +267,36 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // Gates applyTypeface()'s isSubpixelText/isLinearText fix, which changes the
     // measured width for custom fontFamily/fontWeight/fontStyle text. See
     // docs/agent/perf-experiments.md.
-    view.setExperiment(props.getBooleanOr("experiment", false))
+    val experimentOn = props.getBooleanOr("experiment", false)
+    view.setExperiment(experimentOn)
     view.setPlainText(props?.getString("text") ?: "")
     // Applies the state the setters above marked dirty, in dependency order, so their
     // call order here doesn't matter.
     view.flushPendingUpdates()
+
+    // TEMP (validating the hinting-rounding hypothesis, docs/agent/perf-experiments.md):
+    // dumps per-glyph advances hinted vs. unhinted for the same run, to see whether the
+    // width delta is many small per-glyph roundings or one large outlier. Remove once
+    // confirmed.
+    if (experimentOn && view.text.isNotEmpty()) {
+      val debugText = view.text.toString()
+      val unhintedWidths = FloatArray(debugText.length)
+      view.paint.getTextWidths(debugText, unhintedWidths)
+      val wasSubpixel = view.paint.isSubpixelText
+      val wasLinear = view.paint.isLinearText
+      view.paint.isSubpixelText = false
+      view.paint.isLinearText = false
+      val hintedWidths = FloatArray(debugText.length)
+      view.paint.getTextWidths(debugText, hintedWidths)
+      view.paint.isSubpixelText = wasSubpixel
+      view.paint.isLinearText = wasLinear
+      val deltas = unhintedWidths.zip(hintedWidths.toList()) { u, h -> u - h }
+      FLog.d(
+        "PTDebug",
+        "text=\"$debugText\" hintedSum=${hintedWidths.sum()} unhintedSum=${unhintedWidths.sum()} " +
+          "deltaSum=${deltas.sum()} deltas=$deltas"
+      )
+    }
 
     view.measure(
       toMeasureSpec(width, widthMode),
