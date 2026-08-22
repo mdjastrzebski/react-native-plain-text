@@ -18,7 +18,8 @@ bool measurementInputsEqual(
       a.numberOfLines == b.numberOfLines &&
       a.allowFontScaling == b.allowFontScaling &&
       a.maxFontSizeMultiplier == b.maxFontSizeMultiplier &&
-      a.includeFontPadding == b.includeFontPadding;
+      a.includeFontPadding == b.includeFontPadding &&
+      a.experiment == b.experiment;
 }
 
 bool shouldRevisionDirtyMeasurement(
