@@ -455,34 +455,20 @@ class PlainTextView : AppCompatTextView {
   }
 
   private fun applyTypeface() {
-    // Mirrors RN's own condition for attaching a CustomStyleSpan
-    // (TextLayoutManager.kt): fontStyle/fontWeight/fontFamily set at all,
-    // regardless of what they resolve to (an explicit fontStyle="normal" still
-    // counts). That span's updateMeasureState/updateDrawState (CustomStyleSpan.kt)
-    // turns both flags on on the paint it mutates; a plain (un-spanned) TextView
-    // paint never does. Not guarded on the identity check below: unlike the
-    // typeface itself, these flags aren't cached, so a node that goes from custom
-    // back to default styling must still clear them.
-    //
-    // Closes a residual sub-few-px width drift against RN's <Text>, and a matching
-    // drift in drawn glyph positions: isLinearText disables hinting (measures
-    // against un-hinted/linear glyph outlines) and isSubpixelText changes subpixel
-    // positioning, both of which shift glyph advances by a sub-pixel amount
-    // relative to the hinted default this view's paint otherwise uses — invisible
-    // on default-styled text (RN never sets them there either) and only visible
-    // once fontFamily/fontWeight/fontStyle is customized. See
-    // docs/agent/perf-experiments.md for how this was found.
+    // Mirrors RN's CustomStyleSpan condition (TextLayoutManager.kt): any of the
+    // three set at all attaches it, regardless of value. Its apply() turns both
+    // flags on; a plain paint never does. Closes a sub-px width/glyph-position
+    // drift against RN's <Text>, only visible once one of these is customized.
+    // See docs/agent/perf-experiments.md.
     val hasCustomStyleSpan =
       fontStyle != ReactConstants.UNSET || fontWeight != ReactConstants.UNSET || fontFamily != null
     paint.isSubpixelText = hasCustomStyleSpan
     paint.isLinearText = hasCustomStyleSpan
     if (hasCustomStyleSpan != appliedHasCustomStyleSpan) {
       appliedHasCustomStyleSpan = hasCustomStyleSpan
-      // TextView never watches these flags on its own, so without an explicit nudge
-      // here they only take visual effect when something else (a typeface change
-      // below, a width change) happens to force a redraw too. requestLayout is this
-      // class's own override (see below), already built for exactly this "prop
-      // changed but Fabric emitted no updateLayout" case.
+      // EXPENSIVE: forces a re-layout (docs/agent/performance.md). Paint flags
+      // don't self-invalidate; usually setTypeface below does it for us, but not
+      // when the resolved typeface doesn't change (e.g. fontStyle="normal").
       requestLayout()
       invalidate()
     }

@@ -288,6 +288,10 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // autosize). The two agree for most strings but drift apart by typeface, only
     // visible when width isn't EXACTLY (an EXACTLY box takes its width from Yoga on
     // both sides, never from either engine's own measurement).
+    //
+    // EXPENSIVE for custom-styled text (docs/agent/performance.md): the paint's
+    // isSubpixelText/isLinearText push this onto Android's unhinted glyph path.
+    // ~2.5% extra mount cost measured; see docs/agent/perf-experiments.md.
     val rawDesiredWidth =
       if (widthMode != YogaMeasureMode.EXACTLY) {
         ceil(Layout.getDesiredWidth(view.text, view.paint).toDouble()).toInt()

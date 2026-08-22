@@ -282,6 +282,16 @@ Learned the hard way. Most of these cost an afternoon the first time.
   The Features screen's Font Variant rows carry a `fontStyle: 'normal'` purely to
   trip the gate, so that the `<Text>` overlay is comparable at all.
 
+- **Mutating a `Paint` field alone doesn't invalidate anything.**
+  `applyTypeface()`'s `isSubpixelText`/`isLinearText` writes looked inert when
+  toggled alone: `TextView` doesn't watch its own paint, so nothing redraws
+  unless something else (usually `setTypeface`, a few lines below) does it as
+  a side effect. When the resolved typeface doesn't change too (e.g.
+  `fontStyle="normal"`), that side effect never fires. Fixed by tracking the
+  last-applied value (`appliedHasCustomStyleSpan`) and calling
+  `requestLayout()`/`invalidate()` explicitly on change. Any future paint-flag
+  write here needs the same nudge, not a nearby `typeface =` to lean on.
+
 ## iOS
 
 - **Accepted limitation: wrapped text can break one word earlier than RN
