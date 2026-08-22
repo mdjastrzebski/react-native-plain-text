@@ -2,7 +2,7 @@ import { ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PlainText } from 'react-native-plain-text';
-import { useCompareText } from '../components/CompareText';
+import { useCompareText, useExperimentOn } from '../components/CompareText';
 import { CompareBox, Cover, Section, TextItem, screenStyles } from '../components/Specimen';
 import { COLOR, MONO, SERIF } from '../theme';
 
@@ -142,6 +142,7 @@ function UseCaseBaselineRow({
   label,
   parts,
 }: BaselineCombination & { showText: boolean }) {
+  const experimentOn = useExperimentOn();
   return (
     <CompareBox
       label={label}
@@ -158,7 +159,11 @@ function UseCaseBaselineRow({
       }
     >
       {parts.map((part, index) => (
-        <PlainText key={index} style={[part.style, showText && useCaseStyles.baselineCompareText]}>
+        <PlainText
+          key={index}
+          style={[part.style, showText && useCaseStyles.baselineCompareText]}
+          unstable_experiment={experimentOn}
+        >
           {part.text}
         </PlainText>
       ))}
