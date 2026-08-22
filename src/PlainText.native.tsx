@@ -21,10 +21,6 @@ export type PlainTextProps = AccessibilityProps & {
   // Per-instance override for unstable_configureTextCompat's lineHeightClippingIos.
   // Unset defers to the global config. Set here, it wins regardless of it.
   unstable_lineHeightClippingIos?: boolean;
-  // Internal, not a stable part of the public API. Forwards straight to the
-  // native `experiment` prop (see PlainTextViewNativeComponent.ts and
-  // docs/agent/perf-experiments.md) for the perf suite's current A/B test.
-  unstable_experiment?: boolean;
   testID?: string;
   nativeID?: string;
   id?: string;
@@ -68,7 +64,6 @@ export function PlainText({
   allowFontScaling,
   maxFontSizeMultiplier,
   unstable_lineHeightClippingIos,
-  unstable_experiment,
   ...accessibilityProps
 }: PlainTextProps) {
   // Text-style props don't flow through the native ViewProps, so pull them
@@ -125,7 +120,6 @@ export function PlainText({
       lineHeightClippingIos={
         unstable_lineHeightClippingIos ?? getTextCompatConfig().lineHeightClippingIos
       }
-      experiment={unstable_experiment}
       style={viewStyle}
       {...accessibilityProps}
     />

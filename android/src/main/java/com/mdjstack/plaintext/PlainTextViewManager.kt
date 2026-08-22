@@ -195,11 +195,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.includeFontPadding = includeFontPadding
   }
 
-  // Gates PlainTextView.applyTypeface()'s isSubpixelText/isLinearText fix. See
-  // docs/agent/perf-experiments.md.
+  // Unread: no experiment is currently using it. See docs/agent/perf-experiments.md.
   @ReactProp(name = "experiment", defaultBoolean = false)
   override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
-    view?.setExperiment(experiment)
   }
 
   // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as
@@ -263,10 +261,6 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setNumberOfLines(props.getIntOr("numberOfLines", 0))
     // Adds extra ascent/descent padding per line, so it affects the measured height.
     view.includeFontPadding = props.getBooleanOr("includeFontPadding", true)
-    // Gates applyTypeface()'s isSubpixelText/isLinearText fix, which changes the
-    // measured width for custom fontFamily/fontWeight/fontStyle text. See
-    // docs/agent/perf-experiments.md.
-    view.setExperiment(props.getBooleanOr("experiment", false))
     view.setPlainText(props?.getString("text") ?: "")
     // Applies the state the setters above marked dirty, in dependency order, so their
     // call order here doesn't matter.

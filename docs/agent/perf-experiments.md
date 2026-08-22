@@ -38,19 +38,38 @@ experiments simultaneously. Finish and unwire one before starting the next.
 
 ## Current state
 
-**Active on Android** (unread on iOS): gates `PlainTextView.applyTypeface()`
-setting `paint.isSubpixelText`/`isLinearText` to match RN's
-`CustomStyleSpan`. `false` (the default) is the old behavior, never setting
-either flag; `true` is the fix. Drive it live via the Features/Use Cases
-screens' "Exp" header toggle (`example/src/components/CompareText.tsx`,
-`useExperimentOn`) alongside "Vs `<Text>`" — `Specimen.tsx`'s `TextItem`
-forwards it as `unstable_experiment` and logs a `[SpecimenDiff]` line per row
-with the current `experiment` state included, so a real device run can
-confirm which state produced which numbers directly from the log instead of
-inferring it from when the toggle was last tapped. Root cause and how it was
-found, below; once confirmed stable, this should be concluded (see
-"Concluding an experiment") and made unconditional rather than left running
-indefinitely.
+**Unread.** `experiment` isn't driving anything right now, ready for the
+next test. The previous experiment — matching RN's `CustomStyleSpan` by
+setting `paint.isSubpixelText`/`isLinearText` in
+`PlainTextView.applyTypeface()` — won and was concluded: the fix is
+unconditional (no longer gated on `experiment`), and the "Exp" header toggle,
+`unstable_experiment` on `PlainText`, and the `[SpecimenDiff]` onLayout logger
+that A/B'd it (`example/src/components/CompareText.tsx`,
+`example/src/components/Specimen.tsx`) are all removed. Root cause and how it
+was found, below, kept as a history trail per "Concluding an experiment."
+
+While it was live, this surfaced a second, independent bug worth noting for
+the next experiment that touches paint state on the mounted (not just the
+off-screen measuring) view: toggling `experiment` alone often changed nothing
+visible, because `PlainTextView.applyTypeface()`'s typeface-identity guard
+(`if (resolved === appliedBaseTypeface) return`) skips the `typeface =
+resolved` line whose `TextView.setTypeface` side effect is what actually
+forces Android to rebuild its cached internal `Layout` and redraw. Mutating
+`paint.isSubpixelText`/`isLinearText` alone never invalidates or relays out
+the view on its own. Fixed by tracking the last-applied flag value
+(`appliedHasCustomStyleSpan`) and explicitly calling `requestLayout()` +
+`invalidate()` when it changes, independent of the typeface-identity check.
+This is a real, permanent fix (not experiment-only): RN's own condition
+attaches the span even when an explicit `fontStyle="normal"` doesn't change
+the resolved `Typeface`, so `hasCustomStyleSpan` can flip while typeface
+identity doesn't.
+
+A separate, also-permanent fix landed alongside it: `experiment` was missing
+from `measurementInputsEqual` in `cpp/PlainTextMeasurementHelpers.cpp`, the
+shared (both platforms) gate deciding whether Fabric bothers remeasuring at
+all. Any future experiment that changes what `measureContent`/`measure()`
+computes must add its prop there too, or toggling it alone won't trigger a
+remeasure — only some unrelated prop/remount forcing one will mask the bug.
 
 RN attaches a `CustomStyleSpan` (a `MetricAffectingSpan`,
 `.../views/text/internal/span/CustomStyleSpan.kt`) whenever
@@ -84,14 +103,27 @@ combinations like small-caps+ligatures) on every customized one.
 Fixed in `PlainTextView.applyTypeface()`: computes the identical condition
 (`fontStyle != ReactConstants.UNSET || fontWeight != ReactConstants.UNSET ||
 fontFamily != null`, using the same `ReactConstants.UNSET`-sentineled fields
-RN's own check uses) and sets both flags on `paint` to match — gated behind
-`experiment` for now (see "Current state" above) rather than made
-unconditional immediately, so it can keep being A/B'd against the old
-behavior before committing to it. Confirmed via the same real-device
-`onLayout`-based `[SpecimenDiff]` logging this whole investigation used (see
-below): with `experiment: true`, every previously-drifting row reads
-`delta: 0`; with `experiment: false`, the original drift reproduces exactly
-as before.
+RN's own check uses) and sets both flags on `paint` to match, unconditionally.
+Confirmed via the same real-device `onLayout`-based `[SpecimenDiff]` logging
+this whole investigation used (since removed, see "Current state" above):
+with the fix applied, every previously-drifting row read `delta: 0`; reverted,
+the original drift reproduced exactly as before.
+
+Investigated (real-device, avg of 5 runs) whether the fix has a measurable
+perf cost: mounting 1000 OpenSans-styled nodes moved the `interaction` metric
+(measuring.md) from 610ms to 625ms, ~2.5%. Checked whether prior art existed
+for tweaking these flags on Android: yes, `SUBPIXEL_TEXT_FLAG` alone is a
+known (if thinly-justified) idiom for custom `TypefaceSpan`s going back to at
+least 2014, and `LINEAR_TEXT_FLAG`+`SUBPIXEL_TEXT_FLAG` together is
+documented by Android's own SDK for smooth-scaling jitter — but nobody else
+was found combining both flags specifically for custom-typeface correctness,
+so RN's (and now this library's) combination has no independent precedent
+beyond RN's own source. Decided the correctness win (matching RN's `<Text>`
+exactly, both in measured width and drawn glyph position) was worth the cost
+without further optimization for now; revisit if a future perf pass wants to
+chase it (candidate angles: confirm which of the two flags actually causes
+the cost by isolating them, or cache/skip the redundant work on the
+off-screen measuring view specifically).
 
 **Dead end, corrected: a "build a real `StaticLayout` when non-boring"
 experiment, based on a wrong theory.** Before finding the actual cause

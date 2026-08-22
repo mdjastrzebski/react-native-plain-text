@@ -10,9 +10,6 @@ export type PlainTextProps = Omit<TextProps, 'children' | 'style'> & {
   // nothing for it to override on web. Kept in the type so call sites don't
   // need a platform branch just to pass it.
   unstable_lineHeightClippingIos?: boolean;
-  // No-op here too: this only toggles a native Android measurement path
-  // (see PlainText.native.tsx). Kept in the type for the same reason.
-  unstable_experiment?: boolean;
 };
 
 // Web / fallback implementation. No translation needed: CSS supports
@@ -22,7 +19,6 @@ export function PlainText({
   children,
   style,
   unstable_lineHeightClippingIos: _unstable_lineHeightClippingIos,
-  unstable_experiment: _unstable_experiment,
   ...rest
 }: PlainTextProps) {
   return (

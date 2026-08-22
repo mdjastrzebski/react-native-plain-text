@@ -71,10 +71,6 @@ class PlainTextView : AppCompatTextView {
   private var fontWeight: Int = ReactConstants.UNSET
   private var fontStyle: Int = ReactConstants.UNSET
 
-  // Perf-suite A/B flag (docs/agent/perf-experiments.md). Currently gates
-  // applyTypeface()'s isSubpixelText/isLinearText fix below.
-  private var experiment: Boolean = false
-
   // Named for the value, not TextView.setFontVariationSettings, to avoid colliding
   // with the synthetic property Kotlin derives from that method pair.
   private var variationSettings: String? = null
@@ -82,6 +78,15 @@ class PlainTextView : AppCompatTextView {
   // back, since getFontVariationSettings() returns the paint's string, which outlives
   // the typeface it was applied to).
   private var appliedVariationSettings: String? = null
+
+  // The isSubpixelText/isLinearText value applyTypeface last set on `paint`. Tracked
+  // separately from appliedBaseTypeface: toggling `experiment` alone (no font prop
+  // change) leaves the resolved typeface identical, so the setTypeface side effect
+  // below that would otherwise force TextView to rebuild/redraw never fires. Without
+  // this, the paint flags flip in memory but the mounted view keeps drawing its
+  // stale, already-built Layout, invisible unless something else (a width change, a
+  // remount) happens to force a redraw too.
+  private var appliedHasCustomStyleSpan: Boolean = false
 
   // Never the live typeface: applyStyles derives from whatever is passed when
   // fontFamily is null, so chaining would leak a should-be-cleared font between nodes
@@ -355,12 +360,6 @@ class PlainTextView : AppCompatTextView {
     dirtyTypeface = true
   }
 
-  // Perf-suite A/B flag. See docs/agent/perf-experiments.md.
-  fun setExperiment(experiment: Boolean) {
-    this.experiment = experiment
-    dirtyTypeface = true
-  }
-
   // Mirrors <Text> (TextAttributeProps#setFontVariant): an OpenType feature-settings
   // string on the paint, not the typeface. Deliberately unguarded: Paint early-outs
   // on an equal string, and the invalidation is redundant with setText anyway. See
@@ -456,27 +455,37 @@ class PlainTextView : AppCompatTextView {
   }
 
   private fun applyTypeface() {
-    // EXPERIMENT (behind `experiment`, docs/agent/perf-experiments.md): mirrors RN's
-    // own condition for attaching a CustomStyleSpan (TextLayoutManager.kt):
-    // fontStyle/fontWeight/fontFamily set at all, regardless of what they resolve to
-    // (an explicit fontStyle="normal" still counts). That span's
-    // updateMeasureState/updateDrawState (CustomStyleSpan.kt) turns both flags on on
-    // the paint it mutates; a plain (un-spanned) TextView paint never does. Not
-    // guarded on the identity check below: unlike the typeface itself, these flags
-    // aren't cached, so a node that goes from custom back to default styling must
-    // still clear them.
+    // Mirrors RN's own condition for attaching a CustomStyleSpan
+    // (TextLayoutManager.kt): fontStyle/fontWeight/fontFamily set at all,
+    // regardless of what they resolve to (an explicit fontStyle="normal" still
+    // counts). That span's updateMeasureState/updateDrawState (CustomStyleSpan.kt)
+    // turns both flags on on the paint it mutates; a plain (un-spanned) TextView
+    // paint never does. Not guarded on the identity check below: unlike the
+    // typeface itself, these flags aren't cached, so a node that goes from custom
+    // back to default styling must still clear them.
     //
-    // This closes the residual sub-few-px width drift against RN's <Text>
-    // documented in docs/agent/perf-experiments.md: isLinearText disables hinting
-    // (measures against un-hinted/linear glyph outlines) and isSubpixelText changes
-    // subpixel positioning, both of which shift measured glyph advance widths
-    // slightly relative to the hinted default this view's paint otherwise measures
-    // with — invisible on default-styled text (RN never sets them there either) and
-    // only visible once fontFamily/fontWeight/fontStyle is customized.
-    val hasCustomStyleSpan = experiment &&
-      (fontStyle != ReactConstants.UNSET || fontWeight != ReactConstants.UNSET || fontFamily != null)
+    // Closes a residual sub-few-px width drift against RN's <Text>, and a matching
+    // drift in drawn glyph positions: isLinearText disables hinting (measures
+    // against un-hinted/linear glyph outlines) and isSubpixelText changes subpixel
+    // positioning, both of which shift glyph advances by a sub-pixel amount
+    // relative to the hinted default this view's paint otherwise uses — invisible
+    // on default-styled text (RN never sets them there either) and only visible
+    // once fontFamily/fontWeight/fontStyle is customized. See
+    // docs/agent/perf-experiments.md for how this was found.
+    val hasCustomStyleSpan =
+      fontStyle != ReactConstants.UNSET || fontWeight != ReactConstants.UNSET || fontFamily != null
     paint.isSubpixelText = hasCustomStyleSpan
     paint.isLinearText = hasCustomStyleSpan
+    if (hasCustomStyleSpan != appliedHasCustomStyleSpan) {
+      appliedHasCustomStyleSpan = hasCustomStyleSpan
+      // TextView never watches these flags on its own, so without an explicit nudge
+      // here they only take visual effect when something else (a typeface change
+      // below, a width change) happens to force a redraw too. requestLayout is this
+      // class's own override (see below), already built for exactly this "prop
+      // changed but Fabric emitted no updateLayout" case.
+      requestLayout()
+      invalidate()
+    }
 
     // Not expensive despite appearances: every applyStyles path is interned, via
     // ReactFontManager's or Typeface's own caches.

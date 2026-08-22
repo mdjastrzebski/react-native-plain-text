@@ -22,19 +22,12 @@ import { COLOR } from '../theme';
 // "Compat" rides alongside it rather than as its own standing toggle, but it
 // is always visible: what it does is visible on `PlainText` itself, with or
 // without the RN `<Text>` overlay to compare against.
-//
-// "Exp" is the same shape as "Compat": a standing toggle for
-// PlainText.native.tsx's `unstable_experiment`, i.e. whichever measurement
-// A/B test PlainTextViewManager.kt's `experiment` prop currently drives (see
-// docs/agent/perf-experiments.md). Also always visible, for the same reason.
 const CompareTextContext = createContext<
   | {
       showText: boolean;
       toggle: () => void;
       compatOn: boolean;
       toggleCompat: () => void;
-      experimentOn: boolean;
-      toggleExperiment: () => void;
     }
   | undefined
 >(undefined);
@@ -42,13 +35,11 @@ const CompareTextContext = createContext<
 export function CompareTextProvider({ children }: { children: ReactNode }) {
   const [showText, setShowText] = useState(false);
   const [compatOn, setCompatOn] = useState(false);
-  const [experimentOn, setExperimentOn] = useState(false);
   const toggle = useCallback(() => setShowText((v) => !v), []);
   const toggleCompat = useCallback(() => setCompatOn((v) => !v), []);
-  const toggleExperiment = useCallback(() => setExperimentOn((v) => !v), []);
   const value = useMemo(
-    () => ({ showText, toggle, compatOn, toggleCompat, experimentOn, toggleExperiment }),
-    [showText, toggle, compatOn, toggleCompat, experimentOn, toggleExperiment]
+    () => ({ showText, toggle, compatOn, toggleCompat }),
+    [showText, toggle, compatOn, toggleCompat]
   );
 
   return <CompareTextContext.Provider value={value}>{children}</CompareTextContext.Provider>;
@@ -62,7 +53,7 @@ export function useCompareText(navigation: NativeStackNavigationProp<ParamListBa
   if (context == null) {
     throw new Error('useCompareText must be used inside a CompareTextProvider');
   }
-  const { showText, toggle, compatOn, toggleCompat, experimentOn, toggleExperiment } = context;
+  const { showText, toggle, compatOn, toggleCompat } = context;
 
   useLayoutEffect(() => {
     const button = (
@@ -93,18 +84,6 @@ export function useCompareText(navigation: NativeStackNavigationProp<ParamListBa
       </Pressable>
     );
 
-    const experimentButton = (
-      <Pressable
-        onPress={toggleExperiment}
-        hitSlop={8}
-        style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonPressed]}
-      >
-        <PlainText style={styles.headerButtonLabel}>
-          {experimentOn ? 'Exp: On' : 'Exp: Off'}
-        </PlainText>
-      </Pressable>
-    );
-
     navigation.setOptions({
       // `headerRight` is what Android draws. On iOS the same elements go through
       // `unstable_headerRightItems` instead, for `hidesSharedBackground`: from
@@ -112,22 +91,20 @@ export function useCompareText(navigation: NativeStackNavigationProp<ParamListBa
       // the rounded, shadowed capsule it puts behind this label belongs to no
       // other surface in the app.
       //
-      // Written as three JSX expressions rather than an array rendered as
-      // children, so none of the buttons needs a `key`.
+      // Written as two JSX expressions rather than an array rendered as
+      // children, so neither button needs a `key`.
       headerRight: () => (
         <View style={styles.headerButtonRow}>
-          {experimentButton}
           {compatButton}
           {button}
         </View>
       ),
       unstable_headerRightItems: () => [
-        { type: 'custom', element: experimentButton, hidesSharedBackground: true },
         { type: 'custom', element: compatButton, hidesSharedBackground: true },
         { type: 'custom', element: button, hidesSharedBackground: true },
       ],
     });
-  }, [navigation, showText, toggle, compatOn, toggleCompat, experimentOn, toggleExperiment]);
+  }, [navigation, showText, toggle, compatOn, toggleCompat]);
 
   return showText;
 }
@@ -141,15 +118,6 @@ export function useCompatOn(): boolean {
     throw new Error('useCompatOn must be used inside a CompareTextProvider');
   }
   return context.compatOn;
-}
-
-// Same shape as useCompatOn, for unstable_experiment.
-export function useExperimentOn(): boolean {
-  const context = useContext(CompareTextContext);
-  if (context == null) {
-    throw new Error('useExperimentOn must be used inside a CompareTextProvider');
-  }
-  return context.experimentOn;
 }
 
 const styles = StyleSheet.create({

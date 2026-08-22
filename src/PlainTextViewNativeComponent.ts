@@ -89,11 +89,7 @@ export interface NativeProps extends ViewProps {
   // whatever is being tried. What it does is platform- and experiment-
   // specific. A platform with no experiment wired up ignores it.
   //
-  // Current experiment (Android only): gates PlainTextView.applyTypeface()
-  // setting paint.isSubpixelText/isLinearText to match RN's CustomStyleSpan
-  // for custom fontFamily/fontWeight/fontStyle text, closing a residual
-  // sub-few-px width drift against RN's <Text>. See
-  // docs/agent/perf-experiments.md.
+  // Currently unread: no experiment is live. See docs/agent/perf-experiments.md.
   experiment?: CodegenTypes.WithDefault<boolean, false>;
   // Internal, not part of PlainText's public props. Driven by
   // unstable_configureTextCompat (src/compat.ts), forwarded on every render
