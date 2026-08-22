@@ -48,28 +48,14 @@ that A/B'd it (`example/src/components/CompareText.tsx`,
 `example/src/components/Specimen.tsx`) are all removed. Root cause and how it
 was found, below, kept as a history trail per "Concluding an experiment."
 
-While it was live, this surfaced a second, independent bug worth noting for
-the next experiment that touches paint state on the mounted (not just the
-off-screen measuring) view: toggling `experiment` alone often changed nothing
-visible, because `PlainTextView.applyTypeface()`'s typeface-identity guard
-(`if (resolved === appliedBaseTypeface) return`) skips the `typeface =
-resolved` line whose `TextView.setTypeface` side effect is what actually
-forces Android to rebuild its cached internal `Layout` and redraw. Mutating
-`paint.isSubpixelText`/`isLinearText` alone never invalidates or relays out
-the view on its own. Fixed by tracking the last-applied flag value
-(`appliedHasCustomStyleSpan`) and explicitly calling `requestLayout()` +
-`invalidate()` when it changes, independent of the typeface-identity check.
-This is a real, permanent fix (not experiment-only): RN's own condition
-attaches the span even when an explicit `fontStyle="normal"` doesn't change
-the resolved `Typeface`, so `hasCustomStyleSpan` can flip while typeface
-identity doesn't.
-
-A separate, also-permanent fix landed alongside it: `experiment` was missing
-from `measurementInputsEqual` in `cpp/PlainTextMeasurementHelpers.cpp`, the
-shared (both platforms) gate deciding whether Fabric bothers remeasuring at
-all. Any future experiment that changes what `measureContent`/`measure()`
-computes must add its prop there too, or toggling it alone won't trigger a
-remeasure — only some unrelated prop/remount forcing one will mask the bug.
+While it was live, this surfaced two other, permanent bugs, both now fixed
+and documented where the next reader would actually look for them rather
+than here: [native-gotchas.md](native-gotchas.md#android) (mutating a paint
+flag alone doesn't invalidate/redraw the view) and
+[sync-points.md](sync-points.md#a-prop-that-affects-measured-size)
+(`experiment` was missing from `measurementInputsEqual`, so toggling it
+alone never re-triggered a remeasure). Both are worth knowing before wiring
+the next experiment onto either the mounted view's paint or measurement.
 
 RN attaches a `CustomStyleSpan` (a `MetricAffectingSpan`,
 `.../views/text/internal/span/CustomStyleSpan.kt`) whenever
