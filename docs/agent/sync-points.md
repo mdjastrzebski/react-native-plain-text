@@ -23,7 +23,7 @@ count. All five, or the box and the text disagree:
 
 | Site                                                                             | Miss it and…                                                                                                            |
 | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `cpp/PlainTextMeasurementHelpers.cpp` → `measurementInputsEqual`                 | the size goes stale after an update (hit in practice with `experiment`, see [perf-experiments.md](perf-experiments.md)) |
+| `cpp/PlainTextMeasurementHelpers.cpp` → `measurementInputsEqual`                 | the size goes stale after an update                                                                                     |
 | `ios/PlainTextShadowNode.mm` → `measureContent`                                  | iOS measures without it, must mirror `RNPlainText.mm`'s `applyContentFromProps`                                         |
 | `android/.../PlainTextMeasurementsManager.cpp`                                   | the prop never reaches the Android measure pass                                                                         |
 | `PlainTextViewManager.kt` → `measure()`                                          | same from the other side, and it must apply props exactly as the mounted view does                                      |
@@ -83,7 +83,7 @@ three-way default contract above.
 
 ## `lineHeightClippingIos`: global config with a per-instance override
 
-Unlike `hasLetterSpacing`/`experiment`, this one _is_ one of `PlainText`'s
+Unlike `hasLetterSpacing`, this one _is_ one of `PlainText`'s
 public props, just named differently at each layer. `PlainText.native.tsx`
 exposes it as `unstable_lineHeightClippingIos`, the `unstable_` marking that
 its shape/default may change without a major version bump, matching

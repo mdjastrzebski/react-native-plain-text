@@ -80,7 +80,7 @@ class PlainTextView : AppCompatTextView {
   private var appliedVariationSettings: String? = null
 
   // The isSubpixelText/isLinearText value applyTypeface last set on `paint`. Tracked
-  // separately from appliedBaseTypeface: toggling `experiment` alone (no font prop
+  // separately from appliedBaseTypeface: toggling this value alone (no font prop
   // change) leaves the resolved typeface identical, so the setTypeface side effect
   // below that would otherwise force TextView to rebuild/redraw never fires. Without
   // this, the paint flags flip in memory but the mounted view keeps drawing its
