@@ -266,46 +266,53 @@ export default function FeaturesScreen({ navigation }: Props) {
       </Section>
 
       <Section title="Hyphenation" footer={HYPHENATION_FOOTER}>
+        {/* Soft hyphens (U+00AD) pre-inserted at every Duden syllable break in
+            the long compound word (Rei-se-kran-ken-ver-si-che-rung). "none"
+            strips them, so the word stays whole; "manual" leaves them, so it
+            breaks at one instead. Neither needs lang or a dictionary. */}
         <TextItem
-          label='hyphens="none", lang="de"'
+          label='hyphens="none": soft hyphens stripped, word stays whole'
           showText={showText}
-          lang="de"
           hyphens="none"
-          style={styles.hyphenationProbe}
+          style={styles.hyphenationRow}
         >
           {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
         </TextItem>
         <TextItem
-          label='hyphens="manual", lang="de" (default)'
+          label='hyphens="manual" (default): breaks at inserted soft hyphens'
           showText={showText}
-          lang="de"
           hyphens="manual"
-          style={styles.hyphenationProbe}
+          style={styles.hyphenationRow}
         >
           {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
         </TextItem>
+        {/* Same "manual", but the word carries no soft hyphens this time: unlike
+            "auto" below, "manual" never invents a break point on its own. */}
         <TextItem
-          label='hyphens="auto", no lang'
+          label='hyphens="manual": no soft hyphens, so no break'
           showText={showText}
-          hyphens="auto"
-          style={styles.hyphenationProbe}
+          hyphens="manual"
+          style={styles.hyphenationRow}
         >
           {HYPHENATION_LANG_SPECIMEN}
         </TextItem>
+        {/* No soft hyphens in this one: "auto" needs a dictionary lookup, and
+            lang="de" is what picks it (see HYPHENATION_FOOTER). */}
         <TextItem
-          label='hyphens="auto", lang="de"'
+          label='hyphens="auto", lang="de": dictionary hyphenation'
           showText={showText}
           lang="de"
           hyphens="auto"
-          style={styles.hyphenationProbe}
+          style={styles.hyphenationRow}
         >
           {HYPHENATION_LANG_SPECIMEN}
         </TextItem>
         <TextItem
-          label='android_hyphenationFrequency="full" (RN <Text> compat, Android only)'
+          label='android_hyphenationFrequency="full", lang="de": RN <Text> compat'
           showText={showText}
+          lang="de"
           android_hyphenationFrequency="full"
-          style={styles.hyphenationProbe}
+          style={styles.hyphenationRow}
         >
           {HYPHENATION_LANG_SPECIMEN}
         </TextItem>
@@ -928,9 +935,14 @@ const styles = StyleSheet.create({
   wrapProbe: {
     fontSize: 18,
   },
-  hyphenationProbe: {
-    width: 200,
-    fontSize: 22,
+  // A fixed width, not a percentage: at 100% the compound word fit whole at
+  // the end of its line and the break landed at the space before it instead
+  // of inside it, so none of these rows ever showed a real mid-word hyphen.
+  // ~50% of a typical phone's width, so it doesn't need `wideRow` to resolve
+  // against.
+  hyphenationRow: {
+    width: 210,
+    fontSize: 20,
   },
   // Accessibility rows carry no visual difference at all, so they are set below
   // body size: the label above the row is the content here.
@@ -989,15 +1001,26 @@ const PARAGRAPH_LONG = `${PARAGRAPH} ${PARAGRAPH} ${PARAGRAPH}`;
 // full run of figures in one string, and the pangram carries neither.
 const FONT_VARIANT_SPECIMEN = 'Waffle office 0123456789';
 
-const HYPHENATION_LANG_SPECIMEN = 'Strandkorbvermietung';
+// A long German compound word, long enough to need a mid-word break at 100%
+// width on a phone. Unlike "Donaudampfschifffahrt" (the more famous example),
+// no morpheme boundary sits next to a doubled letter, so wherever a break
+// actually lands is unambiguous to read off, not obscured by two identical
+// glyphs next to each other.
+const HYPHENATION_LANG_SPECIMEN =
+  'Die Reisekrankenversicherung war früher nur etwas für Geschäftsreisende, heute nutzen sie auch ganz normale Familien.';
 
-// Soft hyphens (U+00AD) at real German syllable breaks: "manual" can
-// hyphenate at one, "none" (which strips them) visibly can't.
-const HYPHENATION_SOFT_HYPHEN_SPECIMEN = 'Strand­korb­vermietung';
+// Same sentence, every multi-syllable word split at its full Duden
+// syllabification (not just the compound word): Rei-se-kran-ken-ver-si-che-rung,
+// früh-er, et-was, Ge-schäfts-rei-sen-de, heu-te, nut-zen, nor-ma-le,
+// Fa-mi-li-en. "manual" can hyphenate at any of these, "none" (which strips
+// them) visibly can't.
+const HYPHENATION_SOFT_HYPHEN_SPECIMEN =
+  'Die Rei­se­kran­ken­ver­si­che­rung war früh­er nur et­was für Ge­schäfts­rei­sen­de, heu­te nut­zen sie auch ganz nor­ma­le Fa­mi­li­en.';
 
 const HYPHENATION_FOOTER = Platform.select({
   ios: '`hyphens`, PlainText-only. RN <Text> has no iOS hyphenation control.',
-  default: '`hyphens` resolves to android_hyphenationFrequency (see PlainText.native.tsx).',
+  default:
+    '`hyphens` resolves against android_hyphenationFrequency natively (see PlainTextView.kt).',
 });
 
 const EMOJI_SPECIMEN = 'Quick brown 🦊 jumps over the lazy 🐶';

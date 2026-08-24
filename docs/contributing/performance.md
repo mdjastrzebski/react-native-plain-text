@@ -57,20 +57,20 @@ Two rules, both binding on every new prop or style.
 Nothing is heavy today. `adjustsFontSizeToFit` would be the first, which is part
 of why it is still in [todo.md](todo.md).
 
-| Prop                     | Cost   | Why                                                                                                                                                                           |
-| ------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fontFamily`             | medium | First resolution hits the system font database on iOS and the asset lookup on Android. Cached after, per family and size. Also carries `fontWeight`/`fontStyle`'s cost below. |
-| `fontWeight`/`fontStyle` | medium | Android only: setting either, even to the font's own default value, pushes measurement onto the unhinted glyph path below, matching RN's `<Text>`. ~2.5% extra mount cost.    |
-| `fontVariant`            | medium | A descriptor round trip on an iOS cache miss, and a fresh string plus an unguarded paint write per apply on Android.                                                          |
-| `fontVariationSettings`  | medium | A `CTFont` copy on an iOS cache miss. On Android it derives a new `Typeface`, and any typeface change re-derives it, twice, since clearing the old axes derives as well.      |
-| `lineHeight`             | medium | Forces the iOS attributed-string path and an Android `SpannableString` with a span, in place of a plain string.                                                               |
-| `letterSpacing`          | medium | Forces the iOS attributed-string path. The Android side is one paint write.                                                                                                   |
-| `textDecorationLine`     | medium | Forces the iOS attributed-string path. The Android side is two paint flags.                                                                                                   |
-| `textShadow*`            | medium | Forces the iOS attributed-string path. The Android side is one `Paint.setShadowLayer` call.                                                                                   |
-| `textTransform`          | medium | Allocates a transformed copy of the string per apply on both platforms; `capitalize` additionally walks word boundaries.                                                      |
-| `hyphens`                | medium | `auto` forces the iOS attributed-string path; `none` allocates a stripped copy of the text instead. Android ignores it, see `android_hyphenationFrequency` below.             |
-| `lang`                   | medium | Forces the iOS attributed-string path. The Android side is one guarded locale write.                                                                                          |
-| everything else          | light  | One write, or one entry in the font cache key. Includes `android_hyphenationFrequency`: one `hyphenationFrequency` write on Android, ignored on iOS.                          |
+| Prop                     | Cost   | Why                                                                                                                                                                                                  |
+| ------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fontFamily`             | medium | First resolution hits the system font database on iOS and the asset lookup on Android. Cached after, per family and size. Also carries `fontWeight`/`fontStyle`'s cost below.                        |
+| `fontWeight`/`fontStyle` | medium | Android only: setting either, even to the font's own default value, pushes measurement onto the unhinted glyph path below, matching RN's `<Text>`. ~2.5% extra mount cost.                           |
+| `fontVariant`            | medium | A descriptor round trip on an iOS cache miss, and a fresh string plus an unguarded paint write per apply on Android.                                                                                 |
+| `fontVariationSettings`  | medium | A `CTFont` copy on an iOS cache miss. On Android it derives a new `Typeface`, and any typeface change re-derives it, twice, since clearing the old axes derives as well.                             |
+| `lineHeight`             | medium | Forces the iOS attributed-string path and an Android `SpannableString` with a span, in place of a plain string.                                                                                      |
+| `letterSpacing`          | medium | Forces the iOS attributed-string path. The Android side is one paint write.                                                                                                                          |
+| `textDecorationLine`     | medium | Forces the iOS attributed-string path. The Android side is two paint flags.                                                                                                                          |
+| `textShadow*`            | medium | Forces the iOS attributed-string path. The Android side is one `Paint.setShadowLayer` call.                                                                                                          |
+| `textTransform`          | medium | Allocates a transformed copy of the string per apply on both platforms; `capitalize` additionally walks word boundaries.                                                                             |
+| `hyphens`                | medium | `auto` forces the iOS attributed-string path; `none` allocates a stripped copy of the text instead. The Android side is one `hyphenationFrequency` write, like `android_hyphenationFrequency` below. |
+| `lang`                   | medium | Forces the iOS attributed-string path. The Android side is one guarded locale write.                                                                                                                 |
+| everything else          | light  | One write, or one entry in the font cache key. Includes `android_hyphenationFrequency`: one `hyphenationFrequency` write on Android, ignored on iOS.                                                 |
 
 Five of those are medium for the same single reason: `applyContentFromProps`
 takes its plain path only when `lineHeight`, `letterSpacing`,

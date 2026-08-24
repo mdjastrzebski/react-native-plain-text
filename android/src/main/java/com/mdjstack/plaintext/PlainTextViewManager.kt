@@ -205,10 +205,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.includeFontPadding = includeFontPadding
   }
 
-  // No-op: iOS-only at this layer. PlainText.native.tsx resolves `hyphens` into
-  // android_hyphenationFrequency below, so Android never needs to read it.
   @ReactProp(name = "hyphens")
   override fun setHyphens(view: PlainTextView?, value: String?) {
+    view?.setHyphens(value)
   }
 
   @ReactProp(name = "android_hyphenationFrequency")
@@ -277,7 +276,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setLetterSpacingDip(props.getFloatOr("letterSpacing", 0f))
     view.setLineHeight(props.getFloatOr("lineHeight", 0f))
     // Hyphenation moves the soft line breaks, so the wrapped height depends on it.
-    // An absent key means the default: the setter maps null to NONE.
+    // Both feed the same resolution (see PlainTextView.kt); absent keys mean their
+    // codegen defaults, "manual" and "none".
+    view.setHyphens(props?.getString("hyphens"))
     view.setAndroidHyphenationFrequency(props?.getString("android_hyphenationFrequency"))
     // The locale picks the hyphenation patterns, so it moves the breaks too. Absent
     // or "" means the default locale: the setter restores it.

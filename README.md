@@ -97,8 +97,8 @@ Beyond RN `<Text>`, PlainText adds hyphenation control:
 
 - `hyphens`: `'none' | 'manual' | 'auto'`, matching CSS's `hyphens`. `'manual'`
   (default) breaks only at a soft hyphen (`­`), `'none'` strips soft hyphens,
-  `'auto'` hyphenates automatically (pair with `lang` on iOS). Wins over
-  `android_hyphenationFrequency` when both are set.
+  `'auto'` hyphenates automatically (pair with `lang` on iOS). `'none'`/`'auto'`
+  win over `android_hyphenationFrequency` on Android.
 - `android_hyphenationFrequency`: Android only, like RN `<Text>`, kept for
   compat: `'none' | 'normal' | 'full'`. Prefer `hyphens` above.
 - `lang`: BCP-47 language tag (e.g. `'de'`), picking the hyphenation dictionary

@@ -109,6 +109,11 @@ class PlainTextView : AppCompatTextView {
 
   private var appliedLang: String? = null
 
+  // Raw values behind hyphenationFrequency, combined by applyHyphenationFrequency
+  // regardless of which setter last ran. See setHyphens.
+  private var hyphens: String? = null
+  private var androidHyphenationFrequency: String? = null
+
   // Reused by PlainTextViewManager for measurement. Never attached to a window, so
   // posting measureAndLayout would queue forever.
   internal var isMeasureOnly: Boolean = false
@@ -574,12 +579,28 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
-  // Mirrors <Text> (ReactTextViewManager#setAndroidHyphenationFrequency). Fed either
-  // directly from android_hyphenationFrequency or resolved from `hyphens` in
-  // PlainText.native.tsx. Android-only, like RN.
-  //
+  // Web-like `hyphens`. 'none'/'auto' override android_hyphenationFrequency;
+  // 'manual' (also the default codegen sends when unset, so it can't be told
+  // apart from "not set") defers to it instead.
+  fun setHyphens(value: String?) {
+    hyphens = value
+    applyHyphenationFrequency()
+  }
+
+  // Mirrors <Text> (ReactTextViewManager#setAndroidHyphenationFrequency). RN <Text>
+  // compat; overridden by hyphens="none"/"auto" above. Android-only, like RN.
+  fun setAndroidHyphenationFrequency(value: String?) {
+    androidHyphenationFrequency = value
+    applyHyphenationFrequency()
+  }
+
   // "full" prefers FULL_FAST on API 33+: perf-only, not a prop value.
-  fun setAndroidHyphenationFrequency(frequency: String?) {
+  private fun applyHyphenationFrequency() {
+    val frequency = when (hyphens) {
+      "auto" -> "full"
+      "none" -> "none"
+      else -> androidHyphenationFrequency
+    }
     val value = when (frequency) {
       null, "none" -> Layout.HYPHENATION_FREQUENCY_NONE
       "normal" -> Layout.HYPHENATION_FREQUENCY_NORMAL

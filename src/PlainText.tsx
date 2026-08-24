@@ -24,11 +24,11 @@ export type PlainTextProps = AccessibilityProps & {
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
-  // Web-like `hyphens`. Wins over android_hyphenationFrequency on Android when
-  // both are set (see resolveAndroidHyphenationFrequency).
+  // Web-like `hyphens`. On Android, 'none'/'auto' win over
+  // android_hyphenationFrequency below (resolved natively, see PlainTextView.kt).
   hyphens?: 'none' | 'manual' | 'auto';
   // Android-only, same name and values as RN <Text>'s prop, kept for RN <Text>
-  // compat. iOS ignores it. Superseded by `hyphens` above when set.
+  // compat. iOS ignores it.
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
   // BCP-47 language tag (e.g. 'de', 'de-DE') for the text, driving the
   // hyphenation dictionary and locale-sensitive line breaking/glyph selection.
@@ -66,24 +66,6 @@ function resolveFontVariant(fontVariant: TextStyle['fontVariant']): readonly str
     .split(FONT_VARIANT_SEPARATORS)
     .filter((variant) => variant.length > 0);
   return variants.length > 0 ? variants : undefined;
-}
-
-// `hyphens` wins on Android when set: 'auto' -> 'full', 'none'/'manual' -> 'none'
-// (Android can't honor a soft hyphen without FULL). Unset falls back to
-// android_hyphenationFrequency.
-function resolveAndroidHyphenationFrequency(
-  hyphens: PlainTextProps['hyphens'],
-  androidHyphenationFrequency: PlainTextProps['android_hyphenationFrequency']
-): 'none' | 'normal' | 'full' | undefined {
-  switch (hyphens) {
-    case 'auto':
-      return 'full';
-    case 'none':
-    case 'manual':
-      return 'none';
-    default:
-      return androidHyphenationFrequency;
-  }
 }
 
 export function mapPlainTextProps({
@@ -157,10 +139,7 @@ export function mapPlainTextProps({
     allowFontScaling,
     maxFontSizeMultiplier,
     hyphens,
-    android_hyphenationFrequency: resolveAndroidHyphenationFrequency(
-      hyphens,
-      android_hyphenationFrequency
-    ),
+    android_hyphenationFrequency,
     lang,
     includeFontPadding,
     lineHeightClippingIos: unstable_lineHeightClippingIos,

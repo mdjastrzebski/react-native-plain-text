@@ -80,17 +80,16 @@ export interface NativeProps extends ViewProps {
     'none' | 'uppercase' | 'lowercase' | 'capitalize',
     'none'
   >;
-  // Web-like `hyphens`. iOS-only at this layer: PlainText.tsx folds it
-  // into android_hyphenationFrequency below, so Android ignores it (no-op
-  // setter). 'manual' (default) is UILabel's natural state, no cost. 'none'
-  // additionally strips soft hyphens (U+00AD) to match Android/Web. 'auto' sets
-  // usesDefaultHyphenation=true.
+  // Web-like `hyphens`. iOS: 'manual' (default) is UILabel's natural state, no
+  // cost; 'none' strips soft hyphens (U+00AD) to match Android/Web; 'auto' sets
+  // usesDefaultHyphenation=true. Android: 'none'/'auto' resolve into
+  // android_hyphenationFrequency below (PlainTextView.kt); 'manual' defers to it.
   //
   // Cost: medium. 'auto' forces iOS's attributed-string path; 'none' allocates
   // a stripped copy of the text.
   hyphens?: CodegenTypes.WithDefault<'none' | 'manual' | 'auto', 'manual'>;
   // Android-only, like RN <Text>'s prop of the same name, kept for RN <Text>
-  // compat. iOS ignores it. Superseded by `hyphens` above when set.
+  // compat. iOS ignores it.
   android_hyphenationFrequency?: CodegenTypes.WithDefault<'none' | 'normal' | 'full', 'none'>;
   // BCP-47 language tag (e.g. 'de', 'de-DE') for the text itself, driving the
   // hyphenation dictionary and locale-sensitive line breaking/glyph selection.
