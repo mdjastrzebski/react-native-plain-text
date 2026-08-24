@@ -93,11 +93,16 @@ Everything below is API-compatible with RN `<Text>`. Most commonly used:
   RN's accessibility props (`accessible`, `accessibilityLabel`,
   `accessibilityRole`, `accessibilityState`, …).
 
-Beyond RN `<Text>`, PlainText adds `ios_hyphenationFactor` (iOS,
-`NSParagraphStyle`'s `hyphenationFactor`), `android_hyphenationFrequency`
-(Android, like RN `<Text>`'s prop of the same name), and `lang` (a BCP-47
-language tag driving the hyphenation dictionary and locale-sensitive line
-breaking).
+Beyond RN `<Text>`, PlainText adds hyphenation control:
+
+- `hyphens`: `'none' | 'manual' | 'auto'`, matching CSS's `hyphens`. `'manual'`
+  (default) breaks only at a soft hyphen (`­`), `'none'` strips soft hyphens,
+  `'auto'` hyphenates automatically (pair with `lang` on iOS). Wins over
+  `android_hyphenationFrequency` when both are set.
+- `android_hyphenationFrequency`: Android only, like RN `<Text>`, kept for
+  compat: `'none' | 'normal' | 'full'`. Prefer `hyphens` above.
+- `lang`: BCP-47 language tag (e.g. `'de'`), picking the hyphenation dictionary
+  and locale-sensitive line breaking.
 
 See
 [Props and styles](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles)

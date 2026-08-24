@@ -68,16 +68,17 @@ of why it is still in [todo.md](todo.md).
 | `textDecorationLine`     | medium | Forces the iOS attributed-string path. The Android side is two paint flags.                                                                                                   |
 | `textShadow*`            | medium | Forces the iOS attributed-string path. The Android side is one `Paint.setShadowLayer` call.                                                                                   |
 | `textTransform`          | medium | Allocates a transformed copy of the string per apply on both platforms; `capitalize` additionally walks word boundaries.                                                      |
-| `ios_hyphenationFactor`  | medium | Forces the iOS attributed-string path. Android ignores it entirely.                                                                                                            |
-| `lang`                   | medium | Forces the iOS attributed-string path. The Android side is one guarded locale write.                                                                                           |
-| everything else          | light  | One write, or one entry in the font cache key.                                                                                                                                |
+| `hyphens`                | medium | `auto` forces the iOS attributed-string path; `none` allocates a stripped copy of the text instead. Android ignores it, see `android_hyphenationFrequency` below.             |
+| `lang`                   | medium | Forces the iOS attributed-string path. The Android side is one guarded locale write.                                                                                          |
+| everything else          | light  | One write, or one entry in the font cache key. Includes `android_hyphenationFrequency`: one `hyphenationFrequency` write on Android, ignored on iOS.                          |
 
-Six of those are medium for the same single reason: `applyContentFromProps`
+Five of those are medium for the same single reason: `applyContentFromProps`
 takes its plain path only when `lineHeight`, `letterSpacing`,
-`textDecorationLine`, `textShadowOffset`, `ios_hyphenationFactor` and `lang` are
-all unset. Any one of them puts the node on the `NSAttributedString` path for
-good. A further prop that needs an attributed-string attribute is therefore free
-on top of the first, and that is the argument for expressing a new iOS text
+`textDecorationLine`, `textShadowOffset` and `lang` are all unset. Any one of
+them puts the node on the `NSAttributedString` path for good. `hyphens` is the
+exception: only `auto` joins that group; `none` stays on the plain path. A
+further prop that needs an attributed-string attribute is therefore free on top
+of the first group, and that is the argument for expressing a new iOS text
 feature as one if it has the choice.
 
 ### Where the "unused is free" rule gets tested

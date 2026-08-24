@@ -14,7 +14,7 @@ bool measurementInputsEqual(
       a.lineHeight == b.lineHeight &&
       a.letterSpacing == b.letterSpacing &&
       a.textTransform == b.textTransform &&
-      a.ios_hyphenationFactor == b.ios_hyphenationFactor &&
+      a.hyphens == b.hyphens &&
       a.android_hyphenationFrequency == b.android_hyphenationFrequency &&
       a.lang == b.lang &&
       a.numberOfLines == b.numberOfLines &&

@@ -7,6 +7,7 @@
 
 #import "PlainTextComponentDescriptor.h"
 #import "PlainTextFont.h"
+#import "PlainTextHyphenation.h"
 #import "PlainTextTextTransform.h"
 #import "RCTFabricComponentsPlugins.h"
 
@@ -185,6 +186,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     NSTextAlignment alignment = RNPlainTextAlignmentFromProp(props.textAlign);
     NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
     text = plainTextApplyTextTransform(text, props.textTransform);
+    text = plainTextApplyHyphens(text, props.hyphens);
 
     BOOL hasLineHeight = props.lineHeight > 0;
     BOOL hasLetterSpacing = props.letterSpacing.has_value();
@@ -197,8 +199,9 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     }
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
-    // Hyphenation lives only on NSParagraphStyle, so it forces the attributed path too.
-    BOOL hasHyphenation = props.ios_hyphenationFactor > 0;
+    // Only "auto" needs a paragraph style; "none"/"manual" already match
+    // usesDefaultHyphenation's default of NO.
+    BOOL hasHyphenation = props.hyphens == RNPlainTextHyphens::Auto;
     // The language is an attributed-string attribute too (NSLanguageIdentifierAttributeName).
     BOOL hasLang = !props.lang.empty();
 
@@ -259,7 +262,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     paragraphStyle.lineBreakMode = RNPlainTextLineBreakModeFromProp(props.ellipsizeMode);
 
     if (hasHyphenation) {
-        paragraphStyle.hyphenationFactor = props.ios_hyphenationFactor;
+        paragraphStyle.usesDefaultHyphenation = YES;
     }
 
     CGFloat verticalTextShift = 0;
@@ -330,7 +333,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         oldViewProps.textShadowOffsetHeight != newViewProps.textShadowOffsetHeight ||
         oldViewProps.textShadowRadius != newViewProps.textShadowRadius ||
         oldViewProps.textTransform != newViewProps.textTransform ||
-        oldViewProps.ios_hyphenationFactor != newViewProps.ios_hyphenationFactor ||
+        oldViewProps.hyphens != newViewProps.hyphens ||
         oldViewProps.lang != newViewProps.lang ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||

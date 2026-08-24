@@ -574,18 +574,24 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
-  // Mirrors <Text> (ReactTextViewManager#setAndroidHyphenationFrequency). Android-only, like RN.
+  // Mirrors <Text> (ReactTextViewManager#setAndroidHyphenationFrequency). Fed either
+  // directly from android_hyphenationFrequency or resolved from `hyphens` in
+  // PlainText.native.tsx. Android-only, like RN.
+  //
+  // "full" prefers FULL_FAST on API 33+: perf-only, not a prop value.
   fun setAndroidHyphenationFrequency(frequency: String?) {
     val value = when (frequency) {
       null, "none" -> Layout.HYPHENATION_FREQUENCY_NONE
       "normal" -> Layout.HYPHENATION_FREQUENCY_NORMAL
-      "full" -> Layout.HYPHENATION_FREQUENCY_FULL
+      "full" ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Layout.HYPHENATION_FREQUENCY_FULL_FAST
+        else Layout.HYPHENATION_FREQUENCY_FULL
       else -> {
         FLog.w(ReactConstants.TAG, "Invalid android_hyphenationFrequency: $frequency")
         Layout.HYPHENATION_FREQUENCY_NONE
       }
     }
-    
+
     if (hyphenationFrequency == value) return
     hyphenationFrequency = value
   }

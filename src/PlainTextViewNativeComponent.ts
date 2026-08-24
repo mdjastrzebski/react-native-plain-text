@@ -80,17 +80,17 @@ export interface NativeProps extends ViewProps {
     'none' | 'uppercase' | 'lowercase' | 'capitalize',
     'none'
   >;
-  // iOS-only: NSParagraphStyle's hyphenationFactor, 0 (off, the platform default)
-  // through 1 (hyphenate whenever possible). RN <Text> has no iOS hyphenation
-  // control (its android_hyphenationFrequency is a different, enum-shaped API),
-  // so this closes that gap under the UIKit name, behind the same platform
-  // prefix RN uses for one-platform props. Android ignores it.
+  // Web-like `hyphens`. iOS-only at this layer: PlainText.tsx folds it
+  // into android_hyphenationFrequency below, so Android ignores it (no-op
+  // setter). 'manual' (default) is UILabel's natural state, no cost. 'none'
+  // additionally strips soft hyphens (U+00AD) to match Android/Web. 'auto' sets
+  // usesDefaultHyphenation=true.
   //
-  // Cost: medium. Forces iOS's attributed-string path.
-  ios_hyphenationFactor?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
-  // Android-only, like RN <Text>'s prop of the same name: TextView's
-  // hyphenationFrequency presets. iOS ignores it (ios_hyphenationFactor above
-  // is the iOS control).
+  // Cost: medium. 'auto' forces iOS's attributed-string path; 'none' allocates
+  // a stripped copy of the text.
+  hyphens?: CodegenTypes.WithDefault<'none' | 'manual' | 'auto', 'manual'>;
+  // Android-only, like RN <Text>'s prop of the same name, kept for RN <Text>
+  // compat. iOS ignores it. Superseded by `hyphens` above when set.
   android_hyphenationFrequency?: CodegenTypes.WithDefault<'none' | 'normal' | 'full', 'none'>;
   // BCP-47 language tag (e.g. 'de', 'de-DE') for the text itself, driving the
   // hyphenation dictionary and locale-sensitive line breaking/glyph selection.

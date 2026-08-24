@@ -7,6 +7,7 @@
 #import <cmath>
 
 #import "PlainTextFont.h"
+#import "PlainTextHyphenation.h"
 #import "PlainTextTextTransform.h"
 
 namespace facebook::react {
@@ -22,6 +23,7 @@ Size PlainTextShadowNode::measureContent(
 
   NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
   text = plainTextApplyTextTransform(text, props.textTransform);
+  text = plainTextApplyHyphens(text, props.hyphens);
 
   // Base scale comes from the layout context (Fabric seeds it from
   // RCTFontSizeMultiplier, same as the mounted view). Clamping matches the
@@ -58,13 +60,13 @@ Size PlainTextShadowNode::measureContent(
     perLineHeight = static_cast<Float>(lineHeight);
   }
 
-  // Hyphenation moves the soft line breaks, so the wrapped height depends on it.
-  // The unconstrained pass below never wraps and is unaffected either way.
-  if (props.ios_hyphenationFactor > 0) {
+  // Only "auto" moves the soft line breaks; "none"/"manual" already match
+  // usesDefaultHyphenation's default.
+  if (props.hyphens == RNPlainTextHyphens::Auto) {
     if (paragraphStyle == nil) {
       paragraphStyle = [NSMutableParagraphStyle new];
     }
-    paragraphStyle.hyphenationFactor = props.ios_hyphenationFactor;
+    paragraphStyle.usesDefaultHyphenation = YES;
   }
 
   if (paragraphStyle != nil) {

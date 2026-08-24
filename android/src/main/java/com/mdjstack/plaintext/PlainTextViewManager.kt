@@ -205,13 +205,10 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.includeFontPadding = includeFontPadding
   }
 
-  // No-op: iOS-only (NSParagraphStyle's hyphenationFactor). Android's hyphenation
-  // control is android_hyphenationFrequency below, a different enum-shaped API,
-  // matching how RN <Text> splits the two platforms. Declared because the generated
-  // interface requires it. Not serialized for measure() either, so no fallback
-  // belongs there.
-  @ReactProp(name = "ios_hyphenationFactor")
-  override fun setIos_hyphenationFactor(view: PlainTextView?, value: Float) {
+  // No-op: iOS-only at this layer. PlainText.native.tsx resolves `hyphens` into
+  // android_hyphenationFrequency below, so Android never needs to read it.
+  @ReactProp(name = "hyphens")
+  override fun setHyphens(view: PlainTextView?, value: String?) {
   }
 
   @ReactProp(name = "android_hyphenationFrequency")

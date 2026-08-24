@@ -267,28 +267,43 @@ export default function FeaturesScreen({ navigation }: Props) {
 
       <Section title="Hyphenation" footer={HYPHENATION_FOOTER}>
         <TextItem
-          label={Platform.OS === 'android' ? 'none' : '0 (off)'}
-          showText={showText}
-          ios_hyphenationFactor={0}
-          android_hyphenationFrequency="none"
-          style={styles.hyphenationProbe}
-        >
-          {HYPHENATION_LANG_SPECIMEN}
-        </TextItem>
-        <TextItem
-          label={Platform.OS === 'android' ? 'full, no lang' : 'factor 1, no lang'}
-          showText={showText}
-          ios_hyphenationFactor={1}
-          android_hyphenationFrequency="full"
-          style={styles.hyphenationProbe}
-        >
-          {HYPHENATION_LANG_SPECIMEN}
-        </TextItem>
-        <TextItem
-          label={Platform.OS === 'android' ? 'full, lang="de"' : 'factor 1, lang="de"'}
+          label='hyphens="none", lang="de"'
           showText={showText}
           lang="de"
-          ios_hyphenationFactor={1}
+          hyphens="none"
+          style={styles.hyphenationProbe}
+        >
+          {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
+        </TextItem>
+        <TextItem
+          label='hyphens="manual", lang="de" (default)'
+          showText={showText}
+          lang="de"
+          hyphens="manual"
+          style={styles.hyphenationProbe}
+        >
+          {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
+        </TextItem>
+        <TextItem
+          label='hyphens="auto", no lang'
+          showText={showText}
+          hyphens="auto"
+          style={styles.hyphenationProbe}
+        >
+          {HYPHENATION_LANG_SPECIMEN}
+        </TextItem>
+        <TextItem
+          label='hyphens="auto", lang="de"'
+          showText={showText}
+          lang="de"
+          hyphens="auto"
+          style={styles.hyphenationProbe}
+        >
+          {HYPHENATION_LANG_SPECIMEN}
+        </TextItem>
+        <TextItem
+          label='android_hyphenationFrequency="full" (RN <Text> compat, Android only)'
+          showText={showText}
           android_hyphenationFrequency="full"
           style={styles.hyphenationProbe}
         >
@@ -976,10 +991,13 @@ const FONT_VARIANT_SPECIMEN = 'Waffle office 0123456789';
 
 const HYPHENATION_LANG_SPECIMEN = 'Strandkorbvermietung';
 
+// Soft hyphens (U+00AD) at real German syllable breaks: "manual" can
+// hyphenate at one, "none" (which strips them) visibly can't.
+const HYPHENATION_SOFT_HYPHEN_SPECIMEN = 'Strand­korb­vermietung';
+
 const HYPHENATION_FOOTER = Platform.select({
-  ios: 'ios_hyphenationFactor, iOS-only. RN <Text> has no iOS hyphenation control, so the overlay never hyphenates.',
-  default:
-    "android_hyphenationFrequency, as in RN <Text>. The overlay gets the same value but can't take lang, so it only matches on a German-locale device.",
+  ios: '`hyphens`, PlainText-only. RN <Text> has no iOS hyphenation control.',
+  default: '`hyphens` resolves to android_hyphenationFrequency (see PlainText.native.tsx).',
 });
 
 const EMOJI_SPECIMEN = 'Quick brown 🦊 jumps over the lazy 🐶';

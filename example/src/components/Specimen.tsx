@@ -89,7 +89,7 @@ export function TextItem({
   ellipsizeMode,
   allowFontScaling,
   maxFontSizeMultiplier,
-  ios_hyphenationFactor,
+  hyphens,
   android_hyphenationFrequency,
   lang,
   accessibilityProps,
@@ -114,7 +114,7 @@ export function TextItem({
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
-  ios_hyphenationFactor?: number;
+  hyphens?: 'none' | 'manual' | 'auto';
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
   lang?: string;
   // Forwarded to both PlainText and the comparison Text so the two expose the
@@ -147,7 +147,7 @@ export function TextItem({
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             unstable_lineHeightClippingIos={compatOn}
-            ios_hyphenationFactor={ios_hyphenationFactor}
+            hyphens={hyphens}
             android_hyphenationFrequency={android_hyphenationFrequency}
             lang={lang}
             {...accessibilityProps}
