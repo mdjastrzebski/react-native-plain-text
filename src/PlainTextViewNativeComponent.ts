@@ -85,6 +85,13 @@ export interface NativeProps extends ViewProps {
   // usesDefaultHyphenation=true. Android: 'none'/'auto' resolve into
   // android_hyphenationFrequency below (PlainTextView.kt); 'manual' defers to it.
   //
+  // Known gap: 'manual' works on iOS but not Android. Android's line breaker
+  // only honors an embedded U+00AD when hyphenationFrequency is off NONE, and
+  // even then only as a fallback for languages with no hyphenation-pattern
+  // dictionary — for a language it has patterns for (most), it re-derives its
+  // own break points instead of respecting the ones placed in the string.
+  // There is no Android setting that gives "break only where I put ­".
+  //
   // Cost: medium. 'auto' forces iOS's attributed-string path; 'none' allocates
   // a stripped copy of the text.
   hyphens?: CodegenTypes.WithDefault<'none' | 'manual' | 'auto', 'manual'>;

@@ -26,6 +26,9 @@ export type PlainTextProps = AccessibilityProps & {
   maxFontSizeMultiplier?: number;
   // Web-like `hyphens`. On Android, 'none'/'auto' win over
   // android_hyphenationFrequency below (resolved natively, see PlainTextView.kt).
+  // Known gap: 'manual' (breaking only at an inserted U+00AD) works on iOS but
+  // not Android, which has no way to honor an explicit soft hyphen over its
+  // own hyphenation-pattern algorithm. See PlainTextViewNativeComponent.ts.
   hyphens?: 'none' | 'manual' | 'auto';
   // Android-only, same name and values as RN <Text>'s prop, kept for RN <Text>
   // compat. iOS ignores it.

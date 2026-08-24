@@ -268,8 +268,9 @@ export default function FeaturesScreen({ navigation }: Props) {
       <Section title="Hyphenation" footer={HYPHENATION_FOOTER}>
         {/* Soft hyphens (U+00AD) pre-inserted at every Duden syllable break in
             the long compound word (Rei-se-kran-ken-ver-si-che-rung). "none"
-            strips them, so the word stays whole; "manual" leaves them, so it
-            breaks at one instead. Neither needs lang or a dictionary. */}
+            strips them, so the word stays whole either way; "manual" leaves
+            them, so it breaks at one instead, but only on iOS today — see the
+            known gap in PlainTextViewNativeComponent.ts. */}
         <TextItem
           label='hyphens="none": soft hyphens stripped, word stays whole'
           showText={showText}
@@ -278,16 +279,8 @@ export default function FeaturesScreen({ navigation }: Props) {
         >
           {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
         </TextItem>
-        <TextItem
-          label='hyphens="manual" (default): breaks at inserted soft hyphens'
-          showText={showText}
-          hyphens="manual"
-          style={styles.hyphenationRow}
-        >
-          {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
-        </TextItem>
-        {/* Same "manual", but the word carries no soft hyphens this time: unlike
-            "auto" below, "manual" never invents a break point on its own. */}
+        {/* No soft hyphens in this one: unlike "auto" below, "manual" never
+            invents a break point on its own. */}
         <TextItem
           label='hyphens="manual": no soft hyphens, so no break'
           showText={showText}
@@ -295,6 +288,14 @@ export default function FeaturesScreen({ navigation }: Props) {
           style={styles.hyphenationRow}
         >
           {HYPHENATION_LANG_SPECIMEN}
+        </TextItem>
+        <TextItem
+          label='hyphens="manual" (default): breaks at inserted soft hyphens on iOS, not Android (known gap)'
+          showText={showText}
+          hyphens="manual"
+          style={styles.hyphenationRow}
+        >
+          {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
         </TextItem>
         {/* No soft hyphens in this one: "auto" needs a dictionary lookup, and
             lang="de" is what picks it (see HYPHENATION_FOOTER). */}
@@ -307,15 +308,18 @@ export default function FeaturesScreen({ navigation }: Props) {
         >
           {HYPHENATION_LANG_SPECIMEN}
         </TextItem>
-        <TextItem
-          label='android_hyphenationFrequency="full", lang="de": RN <Text> compat'
-          showText={showText}
-          lang="de"
-          android_hyphenationFrequency="full"
-          style={styles.hyphenationRow}
-        >
-          {HYPHENATION_LANG_SPECIMEN}
-        </TextItem>
+        {/* Android only: iOS ignores android_hyphenationFrequency entirely. */}
+        {Platform.OS === 'android' && (
+          <TextItem
+            label='android_hyphenationFrequency="full", lang="de": RN <Text> compat'
+            showText={showText}
+            lang="de"
+            android_hyphenationFrequency="full"
+            style={styles.hyphenationRow}
+          >
+            {HYPHENATION_LANG_SPECIMEN}
+          </TextItem>
+        )}
       </Section>
       <Section title="Number of Lines">
         {[1, 2, 3].map((numberOfLines) => (
@@ -1020,7 +1024,7 @@ const HYPHENATION_SOFT_HYPHEN_SPECIMEN =
 const HYPHENATION_FOOTER = Platform.select({
   ios: '`hyphens`, PlainText-only. RN <Text> has no iOS hyphenation control.',
   default:
-    '`hyphens` resolves against android_hyphenationFrequency natively (see PlainTextView.kt).',
+    '`hyphens` resolves against android_hyphenationFrequency natively (see PlainTextView.kt). Known gap: "manual" cannot honor an inserted soft hyphen here, only on iOS.',
 });
 
 const EMOJI_SPECIMEN = 'Quick brown 🦊 jumps over the lazy 🐶';

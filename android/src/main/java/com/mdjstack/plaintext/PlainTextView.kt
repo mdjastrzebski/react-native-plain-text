@@ -582,6 +582,13 @@ class PlainTextView : AppCompatTextView {
   // Web-like `hyphens`. 'none'/'auto' override android_hyphenationFrequency;
   // 'manual' (also the default codegen sends when unset, so it can't be told
   // apart from "not set") defers to it instead.
+  //
+  // Known gap: 'manual' works on iOS but not here. It maps to NONE below, same
+  // as 'none', because there is no Android setting that breaks only at an
+  // embedded U+00AD: NONE ignores it outright, and any other frequency reaches
+  // it only as a fallback for languages with no hyphenation-pattern data —
+  // for one that has patterns (most), Android picks its own break points
+  // instead of the ones already in the string.
   fun setHyphens(value: String?) {
     hyphens = value
     applyHyphenationFrequency()

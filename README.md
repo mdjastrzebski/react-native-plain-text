@@ -99,6 +99,11 @@ Beyond RN `<Text>`, PlainText adds hyphenation control:
   (default) breaks only at a soft hyphen (`­`), `'none'` strips soft hyphens,
   `'auto'` hyphenates automatically (pair with `lang` on iOS). `'none'`/`'auto'`
   win over `android_hyphenationFrequency` on Android.
+  **Known gap:** `'manual'` currently works on iOS only. Android's line
+  breaker only honors an explicit soft hyphen as a fallback for languages
+  without hyphenation patterns; for a language it has patterns for (most,
+  including German), it picks its own break points instead of the ones you
+  inserted, so `'manual'` behaves like `'none'` there today.
 - `android_hyphenationFrequency`: Android only, like RN `<Text>`, kept for
   compat: `'none' | 'normal' | 'full'`. Prefer `hyphens` above.
 - `lang`: BCP-47 language tag (e.g. `'de'`), picking the hyphenation dictionary
