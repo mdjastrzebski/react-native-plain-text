@@ -15,14 +15,16 @@ import { unstable_NativeText as NativeText } from 'react-native';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getMemoryFootprint } from 'react-native-memory-footprint';
-import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
+import {
+  PlainText,
+  unstable_NativePlainText as NativePlainText,
+  type PlainTextStyle,
+} from 'react-native-plain-text';
 import { Section, screenStyles } from '../components/Specimen';
 import { useSessionState } from '../useSessionState';
 import { COLOR, MONO, SERIF, VARIABLE } from '../theme';
 // The library's bare codegen host component, the analogue of the
-// NativeText-vs-Text pair, which prices the JS wrapper. Imported by path
-// because it is deliberately not public API.
-import NativePlainText from '../../../src/PlainTextViewNativeComponent';
+// NativeText-vs-Text pair, which prices the JS wrapper.
 
 const COUNT = 1000;
 

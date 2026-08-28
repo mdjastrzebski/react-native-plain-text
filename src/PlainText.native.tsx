@@ -1,6 +1,7 @@
 import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } from 'react-native';
+import { forwardRef, type ComponentRef, type ForwardedRef } from 'react';
 import { getTextCompatConfig } from './compat';
-import PlainTextViewNativeComponent from './PlainTextViewNativeComponent';
+import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 
 // RN's TextStyle plus the one text style it has no entry for.
 // `fontVariationSettings` is a style rather than a prop because two upstream
@@ -56,7 +57,7 @@ function resolveFontVariant(fontVariant: TextStyle['fontVariant']): readonly str
   return variants.length > 0 ? variants : undefined;
 }
 
-export function PlainText({
+export function unstable_mapPlainTextProps({
   children,
   style,
   numberOfLines,
@@ -65,7 +66,7 @@ export function PlainText({
   maxFontSizeMultiplier,
   unstable_lineHeightClippingIos,
   ...accessibilityProps
-}: PlainTextProps) {
+}: PlainTextProps): NativeProps {
   // Text-style props don't flow through the native ViewProps, so pull them
   // out of the flattened style and pass them explicitly.
   const {
@@ -90,38 +91,45 @@ export function PlainText({
     ...viewStyle
   } = StyleSheet.flatten(style) ?? {};
 
-  return (
-    <PlainTextViewNativeComponent
-      text={children}
-      color={color}
-      fontSize={fontSize}
-      fontFamily={fontFamily}
-      fontWeight={fontWeight != null ? String(fontWeight) : undefined}
-      fontStyle={fontStyle}
-      fontVariant={resolveFontVariant(fontVariant)}
-      fontVariationSettings={fontVariationSettings}
-      textAlign={textAlign}
-      textAlignVertical={resolveTextAlignVertical(textAlignVertical, verticalAlign)}
-      textDecorationLine={textDecorationLine}
-      textTransform={textTransform}
-      textShadowColor={textShadowColor}
-      textShadowOffsetWidth={textShadowOffset?.width}
-      textShadowOffsetHeight={textShadowOffset?.height}
-      hasTextShadow={textShadowOffset !== undefined}
-      textShadowRadius={textShadowRadius}
-      lineHeight={lineHeight}
-      letterSpacing={letterSpacing}
-      hasLetterSpacing={letterSpacing !== undefined}
-      numberOfLines={numberOfLines}
-      ellipsizeMode={ellipsizeMode}
-      allowFontScaling={allowFontScaling}
-      maxFontSizeMultiplier={maxFontSizeMultiplier}
-      includeFontPadding={includeFontPadding}
-      lineHeightClippingIos={
-        unstable_lineHeightClippingIos ?? getTextCompatConfig().lineHeightClippingIos
-      }
-      style={viewStyle}
-      {...accessibilityProps}
-    />
-  );
+  const compatConfig = getTextCompatConfig();
+
+  return {
+    text: children,
+    color,
+    fontSize,
+    fontFamily,
+    fontWeight: fontWeight != null ? String(fontWeight) : undefined,
+    fontStyle,
+    fontVariant: resolveFontVariant(fontVariant),
+    fontVariationSettings,
+    textAlign,
+    textAlignVertical: resolveTextAlignVertical(textAlignVertical, verticalAlign),
+    textDecorationLine,
+    textTransform,
+    textShadowColor,
+    textShadowOffsetWidth: textShadowOffset?.width,
+    textShadowOffsetHeight: textShadowOffset?.height,
+    hasTextShadow: textShadowOffset !== undefined,
+    textShadowRadius,
+    lineHeight,
+    letterSpacing,
+    hasLetterSpacing: letterSpacing !== undefined,
+    numberOfLines,
+    ellipsizeMode,
+    allowFontScaling,
+    maxFontSizeMultiplier,
+    includeFontPadding,
+    lineHeightClippingIos: unstable_lineHeightClippingIos ?? compatConfig.lineHeightClippingIos,
+    style: viewStyle,
+    ...accessibilityProps,
+  };
 }
+
+type PlainTextRef = ComponentRef<typeof PlainTextViewNativeComponent>;
+
+function PlainTextComponent(props: PlainTextProps, ref: ForwardedRef<PlainTextRef>) {
+  const nativeProps = unstable_mapPlainTextProps(props);
+  return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
+}
+
+export const PlainText = forwardRef(PlainTextComponent);

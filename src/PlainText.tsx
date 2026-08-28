@@ -1,4 +1,5 @@
 import { Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
+import { forwardRef, type ComponentRef, type ForwardedRef } from 'react';
 
 // Same widened type as PlainText.native.tsx, see there for why.
 export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
@@ -15,15 +16,22 @@ export type PlainTextProps = Omit<TextProps, 'children' | 'style'> & {
 // Web / fallback implementation. No translation needed: CSS supports
 // `font-variation-settings` natively and react-native-web passes unrecognized
 // style keys through to it.
-export function PlainText({
-  children,
-  style,
-  unstable_lineHeightClippingIos: _unstable_lineHeightClippingIos,
-  ...rest
-}: PlainTextProps) {
+type PlainTextRef = ComponentRef<typeof Text>;
+
+function PlainTextComponent(
+  {
+    children,
+    style,
+    unstable_lineHeightClippingIos: _unstable_lineHeightClippingIos,
+    ...rest
+  }: PlainTextProps,
+  ref: ForwardedRef<PlainTextRef>
+) {
   return (
-    <Text style={style as StyleProp<TextStyle>} {...rest}>
+    <Text ref={ref} style={style as StyleProp<TextStyle>} {...rest}>
       {children}
     </Text>
   );
 }
+
+export const PlainText = forwardRef(PlainTextComponent);

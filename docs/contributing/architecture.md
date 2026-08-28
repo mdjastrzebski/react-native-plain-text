@@ -11,7 +11,8 @@ see [sync-points.md](sync-points.md)).
    interfaces the native code implements.
 2. **JS wrapper**: `src/PlainText.native.tsx` (native) and `src/PlainText.tsx`
    (web fallback, renders RN `<Text>`). `src/index.tsx` re-exports `PlainText`
-   and its types from `./PlainText`, plus `unstable_configureTextCompat` and
+   and its types from `./PlainText`, plus the unstable native component and
+   prop mapper. It also exports `unstable_configureTextCompat` and
    `TextCompatConfig` from `./compat`.
 3. **iOS**: `ios/RNPlainText.mm` (+ `.h`): an `RCTViewComponentView` subclass
    hosting a `UILabel`, applying props in `updateProps:` by diffing
