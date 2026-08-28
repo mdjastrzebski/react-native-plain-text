@@ -30,6 +30,14 @@
     },
     "plugins": [
       "./plugins/withFontScaleConfigChanges",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
       "expo-status-bar",
       [
         "expo-font",
