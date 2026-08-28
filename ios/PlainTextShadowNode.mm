@@ -20,9 +20,14 @@ Size PlainTextShadowNode::measureContent(
     const LayoutConstraints &layoutConstraints) const {
   const auto &props = getConcreteProps();
 
-  NSString *text = [NSString stringWithUTF8String:props.text.c_str()];
-  if (text == nil) {
-    text = @"";
+  NSString *text = @"";
+  if (props.text.has_value()) {
+    const std::string &textProp = props.text.value();
+    const char *textBytes = textProp.c_str();
+    text = [NSString stringWithUTF8String:textBytes];
+    if (text == nil) {
+      text = @"";
+    }
   }
   text = plainTextApplyTextTransform(text, props.textTransform);
 
@@ -35,8 +40,9 @@ Size PlainTextShadowNode::measureContent(
   NSMutableDictionary<NSAttributedStringKey, id> *attributes = [NSMutableDictionary dictionary];
   attributes[NSFontAttributeName] = font;
 
-  if (props.hasLetterSpacing) {
-    attributes[NSKernAttributeName] = @(props.letterSpacing);
+  if (props.letterSpacing.has_value()) {
+    Float letterSpacing = props.letterSpacing.value();
+    attributes[NSKernAttributeName] = @(letterSpacing);
   }
 
   // The per-line height used to cap numberOfLines: the pinned lineHeight when

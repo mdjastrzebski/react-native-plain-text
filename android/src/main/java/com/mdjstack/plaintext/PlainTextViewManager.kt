@@ -128,19 +128,13 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   }
 
   @ReactProp(name = "textShadowOffsetWidth")
-  override fun setTextShadowOffsetWidth(view: PlainTextView?, textShadowOffsetWidth: Float) {
-    view?.setTextShadowOffsetWidth(textShadowOffsetWidth)
+  override fun setTextShadowOffsetWidth(view: PlainTextView?, textShadowOffsetWidth: Float?) {
+    view?.setTextShadowOffsetWidth(textShadowOffsetWidth ?: 0f)
   }
 
   @ReactProp(name = "textShadowOffsetHeight")
-  override fun setTextShadowOffsetHeight(view: PlainTextView?, textShadowOffsetHeight: Float) {
-    view?.setTextShadowOffsetHeight(textShadowOffsetHeight)
-  }
-
-  // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as
-  // `hasLetterSpacing`.
-  @ReactProp(name = "hasTextShadow", defaultBoolean = false)
-  override fun setHasTextShadow(view: PlainTextView?, hasTextShadow: Boolean) {
+  override fun setTextShadowOffsetHeight(view: PlainTextView?, textShadowOffsetHeight: Float?) {
+    view?.setTextShadowOffsetHeight(textShadowOffsetHeight ?: 0f)
   }
 
   @ReactProp(name = "textShadowRadius")
@@ -159,14 +153,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   }
 
   @ReactProp(name = "letterSpacing")
-  override fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float) {
-    view?.setLetterSpacingDip(letterSpacing)
-  }
-
-  // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as
-  // `lineHeightClippingIos` below.
-  @ReactProp(name = "hasLetterSpacing", defaultBoolean = false)
-  override fun setHasLetterSpacing(view: PlainTextView?, hasLetterSpacing: Boolean) {
+  override fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float?) {
+    view?.setLetterSpacingDip(letterSpacing ?: 0f)
   }
 
   @ReactProp(name = "numberOfLines")
@@ -200,9 +188,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
   }
 
-  // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as
-  // `hasLetterSpacing`: Android's TextView never had the ascent-clipping bug
-  // this reverts to on iOS.
+  // iOS-only concern (see PlainTextViewNativeComponent.ts). Android's TextView
+  // never had the ascent-clipping bug this reverts to on iOS.
   @ReactProp(name = "lineHeightClippingIos", defaultBoolean = false)
   override fun setLineHeightClippingIos(view: PlainTextView?, lineHeightClippingIos: Boolean) {
   }
@@ -240,15 +227,13 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setAllowFontScaling(props.getBooleanOr("allowFontScaling", true))
     view.setMaxFontSizeMultiplier(props.getFloatOr("maxFontSizeMultiplier", 0f))
     view.setFontSizeSp(props.getFloatOr("fontSize", 14f))
-    // props serializes an unset fontFamily as "" (the C++ std::string default),
-    // not null. Normalize so this matches the setFontFamily prop setter path.
-    view.setFontFamily(props?.getString("fontFamily")?.ifEmpty { null })
-    view.setFontWeight(props?.getString("fontWeight")?.ifEmpty { null })
-    view.setFontStyle(props?.getString("fontStyle")?.ifEmpty { null })
+    view.setFontFamily(props?.getString("fontFamily"))
+    view.setFontWeight(props?.getString("fontWeight"))
+    view.setFontStyle(props?.getString("fontStyle"))
     // fontVariant and fontVariationSettings both change glyph shapes/advances, so the
     // measured size depends on them.
     view.setFontVariant(props?.getArray("fontVariant"))
-    view.setVariationSettings(props?.getString("fontVariationSettings")?.ifEmpty { null })
+    view.setVariationSettings(props?.getString("fontVariationSettings"))
     // letterSpacing widens the text and lineHeight grows each line, so both must be
     // applied for the measured size to match.
     view.setLetterSpacingDip(props.getFloatOr("letterSpacing", 0f))

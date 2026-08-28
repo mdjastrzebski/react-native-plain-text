@@ -156,17 +156,36 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 {
     CGFloat fontSizeMultiplier = RNPlainTextFontSizeMultiplier(props);
     UIFont *font = plainTextFont(props, fontSizeMultiplier);
-    UIColor *color = props.color ? RCTUIColorFromSharedColor(props.color) : [UIColor blackColor];
+    UIColor *color = [UIColor blackColor];
+    if (props.color.has_value()) {
+        const SharedColor &sharedColor = props.color.value();
+        color = RCTUIColorFromSharedColor(sharedColor);
+    }
     NSTextAlignment alignment = RNPlainTextAlignmentFromProp(props.textAlign);
-    NSString *text = [NSString stringWithUTF8String:props.text.c_str()] ?: @"";
+    NSString *text = @"";
+    if (props.text.has_value()) {
+        const std::string &textProp = props.text.value();
+        const char *textBytes = textProp.c_str();
+        text = [NSString stringWithUTF8String:textBytes];
+        if (text == nil) {
+            text = @"";
+        }
+    }
     text = plainTextApplyTextTransform(text, props.textTransform);
 
     BOOL hasLineHeight = props.lineHeight > 0;
-    BOOL hasLetterSpacing = props.hasLetterSpacing;
-    BOOL hasUnderline = RNPlainTextHasUnderline(props.textDecorationLine);
-    BOOL hasLineThrough = RNPlainTextHasLineThrough(props.textDecorationLine);
+    BOOL hasLetterSpacing = props.letterSpacing.has_value();
+    BOOL hasUnderline = NO;
+    BOOL hasLineThrough = NO;
+    if (props.textDecorationLine.has_value()) {
+        const std::string &textDecorationLine = props.textDecorationLine.value();
+        hasUnderline = RNPlainTextHasUnderline(textDecorationLine);
+        hasLineThrough = RNPlainTextHasLineThrough(textDecorationLine);
+    }
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
-    BOOL hasTextShadow = props.hasTextShadow;
+    BOOL hasTextShadowOffsetWidth = props.textShadowOffsetWidth.has_value();
+    BOOL hasTextShadowOffsetHeight = props.textShadowOffsetHeight.has_value();
+    BOOL hasTextShadow = hasTextShadowOffsetWidth || hasTextShadowOffsetHeight;
 
     if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow) {
         // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
@@ -186,7 +205,8 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 
     // letterSpacing is in points, applied directly as kerning (mirrors RN <Text>).
     if (hasLetterSpacing) {
-        attributes[NSKernAttributeName] = @(props.letterSpacing);
+        Float letterSpacing = props.letterSpacing.value();
+        attributes[NSKernAttributeName] = @(letterSpacing);
     }
 
     // UILabel has no plain property for these either; line color defaults to text color, matching RN <Text>.
@@ -202,10 +222,13 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     // Unset radius/color fall back to NSShadow's own defaults.
     if (hasTextShadow) {
         NSShadow *shadow = [NSShadow new];
-        shadow.shadowOffset = CGSizeMake(props.textShadowOffsetWidth, props.textShadowOffsetHeight);
+        Float textShadowOffsetWidth = props.textShadowOffsetWidth.value_or(0);
+        Float textShadowOffsetHeight = props.textShadowOffsetHeight.value_or(0);
+        shadow.shadowOffset = CGSizeMake(textShadowOffsetWidth, textShadowOffsetHeight);
         shadow.shadowBlurRadius = props.textShadowRadius;
-        if (props.textShadowColor) {
-            shadow.shadowColor = RCTUIColorFromSharedColor(props.textShadowColor);
+        if (props.textShadowColor.has_value()) {
+            const SharedColor &textShadowColor = props.textShadowColor.value();
+            shadow.shadowColor = RCTUIColorFromSharedColor(textShadowColor);
         }
         attributes[NSShadowAttributeName] = shadow;
     }
@@ -276,12 +299,10 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         oldViewProps.color != newViewProps.color ||
         oldViewProps.lineHeight != newViewProps.lineHeight ||
         oldViewProps.letterSpacing != newViewProps.letterSpacing ||
-        oldViewProps.hasLetterSpacing != newViewProps.hasLetterSpacing ||
         oldViewProps.textDecorationLine != newViewProps.textDecorationLine ||
         oldViewProps.textShadowColor != newViewProps.textShadowColor ||
         oldViewProps.textShadowOffsetWidth != newViewProps.textShadowOffsetWidth ||
         oldViewProps.textShadowOffsetHeight != newViewProps.textShadowOffsetHeight ||
-        oldViewProps.hasTextShadow != newViewProps.hasTextShadow ||
         oldViewProps.textShadowRadius != newViewProps.textShadowRadius ||
         oldViewProps.textTransform != newViewProps.textTransform ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||

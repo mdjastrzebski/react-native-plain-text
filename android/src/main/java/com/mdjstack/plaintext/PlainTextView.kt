@@ -306,8 +306,7 @@ class PlainTextView : AppCompatTextView {
   }
 
   // Mirrors <Text> (ShadowStyleSpan): paints only when there's something to draw,
-  // unlike iOS which gates on textShadowOffset alone (see hasTextShadow in
-  // PlainTextViewNativeComponent.ts).
+  // unlike iOS which gates on whether textShadowOffset was provided.
   private fun applyTextShadow() {
     if ((textShadowOffsetDx != 0f || textShadowOffsetDy != 0f || textShadowRadius != 0f) &&
       Color.alpha(textShadowColor) != 0

@@ -24,8 +24,6 @@ it('maps PlainText props to native component props', () => {
     accessibilityLabel: 'Greeting',
     fontVariant: ['small-caps', 'tabular-nums'],
     fontWeight: '600',
-    hasLetterSpacing: true,
-    hasTextShadow: true,
     letterSpacing: 0,
     numberOfLines: 2,
     style: { padding: 4 },
@@ -55,8 +53,6 @@ describe('<PlainText />', () => {
     expect(screen.toJSON()).toMatchInlineSnapshot(`
 <RNPlainText
   fontSize={12}
-  hasLetterSpacing={false}
-  hasTextShadow={false}
   numberOfLines={2}
   style={
     {
@@ -217,33 +213,30 @@ describe('mapPlainTextProps', () => {
   });
 
   describe('text shadow', () => {
-    it('splits textShadowOffset into width/height and flags hasTextShadow', () => {
+    it('splits textShadowOffset into width/height', () => {
       expect(
         mapPlainTextProps({ style: { textShadowOffset: { width: 1, height: 2 } } })
       ).toMatchObject({
         textShadowOffsetWidth: 1,
         textShadowOffsetHeight: 2,
-        hasTextShadow: true,
       });
     });
 
-    it('treats a zero offset as a shadow (offset present)', () => {
+    it('keeps a zero offset (present, not dropped to undefined)', () => {
       expect(
         mapPlainTextProps({ style: { textShadowOffset: { width: 0, height: 0 } } })
       ).toMatchObject({
         textShadowOffsetWidth: 0,
         textShadowOffsetHeight: 0,
-        hasTextShadow: true,
       });
     });
 
-    it('reports no shadow when the offset is absent', () => {
+    it('leaves width/height unset when the offset is absent', () => {
       expect(
         mapPlainTextProps({ style: { textShadowColor: '#000', textShadowRadius: 4 } })
       ).toMatchObject({
         textShadowOffsetWidth: undefined,
         textShadowOffsetHeight: undefined,
-        hasTextShadow: false,
         textShadowColor: '#000',
         textShadowRadius: 4,
       });
@@ -251,21 +244,18 @@ describe('mapPlainTextProps', () => {
   });
 
   describe('letterSpacing', () => {
-    it('flags hasLetterSpacing and forwards the value when set, including 0', () => {
+    it('forwards the value when set, including 0', () => {
       expect(mapPlainTextProps({ style: { letterSpacing: 0 } })).toMatchObject({
         letterSpacing: 0,
-        hasLetterSpacing: true,
       });
       expect(mapPlainTextProps({ style: { letterSpacing: 2 } })).toMatchObject({
         letterSpacing: 2,
-        hasLetterSpacing: true,
       });
     });
 
-    it('reports hasLetterSpacing false when unset', () => {
+    it('leaves letterSpacing undefined when unset', () => {
       expect(mapPlainTextProps({})).toMatchObject({
         letterSpacing: undefined,
-        hasLetterSpacing: false,
       });
     });
   });

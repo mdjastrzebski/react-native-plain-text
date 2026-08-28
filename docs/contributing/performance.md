@@ -60,8 +60,8 @@ of why it is still in [todo.md](todo.md).
 
 Four of those are medium for the same reason, and it is worth knowing as one
 fact rather than four: `applyContentFromProps` takes its plain path only when
-`lineHeight`, `letterSpacing`, `textDecorationLine` and `textShadow` (via
-`hasTextShadow`) are all unset. Any one of them puts the node on the
+`lineHeight`, `letterSpacing`, `textDecorationLine` and `textShadowOffset` are
+all unset. Any one of them puts the node on the
 `NSAttributedString` path for good. A further prop that needs an
 attributed-string attribute is therefore free on top of the first, and that is
 the argument for expressing a new iOS text feature as one if it has the choice.
