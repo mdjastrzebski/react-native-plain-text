@@ -45,8 +45,14 @@ being removed, and can silently differ.
 ## Documentation
 
 Agent docs live in `docs/agent/`. Put new ones there and link them here. The
-human-facing docs are `README.md` and `CONTRIBUTING.md`, under `docs/` once that
-exists.
+human-facing docs are `README.md` and `CONTRIBUTING.md`.
+
+The published documentation site is an RSPress project rooted at `docs/`
+(`react-native-plain-text-docs` workspace). Page content is the Markdown
+directly under `docs/` (`docs/index.md` today); `docs/agent/` is excluded from
+it. Run it with `yarn docs dev` / `yarn docs build`. The `Docs` workflow
+deploys `main` to GitHub Pages at
+`https://mdjastrzebski.github.io/react-native-plain-text/`.
 
 | Read when                                                                     |                                                                                                                                        |
 | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |

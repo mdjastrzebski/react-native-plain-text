@@ -1,0 +1,24 @@
+import { defineConfig } from 'rspress/config';
+
+const GITHUB_REPO = 'https://github.com/mdjastrzebski/react-native-plain-text';
+
+export default defineConfig({
+  // The doc root is this `docs/` directory itself. `docs/agent/` holds
+  // agent-only notes and the project files below are not pages, so all are
+  // kept out of the published site.
+  root: __dirname,
+  base: '/react-native-plain-text/',
+  title: 'React Native Plain Text',
+  description:
+    'A faster, lower-memory React Native <Text> alternative for simple, single-style text',
+  route: {
+    exclude: ['agent/**', 'doc_build/**', 'node_modules/**', 'rspress.config.ts', 'tsconfig.json'],
+  },
+  themeConfig: {
+    outlineTitle: 'On this page',
+    socialLinks: [{ icon: 'github', mode: 'link', content: GITHUB_REPO }],
+    footer: {
+      message: 'MIT Licensed',
+    },
+  },
+});

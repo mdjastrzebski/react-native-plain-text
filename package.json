@@ -36,6 +36,7 @@
   ],
   "scripts": {
     "example": "yarn workspace react-native-plain-text-example",
+    "docs": "yarn workspace react-native-plain-text-docs",
     "clean": "del-cli lib tests/cpp/build",
     "prepare": "bob build",
     "typecheck": "tsc",
@@ -102,7 +103,8 @@
     "react-native": "*"
   },
   "workspaces": [
-    "example"
+    "example",
+    "docs"
   ],
   "packageManager": "yarn@4.11.0",
   "react-native-builder-bob": {
