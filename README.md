@@ -15,14 +15,18 @@ Beta: the API is stable enough to use, and feedback drives what gets built next.
 
 ## Should you use it?
 
-RN's `<Text>` is the right choice for most apps. Reach for `PlainText` when you
-want to squeeze the most out of text-heavy screens like long lists and feeds,
-where a lot of labels mount at once.
+For most apps, RN's `<Text>` is a reasonable choice. Two reasons to pick
+`PlainText` instead:
 
-It is not all-or-nothing. Everything `PlainText` supports is API-compatible with
-RN `<Text>`, so the two mix freely in one screen. Use `PlainText` for the flat,
-single-style labels and plain `<Text>` wherever you need something it doesn't
-do, like mixed styles, nested text, press handling or selection.
+1. Performance. On screens that mount a lot of single-style labels at once, like
+   feeds and long lists, it mounts faster and uses less memory.
+2. Features missing from RN `<Text>`, such as `fontVariationSettings` and
+   `verticalAlign` / `textAlignVertical` on iOS. See
+   [Improvements over RN Text](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles#improvements-over-rn-text).
+
+You can mix it with `<Text>` in the same screen and only use it where it earns
+its place. The [compatibility wrapper](#rn-text-compatibility-wrapper) below
+picks between the two for you.
 
 ## Installation
 
@@ -113,46 +117,12 @@ Compared with RN `<Text>` rendering the same content on the same device:
 | Time to mount 1000 views | 13–21% faster | ~30% faster |
 | Memory per mounted view  | 15–25% less   | ~33% less   |
 
-Time to mount covers input dispatch, React render, Fabric commit, Yoga layout
-with text measurement, and native view creation, but not rasterization. It is
-the `event` entry duration reported by `PerformanceObserver`, the RN metric
-closest to INP on the web. Self-measured from the example app: see
-[measuring.md](docs/agent/measuring.md) for the method and
-[performance.md](docs/agent/performance.md) for per-run data.
-
-<details>
-<summary>Measured numbers behind the percentages</summary>
-
-Time to mount 1000 views, release builds:
-
-|                            | `PlainText` | RN `Text` | Difference |
-| -------------------------- | ----------- | --------- | ---------- |
-| Android, small (Pixel 3)   | 502 ms      | 716 ms    | 30% faster |
-| Android, regular (Pixel 3) | 505 ms      | 724 ms    | 30% faster |
-| Android, large (Pixel 3)   | 504 ms      | 718 ms    | 30% faster |
-| iOS, small (iPhone 16)     | 142 ms      | 164 ms    | 13% faster |
-| iOS, regular (iPhone 16)   | 144 ms      | 171 ms    | 16% faster |
-| iOS, large (iPhone 16)     | 165 ms      | 210 ms    | 21% faster |
-
-Memory per mounted view:
-
-| Text size        | `PlainText` | RN `Text` | Difference |
-| ---------------- | ----------- | --------- | ---------- |
-| iOS, small       | 34.5 KB     | 42.6 KB   | 19% less   |
-| iOS, regular     | 49.6 KB     | 58.4 KB   | 15% less   |
-| iOS, large       | 148.6 KB    | 197.6 KB  | 25% less   |
-| Android, small   | 35.1 KB     | 52.9 KB   | 34% less   |
-| Android, regular | 35.4 KB     | 52.7 KB   | 33% less   |
-| Android, large   | 35.3 KB     | 53.2 KB   | 34% less   |
-
-Each figure is a mean of 3 runs.
-
-</details>
+Self-measured from the example app. See
+[Performance](https://mdjastrzebski.github.io/react-native-plain-text/guide/performance)
+for the method and the per-device numbers behind these percentages.
 
 ## Contributing
 
-- [Measuring performance](docs/agent/measuring.md) ·
-  [Performance notes](docs/agent/performance.md)
 - [Development workflow](CONTRIBUTING.md#development-workflow)
 - [Sending a pull request](CONTRIBUTING.md#sending-a-pull-request)
 - [Code of conduct](CODE_OF_CONDUCT.md)
