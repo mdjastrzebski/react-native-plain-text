@@ -9,8 +9,7 @@ export default defineConfig({
   root: __dirname,
   base: '/react-native-plain-text/',
   title: 'React Native Plain Text',
-  description:
-    'Faster, lighter React Native <Text> for single-style text',
+  description: 'Faster, lighter React Native <Text> for single-style text',
   route: {
     exclude: ['agent/**', 'doc_build/**', 'node_modules/**', 'rspress.config.ts', 'tsconfig.json'],
   },
@@ -28,7 +27,7 @@ export default defineConfig({
           items: [
             { text: 'Introduction', link: '/guide/introduction' },
             { text: 'Installation', link: '/guide/installation' },
-            { text: 'Styles and props', link: '/guide/styles-and-props' },
+            { text: 'Props and styles', link: '/guide/props-and-styles' },
             { text: 'Performance', link: '/guide/performance' },
           ],
         },

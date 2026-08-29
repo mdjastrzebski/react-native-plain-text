@@ -21,14 +21,6 @@ RN `<Text>`, so the two mix freely in one screen. Use `PlainText` for the flat,
 single-style labels and plain `<Text>` wherever you need something it doesn't
 do, like mixed styles, nested text, press handling or selection.
 
-## Contributing
-
-- [Measuring performance](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/docs/agent/measuring.md) ·
-  [Performance notes](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/docs/agent/performance.md)
-- [Development workflow](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/CONTRIBUTING.md#development-workflow)
-- [Sending a pull request](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/CONTRIBUTING.md#sending-a-pull-request)
-- [Code of conduct](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/CODE_OF_CONDUCT.md)
-
 ## License
 
 MIT
