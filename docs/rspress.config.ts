@@ -10,7 +10,7 @@ export default defineConfig({
   base: '/react-native-plain-text/',
   title: 'React Native Plain Text',
   description:
-    'A faster, lower-memory React Native <Text> alternative for simple, single-style text',
+    'Faster, lighter React Native <Text> for single-style text',
   route: {
     exclude: ['agent/**', 'doc_build/**', 'node_modules/**', 'rspress.config.ts', 'tsconfig.json'],
   },
@@ -19,6 +19,20 @@ export default defineConfig({
     socialLinks: [{ icon: 'github', mode: 'link', content: GITHUB_REPO }],
     footer: {
       message: 'MIT Licensed',
+    },
+    nav: [{ text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' }],
+    sidebar: {
+      '/guide/': [
+        {
+          text: 'Guide',
+          items: [
+            { text: 'Introduction', link: '/guide/introduction' },
+            { text: 'Installation', link: '/guide/installation' },
+            { text: 'Styles and props', link: '/guide/styles-and-props' },
+            { text: 'Performance', link: '/guide/performance' },
+          ],
+        },
+      ],
     },
   },
 });
