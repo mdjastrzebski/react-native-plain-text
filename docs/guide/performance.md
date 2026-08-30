@@ -1,5 +1,7 @@
 # Performance
 
+## Summary
+
 Compared with RN `<Text>` rendering the same content on the same device:
 
 |                          | iOS           | Android     |
@@ -15,6 +17,8 @@ closest to INP on the web. Self-measured from the example app: see
 for the method and
 [performance.md](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/docs/agent/performance.md)
 for per-run data.
+
+## Detailed results
 
 <details>
 <summary>Measured numbers behind the percentages</summary>
