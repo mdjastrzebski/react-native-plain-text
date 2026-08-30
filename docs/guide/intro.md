@@ -23,8 +23,8 @@ For most apps, React Native's `<Text>` is a reasonable choice. Two reasons to pi
    [Improvements over RN Text](./props-and-styles#improvements-over-rn-text).
 
 You can mix it with `<Text>` in the same screen and only use it where it earns
-its place. The [drop-in `<Text>` replacement](./installation#drop-in-text-replacement)
-picks between the two for you.
+its place. A [unified `Text` component](./installation#unified-text-component) uses
+conditional rendering to pick between the two for you.
 
 ## License
 

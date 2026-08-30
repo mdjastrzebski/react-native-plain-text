@@ -16,14 +16,13 @@ import { PlainText } from 'react-native-plain-text';
 <PlainText style={{ fontSize: 16 }}>Hello there 👋</PlainText>;
 ```
 
-## Drop-in `<Text>` replacement
+## Unified `Text` component
 
-`<PlainText>` is API-compatible with React Native `<Text>`, so you can define a component that
-renders `<PlainText>` for simple strings and falls back to RN `<Text>` for nested text. Use it
-anywhere you'd use `<Text>`.
+`<PlainText>` is API-compatible with React Native `<Text>`, so you can define a selector component:
+`<PlainText>` for simple strings, falling back to RN `<Text>` for nested text. Use it anywhere
+you'd use `<Text>`.
 
-You can also apply this pattern inside an existing centralized Text component (e.g. design system)
-instead of adding a separate component.
+This pattern gives you `<PlainText>`'s performance benefits across the app without changing any call sites.
 
 ```tsx
 import { use } from 'react';
@@ -40,6 +39,7 @@ export function Text({ children, ...rest }: TextProps) {
 }
 ```
 
-RN's `unstable_TextAncestorContext` is `true` when the text renders inside another `<Text>`.
+You can also apply this conditional rendering inside an existing centralized Text component
+(e.g. design system) instead of adding a separate component.
 
-Note: you should tweak this pattern as needed.
+RN's `unstable_TextAncestorContext` is `true` when the text renders inside another `<Text>`.
