@@ -100,12 +100,10 @@ such as `fontVariationSettings`.
 
 ## Not supported
 
-Deliberate scope calls, given `PlainText`'s job as a flat, single-style,
-non-interactive label:
+Following are deliberately excluded:
 
-- Nested `<Text>` and mixed styles
-- Press and touch handling (`onPress`, `onLongPress`, the responder handlers).
-  Wrap `PlainText` in a `Pressable` instead.
+- Nested `<Text>` elements and mixed styles
+- Press and touch handling (`onPress`, `onLongPress`, the responder handlers). Wrap `PlainText` in a `Pressable` instead.
 
 Use RN's `<Text>` where you need any of these. See
 [Props and styles](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles)
