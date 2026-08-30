@@ -19,13 +19,13 @@ export default defineConfig({
     footer: {
       message: 'MIT Licensed',
     },
-    nav: [{ text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' }],
+    nav: [{ text: 'Guide', link: '/guide/intro', activeMatch: '/guide/' }],
     sidebar: {
       '/guide/': [
         {
           text: 'Guide',
           items: [
-            { text: 'Introduction', link: '/guide/introduction' },
+            { text: 'Introduction', link: '/guide/intro' },
             { text: 'Installation', link: '/guide/installation' },
             { text: 'Props and styles', link: '/guide/props-and-styles' },
             { text: 'Performance', link: '/guide/performance' },

@@ -7,7 +7,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /guide/introduction
+      link: /guide/intro
     - theme: alt
       text: GitHub
       link: https://github.com/mdjastrzebski/react-native-plain-text
