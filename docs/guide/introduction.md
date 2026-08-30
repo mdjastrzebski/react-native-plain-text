@@ -1,25 +1,30 @@
 # Introduction
 
-A faster, lower-memory alternative to React Native's `<Text>` for simple,
-single-style text. `PlainText` renders straight to the platform's native text
-widget (`UILabel` on iOS, `TextView` on Android) instead of going through RN's
+PlainText is a faster, lighter alternative to React Native's built-in `<Text>` component
+that focuses on single-style text. This covers most real-world text: headers, labels, body copy.
+
+It renders straight to the platform's native text
+views: `UILabel` on iOS, `TextView` on Android, instead of using React Native's
 text layout pipeline.
 
-The tradeoff: one string, one style. No nested `<Text>`, no mixed styles. That
-still covers most real-world text: body copy, labels, list and feed content.
+The tradeoff: one style, no nested `<Text>`.
 
-Beta: the API is stable enough to use, and feedback drives what gets built next.
+See the list of [supported props and styles](./props-and-styles).
 
 ## Should you use it?
 
-RN's `<Text>` is the right choice for most apps. Reach for `PlainText` when you
-want to squeeze the most out of text-heavy screens like long lists and feeds,
-where a lot of labels mount at once.
+For most apps, React Native's `<Text>` is a reasonable choice. Two reasons to pick
+`<PlainText>` instead:
 
-It is not all-or-nothing. Everything `PlainText` supports is API-compatible with
-RN `<Text>`, so the two mix freely in one screen. Use `PlainText` for the flat,
-single-style labels and plain `<Text>` wherever you need something it doesn't
-do, like mixed styles, nested text, press handling or selection.
+1. Performance: on screens that mount a lot of single-style labels at once, like
+   feeds and long lists, it renders faster and uses less memory. See [benchmarks](./performance).
+2. Features and bug fixes missing from RN `<Text>`: such as `fontVariationSettings` and
+   `verticalAlign` / `textAlignVertical` on iOS. See
+   [Improvements over RN Text](./props-and-styles#improvements-over-rn-text).
+
+You can mix it with `<Text>` in the same screen and only use it where it earns
+its place. The [drop-in `<Text>` replacement](./installation#drop-in-text-replacement)
+picks between the two for you.
 
 ## License
 
