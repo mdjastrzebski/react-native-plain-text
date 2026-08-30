@@ -79,7 +79,7 @@ Deliberatly excluded:
   `pressRetentionOffset`, and the touch-responder handlers
   (`onStartShouldSetResponderCapture`, `onMoveShouldSetResponder`,
   `onResponderGrant` / `Move` / `Release` / `Terminate`,
-  `onResponderTerminationRequest`). Wrap `PlainText` in a `Pressable` instead.
+  `onResponderTerminationRequest`). Wrap `<PlainText>` in a `Pressable` instead.
 - `disabled`: only meaningful alongside press handlers.
 - `dataDetectorType`: turns substrings into tappable links, which makes the label
   interactive.

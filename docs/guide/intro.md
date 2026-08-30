@@ -1,6 +1,6 @@
 # Introduction
 
-PlainText is a faster, lighter alternative to React Native's built-in `<Text>` component
+Plain Text is a faster, lighter alternative to React Native's built-in `<Text>` component
 that focuses on single-style text. This covers most real-world text: headers, labels, body copy.
 
 It renders straight to the platform's native text
