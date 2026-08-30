@@ -3,15 +3,14 @@
 [![npm version](https://img.shields.io/npm/v/react-native-plain-text.svg)](https://www.npmjs.com/package/react-native-plain-text)
 [![license](https://img.shields.io/npm/l/react-native-plain-text.svg)](./LICENSE)
 
-A faster, lower-memory alternative to React Native's `<Text>` for simple,
-single-style text. `PlainText` renders straight to the platform's native text
-widget (`UILabel` on iOS, `TextView` on Android) instead of going through RN's
-text layout pipeline.
+`PlainText` is a faster, lighter alternative to React Native's built-in `<Text>`
+component that focuses on single-style text. This covers most real-world text:
+headers, labels, body copy.
 
-The tradeoff: one string, one style. No nested `<Text>`, no mixed styles. That
-still covers most real-world text: body copy, labels, list and feed content.
+It renders straight to the platform's native text views: `UILabel` on iOS,
+`TextView` on Android, instead of using React Native's text layout pipeline.
 
-Beta: the API is stable enough to use, and feedback drives what gets built next.
+The tradeoff: one style, no nested `<Text>`.
 
 ## Should you use it?
 
@@ -25,8 +24,8 @@ For most apps, RN's `<Text>` is a reasonable choice. Two reasons to pick
    [Improvements over RN Text](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles#improvements-over-rn-text).
 
 You can mix it with `<Text>` in the same screen and only use it where it earns
-its place. The [compatibility wrapper](#rn-text-compatibility-wrapper) below
-picks between the two for you.
+its place. A [unified `Text` component](#unified-text-component) uses conditional
+rendering to pick between the two for you.
 
 ## Installation
 
@@ -48,31 +47,35 @@ import { PlainText } from 'react-native-plain-text';
 <PlainText style={{ fontSize: 16 }}>Hello from PlainText 👋</PlainText>;
 ```
 
-## RN Text compatibility wrapper
+## Unified `Text` component
 
-`PlainText` is API-compatible with React Native `<Text>`, so a wrapper can pick
-one or the other automatically. The one below renders `PlainText` in supported
-cases and falls back to RN `<Text>` for anything more advanced (e.g. nested
-text).
+`PlainText` is API-compatible with React Native `<Text>`, so you can define a
+selector component: `PlainText` for simple strings, falling back to RN `<Text>`
+for nested text. Use it anywhere you'd use `<Text>`.
+
+This pattern gives you `PlainText`'s performance benefits across the app without
+changing any call sites.
 
 ```tsx
 import { use } from 'react';
 import { Text as RnText, unstable_TextAncestorContext, type TextProps } from 'react-native';
 import { PlainText, type PlainTextProps } from 'react-native-plain-text';
 
-export function CompatText({ children, ...rest }: TextProps) {
+export function Text({ children, ...rest }: TextProps) {
   const isNestedText = use(unstable_TextAncestorContext);
-  if (!isNestedText && typeof children === 'string') {
+  if (typeof children === 'string' && !isNestedText) {
     return <PlainText {...(rest as PlainTextProps)}>{children}</PlainText>;
   }
+
   return <RnText {...rest}>{children}</RnText>;
 }
 ```
 
-RN's `unstable_TextAncestorContext` helps detect cases when `<Text>` is nested
-inside another `<Text>`, one of the cases `PlainText` can't handle.
+You can also apply this conditional rendering inside an existing centralized Text
+component (e.g. design system) instead of adding a separate component.
 
-Note: you should tweak this pattern as needed.
+RN's `unstable_TextAncestorContext` is `true` when the text renders inside
+another `<Text>`.
 
 ## Props and styles
 
