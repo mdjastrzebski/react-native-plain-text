@@ -30,7 +30,7 @@ import { use } from 'react';
 import { Text as RnText, unstable_TextAncestorContext, type TextProps } from 'react-native';
 import { PlainText, type PlainTextProps } from 'react-native-plain-text';
 
-export function CompatText({ children, ...rest }: TextProps) {
+export function Text({ children, ...rest }: TextProps) {
   const isNestedText = use(unstable_TextAncestorContext);
   if (typeof children === 'string' && !isNestedText) {
     return <PlainText {...(rest as PlainTextProps)}>{children}</PlainText>;

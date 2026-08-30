@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 import { defineConfig } from 'rspress/config';
 
 const GITHUB_REPO = 'https://github.com/mdjastrzebski/react-native-plain-text';
@@ -13,6 +15,8 @@ export default defineConfig({
   route: {
     exclude: ['agent/**', 'doc_build/**', 'node_modules/**', 'rspress.config.ts', 'tsconfig.json'],
   },
+  // Brand palette pulled from the example app's `example/src/theme.ts`.
+  globalStyles: path.join(__dirname, 'styles/index.css'),
   themeConfig: {
     outlineTitle: 'On this page',
     socialLinks: [{ icon: 'github', mode: 'link', content: GITHUB_REPO }],

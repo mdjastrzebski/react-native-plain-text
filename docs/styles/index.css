@@ -1,0 +1,26 @@
+/*
+ * Docs palette, taken from the example app's `example/src/theme.ts`.
+ *
+ * The brand ramp is that palette's `indigo` accent (#2f55c0), its designated
+ * blue, with hover/active steps darkened along the same hue and the light
+ * steps lifted toward `indigoWash`. `--rp-c-brand-tint` keeps an alpha so
+ * translucent fills (sidebar active row, badges) still read.
+ */
+:root {
+  --rp-c-brand: #2f55c0;
+  --rp-c-brand-dark: #274aa8;
+  --rp-c-brand-darker: #1f3d8c;
+  --rp-c-brand-light: #4a6fd0;
+  --rp-c-brand-lighter: #6e8cdd;
+  --rp-c-brand-tint: #2f55c029;
+}
+
+.dark {
+  /* Lift the brand for contrast on the dark surface, staying on the indigo hue. */
+  --rp-c-brand: #6e8cdd;
+  --rp-c-brand-dark: #4a6fd0;
+  --rp-c-brand-darker: #2f55c0;
+  --rp-c-brand-light: #8aa2e6;
+  --rp-c-brand-lighter: #a6b9ee;
+  --rp-c-brand-tint: #6e8cdd29;
+}
