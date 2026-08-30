@@ -127,12 +127,24 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setTextShadowColor(textShadowColor)
   }
 
-  @ReactProp(name = "textShadowOffsetWidth")
+  // Two methods per optional Float prop (as in RN's ReactDrawerLayoutManager): the
+  // @ReactProp view-config reflection rejects a boxed Float ("Unrecognized type:
+  // java.lang.Float"), so the primitive overload registers the prop and the
+  // unannotated nullable override is what the codegen delegate calls at runtime.
+  @ReactProp(name = "textShadowOffsetWidth", defaultFloat = 0f)
+  fun setTextShadowOffsetWidth(view: PlainTextView?, textShadowOffsetWidth: Float) {
+    view?.setTextShadowOffsetWidth(textShadowOffsetWidth)
+  }
+
   override fun setTextShadowOffsetWidth(view: PlainTextView?, textShadowOffsetWidth: Float?) {
     view?.setTextShadowOffsetWidth(textShadowOffsetWidth ?: 0f)
   }
 
-  @ReactProp(name = "textShadowOffsetHeight")
+  @ReactProp(name = "textShadowOffsetHeight", defaultFloat = 0f)
+  fun setTextShadowOffsetHeight(view: PlainTextView?, textShadowOffsetHeight: Float) {
+    view?.setTextShadowOffsetHeight(textShadowOffsetHeight)
+  }
+
   override fun setTextShadowOffsetHeight(view: PlainTextView?, textShadowOffsetHeight: Float?) {
     view?.setTextShadowOffsetHeight(textShadowOffsetHeight ?: 0f)
   }
@@ -152,7 +164,12 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setLineHeight(lineHeight)
   }
 
-  @ReactProp(name = "letterSpacing")
+  // See the textShadowOffset* pair above for why this prop needs two methods.
+  @ReactProp(name = "letterSpacing", defaultFloat = 0f)
+  fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float) {
+    view?.setLetterSpacingDip(letterSpacing)
+  }
+
   override fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float?) {
     view?.setLetterSpacingDip(letterSpacing ?: 0f)
   }
