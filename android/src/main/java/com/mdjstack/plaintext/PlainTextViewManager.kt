@@ -131,7 +131,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // @ReactProp view-config reflection rejects a boxed Float ("Unrecognized type:
   // java.lang.Float"), so the primitive overload registers the prop and the
   // unannotated nullable override is what the codegen delegate calls at runtime.
-  @ReactProp(name = "textShadowOffsetWidth", defaultFloat = 0f)
+  @ReactProp(name = "textShadowOffsetWidth")
   fun setTextShadowOffsetWidth(view: PlainTextView?, textShadowOffsetWidth: Float) {
     view?.setTextShadowOffsetWidth(textShadowOffsetWidth)
   }
@@ -140,7 +140,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setTextShadowOffsetWidth(textShadowOffsetWidth ?: 0f)
   }
 
-  @ReactProp(name = "textShadowOffsetHeight", defaultFloat = 0f)
+  @ReactProp(name = "textShadowOffsetHeight")
   fun setTextShadowOffsetHeight(view: PlainTextView?, textShadowOffsetHeight: Float) {
     view?.setTextShadowOffsetHeight(textShadowOffsetHeight)
   }
@@ -165,7 +165,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   }
 
   // See the textShadowOffset* pair above for why this prop needs two methods.
-  @ReactProp(name = "letterSpacing", defaultFloat = 0f)
+  @ReactProp(name = "letterSpacing")
   fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float) {
     view?.setLetterSpacingDip(letterSpacing)
   }

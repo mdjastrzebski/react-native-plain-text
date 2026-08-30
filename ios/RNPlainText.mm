@@ -156,21 +156,9 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 {
     CGFloat fontSizeMultiplier = RNPlainTextFontSizeMultiplier(props);
     UIFont *font = plainTextFont(props, fontSizeMultiplier);
-    UIColor *color = [UIColor blackColor];
-    if (props.color.has_value()) {
-        const SharedColor &sharedColor = props.color.value();
-        color = RCTUIColorFromSharedColor(sharedColor);
-    }
+    UIColor *color = props.color.has_value() ? RCTUIColorFromSharedColor(props.color.value()) : [UIColor blackColor];
     NSTextAlignment alignment = RNPlainTextAlignmentFromProp(props.textAlign);
-    NSString *text = @"";
-    if (props.text.has_value()) {
-        const std::string &textProp = props.text.value();
-        const char *textBytes = textProp.c_str();
-        text = [NSString stringWithUTF8String:textBytes];
-        if (text == nil) {
-            text = @"";
-        }
-    }
+    NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
     text = plainTextApplyTextTransform(text, props.textTransform);
 
     BOOL hasLineHeight = props.lineHeight > 0;
@@ -183,9 +171,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         hasLineThrough = RNPlainTextHasLineThrough(textDecorationLine);
     }
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
-    BOOL hasTextShadowOffsetWidth = props.textShadowOffsetWidth.has_value();
-    BOOL hasTextShadowOffsetHeight = props.textShadowOffsetHeight.has_value();
-    BOOL hasTextShadow = hasTextShadowOffsetWidth || hasTextShadowOffsetHeight;
+    BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
 
     if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow) {
         // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
@@ -205,8 +191,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 
     // letterSpacing is in points, applied directly as kerning (mirrors RN <Text>).
     if (hasLetterSpacing) {
-        Float letterSpacing = props.letterSpacing.value();
-        attributes[NSKernAttributeName] = @(letterSpacing);
+        attributes[NSKernAttributeName] = @(props.letterSpacing.value());
     }
 
     // UILabel has no plain property for these either; line color defaults to text color, matching RN <Text>.
@@ -222,13 +207,10 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     // Unset radius/color fall back to NSShadow's own defaults.
     if (hasTextShadow) {
         NSShadow *shadow = [NSShadow new];
-        Float textShadowOffsetWidth = props.textShadowOffsetWidth.value_or(0);
-        Float textShadowOffsetHeight = props.textShadowOffsetHeight.value_or(0);
-        shadow.shadowOffset = CGSizeMake(textShadowOffsetWidth, textShadowOffsetHeight);
+        shadow.shadowOffset = CGSizeMake(props.textShadowOffsetWidth.value_or(0), props.textShadowOffsetHeight.value_or(0));
         shadow.shadowBlurRadius = props.textShadowRadius;
         if (props.textShadowColor.has_value()) {
-            const SharedColor &textShadowColor = props.textShadowColor.value();
-            shadow.shadowColor = RCTUIColorFromSharedColor(textShadowColor);
+            shadow.shadowColor = RCTUIColorFromSharedColor(props.textShadowColor.value());
         }
         attributes[NSShadowAttributeName] = shadow;
     }
