@@ -24,3 +24,58 @@
   --rp-c-brand-lighter: #a6b9ee;
   --rp-c-brand-tint: #6e8cdd29;
 }
+
+/*
+ * Typography, following the same cues as the example app's `example/src/theme.ts`
+ * and `example/src/components/Specimen.tsx`.
+ *
+ * The library's whole claim is that it draws with the platform's own text widget
+ * in the platform's own face, one style per node. So the docs lead with the
+ * native system stack rather than a bundled web face (the default theme opens
+ * with "Inter var"), the same reason the example's cover lockup takes the system
+ * face instead of a serif wordmark. Mono is the platform's own monospace, with
+ * Menlo kept prominent as `example/src/theme.ts`'s `MONO` picks it on iOS.
+ */
+:root {
+  --rp-font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol";
+  --rp-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+/*
+ * The hero name is the library's wordmark, so it gets the example's cover-lockup
+ * treatment: light and opened up rather than heavy and tight, because "nothing
+ * about this library is loud" and "the positive tracking is what keeps it
+ * precise at that size instead of merely wide". The default theme sets this h1
+ * bold; this steps it back down. `:has` picks the hero h1 by its tagline
+ * sibling, since the element carries no stable class.
+ */
+h1:has(+ .rspress-home-hero-tagline) {
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+.rspress-home-hero-tagline {
+  font-weight: 400;
+}
+
+/*
+ * Structural furniture as tracked caps, the way the example sets its section
+ * headers (`letterSpacing: 1.1` on 16px) and row labels (`letterSpacing: 0.7`
+ * on 10px), both about 0.07em.
+ */
+.rspress-sidebar-section-header {
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/*
+ * Tabular figures in tables, matching the specimen row labels'
+ * `fontVariant: ['tabular-nums']`, so the guide's columns of measured
+ * milliseconds and kilobytes line up.
+ */
+.rspress-doc table {
+  font-variant-numeric: tabular-nums;
+}

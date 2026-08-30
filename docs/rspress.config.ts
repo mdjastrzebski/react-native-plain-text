@@ -15,7 +15,8 @@ export default defineConfig({
   route: {
     exclude: ['agent/**', 'doc_build/**', 'node_modules/**', 'rspress.config.ts', 'tsconfig.json'],
   },
-  // Brand palette pulled from the example app's `example/src/theme.ts`.
+  // Brand palette and typography cues pulled from the example app's
+  // `example/src/theme.ts` and `example/src/components/Specimen.tsx`.
   globalStyles: path.join(__dirname, 'styles/index.css'),
   themeConfig: {
     outlineTitle: 'On this page',
