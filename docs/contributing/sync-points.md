@@ -81,26 +81,25 @@ kerning attribute treats those two differently (auto kerning vs. disabled).
 Android ignores it (no such distinction there) and it doesn't enter the
 three-way default contract above.
 
-## `lineHeightClippingIos`: global config with a per-instance override
+## `lineHeightClippingIos`: one prop, renamed at the JS boundary
 
 Unlike `hasLetterSpacing`, this one _is_ one of `PlainText`'s
 public props, just named differently at each layer. `PlainText.tsx`
 exposes it as `unstable_lineHeightClippingIos`, the `unstable_` marking that
-its shape/default may change without a major version bump, matching
-`unstable_configureTextCompat`. Past the JS wrapper the prefix drops: the
-native prop (`PlainTextViewNativeComponent.ts`), `Props.h`, and both native
-implementations all use the bare `lineHeightClippingIos`, since codegen output
-and native code aren't the unstable surface, the JS entry point is.
+its shape/default may change without a major version bump. Past the JS wrapper
+the prefix drops: the native prop (`PlainTextViewNativeComponent.ts`),
+`Props.h`, and both native implementations all use the bare
+`lineHeightClippingIos`, since codegen output and native code aren't the
+unstable surface, the JS entry point is.
 
-The value has two sources: `src/compat.ts` holds the module-level default
-`unstable_configureTextCompat` writes, and `PlainText.tsx` resolves
-`props.unstable_lineHeightClippingIos ?? getTextCompatConfig().lineHeightClippingIos`
-on every render, so an explicit prop always wins over the global config. It
-doesn't affect `measureContent`/`measure()` (the shift it gates is draw-only,
-the line-height box size is identical either way), so unlike `hasLetterSpacing`
-it does not belong in `measurementInputsEqual` or the three-way default
-contract. Android no-ops it (`PlainTextViewManager.setLineHeightClippingIos`):
-the TextKit bug it reverts to (RN#29507) has no Android counterpart.
+`mapPlainTextProps` forwards `props.unstable_lineHeightClippingIos` straight
+through as `lineHeightClippingIos`; when unset it stays `undefined` and the
+codegen `WithDefault<boolean, false>` supplies the default. It doesn't affect
+`measureContent`/`measure()` (the shift it gates is draw-only, the line-height
+box size is identical either way), so unlike `hasLetterSpacing` it does not
+belong in `measurementInputsEqual` or the three-way default contract. Android
+no-ops it (`PlainTextViewManager.setLineHeightClippingIos`): the TextKit bug it
+reverts to (RN#29507) has no Android counterpart.
 
 ## Anything derived from the OS text-size setting
 

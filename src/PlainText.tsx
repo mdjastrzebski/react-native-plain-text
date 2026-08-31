@@ -1,6 +1,5 @@
 import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } from 'react-native';
 import type { ComponentRef, Ref } from 'react';
-import { getTextCompatConfig } from './compat';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 
 // RN's TextStyle plus the one text style it has no entry for.
@@ -19,8 +18,10 @@ export type PlainTextProps = AccessibilityProps & {
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
-  // Per-instance override for unstable_configureTextCompat's lineHeightClippingIos.
-  // Unset defers to the global config. Set here, it wins regardless of it.
+  // When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
+  // ascent-clipping behavior (RN#29507) for this instance. Unset uses
+  // PlainText's fix. `unstable_` marks that its shape/default may change
+  // without a major version bump. No-op on Android.
   unstable_lineHeightClippingIos?: boolean;
   testID?: string;
   nativeID?: string;
@@ -91,8 +92,6 @@ export function mapPlainTextProps({
     ...viewStyle
   } = StyleSheet.flatten(style) ?? {};
 
-  const compatConfig = getTextCompatConfig();
-
   return {
     ...accessibilityProps,
     text: children,
@@ -120,7 +119,7 @@ export function mapPlainTextProps({
     allowFontScaling,
     maxFontSizeMultiplier,
     includeFontPadding,
-    lineHeightClippingIos: unstable_lineHeightClippingIos ?? compatConfig.lineHeightClippingIos,
+    lineHeightClippingIos: unstable_lineHeightClippingIos,
     style: viewStyle,
   };
 }

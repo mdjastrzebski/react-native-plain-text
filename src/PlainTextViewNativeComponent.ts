@@ -96,11 +96,10 @@ export interface NativeProps extends ViewProps {
   //
   // Currently unread: no experiment is live. See docs/contributing/perf-experiments.md.
   experiment?: CodegenTypes.WithDefault<boolean, false>;
-  // Internal, not part of PlainText's public props. Driven by
-  // unstable_configureTextCompat (src/compat.ts), forwarded on every render
-  // rather than only when it changes. iOS-only concern: when true, reverts
-  // applyContentFromProps's lineHeight vertical shift to RN <Text>'s current
-  // ascent-clipping bug instead of PlainText's fix. No-op on Android.
+  // PlainText's unstable_lineHeightClippingIos, prefix dropped past the JS
+  // wrapper. iOS-only concern: when true, reverts applyContentFromProps's
+  // lineHeight vertical shift to RN <Text>'s current ascent-clipping bug
+  // (RN#29507) instead of PlainText's fix. No-op on Android.
   lineHeightClippingIos?: CodegenTypes.WithDefault<boolean, false>;
   // Android-only, matching RN <Text>: UILabel has no equivalent extra
   // line-height padding to turn off, so this stays a real platform gap.

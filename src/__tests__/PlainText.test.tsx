@@ -1,15 +1,9 @@
-import { afterEach, describe, expect, it } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
 import { createRef, type ComponentRef } from 'react';
 import type { TextStyle } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
-import { unstable_configureTextCompat } from '../compat';
 import { PlainText, mapPlainTextProps } from '../PlainText';
 import PlainTextViewNativeComponent from '../PlainTextViewNativeComponent';
-
-afterEach(() => {
-  // unstable_configureTextCompat mutates module-level state; restore the default.
-  unstable_configureTextCompat({ lineHeightClippingIos: false });
-});
 
 it('maps PlainText props to native component props', () => {
   const nativeProps = mapPlainTextProps({
@@ -33,7 +27,6 @@ it('maps PlainText props to native component props', () => {
     hasLetterSpacing: true,
     hasTextShadow: true,
     letterSpacing: 0,
-    lineHeightClippingIos: false,
     numberOfLines: 2,
     style: { padding: 4 },
     text: 'Hello',
@@ -64,7 +57,6 @@ describe('<PlainText />', () => {
   fontSize={12}
   hasLetterSpacing={false}
   hasTextShadow={false}
-  lineHeightClippingIos={false}
   numberOfLines={2}
   style={
     {
@@ -279,23 +271,17 @@ describe('mapPlainTextProps', () => {
   });
 
   describe('lineHeightClippingIos', () => {
-    it('defaults to the global compat config', () => {
-      expect(mapPlainTextProps({}).lineHeightClippingIos).toBe(false);
-
-      unstable_configureTextCompat({ lineHeightClippingIos: true });
-      expect(mapPlainTextProps({}).lineHeightClippingIos).toBe(true);
-    });
-
-    it('lets the per-instance prop override the global config', () => {
-      unstable_configureTextCompat({ lineHeightClippingIos: true });
-      expect(
-        mapPlainTextProps({ unstable_lineHeightClippingIos: false }).lineHeightClippingIos
-      ).toBe(false);
-
-      unstable_configureTextCompat({ lineHeightClippingIos: false });
+    it('forwards unstable_lineHeightClippingIos under the native name', () => {
       expect(
         mapPlainTextProps({ unstable_lineHeightClippingIos: true }).lineHeightClippingIos
       ).toBe(true);
+      expect(
+        mapPlainTextProps({ unstable_lineHeightClippingIos: false }).lineHeightClippingIos
+      ).toBe(false);
+    });
+
+    it('is undefined when unset (native WithDefault applies)', () => {
+      expect(mapPlainTextProps({}).lineHeightClippingIos).toBeUndefined();
     });
   });
 
