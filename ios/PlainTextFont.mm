@@ -16,6 +16,29 @@
 
 namespace facebook::react {
 
+namespace {
+constinit const std::string kEmptyString;
+const std::vector<std::string> kEmptyStringVector;
+} // namespace
+
+// Map an unset optional prop to a shared empty value, by reference (no per-call copy).
+static const std::string &stringPropOrEmpty(const std::optional<std::string> &value)
+{
+  if (value.has_value()) {
+    return value.value();
+  }
+  return kEmptyString;
+}
+
+static const std::vector<std::string> &arrayPropOrEmpty(
+    const std::optional<std::vector<std::string>> &value)
+{
+  if (value.has_value()) {
+    return value.value();
+  }
+  return kEmptyStringVector;
+}
+
 // Caches +[UIFont fontNamesForFamilyName:], including the empty answer, so a face-only fontFamily isn't re-queried on every lookup.
 static NSArray<NSString *> *cachedFontNamesForFamilyName(NSString *familyName)
 {
@@ -198,11 +221,17 @@ CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseM
 // The resolution plainTextFont's cache wraps, for an already-scaled fontSize and faceKey.
 static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &faceKey, CGFloat fontSize, bool italic)
 {
-  RCTFontWeight weight = fontWeightFromProp(props.fontWeight);
+  const std::string &fontFamily = stringPropOrEmpty(props.fontFamily);
+  const std::string &fontWeight = stringPropOrEmpty(props.fontWeight);
+  const std::string &fontStyle = stringPropOrEmpty(props.fontStyle);
+  const std::vector<std::string> &fontVariant = arrayPropOrEmpty(props.fontVariant);
+  const std::string &fontVariationSettings = stringPropOrEmpty(props.fontVariationSettings);
+
+  RCTFontWeight weight = fontWeightFromProp(fontWeight);
   UIFont *font = nil;
   // "System" is RCTFont.mm's special-case name for the system font (no family is actually registered as "System"), so it's excluded here rather than failing the family lookup and logging.
-  if (!props.fontFamily.empty() && props.fontFamily != "System") {
-    NSString *faceName = resolvedFaceName(props.fontFamily, faceKey, props.fontWeight, weight, props.fontStyle);
+  if (!fontFamily.empty() && fontFamily != "System") {
+    NSString *faceName = resolvedFaceName(fontFamily, faceKey, fontWeight, weight, fontStyle);
     if (faceName != nil) {
       font = [UIFont fontWithName:faceName size:fontSize];
     }
@@ -222,7 +251,7 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
   }
 
   // Added last, as in RCTFont.mm, on top of whatever family/weight/italic resolution produced.
-  NSArray<NSDictionary *> *features = fontFeatureSettings(props.fontVariant);
+  NSArray<NSDictionary *> *features = fontFeatureSettings(fontVariant);
   if (features != nil) {
     // EXPENSIVE: a descriptor round trip (fontVariant's cache-miss cost, docs/contributing/performance.md).
     UIFontDescriptor *featureDescriptor = [font.fontDescriptor
@@ -233,7 +262,7 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
   // Variable-font axes, applied last so they win over family/weight resolution, matching CSS's font-variation-settings precedence over font-weight.
   // Set via CTFontCreateCopyWithAttributes, not -[UIFont fontWithDescriptor:size:], which has been reported to drop kCTFontVariationAttribute since iOS 14 (developer.apple.com/forums/thread/669246). CTFont/UIFont are toll-free bridged, so the result is a UIFont either way.
   // Only a font whose file carries an fvar table can move. The system font's axes are private, so this silently no-ops without a registered variable family.
-  NSDictionary<NSNumber *, NSNumber *> *variations = fontVariations(props.fontVariationSettings);
+  NSDictionary<NSNumber *, NSNumber *> *variations = fontVariations(fontVariationSettings);
   if (variations != nil) {
     CTFontDescriptorRef variationDescriptor = CTFontDescriptorCreateWithAttributes(
         (__bridge CFDictionaryRef) @{(__bridge id)kCTFontVariationAttribute : variations});
@@ -255,10 +284,16 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
   static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache =
       [[PlainTextFontCache alloc] initWithCountLimit:kFontCacheCountLimit];
 
+  const std::string &fontFamily = stringPropOrEmpty(props.fontFamily);
+  const std::string &fontWeight = stringPropOrEmpty(props.fontWeight);
+  const std::string &fontStyle = stringPropOrEmpty(props.fontStyle);
+  const std::vector<std::string> &fontVariant = arrayPropOrEmpty(props.fontVariant);
+  const std::string &fontVariationSettings = stringPropOrEmpty(props.fontVariationSettings);
+
   CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
-  bool italic = isItalicFromProp(props.fontStyle);
-  std::string faceKey = faceCacheKey(props.fontFamily, props.fontWeight, props.fontStyle);
-  std::string cacheKey = fontCacheKey(faceKey, fontSize, props.fontVariant, props.fontVariationSettings);
+  bool italic = isItalicFromProp(fontStyle);
+  std::string faceKey = faceCacheKey(fontFamily, fontWeight, fontStyle);
+  std::string cacheKey = fontCacheKey(faceKey, fontSize, fontVariant, fontVariationSettings);
   NSString *key = [NSString stringWithUTF8String:cacheKey.c_str()];
 
   return [resolvedFontsCache objectForKey:key

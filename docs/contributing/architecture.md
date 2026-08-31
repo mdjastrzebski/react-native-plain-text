@@ -53,6 +53,12 @@ prefixed names left are the generated ones we implement:
   Do **not** import `react-native/Libraries/Types/CodegenTypes`, this project
   uses the strict API (`customConditions` in `tsconfig.json`), which blocks
   `react-native/Libraries/*` subpaths.
+- The native component enables `generateOptionalProperties`, so an optional
+  prop without a default becomes `std::optional` in generated C++. Codegen
+  currently gives a plain optional `Float` a synthetic `0` default
+  ([RN#55315](https://github.com/facebook/react-native/issues/55315)), so use
+  `WithDefault<Float, null>` when native code needs to distinguish unset from
+  an explicit zero.
 
 ## Example app
 

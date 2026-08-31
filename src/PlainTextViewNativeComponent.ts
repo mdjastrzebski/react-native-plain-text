@@ -40,15 +40,10 @@ export interface NativeProps extends ViewProps {
   //
   // Cost: medium. Forces iOS's attributed-string path and an Android line-height span.
   lineHeight?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
-  // Points. "Set or not" is carried separately in hasLetterSpacing, since 0
-  // is both the default and a legitimate value.
+  // Points. null keeps unset distinct from an explicit 0 in generated C++.
   //
   // Cost: medium. Forces iOS's attributed-string path, plus one paint write on Android.
-  letterSpacing?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
-  // Internal. iOS's kerning attribute treats "unset" and "0" differently
-  // (auto kerning vs. disabled), so this carries that bit explicitly.
-  // Android has no such distinction and ignores it.
-  hasLetterSpacing?: CodegenTypes.WithDefault<boolean, false>;
+  letterSpacing?: CodegenTypes.WithDefault<CodegenTypes.Float, null>;
   textAlign?: CodegenTypes.WithDefault<'auto' | 'left' | 'right' | 'center' | 'justify', 'auto'>;
   // Android-only in RN <Text>, but PlainText closes that gap on iOS too (see
   // docs/contributing/workflow.md#when-rn-itself-has-the-platform-gap). JS maps the
@@ -63,16 +58,11 @@ export interface NativeProps extends ViewProps {
   //
   // Cost: medium. Forces the iOS attributed-string path; the Android side is one paint write.
   textShadowColor?: ColorValue;
-  // DIP each. Flattened rather than a single {width, height} object, matching
-  // this spec's other flat-scalar props.
-  textShadowOffsetWidth?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
-  textShadowOffsetHeight?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
-  // "Set or not" for textShadowOffset, carried separately since {0, 0} is a
-  // legitimate offset distinct from unset. RN <Text> on iOS only draws a
-  // shadow when textShadowOffset itself was provided, regardless of
-  // textShadowRadius/textShadowColor; Android has no such distinction and
-  // ignores this, like hasLetterSpacing.
-  hasTextShadow?: CodegenTypes.WithDefault<boolean, false>;
+  // DIP each. null keeps an explicitly set {0, 0} distinct from unset in
+  // generated C++. Flattened rather than a single {width, height} object,
+  // matching this spec's other flat-scalar props.
+  textShadowOffsetWidth?: CodegenTypes.WithDefault<CodegenTypes.Float, null>;
+  textShadowOffsetHeight?: CodegenTypes.WithDefault<CodegenTypes.Float, null>;
   textShadowRadius?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
   // Transforms the text content itself, so it feeds both what's drawn and what's
   // measured (case changes can change width).
@@ -106,4 +96,7 @@ export interface NativeProps extends ViewProps {
   includeFontPadding?: CodegenTypes.WithDefault<boolean, true>;
 }
 
-export default codegenNativeComponent<NativeProps>('RNPlainText');
+export default codegenNativeComponent<NativeProps>('RNPlainText', {
+  // @ts-expect-error React Native's public export omits this supported codegen option.
+  generateOptionalProperties: true,
+});

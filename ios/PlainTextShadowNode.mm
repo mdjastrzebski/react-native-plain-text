@@ -20,10 +20,7 @@ Size PlainTextShadowNode::measureContent(
     const LayoutConstraints &layoutConstraints) const {
   const auto &props = getConcreteProps();
 
-  NSString *text = [NSString stringWithUTF8String:props.text.c_str()];
-  if (text == nil) {
-    text = @"";
-  }
+  NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
   text = plainTextApplyTextTransform(text, props.textTransform);
 
   // Base scale comes from the layout context (Fabric seeds it from
@@ -35,8 +32,8 @@ Size PlainTextShadowNode::measureContent(
   NSMutableDictionary<NSAttributedStringKey, id> *attributes = [NSMutableDictionary dictionary];
   attributes[NSFontAttributeName] = font;
 
-  if (props.hasLetterSpacing) {
-    attributes[NSKernAttributeName] = @(props.letterSpacing);
+  if (props.letterSpacing.has_value()) {
+    attributes[NSKernAttributeName] = @(props.letterSpacing.value());
   }
 
   // The per-line height used to cap numberOfLines: the pinned lineHeight when

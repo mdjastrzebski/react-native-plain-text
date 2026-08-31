@@ -63,28 +63,38 @@ entry on its own.
 These must all agree, per prop:
 
 1. the default in the generated `Props.h`,
-2. the `if (prop != default)` condition in `PlainTextMeasurementsManager.cpp`,
+2. the default/presence condition in `PlainTextMeasurementsManager.cpp`,
 3. the fallback in `PlainTextViewManager.measure()`.
 
-The C++ side omits props still at their default, so an absent key means
-"default", not "unset". A mismatch silently measures at the wrong size.
+For value-defaulted C++ props, the serialized map omits the generated default,
+so an absent key means "default". With `generateOptionalProperties`, props
+without a default become `std::optional`; those are omitted when they have no
+value, so absence means "unset". In both cases the Java fallback must produce
+the value the measuring view should apply for an absent key. A mismatch
+silently measures at the wrong size.
 
-## `letterSpacing`'s companion `hasLetterSpacing`
+## Optional zero-valued props
 
-`letterSpacing` defaults to `0`, same as "explicitly set to `0`", but iOS's
-kerning attribute treats those two differently (auto kerning vs. disabled).
-`hasLetterSpacing` carries the "was it set" bit separately, from
-`PlainText.tsx` through to `ios/PlainTextShadowNode.mm` and
-`ios/RNPlainText.mm`, and belongs in `measurementInputsEqual`
-(`cpp/PlainTextMeasurementHelpers.cpp`) alongside `letterSpacing` itself.
+`letterSpacing` and the two flattened `textShadowOffset` fields use
+`WithDefault<Float, null>`. With `generateOptionalProperties` enabled, codegen
+turns those into `std::optional<Float>`, preserving the distinction between
+unset and an explicit zero without a separate boolean prop. A plain optional
+`Float` does not work because codegen currently assigns it a synthetic `0`
+default (RN#55315).
 
-Android ignores it (no such distinction there) and it doesn't enter the
-three-way default contract above.
+iOS needs the distinction. Unset `letterSpacing` keeps automatic kerning while
+an explicit `0` disables it, and a `{0, 0}` shadow offset still opts into the
+shadow path. Android maps absent optional Floats back to `0`, since it has no
+equivalent distinction.
+
+`letterSpacing` belongs in `measurementInputsEqual`
+(`cpp/PlainTextMeasurementHelpers.cpp`) as the optional itself. Text shadow is
+draw-only, so its fields do not.
 
 ## `lineHeightClippingIos`: one prop, renamed at the JS boundary
 
-Unlike `hasLetterSpacing`, this one _is_ one of `PlainText`'s
-public props, just named differently at each layer. `PlainText.tsx`
+This one is a `PlainText` public prop, just named differently at each layer.
+`PlainText.tsx`
 exposes it as `unstable_lineHeightClippingIos`, the `unstable_` marking that
 its shape/default may change without a major version bump. Past the JS wrapper
 the prefix drops: the native prop (`PlainTextViewNativeComponent.ts`),
@@ -96,10 +106,10 @@ unstable surface, the JS entry point is.
 through as `lineHeightClippingIos`; when unset it stays `undefined` and the
 codegen `WithDefault<boolean, false>` supplies the default. It doesn't affect
 `measureContent`/`measure()` (the shift it gates is draw-only, the line-height
-box size is identical either way), so unlike `hasLetterSpacing` it does not
-belong in `measurementInputsEqual` or the three-way default contract. Android
-no-ops it (`PlainTextViewManager.setLineHeightClippingIos`): the TextKit bug it
-reverts to (RN#29507) has no Android counterpart.
+box size is identical either way), so it does not belong in
+`measurementInputsEqual` or the three-way default contract. Android no-ops it
+(`PlainTextViewManager.setLineHeightClippingIos`): the TextKit bug it reverts
+to (RN#29507) has no Android counterpart.
 
 ## Anything derived from the OS text-size setting
 

@@ -537,8 +537,8 @@ function renderItems(kind: Kind, applied: Applied) {
     // props actually set. The delta is the JS wrapper's cost. Every key in
     // textStyle is also a native prop name, so it spreads straight through,
     // except textShadowOffset: PlainText flattens that one object
-    // into textShadowOffsetWidth/Height plus hasTextShadow, so it needs the
-    // same translation here rather than a raw spread. Not factored into a
+    // into textShadowOffsetWidth/Height, so it needs the same translation here
+    // rather than a raw spread. Not factored into a
     // shared helper: this branch exists specifically to measure the
     // wrapper's own cost, so it has to redo the wrapper's work rather than
     // call into it.
@@ -546,7 +546,6 @@ function renderItems(kind: Kind, applied: Applied) {
     if (textShadowOffset != null) {
       (nativeTextStyle as Record<string, unknown>).textShadowOffsetWidth = textShadowOffset.width;
       (nativeTextStyle as Record<string, unknown>).textShadowOffsetHeight = textShadowOffset.height;
-      (nativeTextStyle as Record<string, unknown>).hasTextShadow = true;
     }
     return Array.from({ length: COUNT }, (_, n) => (
       <NativePlainText

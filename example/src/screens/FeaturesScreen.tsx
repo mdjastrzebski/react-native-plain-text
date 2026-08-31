@@ -855,7 +855,7 @@ const TEXT_DECORATION_LINES = [
 
 // "offset only" shows iOS drawing with no radius set, since its gate is
 // textShadowOffset alone. "radius only" is the asymmetric case: no shadow on
-// iOS, but Android still draws (see hasTextShadow in
+// iOS, but Android still draws (see the platform note on the offset props in
 // PlainTextViewNativeComponent.ts).
 //
 // textShadowColor is excluded from compareText/overlayText (Specimen.tsx): a

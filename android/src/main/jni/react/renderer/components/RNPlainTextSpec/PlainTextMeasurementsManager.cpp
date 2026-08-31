@@ -26,37 +26,38 @@ namespace {
 // at the wrong size, since an omitted key means "default", not "not set".
 folly::dynamic serializeProps(const RNPlainTextProps &props) {
   folly::dynamic serializedProps = folly::dynamic::object;
-  if (!props.text.empty()) {
-    serializedProps["text"] = props.text;
+  if (props.text.has_value()) {
+    serializedProps["text"] = props.text.value();
   }
   if (props.fontSize != 14.0) {
     serializedProps["fontSize"] = props.fontSize;
   }
-  if (!props.fontFamily.empty()) {
-    serializedProps["fontFamily"] = props.fontFamily;
+  if (props.fontFamily.has_value()) {
+    serializedProps["fontFamily"] = props.fontFamily.value();
   }
-  if (!props.fontWeight.empty()) {
-    serializedProps["fontWeight"] = props.fontWeight;
+  if (props.fontWeight.has_value()) {
+    serializedProps["fontWeight"] = props.fontWeight.value();
   }
-  if (!props.fontStyle.empty()) {
-    serializedProps["fontStyle"] = props.fontStyle;
+  if (props.fontStyle.has_value()) {
+    serializedProps["fontStyle"] = props.fontStyle.value();
   }
-  if (!props.fontVariant.empty()) {
+  if (props.fontVariant.has_value()) {
     // Arrives as a ReadableArray, what ReactTypefaceUtils.parseFontVariant takes.
     folly::dynamic fontVariant = folly::dynamic::array;
-    for (const auto &variant : props.fontVariant) {
+    const auto &fontVariants = props.fontVariant.value();
+    for (const auto &variant : fontVariants) {
       fontVariant.push_back(variant);
     }
     serializedProps["fontVariant"] = std::move(fontVariant);
   }
-  if (!props.fontVariationSettings.empty()) {
-    serializedProps["fontVariationSettings"] = props.fontVariationSettings;
+  if (props.fontVariationSettings.has_value()) {
+    serializedProps["fontVariationSettings"] = props.fontVariationSettings.value();
   }
   if (props.lineHeight != 0.0) {
     serializedProps["lineHeight"] = props.lineHeight;
   }
-  if (props.letterSpacing != 0.0) {
-    serializedProps["letterSpacing"] = props.letterSpacing;
+  if (props.letterSpacing.has_value()) {
+    serializedProps["letterSpacing"] = props.letterSpacing.value();
   }
   if (props.textTransform != RNPlainTextTextTransform::None) {
     serializedProps["textTransform"] = toString(props.textTransform);
