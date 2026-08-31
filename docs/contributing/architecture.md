@@ -9,11 +9,11 @@ see [sync-points.md](sync-points.md)).
 1. **Codegen spec**: `src/PlainTextViewNativeComponent.ts`. The `NativeProps`
    interface is the source of truth. Codegen turns it into the C++/Kotlin
    interfaces the native code implements.
-2. **JS wrapper**: `src/PlainText.native.tsx` (native) and `src/PlainText.tsx`
-   (web fallback, renders RN `<Text>`). `src/index.tsx` re-exports `PlainText`
+2. **JS wrapper**: `src/PlainText.tsx`. `src/index.tsx` re-exports `PlainText`
    and its types from `./PlainText`, plus the unstable native component and
    prop mapper. It also exports `unstable_configureTextCompat` and
-   `TextCompatConfig` from `./compat`.
+   `TextCompatConfig` from `./compat`. The library is Android/iOS only — there
+   is no web fallback.
 3. **iOS**: `ios/RNPlainText.mm` (+ `.h`): an `RCTViewComponentView` subclass
    hosting a `UILabel`, applying props in `updateProps:` by diffing
    `oldViewProps`/`newViewProps`.
@@ -41,7 +41,7 @@ prefixed names left are the generated ones we implement:
 
 - **Text-style props (e.g. `fontSize`) are not part of RN `ViewProps`**, so they
   don't reach the native view through `style`. The pattern (see
-  `PlainText.native.tsx`): accept a `TextStyle` `style`, `StyleSheet.flatten`
+  `PlainText.tsx`): accept a `TextStyle` `style`, `StyleSheet.flatten`
   it, destructure the text-style keys out, pass them as explicit codegen props,
   and forward the remaining layout styles as `style`.
 - **A prop nobody sets must cost a check.** No allocation, no font resolution,

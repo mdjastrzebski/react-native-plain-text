@@ -1,4 +1,4 @@
-// Internal state read by PlainText.native.tsx on every render and forwarded
+// Internal state read by PlainText.tsx on every render and forwarded
 // as a hidden native prop (lineHeightClippingIos in PlainTextViewNativeComponent.ts),
 // so it rides the existing Fabric props diff instead of needing its own native
 // module/bridge for a single flag.

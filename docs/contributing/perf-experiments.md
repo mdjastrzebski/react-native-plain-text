@@ -13,7 +13,7 @@ One internal boolean prop, declared in `src/PlainTextViewNativeComponent.ts`:
 experiment?: CodegenTypes.WithDefault<boolean, false>;
 ```
 
-It is **not** part of `PlainText`'s public props: `PlainText.native.tsx` never
+It is **not** part of `PlainText`'s public props: `PlainText.tsx` never
 destructures it, so it only reaches a node through the bare codegen component
 (`PlainTextViewNativeComponent`/`NativePlainText`) or through a prop spread
 that bypasses the wrapper's type, which is exactly how the perf suite sets it

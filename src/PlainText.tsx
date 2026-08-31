@@ -1,37 +1,135 @@
-import { Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
+import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } from 'react-native';
 import { forwardRef, type ComponentRef, type ForwardedRef } from 'react';
+import { getTextCompatConfig } from './compat';
+import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 
-// Same widened type as PlainText.native.tsx, see there for why.
+// RN's TextStyle plus the one text style it has no entry for.
+// `fontVariationSettings` is a style rather than a prop because two upstream
+// attempts to add it (react/react-native#44685, #44667) never merged, so
+// the type is widened here instead. Widened, not replaced, so a plain
+// TextStyle stays assignable and this can be dropped if RN adds the key.
 export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
 
-export type PlainTextProps = Omit<TextProps, 'children' | 'style'> & {
+// Accessibility, testID, and nativeID/id are ViewProps that the native view
+// already applies; `...accessibilityProps` just forwards them through.
+export type PlainTextProps = AccessibilityProps & {
   children?: string;
   style?: StyleProp<PlainTextStyle>;
-  // No-op here: the bug it works around (RN#29507) is iOS-only, so there is
-  // nothing for it to override on web. Kept in the type so call sites don't
-  // need a platform branch just to pass it.
+  numberOfLines?: number;
+  ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
+  allowFontScaling?: boolean;
+  maxFontSizeMultiplier?: number;
+  // Per-instance override for unstable_configureTextCompat's lineHeightClippingIos.
+  // Unset defers to the global config. Set here, it wins regardless of it.
   unstable_lineHeightClippingIos?: boolean;
+  testID?: string;
+  nativeID?: string;
+  id?: string;
 };
 
-// Web / fallback implementation. No translation needed: CSS supports
-// `font-variation-settings` natively and react-native-web passes unrecognized
-// style keys through to it.
-type PlainTextRef = ComponentRef<typeof Text>;
+// Despite the CSS name, `verticalAlign` is Android-only in RN as well: Text.js
+// aliases it onto `textAlignVertical` in JS, before either reaches native.
+// Mirroring that here means closing `textAlignVertical` on iOS closes
+// `verticalAlign` for free. `verticalAlign` wins when both are set (matches RN
+// <Text>), and its 'middle' maps to the native prop's 'center'.
+function resolveTextAlignVertical(
+  textAlignVertical: TextStyle['textAlignVertical'],
+  verticalAlign: TextStyle['verticalAlign']
+): 'auto' | 'top' | 'bottom' | 'center' | undefined {
+  if (verticalAlign != null) {
+    return verticalAlign === 'middle' ? 'center' : verticalAlign;
+  }
+  return textAlignVertical;
+}
 
-function PlainTextComponent(
-  {
-    children,
-    style,
-    unstable_lineHeightClippingIos: _unstable_lineHeightClippingIos,
-    ...rest
-  }: PlainTextProps,
-  ref: ForwardedRef<PlainTextRef>
-) {
-  return (
-    <Text ref={ref} style={style as StyleProp<TextStyle>} {...rest}>
-      {children}
-    </Text>
-  );
+const FONT_VARIANT_SEPARATORS = /[\s,]+/;
+
+// RN accepts fontVariant as either an array or a CSS-style string; the native
+// prop only takes the array, so the string form is split here. The array form
+// is returned as-is (not copied) to avoid allocating in the common case.
+function resolveFontVariant(fontVariant: TextStyle['fontVariant']): readonly string[] | undefined {
+  if (typeof fontVariant !== 'string') {
+    return fontVariant;
+  }
+  const variants = fontVariant
+    .split(FONT_VARIANT_SEPARATORS)
+    .filter((variant) => variant.length > 0);
+  return variants.length > 0 ? variants : undefined;
+}
+
+export function unstable_mapPlainTextProps({
+  children,
+  style,
+  numberOfLines,
+  ellipsizeMode,
+  allowFontScaling,
+  maxFontSizeMultiplier,
+  unstable_lineHeightClippingIos,
+  ...accessibilityProps
+}: PlainTextProps): NativeProps {
+  // Text-style props don't flow through the native ViewProps, so pull them
+  // out of the flattened style and pass them explicitly.
+  const {
+    color,
+    fontSize,
+    fontFamily,
+    fontWeight,
+    fontStyle,
+    fontVariant,
+    fontVariationSettings,
+    textAlign,
+    textAlignVertical,
+    verticalAlign,
+    textDecorationLine,
+    textTransform,
+    lineHeight,
+    letterSpacing,
+    includeFontPadding,
+    textShadowColor,
+    textShadowOffset,
+    textShadowRadius,
+    ...viewStyle
+  } = StyleSheet.flatten(style) ?? {};
+
+  const compatConfig = getTextCompatConfig();
+
+  return {
+    text: children,
+    color,
+    fontSize,
+    fontFamily,
+    fontWeight: fontWeight != null ? String(fontWeight) : undefined,
+    fontStyle,
+    fontVariant: resolveFontVariant(fontVariant),
+    fontVariationSettings,
+    textAlign,
+    textAlignVertical: resolveTextAlignVertical(textAlignVertical, verticalAlign),
+    textDecorationLine,
+    textTransform,
+    textShadowColor,
+    textShadowOffsetWidth: textShadowOffset?.width,
+    textShadowOffsetHeight: textShadowOffset?.height,
+    hasTextShadow: textShadowOffset !== undefined,
+    textShadowRadius,
+    lineHeight,
+    letterSpacing,
+    hasLetterSpacing: letterSpacing !== undefined,
+    numberOfLines,
+    ellipsizeMode,
+    allowFontScaling,
+    maxFontSizeMultiplier,
+    includeFontPadding,
+    lineHeightClippingIos: unstable_lineHeightClippingIos ?? compatConfig.lineHeightClippingIos,
+    style: viewStyle,
+    ...accessibilityProps,
+  };
+}
+
+type PlainTextRef = ComponentRef<typeof PlainTextViewNativeComponent>;
+
+function PlainTextComponent(props: PlainTextProps, ref: ForwardedRef<PlainTextRef>) {
+  const nativeProps = unstable_mapPlainTextProps(props);
+  return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }
 
 export const PlainText = forwardRef(PlainTextComponent);

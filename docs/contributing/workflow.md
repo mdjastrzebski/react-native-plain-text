@@ -33,7 +33,7 @@ divergence is deliberate.
 **Check for JS-level aliases first.** RN's `Text.js` maps `verticalAlign` onto
 `textAlignVertical` in JS (`verticalAlignToTextAlignVerticalMap`), so despite
 the CSS name it was never a second gap.
-`PlainText.native.tsx`'s `resolveTextAlignVertical` mirrors that alias, and
+`PlainText.tsx`'s `resolveTextAlignVertical` mirrors that alias, and
 closing `textAlignVertical` on iOS closed `verticalAlign` with it.
 
 ### When RN itself is wrong
