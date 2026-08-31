@@ -32,13 +32,13 @@ RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible.
 | `letterSpacing`              | ✅                     |                                                                                         |
 | `lineHeight`                 | ✅                     |                                                                                         |
 | `textAlign`                  | ✅                     |                                                                                         |
-| `textAlignVertical`          | ✅ ⬆️                  | Anroid-only in RN Text. Implemented for both iOS & Android here.                        |
+| `textAlignVertical`          | ✅ ⬆️                  | Android-only in RN Text. Implemented for both iOS & Android here.                        |
 | `textDecorationLine`         | ✅                     |                                                                                         |
 | `textShadowColor`            | ✅                     |                                                                                         |
 | `textShadowOffset`           | ✅                     |                                                                                         |
 | `textShadowRadius`           | ✅                     |                                                                                         |
 | `textTransform`              | ✅                     |                                                                                         |
-| `verticalAlign`              | ✅ ⬆️                  | Anroid-only in RN Text. Implemented for both iOS & Android                              |
+| `verticalAlign`              | ✅ ⬆️                  | Android-only in RN Text. Implemented for both iOS & Android                              |
 | Every other `ViewStyle` prop | ✅                     | `width`, `margin`, `padding`, `backgroundColor`, `opacity`, etc                         |
 
 RN `<Text>` compatibility: ✅ fully compatible · ⬆️ added in Plain Text
