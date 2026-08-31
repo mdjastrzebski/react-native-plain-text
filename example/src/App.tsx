@@ -21,10 +21,12 @@ import { COLOR } from './theme';
 import FeaturesScreen from './screens/FeaturesScreen';
 import PerformanceScreen from './screens/PerformanceScreen';
 import UseCasesScreen from './screens/UseCasesScreen';
+import AndroidTextClippingScreen from './screens/AndroidTextClippingScreen';
+import OtherExamplesScreen from './screens/OtherExamplesScreen';
 
 const Tab = createBottomTabNavigator();
-// One pair of components, used by all three stacks: `Navigator` and `Screen` are
-// plain components, and three of them mounted side by side under the tab
+// One pair of components, used by all four stacks: `Navigator` and `Screen` are
+// plain components, and four of them mounted side by side under the tab
 // navigator each get their own state.
 const Stack = createNativeStackNavigator();
 
@@ -35,8 +37,8 @@ const Stack = createNativeStackNavigator();
 // iOS branch always hands the title to UIKit's centered title view, and ignores
 // the option. So on iOS the title is rendered as the header's *left* view
 // instead, with the native title string emptied so UIKit does not draw it
-// centered as well. `headerLeft` is free here because these are single-screen
-// stacks with no back button to displace.
+// centered as well. Root screens have no back button to displace. Detail screens
+// use `detailTitleOptions` below so their native back control remains intact.
 function titleOptions(title: string): NativeStackNavigationOptions {
   // Set as display type rather than as a label: bold, tight, in ink. The caps
   // and tracking belong to the furniture inside the page (section rules, row
@@ -73,38 +75,88 @@ function titleOptions(title: string): NativeStackNavigationOptions {
   };
 }
 
+function detailTitleOptions(title: string): NativeStackNavigationOptions {
+  if (Platform.OS !== 'ios') {
+    return titleOptions(title);
+  }
+
+  return {
+    title,
+    headerTitleStyle: { fontSize: 18, fontWeight: '600', color: COLOR.ink },
+  };
+}
+
 // Every screen is wrapped in a single-screen native stack, which is what gives it
 // a real native header: Features and Use Cases install their "compare with Text"
-// toggle there, and Performance its props button, and all three then scroll under
-// a real navigation bar rather than a JS imitation of one.
+// toggle there, Performance installs its props button, and Other Examples pushes
+// individual reproductions from its index. All four then scroll under a real
+// navigation bar rather than a JS imitation of one.
 //
-// Each tab title is also the stack title, and deliberately short. On iOS the title
-// is a custom left bar button item, which UIKit lays out before the right one and
-// lets take the width it asks for, so a long title compresses the screen's own
-// header button to a bare "…": "Performance", not "Performance Benchmarks". The
-// library's full name is not in the bar at all. It is set as a wordmark on the
-// Features cover, right beside the "Aa", which is a better place for it than a
-// 23pt nav title next to a button.
+// Each tab title is also its root stack title. On iOS the title is a custom left
+// bar button item, which UIKit lays out before the right one and lets take the
+// width it asks for. This is why the screen with a header button stays
+// "Performance", not "Performance Benchmarks". The library's full name is not in
+// the bar at all. It is set as a wordmark on the Features cover, right beside the
+// "Aa", which is a better place for it than a 23pt nav title next to a button.
 //
-// The route name inside each stack never surfaces: single-screen stacks show no
-// back button, and the persisted selection reads the *tab* route name, which is
-// the title. So it is the titles here that have to stay put across releases, or a
-// persisted selection stops resolving; see `onStateChange` in App below.
+// The root route name inside each stack never surfaces, and the persisted
+// selection reads the *tab* route name, which is the title. So it is the titles
+// here that have to stay put across releases, or a persisted selection stops
+// resolving; see `onStateChange` in App below.
 const TABS = [
-  { title: 'Features', route: 'PlainText', icon: 'text', screen: FeaturesScreen },
-  { title: 'Use Cases', route: 'UseCases', icon: 'albums', screen: UseCasesScreen },
-  { title: 'Performance', route: 'Benchmarks', icon: 'speedometer', screen: PerformanceScreen },
+  {
+    title: 'Features',
+    icon: 'text',
+    screens: [{ route: 'PlainText', title: 'Features', component: FeaturesScreen, detail: false }],
+  },
+  {
+    title: 'Use Cases',
+    icon: 'albums',
+    screens: [{ route: 'UseCases', title: 'Use Cases', component: UseCasesScreen, detail: false }],
+  },
+  {
+    title: 'Other Examples',
+    icon: 'list',
+    screens: [
+      {
+        route: 'OtherExamples',
+        title: 'Other Examples',
+        component: OtherExamplesScreen,
+        detail: false,
+      },
+      {
+        route: 'AndroidTextClipping',
+        title: 'Android text clipping',
+        component: AndroidTextClippingScreen,
+        detail: true,
+      },
+    ],
+  },
+  {
+    title: 'Performance',
+    icon: 'speedometer',
+    screens: [
+      { route: 'Benchmarks', title: 'Performance', component: PerformanceScreen, detail: false },
+    ],
+  },
 ] as const;
 
 // Built once per tab at module load rather than per render of App: `component` and
 // `tabBarIcon` are identities react-navigation diffs against, and a fresh closure
 // each render would remount the stack and re-set the tab's options.
-const TAB_SCREENS = TABS.map(({ title, route, icon, screen }) => ({
+const TAB_SCREENS = TABS.map(({ title, icon, screens }) => ({
   title,
   stack: function Stacked() {
     return (
       <Stack.Navigator>
-        <Stack.Screen name={route} component={screen} options={titleOptions(title)} />
+        {screens.map((screen) => (
+          <Stack.Screen
+            key={screen.route}
+            name={screen.route}
+            component={screen.component}
+            options={screen.detail ? detailTitleOptions(screen.title) : titleOptions(screen.title)}
+          />
+        ))}
       </Stack.Navigator>
     );
   },
@@ -113,11 +165,10 @@ const TAB_SCREENS = TABS.map(({ title, route, icon, screen }) => ({
   ),
 }));
 
-// The keys are the names FeaturesScreen passes as fontFamily, and expo-font
-// registers each one as an alias for the face's real PostScript name
-// ("Inter_400Regular" ▸ "Inter-Regular"). One family, same names on both
-// platforms, which is what makes those rows comparable at all. Every other font
-// in that section is a platform built-in.
+// The keys are the names the example screens pass as fontFamily, and expo-font
+// registers each one as an alias for the face's real PostScript name. One alias
+// per cut gives both platforms the same names, which is what makes those rows
+// comparable at all.
 //
 // Gated rather than rendered through: an alias that hasn't been registered yet
 // resolves to the system font, which is precisely the failure the section exists
@@ -127,6 +178,19 @@ export default function App() {
     Inter_300Light_Italic,
     Inter_400Regular,
     Inter_600SemiBold,
+    'NotoSans-Bold': require('../assets/fonts/NotoSans-Bold.ttf'),
+    'NotoSans-BoldItalic': require('../assets/fonts/NotoSans-BoldItalic.ttf'),
+    'NotoSans-ExtraBold': require('../assets/fonts/NotoSans-ExtraBold.ttf'),
+    'NotoSans-ExtraLight': require('../assets/fonts/NotoSans-ExtraLight.ttf'),
+    'NotoSans-ExtraLightItalic': require('../assets/fonts/NotoSans-ExtraLightItalic.ttf'),
+    'NotoSans-Light': require('../assets/fonts/NotoSans-Light.ttf'),
+    'NotoSans-LightItalic': require('../assets/fonts/NotoSans-LightItalic.ttf'),
+    'NotoSans-Medium': require('../assets/fonts/NotoSans-Medium.ttf'),
+    'NotoSans-MediumItalic': require('../assets/fonts/NotoSans-MediumItalic.ttf'),
+    'NotoSans-Regular': require('../assets/fonts/NotoSans-Regular.ttf'),
+    'NotoSans-RegularItalic': require('../assets/fonts/NotoSans-RegularItalic.ttf'),
+    'NotoSans-SemiBold': require('../assets/fonts/NotoSans-SemiBold.ttf'),
+    'NotoSans-SemiBoldItalic': require('../assets/fonts/NotoSans-SemiBoldItalic.ttf'),
   });
 
   // Which tab was selected, kept across app kills for the rest of the session.
