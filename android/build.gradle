@@ -37,6 +37,11 @@ apply plugin: "kotlin-android"
 
 apply plugin: "com.facebook.react"
 
+// The npm package excludes android/src/test, while the local example app includes this
+// directory directly. Only configure test resources and dependencies when sources exist.
+def androidTestDirectory = file("src/test")
+def hasAndroidTests = androidTestDirectory.isDirectory()
+
 android {
   namespace "com.mdjstack.plaintext"
 
@@ -46,10 +51,12 @@ android {
     minSdkVersion getExtOrDefault("minSdkVersion")
   }
 
-  // Robolectric reads the module's merged manifest and resources. Without this it runs
-  // against a stub R and fails on anything that resolves a theme attribute.
-  testOptions {
-    unitTests.includeAndroidResources = true
+  if (hasAndroidTests) {
+    // Robolectric reads the module's merged manifest and resources. Without this it runs
+    // against a stub R and fails on anything that resolves a theme attribute.
+    testOptions {
+      unitTests.includeAndroidResources = true
+    }
   }
 
   compileOptions {
@@ -61,6 +68,8 @@ android {
 dependencies {
   implementation "com.facebook.react:react-android"
 
-  testImplementation "junit:junit:4.13.2"
-  testImplementation "org.robolectric:robolectric:4.14.1"
+  if (hasAndroidTests) {
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.robolectric:robolectric:4.14.1"
+  }
 }
