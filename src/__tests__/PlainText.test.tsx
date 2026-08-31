@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
+import { createRef, type ComponentRef } from 'react';
 import type { TextStyle } from 'react-native';
+import { render, screen } from '@testing-library/react-native';
 import { unstable_NativePlainText, unstable_configureTextCompat } from '..';
-import { mapPlainTextProps } from '../PlainText';
+import { PlainText, mapPlainTextProps } from '../PlainText';
+import PlainTextViewNativeComponent from '../PlainTextViewNativeComponent';
 
 afterEach(() => {
   // unstable_configureTextCompat mutates module-level state; restore the default.
@@ -41,6 +44,48 @@ it('maps PlainText props to native component props', () => {
     textAlignVertical: 'center',
     textShadowOffsetHeight: 2,
     textShadowOffsetWidth: 1,
+  });
+});
+
+describe('<PlainText />', () => {
+  it('renders the native component with the mapped native props', async () => {
+    await render(
+      <PlainText numberOfLines={2} style={{ fontSize: 12, padding: 4 }}>
+        Hello
+      </PlainText>
+    );
+
+    // `text` and `fontSize` are native-only props produced by the mapper;
+    // seeing them on the host element means the wrapper ran end to end.
+    expect(screen.root).toHaveProp('text', 'Hello');
+    expect(screen.root).toHaveProp('fontSize', 12);
+    expect(screen.root).toHaveProp('numberOfLines', 2);
+    // Text-style keys are pulled out of `style`; layout keys stay behind.
+    expect(screen.root).toHaveProp('style', { padding: 4 });
+
+    expect(screen.toJSON()).toMatchInlineSnapshot(`
+<RNPlainText
+  fontSize={12}
+  hasLetterSpacing={false}
+  hasTextShadow={false}
+  lineHeightClippingIos={false}
+  numberOfLines={2}
+  style={
+    {
+      "padding": 4,
+    }
+  }
+  text="Hello"
+/>
+`);
+  });
+
+  it('forwards ref to the underlying native view', async () => {
+    const ref = createRef<ComponentRef<typeof PlainTextViewNativeComponent>>();
+
+    await render(<PlainText ref={ref}>Hello</PlainText>);
+
+    expect(ref.current).not.toBeNull();
   });
 });
 
