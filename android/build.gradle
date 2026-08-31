@@ -37,10 +37,9 @@ apply plugin: "kotlin-android"
 
 apply plugin: "com.facebook.react"
 
-// The npm package excludes android/src/test, while the local example app includes this
-// directory directly. Only configure test resources and dependencies when sources exist.
-def androidTestDirectory = file("src/test")
-def hasAndroidTests = androidTestDirectory.isDirectory()
+// Only a source checkout has android/src/test; the npm package strips it. Gating test
+// config off it avoids AGP failing testDebugUnitTest on an empty source set in consumers.
+def hasAndroidTests = file("src/test").isDirectory()
 
 android {
   namespace "com.mdjstack.plaintext"
@@ -52,8 +51,7 @@ android {
   }
 
   if (hasAndroidTests) {
-    // Robolectric reads the module's merged manifest and resources. Without this it runs
-    // against a stub R and fails on anything that resolves a theme attribute.
+    // Robolectric needs the merged manifest and resources, not a stub R.
     testOptions {
       unitTests.includeAndroidResources = true
     }
