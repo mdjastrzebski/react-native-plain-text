@@ -74,7 +74,7 @@ The C++ side omits props still at their default, so an absent key means
 `letterSpacing` defaults to `0`, same as "explicitly set to `0`", but iOS's
 kerning attribute treats those two differently (auto kerning vs. disabled).
 `hasLetterSpacing` carries the "was it set" bit separately, from
-`PlainText.native.tsx` through to `ios/PlainTextShadowNode.mm` and
+`PlainText.tsx` through to `ios/PlainTextShadowNode.mm` and
 `ios/RNPlainText.mm`, and belongs in `measurementInputsEqual`
 (`cpp/PlainTextMeasurementHelpers.cpp`) alongside `letterSpacing` itself.
 
@@ -84,7 +84,7 @@ three-way default contract above.
 ## `lineHeightClippingIos`: global config with a per-instance override
 
 Unlike `hasLetterSpacing`, this one _is_ one of `PlainText`'s
-public props, just named differently at each layer. `PlainText.native.tsx`
+public props, just named differently at each layer. `PlainText.tsx`
 exposes it as `unstable_lineHeightClippingIos`, the `unstable_` marking that
 its shape/default may change without a major version bump, matching
 `unstable_configureTextCompat`. Past the JS wrapper the prefix drops: the
@@ -93,7 +93,7 @@ implementations all use the bare `lineHeightClippingIos`, since codegen output
 and native code aren't the unstable surface, the JS entry point is.
 
 The value has two sources: `src/compat.ts` holds the module-level default
-`unstable_configureTextCompat` writes, and `PlainText.native.tsx` resolves
+`unstable_configureTextCompat` writes, and `PlainText.tsx` resolves
 `props.unstable_lineHeightClippingIos ?? getTextCompatConfig().lineHeightClippingIos`
 on every render, so an explicit prop always wins over the global config. It
 doesn't affect `measureContent`/`measure()` (the shift it gates is draw-only,

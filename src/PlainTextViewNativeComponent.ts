@@ -32,7 +32,7 @@ export interface NativeProps extends ViewProps {
   // Cost: medium. Font-cache-miss descriptor round trip on iOS, unguarded paint write on Android.
   fontVariant?: ReadonlyArray<string>;
   // Variable-font axes, CSS `font-variation-settings` syntax (e.g. '"wght" 700, "wdth" 87.5').
-  // Not in RN's TextStyle, so PlainText.native.tsx widens the style type (PlainTextStyle).
+  // Not in RN's TextStyle, so PlainText.tsx widens the style type (PlainTextStyle).
   //
   // Cost: medium. CTFont copy on an iOS font-cache miss, Android derives a new Typeface on change.
   fontVariationSettings?: string;

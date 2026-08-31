@@ -160,7 +160,7 @@ Learned the hard way. Most of these cost an afternoon the first time.
   they each added it to `StyleSheetTypes` and `ReactNativeStyleAttributes` and
   threaded it through `TextAttributes`/`BaseTextProps`, and their rn-tester
   examples read `style={{fontVariationSettings: '"wght" 800'}}`. Since RN's
-  `TextStyle` has no such key, `PlainText.native.tsx` widens the style type
+  `TextStyle` has no such key, `PlainText.tsx` widens the style type
   itself, as `PlainTextStyle`. That is the one place the library adds a style RN
   does not have, so anything typed against RN's `TextStyle` (`TextItem`'s `<Text>`
   overlay in `example/src/components/Specimen.tsx`, for one) needs a cast in the
