@@ -94,6 +94,7 @@ export function mapPlainTextProps({
   const compatConfig = getTextCompatConfig();
 
   return {
+    ...accessibilityProps,
     text: children,
     color,
     fontSize,
@@ -121,7 +122,6 @@ export function mapPlainTextProps({
     includeFontPadding,
     lineHeightClippingIos: unstable_lineHeightClippingIos ?? compatConfig.lineHeightClippingIos,
     style: viewStyle,
-    ...accessibilityProps,
   };
 }
 

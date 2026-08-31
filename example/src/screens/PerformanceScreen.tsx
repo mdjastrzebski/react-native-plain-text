@@ -23,8 +23,6 @@ import {
 import { Section, screenStyles } from '../components/Specimen';
 import { useSessionState } from '../useSessionState';
 import { COLOR, MONO, SERIF, VARIABLE } from '../theme';
-// The library's bare codegen host component, the analogue of the
-// NativeText-vs-Text pair, which prices the JS wrapper.
 
 const COUNT = 1000;
 
@@ -538,7 +536,7 @@ function renderItems(kind: Kind, applied: Applied) {
     // native shape: no StyleSheet.flatten, no rest destructure, and only the
     // props actually set. The delta is the JS wrapper's cost. Every key in
     // textStyle is also a native prop name, so it spreads straight through,
-    // except textShadowOffset: PlainText.native.tsx flattens that one object
+    // except textShadowOffset: PlainText flattens that one object
     // into textShadowOffsetWidth/Height plus hasTextShadow, so it needs the
     // same translation here rather than a raw spread. Not factored into a
     // shared helper: this branch exists specifically to measure the
