@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 import type { TextStyle } from 'react-native';
-import {
-  unstable_NativePlainText,
-  unstable_configureTextCompat,
-  unstable_mapPlainTextProps,
-} from '..';
+import { unstable_NativePlainText, unstable_configureTextCompat } from '..';
+import { mapPlainTextProps } from '../PlainText';
 
 afterEach(() => {
   // unstable_configureTextCompat mutates module-level state; restore the default.
@@ -16,7 +13,7 @@ it('exposes the unstable native component', () => {
 });
 
 it('maps PlainText props to native component props', () => {
-  const nativeProps = unstable_mapPlainTextProps({
+  const nativeProps = mapPlainTextProps({
     accessibilityLabel: 'Greeting',
     children: 'Hello',
     numberOfLines: 2,
@@ -47,15 +44,15 @@ it('maps PlainText props to native component props', () => {
   });
 });
 
-describe('unstable_mapPlainTextProps', () => {
+describe('mapPlainTextProps', () => {
   it('maps children to text', () => {
-    expect(unstable_mapPlainTextProps({ children: 'Hello' }).text).toBe('Hello');
-    expect(unstable_mapPlainTextProps({}).text).toBeUndefined();
+    expect(mapPlainTextProps({ children: 'Hello' }).text).toBe('Hello');
+    expect(mapPlainTextProps({}).text).toBeUndefined();
   });
 
   it('forwards non-style props unchanged', () => {
     expect(
-      unstable_mapPlainTextProps({
+      mapPlainTextProps({
         numberOfLines: 3,
         ellipsizeMode: 'middle',
         allowFontScaling: false,
@@ -70,7 +67,7 @@ describe('unstable_mapPlainTextProps', () => {
   });
 
   it('forwards plain text-style props unchanged', () => {
-    const nativeProps = unstable_mapPlainTextProps({
+    const nativeProps = mapPlainTextProps({
       style: {
         color: '#f00',
         fontSize: 18,
@@ -107,96 +104,89 @@ describe('unstable_mapPlainTextProps', () => {
 
   describe('fontWeight', () => {
     it('stringifies a numeric weight', () => {
-      expect(unstable_mapPlainTextProps({ style: { fontWeight: 600 } }).fontWeight).toBe('600');
+      expect(mapPlainTextProps({ style: { fontWeight: 600 } }).fontWeight).toBe('600');
     });
 
     it('passes a string weight through', () => {
-      expect(unstable_mapPlainTextProps({ style: { fontWeight: 'bold' } }).fontWeight).toBe('bold');
+      expect(mapPlainTextProps({ style: { fontWeight: 'bold' } }).fontWeight).toBe('bold');
     });
 
     it('is undefined when unset', () => {
-      expect(unstable_mapPlainTextProps({}).fontWeight).toBeUndefined();
+      expect(mapPlainTextProps({}).fontWeight).toBeUndefined();
     });
   });
 
   describe('fontVariant', () => {
     it('splits a comma-separated string', () => {
       expect(
-        unstable_mapPlainTextProps({ style: { fontVariant: 'small-caps, tabular-nums' } })
-          .fontVariant
+        mapPlainTextProps({ style: { fontVariant: 'small-caps, tabular-nums' } }).fontVariant
       ).toEqual(['small-caps', 'tabular-nums']);
     });
 
     it('splits a space-separated string', () => {
       expect(
-        unstable_mapPlainTextProps({ style: { fontVariant: 'small-caps tabular-nums' } })
-          .fontVariant
+        mapPlainTextProps({ style: { fontVariant: 'small-caps tabular-nums' } }).fontVariant
       ).toEqual(['small-caps', 'tabular-nums']);
     });
 
     it('collapses mixed and repeated separators and trims edges', () => {
       expect(
-        unstable_mapPlainTextProps({ style: { fontVariant: ' small-caps ,, tabular-nums ' } })
-          .fontVariant
+        mapPlainTextProps({ style: { fontVariant: ' small-caps ,, tabular-nums ' } }).fontVariant
       ).toEqual(['small-caps', 'tabular-nums']);
     });
 
     it('maps a separator-only string to undefined', () => {
-      expect(
-        unstable_mapPlainTextProps({ style: { fontVariant: '  ' } }).fontVariant
-      ).toBeUndefined();
+      expect(mapPlainTextProps({ style: { fontVariant: '  ' } }).fontVariant).toBeUndefined();
     });
 
     it('passes an array through by reference (no copy)', () => {
       const fontVariant: TextStyle['fontVariant'] = ['small-caps', 'tabular-nums'];
-      expect(unstable_mapPlainTextProps({ style: { fontVariant } }).fontVariant).toBe(fontVariant);
+      expect(mapPlainTextProps({ style: { fontVariant } }).fontVariant).toBe(fontVariant);
     });
 
     it('is undefined when unset', () => {
-      expect(unstable_mapPlainTextProps({}).fontVariant).toBeUndefined();
+      expect(mapPlainTextProps({}).fontVariant).toBeUndefined();
     });
   });
 
   describe('textAlignVertical / verticalAlign', () => {
     it('passes textAlignVertical through when verticalAlign is unset', () => {
-      expect(
-        unstable_mapPlainTextProps({ style: { textAlignVertical: 'bottom' } }).textAlignVertical
-      ).toBe('bottom');
+      expect(mapPlainTextProps({ style: { textAlignVertical: 'bottom' } }).textAlignVertical).toBe(
+        'bottom'
+      );
     });
 
     it('uses verticalAlign when it is the only one set', () => {
-      expect(
-        unstable_mapPlainTextProps({ style: { verticalAlign: 'top' } }).textAlignVertical
-      ).toBe('top');
+      expect(mapPlainTextProps({ style: { verticalAlign: 'top' } }).textAlignVertical).toBe('top');
     });
 
     it("maps verticalAlign 'middle' to the native 'center'", () => {
-      expect(
-        unstable_mapPlainTextProps({ style: { verticalAlign: 'middle' } }).textAlignVertical
-      ).toBe('center');
+      expect(mapPlainTextProps({ style: { verticalAlign: 'middle' } }).textAlignVertical).toBe(
+        'center'
+      );
     });
 
     it('lets verticalAlign win when both are set', () => {
       expect(
-        unstable_mapPlainTextProps({
+        mapPlainTextProps({
           style: { textAlignVertical: 'bottom', verticalAlign: 'top' },
         }).textAlignVertical
       ).toBe('top');
     });
 
     it('is undefined when neither is set', () => {
-      expect(unstable_mapPlainTextProps({}).textAlignVertical).toBeUndefined();
+      expect(mapPlainTextProps({}).textAlignVertical).toBeUndefined();
     });
 
     it('does not forward verticalAlign through style', () => {
-      expect(unstable_mapPlainTextProps({ style: { verticalAlign: 'middle' } }).style).toEqual({});
+      expect(mapPlainTextProps({ style: { verticalAlign: 'middle' } }).style).toEqual({});
     });
   });
 
   describe('text shadow', () => {
     it('splits textShadowOffset into width/height and flags hasTextShadow', () => {
       expect(
-        unstable_mapPlainTextProps({ style: { textShadowOffset: { width: 1, height: 2 } } })
+        mapPlainTextProps({ style: { textShadowOffset: { width: 1, height: 2 } } })
       ).toMatchObject({
         textShadowOffsetWidth: 1,
         textShadowOffsetHeight: 2,
@@ -206,7 +196,7 @@ describe('unstable_mapPlainTextProps', () => {
 
     it('treats a zero offset as a shadow (offset present)', () => {
       expect(
-        unstable_mapPlainTextProps({ style: { textShadowOffset: { width: 0, height: 0 } } })
+        mapPlainTextProps({ style: { textShadowOffset: { width: 0, height: 0 } } })
       ).toMatchObject({
         textShadowOffsetWidth: 0,
         textShadowOffsetHeight: 0,
@@ -216,7 +206,7 @@ describe('unstable_mapPlainTextProps', () => {
 
     it('reports no shadow when the offset is absent', () => {
       expect(
-        unstable_mapPlainTextProps({ style: { textShadowColor: '#000', textShadowRadius: 4 } })
+        mapPlainTextProps({ style: { textShadowColor: '#000', textShadowRadius: 4 } })
       ).toMatchObject({
         textShadowOffsetWidth: undefined,
         textShadowOffsetHeight: undefined,
@@ -229,18 +219,18 @@ describe('unstable_mapPlainTextProps', () => {
 
   describe('letterSpacing', () => {
     it('flags hasLetterSpacing and forwards the value when set, including 0', () => {
-      expect(unstable_mapPlainTextProps({ style: { letterSpacing: 0 } })).toMatchObject({
+      expect(mapPlainTextProps({ style: { letterSpacing: 0 } })).toMatchObject({
         letterSpacing: 0,
         hasLetterSpacing: true,
       });
-      expect(unstable_mapPlainTextProps({ style: { letterSpacing: 2 } })).toMatchObject({
+      expect(mapPlainTextProps({ style: { letterSpacing: 2 } })).toMatchObject({
         letterSpacing: 2,
         hasLetterSpacing: true,
       });
     });
 
     it('reports hasLetterSpacing false when unset', () => {
-      expect(unstable_mapPlainTextProps({})).toMatchObject({
+      expect(mapPlainTextProps({})).toMatchObject({
         letterSpacing: undefined,
         hasLetterSpacing: false,
       });
@@ -249,28 +239,28 @@ describe('unstable_mapPlainTextProps', () => {
 
   describe('lineHeightClippingIos', () => {
     it('defaults to the global compat config', () => {
-      expect(unstable_mapPlainTextProps({}).lineHeightClippingIos).toBe(false);
+      expect(mapPlainTextProps({}).lineHeightClippingIos).toBe(false);
 
       unstable_configureTextCompat({ lineHeightClippingIos: true });
-      expect(unstable_mapPlainTextProps({}).lineHeightClippingIos).toBe(true);
+      expect(mapPlainTextProps({}).lineHeightClippingIos).toBe(true);
     });
 
     it('lets the per-instance prop override the global config', () => {
       unstable_configureTextCompat({ lineHeightClippingIos: true });
       expect(
-        unstable_mapPlainTextProps({ unstable_lineHeightClippingIos: false }).lineHeightClippingIos
+        mapPlainTextProps({ unstable_lineHeightClippingIos: false }).lineHeightClippingIos
       ).toBe(false);
 
       unstable_configureTextCompat({ lineHeightClippingIos: false });
       expect(
-        unstable_mapPlainTextProps({ unstable_lineHeightClippingIos: true }).lineHeightClippingIos
+        mapPlainTextProps({ unstable_lineHeightClippingIos: true }).lineHeightClippingIos
       ).toBe(true);
     });
   });
 
   describe('style splitting', () => {
     it('pulls text-style keys out and keeps layout styles in style', () => {
-      const nativeProps = unstable_mapPlainTextProps({
+      const nativeProps = mapPlainTextProps({
         style: {
           color: 'red',
           fontSize: 12,
@@ -292,7 +282,7 @@ describe('unstable_mapPlainTextProps', () => {
     });
 
     it('flattens an array style (last value wins)', () => {
-      const nativeProps = unstable_mapPlainTextProps({
+      const nativeProps = mapPlainTextProps({
         style: [
           { fontSize: 10, padding: 1 },
           { fontSize: 20, margin: 2 },
@@ -304,14 +294,14 @@ describe('unstable_mapPlainTextProps', () => {
     });
 
     it('defaults to an empty style object when no style is given', () => {
-      expect(unstable_mapPlainTextProps({}).style).toEqual({});
+      expect(mapPlainTextProps({}).style).toEqual({});
     });
   });
 
   describe('pass-through of remaining props', () => {
     it('forwards accessibility and identifier props', () => {
       expect(
-        unstable_mapPlainTextProps({
+        mapPlainTextProps({
           accessibilityLabel: 'Greeting',
           accessibilityRole: 'header',
           accessibilityState: { disabled: true },
@@ -330,7 +320,7 @@ describe('unstable_mapPlainTextProps', () => {
     });
 
     it('does not leak consumed props into the output', () => {
-      const nativeProps = unstable_mapPlainTextProps({
+      const nativeProps = mapPlainTextProps({
         children: 'x',
         unstable_lineHeightClippingIos: true,
         style: { fontSize: 10 },

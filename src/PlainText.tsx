@@ -1,5 +1,5 @@
 import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } from 'react-native';
-import { forwardRef, type ComponentRef, type ForwardedRef } from 'react';
+import type { ComponentRef, Ref } from 'react';
 import { getTextCompatConfig } from './compat';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 
@@ -57,7 +57,7 @@ function resolveFontVariant(fontVariant: TextStyle['fontVariant']): readonly str
   return variants.length > 0 ? variants : undefined;
 }
 
-export function unstable_mapPlainTextProps({
+export function mapPlainTextProps({
   children,
   style,
   numberOfLines,
@@ -127,9 +127,9 @@ export function unstable_mapPlainTextProps({
 
 type PlainTextRef = ComponentRef<typeof PlainTextViewNativeComponent>;
 
-function PlainTextComponent(props: PlainTextProps, ref: ForwardedRef<PlainTextRef>) {
-  const nativeProps = unstable_mapPlainTextProps(props);
+// React 19: `ref` is a plain prop, no `forwardRef` needed. Kept off
+// `PlainTextProps` so it never reaches `mapPlainTextProps`.
+export function PlainText({ ref, ...props }: PlainTextProps & { ref?: Ref<PlainTextRef> }) {
+  const nativeProps = mapPlainTextProps(props);
   return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }
-
-export const PlainText = forwardRef(PlainTextComponent);
