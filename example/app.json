@@ -25,9 +25,6 @@
       },
       "package": "plaintext.example"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
     "plugins": [
       "./plugins/withFontScaleConfigChanges",
       "expo-status-bar",

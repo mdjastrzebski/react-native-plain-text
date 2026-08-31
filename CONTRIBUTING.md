@@ -45,8 +45,10 @@ JavaScript are picked up on reload, native changes need a rebuild.
 yarn example start      # Metro only
 yarn example ios        # build & run on iOS
 yarn example android    # build & run on Android
-yarn example web        # run on Web
 ```
+
+The library is iOS/Android only — `PlainText` renders a Fabric native
+component with no web fallback, so there is no `yarn example web`.
 
 To edit native code in an IDE, open `example/ios/PlainTextExample.xcworkspace`
 in Xcode (sources under `Pods > Development Pods > react-native-plain-text`) or

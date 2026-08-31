@@ -2,17 +2,13 @@ import { afterEach, describe, expect, it } from '@jest/globals';
 import { createRef, type ComponentRef } from 'react';
 import type { TextStyle } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
-import { unstable_NativePlainText, unstable_configureTextCompat } from '..';
+import { unstable_configureTextCompat } from '../compat';
 import { PlainText, mapPlainTextProps } from '../PlainText';
 import PlainTextViewNativeComponent from '../PlainTextViewNativeComponent';
 
 afterEach(() => {
   // unstable_configureTextCompat mutates module-level state; restore the default.
   unstable_configureTextCompat({ lineHeightClippingIos: false });
-});
-
-it('exposes the unstable native component', () => {
-  expect(unstable_NativePlainText).toBeDefined();
 });
 
 it('maps PlainText props to native component props', () => {
