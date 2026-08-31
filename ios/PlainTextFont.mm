@@ -16,24 +16,27 @@
 
 namespace facebook::react {
 
+namespace {
+constinit const std::string kEmptyString;
+const std::vector<std::string> kEmptyStringVector;
+} // namespace
+
 // Map an unset optional prop to a shared empty value, by reference (no per-call copy).
 static const std::string &stringPropOrEmpty(const std::optional<std::string> &value)
 {
-  static const std::string empty;
   if (value.has_value()) {
     return value.value();
   }
-  return empty;
+  return kEmptyString;
 }
 
 static const std::vector<std::string> &arrayPropOrEmpty(
     const std::optional<std::vector<std::string>> &value)
 {
-  static const std::vector<std::string> empty;
   if (value.has_value()) {
     return value.value();
   }
-  return empty;
+  return kEmptyStringVector;
 }
 
 // Caches +[UIFont fontNamesForFamilyName:], including the empty answer, so a face-only fontFamily isn't re-queried on every lookup.
