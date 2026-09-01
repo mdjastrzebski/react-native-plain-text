@@ -28,7 +28,7 @@ it('maps PlainText props to native component props', () => {
     numberOfLines: 2,
     style: { padding: 4 },
     text: 'Hello',
-    textAlignVertical: 'center',
+    verticalAlign: 'middle',
     textShadowOffsetHeight: 2,
     textShadowOffsetWidth: 1,
   });
@@ -179,32 +179,25 @@ describe('mapPlainTextProps', () => {
   });
 
   describe('textAlignVertical / verticalAlign', () => {
-    it('passes textAlignVertical through when verticalAlign is unset', () => {
+    // The merge (verticalAlign wins when set, its 'middle' maps to 'center') is
+    // native-side now, per docs/contributing/performance.md#prop-cost-policy.
+    // JS only has to forward both raw values unmodified; the merge itself is
+    // covered by the native tests (PlainTextViewTest.kt / RNPlainTextTests.mm).
+    it('passes textAlignVertical through unmodified', () => {
       expect(mapPlainTextProps({ style: { textAlignVertical: 'bottom' } }).textAlignVertical).toBe(
         'bottom'
       );
     });
 
-    it('uses verticalAlign when it is the only one set', () => {
-      expect(mapPlainTextProps({ style: { verticalAlign: 'top' } }).textAlignVertical).toBe('top');
-    });
-
-    it("maps verticalAlign 'middle' to the native 'center'", () => {
-      expect(mapPlainTextProps({ style: { verticalAlign: 'middle' } }).textAlignVertical).toBe(
-        'center'
+    it('passes verticalAlign through unmodified', () => {
+      expect(mapPlainTextProps({ style: { verticalAlign: 'middle' } }).verticalAlign).toBe(
+        'middle'
       );
-    });
-
-    it('lets verticalAlign win when both are set', () => {
-      expect(
-        mapPlainTextProps({
-          style: { textAlignVertical: 'bottom', verticalAlign: 'top' },
-        }).textAlignVertical
-      ).toBe('top');
     });
 
     it('is undefined when neither is set', () => {
       expect(mapPlainTextProps({}).textAlignVertical).toBeUndefined();
+      expect(mapPlainTextProps({}).verticalAlign).toBeUndefined();
     });
 
     it('does not forward verticalAlign through style', () => {

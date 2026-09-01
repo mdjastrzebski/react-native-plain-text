@@ -45,6 +45,31 @@ static BOOL RNPlainTextHasLineThrough(const std::string &textDecorationLine)
     return textDecorationLine.find("line-through") != std::string::npos;
 }
 
+// verticalAlign (the cross-platform CSS style) wins over textAlignVertical when set
+// (matches RN <Text>'s Text.js), and its 'middle' maps to textAlignVertical's 'center'.
+// This merge used to run in JS (PlainText.tsx's resolveTextAlignVertical); moved here
+// per docs/contributing/performance.md#prop-cost-policy.
+// SYNC: PlainTextView.kt's applyVerticalAlignGravity must resolve identically.
+static RNPlainTextTextAlignVertical RNPlainTextResolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign)
+{
+    if (!verticalAlign.has_value()) {
+        return textAlignVertical;
+    }
+    if (verticalAlign.value() == "middle") {
+        return RNPlainTextTextAlignVertical::Center;
+    }
+    if (verticalAlign.value() == "top") {
+        return RNPlainTextTextAlignVertical::Top;
+    }
+    if (verticalAlign.value() == "bottom") {
+        return RNPlainTextTextAlignVertical::Bottom;
+    }
+    if (verticalAlign.value() == "auto") {
+        return RNPlainTextTextAlignVertical::Auto;
+    }
+    return textAlignVertical;
+}
+
 static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
 {
     switch (ellipsizeMode) {
@@ -181,7 +206,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         _label.textAlignment = alignment;
         _label.text = text;
         _label.verticalTextShift = 0;
-        _label.verticalAlignment = props.textAlignVertical;
+        _label.verticalAlignment = RNPlainTextResolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
         return;
     }
 
@@ -239,7 +264,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         }
     }
     _label.verticalTextShift = verticalTextShift;
-    _label.verticalAlignment = props.textAlignVertical;
+    _label.verticalAlignment = RNPlainTextResolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
 
     attributes[NSParagraphStyleAttributeName] = paragraphStyle;
     _label.attributedText = [[NSAttributedString alloc] initWithString:text attributes:attributes];
@@ -278,6 +303,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         oldViewProps.fontVariationSettings != newViewProps.fontVariationSettings ||
         oldViewProps.textAlign != newViewProps.textAlign ||
         oldViewProps.textAlignVertical != newViewProps.textAlignVertical ||
+        oldViewProps.verticalAlign != newViewProps.verticalAlign ||
         oldViewProps.color != newViewProps.color ||
         oldViewProps.lineHeight != newViewProps.lineHeight ||
         oldViewProps.letterSpacing != newViewProps.letterSpacing ||

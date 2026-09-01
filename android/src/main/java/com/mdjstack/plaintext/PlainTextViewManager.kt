@@ -117,6 +117,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setTextAlignVertical(textAlignVertical)
   }
 
+  @ReactProp(name = "verticalAlign")
+  override fun setVerticalAlign(view: PlainTextView?, verticalAlign: String?) {
+    view?.setVerticalAlign(verticalAlign)
+  }
+
   @ReactProp(name = "textDecorationLine")
   override fun setTextDecorationLine(view: PlainTextView?, textDecorationLine: String?) {
     view?.setTextDecorationLine(textDecorationLine)

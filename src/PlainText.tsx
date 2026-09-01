@@ -28,21 +28,6 @@ export type PlainTextProps = AccessibilityProps & {
   id?: string;
 };
 
-// Despite the CSS name, `verticalAlign` is Android-only in RN as well: Text.js
-// aliases it onto `textAlignVertical` in JS, before either reaches native.
-// Mirroring that here means closing `textAlignVertical` on iOS closes
-// `verticalAlign` for free. `verticalAlign` wins when both are set (matches RN
-// <Text>), and its 'middle' maps to the native prop's 'center'.
-function resolveTextAlignVertical(
-  textAlignVertical: TextStyle['textAlignVertical'],
-  verticalAlign: TextStyle['verticalAlign']
-): 'auto' | 'top' | 'bottom' | 'center' | undefined {
-  if (verticalAlign != null) {
-    return verticalAlign === 'middle' ? 'center' : verticalAlign;
-  }
-  return textAlignVertical;
-}
-
 const FONT_VARIANT_SEPARATORS = /[\s,]+/;
 
 // RN accepts fontVariant as either an array or a CSS-style string; the native
@@ -103,7 +88,8 @@ export function mapPlainTextProps({
     fontVariant: resolveFontVariant(fontVariant),
     fontVariationSettings,
     textAlign,
-    textAlignVertical: resolveTextAlignVertical(textAlignVertical, verticalAlign),
+    textAlignVertical,
+    verticalAlign,
     textDecorationLine,
     textTransform,
     textShadowColor,

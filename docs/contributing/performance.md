@@ -35,6 +35,18 @@ Two rules, both binding on every new prop or style.
   allocates, derives, or invalidates a layout, and which one only looks like it does.
   `grep -rn 'EXPENSIVE:'` should return every such call. Where the obvious suspect is
   in fact cached, say that too, or the next reader will guard the wrong line.
+- **No prop processing in JS.** `PlainText.tsx` extracts style keys out of the
+  flattened style object and forwards them, it must not resolve, merge, coerce
+  or derive values from them. Style flattening (`StyleSheet.flatten`) is the one
+  temporary exception, kept only because there is nowhere else for it to run yet;
+  it is not license for more JS-side work alongside it. Every prop the JS layer
+  hands to native must be one the RN app author actually set, unmodified. Push
+  resolution logic to native: shared C++ when the same decision is needed on both
+  platforms, platform-specific native code otherwise. This exists because JS-side
+  processing runs on every render regardless of whether the prop changed, where
+  Fabric's own diffing and the dirty-flag/cache machinery above buy nothing; it
+  also means every prop the cost table above rates has a native cost only, not a
+  hidden JS one on top.
 
 | Tier       | Means                                                                                                                                                    |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |

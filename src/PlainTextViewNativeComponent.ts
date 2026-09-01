@@ -46,9 +46,17 @@ export interface NativeProps extends ViewProps {
   letterSpacing?: CodegenTypes.WithDefault<CodegenTypes.Float, null>;
   textAlign?: CodegenTypes.WithDefault<'auto' | 'left' | 'right' | 'center' | 'justify', 'auto'>;
   // Android-only in RN <Text>, but PlainText closes that gap on iOS too (see
-  // docs/contributing/workflow.md#when-rn-itself-has-the-platform-gap). JS maps the
-  // cross-platform verticalAlign style onto this ('middle' -> 'center').
+  // docs/contributing/workflow.md#when-rn-itself-has-the-platform-gap).
   textAlignVertical?: CodegenTypes.WithDefault<'auto' | 'top' | 'bottom' | 'center', 'auto'>;
+  // The cross-platform verticalAlign style, passed through raw (unlike RN <Text>'s
+  // Text.js, which aliases it onto textAlignVertical in JS): 'middle' -> 'center' and
+  // "wins over textAlignVertical when set" are both native-side decisions now, per
+  // docs/contributing/performance.md#prop-cost-policy. Free string rather than
+  // WithDefault, since an empty string (unset) has to be distinguishable from an
+  // explicit 'auto'. Kept in sync across platforms by the SYNC comments on
+  // PlainTextView.kt's applyVerticalAlignGravity and RNPlainText.mm's
+  // RNPlainTextResolveVerticalAlign.
+  verticalAlign?: string;
   // Free string: 'underline line-through' has a space, which codegen enums can't represent.
   //
   // Cost: medium. Forces iOS's attributed-string path and two Android paint flags.

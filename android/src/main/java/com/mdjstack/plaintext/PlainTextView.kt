@@ -521,10 +521,33 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
+  private var rawTextAlignVertical: String? = null
+  private var rawVerticalAlign: String? = null
+
   // Mirrors <Text> (ReactTextView#setGravityVertical): vertical bits only, moves text
   // only when the view is taller than it. Android-only, like RN.
   fun setTextAlignVertical(textAlignVertical: String?) {
-    val vertical = when (textAlignVertical) {
+    rawTextAlignVertical = textAlignVertical
+    applyVerticalAlignGravity()
+  }
+
+  // The cross-platform verticalAlign style; wins over textAlignVertical when set
+  // (matches RN <Text>'s Text.js), and its 'middle' maps to textAlignVertical's
+  // 'center'. This merge used to run in JS (PlainText.tsx's resolveTextAlignVertical);
+  // moved here per docs/contributing/performance.md#prop-cost-policy.
+  // SYNC: RNPlainText.mm's RNPlainTextResolveVerticalAlign must resolve identically.
+  fun setVerticalAlign(verticalAlign: String?) {
+    rawVerticalAlign = verticalAlign
+    applyVerticalAlignGravity()
+  }
+
+  private fun applyVerticalAlignGravity() {
+    val resolved = when (rawVerticalAlign) {
+      null -> rawTextAlignVertical
+      "middle" -> "center"
+      else -> rawVerticalAlign
+    }
+    val vertical = when (resolved) {
       "top" -> Gravity.TOP
       "bottom" -> Gravity.BOTTOM
       "center" -> Gravity.CENTER_VERTICAL
