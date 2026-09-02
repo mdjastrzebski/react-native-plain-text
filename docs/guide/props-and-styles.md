@@ -13,9 +13,10 @@
 | `numberOfLines`         | ✅                     |                                                                                    |
 | `onLayout`              | ✅                     |                                                                                    |
 | `testID`                | ✅                     |                                                                                    |
+| `text`                  | ⬆️                     | Alternative to `children`. Use this to animate text (see below).                   |
 | Accessibility props     | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
 
-RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible.
+RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
 
 ## Supported styles
 
@@ -57,6 +58,35 @@ Things Plain Text does that RN `<Text>` does not:
   ([RN#29507](https://github.com/facebook/react-native/issues/29507)). Plain
   Text corrects the vertical offset at draw time so the text stays centered in
   its line box.
+
+## Animating text
+
+`PlainText` can be driven from an `Animated.Value` or a Reanimated shared
+value, per frame, with no React re-render — as long as the text is passed
+through `text`, not `children`. Both RN core's `Animated` and Reanimated push
+per-frame updates directly onto the native view keyed by whatever prop name
+was used in JSX; they never re-run `PlainText`'s render, so its
+`children` → native `text` remapping never fires, and animating `children`
+is silently dropped.
+
+```tsx
+// RN core Animated
+const AnimatedPlainText = Animated.createAnimatedComponent(PlainText);
+<AnimatedPlainText text={value.interpolate({ inputRange, outputRange })} />;
+```
+
+```tsx
+// Reanimated
+import Animated, { useAnimatedProps } from 'react-native-reanimated';
+
+const AnimatedPlainText = Animated.createAnimatedComponent(PlainText);
+const animatedProps = useAnimatedProps(() => ({ text: sharedValue.value }));
+<AnimatedPlainText text={initial} animatedProps={animatedProps} />;
+```
+
+Note: `Animated.Value.interpolate()` can only produce numeric/color-style
+strings (e.g. `'0'`, `'1'`), not arbitrary text, so the RN-core case above is
+limited to numeric output.
 
 ## Planned
 

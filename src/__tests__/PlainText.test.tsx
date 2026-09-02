@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import { createRef, type ComponentRef } from 'react';
 import type { TextStyle } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
@@ -64,6 +64,12 @@ describe('<PlainText />', () => {
 `);
   });
 
+  it('renders with the text prop', async () => {
+    await render(<PlainText text="Hello" />);
+
+    expect(screen.root).toHaveProp('text', 'Hello');
+  });
+
   it('forwards ref to the underlying native view', async () => {
     const ref = createRef<ComponentRef<typeof PlainTextViewNativeComponent>>();
 
@@ -77,6 +83,20 @@ describe('mapPlainTextProps', () => {
   it('maps children to text', () => {
     expect(mapPlainTextProps({ children: 'Hello' }).text).toBe('Hello');
     expect(mapPlainTextProps({}).text).toBeUndefined();
+  });
+
+  it('maps the text prop directly', () => {
+    expect(mapPlainTextProps({ text: 'Hello' }).text).toBe('Hello');
+  });
+
+  it('prefers text over children and warns once in dev', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(mapPlainTextProps({ text: 'Hello', children: 'Ignored' }).text).toBe('Hello');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toMatch(/text.*children/i);
+
+    warnSpy.mockRestore();
   });
 
   it('forwards non-style props unchanged', () => {

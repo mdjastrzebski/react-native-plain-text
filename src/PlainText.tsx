@@ -13,6 +13,12 @@ export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
 // already applies; `...accessibilityProps` just forwards them through.
 export type PlainTextProps = AccessibilityProps & {
   children?: string;
+  // Use instead of `children` when driving text from
+  // `Animated.createAnimatedComponent` (RN core or Reanimated): both push
+  // per-frame updates straight onto the host ref via a prop name, bypassing
+  // PlainText's render entirely, so animating `children` is silently
+  // dropped. Wins over `children` when both are set.
+  text?: string;
   style?: StyleProp<PlainTextStyle>;
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
@@ -30,6 +36,16 @@ export type PlainTextProps = AccessibilityProps & {
 
 const FONT_VARIANT_SEPARATORS = /[\s,]+/;
 
+const warnedOnceKeys = new Set<string>();
+
+function warnOnce(key: string, message: string): void {
+  if (warnedOnceKeys.has(key)) {
+    return;
+  }
+  warnedOnceKeys.add(key);
+  console.warn(message);
+}
+
 // RN accepts fontVariant as either an array or a CSS-style string; the native
 // prop only takes the array, so the string form is split here. The array form
 // is returned as-is (not copied) to avoid allocating in the common case.
@@ -45,6 +61,7 @@ function resolveFontVariant(fontVariant: TextStyle['fontVariant']): readonly str
 
 export function mapPlainTextProps({
   children,
+  text,
   style,
   numberOfLines,
   ellipsizeMode,
@@ -53,6 +70,13 @@ export function mapPlainTextProps({
   unstable_lineHeightClippingIos,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
+  if (__DEV__ && text != null && children != null) {
+    warnOnce(
+      'plain-text-text-and-children',
+      'PlainText: both `text` and `children` were set; `text` takes precedence. Pass only one.'
+    );
+  }
+
   // Text-style props don't flow through the native ViewProps, so pull them
   // out of the flattened style and pass them explicitly.
   const {
@@ -79,7 +103,7 @@ export function mapPlainTextProps({
 
   return {
     ...accessibilityProps,
-    text: children,
+    text: text ?? children,
     color,
     fontSize,
     fontFamily,

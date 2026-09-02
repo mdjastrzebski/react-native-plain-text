@@ -1,10 +1,61 @@
-import { Platform, ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import {
+  Animated as RNAnimated,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type TextStyle,
+} from 'react-native';
+import ReanimatedAnimated, { useAnimatedProps, useSharedValue } from 'react-native-reanimated';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { useCompareText } from '../components/CompareText';
 import { CompareBox, Cover, Section, TextItem, screenStyles } from '../components/Specimen';
+import { TextScrubber } from '../components/TextScrubber';
 import { COLOR, VARIABLE } from '../theme';
+
+// `text`, not `children`: both createAnimatedComponent implementations push
+// per-frame updates straight onto the host ref by prop name, bypassing
+// PlainText's render (and its children -> text remap) entirely.
+const RNAnimatedPlainText = RNAnimated.createAnimatedComponent(PlainText);
+const ReanimatedPlainText = ReanimatedAnimated.createAnimatedComponent(PlainText);
+
+// Roman numerals vary a lot more in length than plain digits (III vs
+// LXXXVIII), which makes PlainText's intrinsic-size re-measurement much more
+// visible as the scrubber moves. `'worklet'` so this same function is usable
+// both here (plain JS, on the RN Animated side) and inside a Reanimated
+// worklet (see `reanimatedProps` below).
+const ROMAN_NUMERALS: readonly [number, string][] = [
+  [100, 'C'],
+  [90, 'XC'],
+  [50, 'L'],
+  [40, 'XL'],
+  [10, 'X'],
+  [9, 'IX'],
+  [5, 'V'],
+  [4, 'IV'],
+  [1, 'I'],
+];
+
+function toRoman(value: number): string {
+  'worklet';
+  if (value <= 0) {
+    return 'N'; // Roman numerals have no zero; "nulla" is the traditional stand-in.
+  }
+  let remaining = value;
+  let result = '';
+  for (let i = 0; i < ROMAN_NUMERALS.length; i++) {
+    const [amount, numeral] = ROMAN_NUMERALS[i]!;
+    while (remaining >= amount) {
+      result += numeral;
+      remaining -= amount;
+    }
+  }
+  return result;
+}
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
@@ -13,8 +64,36 @@ type Props = NativeStackScreenProps<ParamListBase>;
 export default function FeaturesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
+  // Roman numerals have no numeric substring for `.interpolate()` to extract
+  // and recombine (`outputRange must contain color or value with numeric
+  // component`), so this side is driven the same way the plain setNativeProps
+  // spike was: an `Animated.Value` listener computing arbitrary text and
+  // pushing it straight onto the ref, rather than through `.interpolate()`.
+  const rnValue = useRef(new RNAnimated.Value(0)).current;
+  const rnAnimatedRef = useRef<ComponentRef<typeof RNAnimatedPlainText>>(null);
+  useEffect(() => {
+    const id = rnValue.addListener(({ value }) => {
+      rnAnimatedRef.current?.setNativeProps({ text: toRoman(Math.round(value)) });
+    });
+    return () => rnValue.removeListener(id);
+  }, [rnValue]);
+
+  const reanimatedValue = useSharedValue(0);
+  const reanimatedProps = useAnimatedProps(() => ({
+    text: toRoman(Math.round(reanimatedValue.value)),
+  }));
+  const onScrub = (value: number) => {
+    rnValue.setValue(value);
+    reanimatedValue.value = value;
+  };
+  const [scrubbing, setScrubbing] = useState(false);
+
   return (
-    <ScrollView style={screenStyles.scroll} contentContainerStyle={screenStyles.container}>
+    <ScrollView
+      style={screenStyles.scroll}
+      contentContainerStyle={screenStyles.container}
+      scrollEnabled={!scrubbing}
+    >
       <Cover
         lockup={{ glyph: 'Aa', title: 'PlainText' }}
         blurb="A faster, lower-memory React Native <Text> alternative for simple, single-style text."
@@ -715,6 +794,21 @@ export default function FeaturesScreen({ navigation }: Props) {
           {PARAGRAPH}
         </TextItem>
       </Section>
+      <Section title="Animating text" footer={ANIMATING_TEXT_FOOTER} spacedRows>
+        <View style={styles.animatingRow}>
+          <Text style={styles.animatingLabel}>ANIMATED (RN CORE)</Text>
+          <RNAnimatedPlainText ref={rnAnimatedRef} style={styles.animatingText} text="N" />
+        </View>
+        <View style={styles.animatingRow}>
+          <Text style={styles.animatingLabel}>REANIMATED</Text>
+          <ReanimatedPlainText
+            style={styles.animatingText}
+            text="N"
+            animatedProps={reanimatedProps}
+          />
+        </View>
+        <TextScrubber onChange={onScrub} onDragStateChange={setScrubbing} />
+      </Section>
     </ScrollView>
   );
 }
@@ -802,6 +896,23 @@ const styles = StyleSheet.create({
   a11yRow: {
     fontSize: 15,
     color: COLOR.inkSoft,
+  },
+  animatingRow: {
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  animatingLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.7,
+    color: COLOR.faint,
+  },
+  animatingText: {
+    fontSize: 26,
+    color: COLOR.ink,
+    backgroundColor: COLOR.wash,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
 });
 
@@ -1248,6 +1359,9 @@ const FONT_FAMILY_RESOLUTION_FOOTER = Platform.select({
   ios: 'Compare Text should agree on every row. Inter_* are expo-font aliases, one per cut.',
   default: 'The built-in rows are Android analogs. Inter_* are expo-font aliases, one per cut.',
 });
+
+const ANIMATING_TEXT_FOOTER =
+  'PlainText wrapped in createAnimatedComponent from Animated RN API and RN Reanimated package.';
 
 const FONT_PADDING_FOOTER = Platform.select({
   ios: 'Both rows should look identical here.',
