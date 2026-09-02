@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useEffect, useRef, type ComponentRef } from 'react';
 import {
   Animated as RNAnimated,
   Platform,
@@ -17,44 +17,21 @@ import { CompareBox, Cover, Section, TextItem, screenStyles } from '../component
 import { TextScrubber } from '../components/TextScrubber';
 import { COLOR, VARIABLE } from '../theme';
 
-// `text`, not `children`: both createAnimatedComponent implementations push
-// per-frame updates straight onto the host ref by prop name, bypassing
-// PlainText's render (and its children -> text remap) entirely.
+// `text`, not `children`: createAnimatedComponent writes updates onto the host
+// ref by prop name, bypassing PlainText's render and its children -> text remap.
 const RNAnimatedPlainText = RNAnimated.createAnimatedComponent(PlainText);
 const ReanimatedPlainText = ReanimatedAnimated.createAnimatedComponent(PlainText);
 
-// Roman numerals vary a lot more in length than plain digits (III vs
-// LXXXVIII), which makes PlainText's intrinsic-size re-measurement much more
-// visible as the scrubber moves. `'worklet'` so this same function is usable
-// both here (plain JS, on the RN Animated side) and inside a Reanimated
-// worklet (see `reanimatedProps` below).
-const ROMAN_NUMERALS: readonly [number, string][] = [
-  [100, 'C'],
-  [90, 'XC'],
-  [50, 'L'],
-  [40, 'XL'],
-  [10, 'X'],
-  [9, 'IX'],
-  [5, 'V'],
-  [4, 'IV'],
-  [1, 'I'],
-];
+// The scrubber (0-100) reveals this phrase one character at a time. Each step is
+// a new string length, so PlainText re-measures its intrinsic size every frame.
+// `'worklet'` lets the same function run on the RN Animated and Reanimated sides.
+const REVEAL_PHRASE = 'The quick brown fox jumps over the lazy dog.';
 
-function toRoman(value: number): string {
+function revealPhrase(value: number): string {
   'worklet';
-  if (value <= 0) {
-    return 'N'; // Roman numerals have no zero; "nulla" is the traditional stand-in.
-  }
-  let remaining = value;
-  let result = '';
-  for (let i = 0; i < ROMAN_NUMERALS.length; i++) {
-    const [amount, numeral] = ROMAN_NUMERALS[i]!;
-    while (remaining >= amount) {
-      result += numeral;
-      remaining -= amount;
-    }
-  }
-  return result;
+  const clamped = value < 0 ? 0 : value > 100 ? 100 : value;
+  const count = Math.round((clamped / 100) * REVEAL_PHRASE.length);
+  return REVEAL_PHRASE.slice(0, count);
 }
 
 type Props = NativeStackScreenProps<ParamListBase>;
@@ -64,35 +41,56 @@ type Props = NativeStackScreenProps<ParamListBase>;
 export default function FeaturesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
-  // Roman numerals have no numeric substring for `.interpolate()` to extract
-  // and recombine (`outputRange must contain color or value with numeric
-  // component`), so this side is driven the same way the plain setNativeProps
-  // spike was: an `Animated.Value` listener computing arbitrary text and
-  // pushing it straight onto the ref, rather than through `.interpolate()`.
+  // `.interpolate()` can't produce an arbitrary string, so the RN Animated side
+  // bridges the value to `text` by hand: a listener + `setNativeProps`. The
+  // listener fires several times per frame; on Fabric that burst of commits can
+  // land out of order and strand a stale value, so coalesce to one write per
+  // frame. Reanimated's `useAnimatedProps` (below) needs none of this.
   const rnValue = useRef(new RNAnimated.Value(0)).current;
   const rnAnimatedRef = useRef<ComponentRef<typeof RNAnimatedPlainText>>(null);
   useEffect(() => {
+    let frame: number | null = null;
+    let pending = '';
+    const flush = () => {
+      frame = null;
+      rnAnimatedRef.current?.setNativeProps({ text: pending });
+    };
     const id = rnValue.addListener(({ value }) => {
-      rnAnimatedRef.current?.setNativeProps({ text: toRoman(Math.round(value)) });
+      pending = revealPhrase(value);
+      if (frame == null) frame = requestAnimationFrame(flush);
     });
-    return () => rnValue.removeListener(id);
+    return () => {
+      rnValue.removeListener(id);
+      if (frame != null) cancelAnimationFrame(frame);
+    };
   }, [rnValue]);
 
   const reanimatedValue = useSharedValue(0);
   const reanimatedProps = useAnimatedProps(() => ({
-    text: toRoman(Math.round(reanimatedValue.value)),
+    text: revealPhrase(reanimatedValue.value),
   }));
   const onScrub = (value: number) => {
     rnValue.setValue(value);
     reanimatedValue.value = value;
   };
-  const [scrubbing, setScrubbing] = useState(false);
+
+  // Scroll-lock during the drag is an imperative native-prop toggle, not state:
+  // a re-render here would be pointless and would inflate the render count below.
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const onDragStateChange = (dragging: boolean) => {
+    scrollRef.current?.setNativeProps({ scrollEnabled: !dragging });
+  };
+
+  // Neither animated side re-renders this screen while scrubbing; the counter
+  // shown below the rows stays at 1 to prove it.
+  const renderCount = useRef(0);
+  renderCount.current += 1;
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={screenStyles.scroll}
       contentContainerStyle={screenStyles.container}
-      scrollEnabled={!scrubbing}
     >
       <Cover
         lockup={{ glyph: 'Aa', title: 'PlainText' }}
@@ -797,17 +795,18 @@ export default function FeaturesScreen({ navigation }: Props) {
       <Section title="Animating text" footer={ANIMATING_TEXT_FOOTER} spacedRows>
         <View style={styles.animatingRow}>
           <Text style={styles.animatingLabel}>ANIMATED (RN CORE)</Text>
-          <RNAnimatedPlainText ref={rnAnimatedRef} style={styles.animatingText} text="N" />
+          <RNAnimatedPlainText ref={rnAnimatedRef} style={styles.animatingText} text="" />
         </View>
         <View style={styles.animatingRow}>
           <Text style={styles.animatingLabel}>REANIMATED</Text>
           <ReanimatedPlainText
             style={styles.animatingText}
-            text="N"
+            text=""
             animatedProps={reanimatedProps}
           />
         </View>
-        <TextScrubber onChange={onScrub} onDragStateChange={setScrubbing} />
+        <Text style={styles.renderCountLabel}>RENDER COUNT: {renderCount.current}</Text>
+        <TextScrubber onChange={onScrub} onDragStateChange={onDragStateChange} />
       </Section>
     </ScrollView>
   );
@@ -908,11 +907,18 @@ const styles = StyleSheet.create({
     color: COLOR.faint,
   },
   animatingText: {
-    fontSize: 26,
+    fontSize: 18,
     color: COLOR.ink,
     backgroundColor: COLOR.wash,
     paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  renderCountLabel: {
+    alignSelf: 'center',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.7,
+    color: COLOR.faint,
   },
 });
 
