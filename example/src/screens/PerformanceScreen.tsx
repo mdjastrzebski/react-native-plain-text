@@ -65,9 +65,10 @@ type Scenario = 'mount' | 'unmount' | 'parent' | 'color' | 'layout';
 
 // The two colors the "Color" scenario alternates between. A toggle rather than
 // an absolute value so every press commits something, and so the run never
-// needs a value picker. Both from the palette: the page's ink, and the indigo
-// accent the rest of the app already uses for its own interactive elements.
-const COLORS = [COLOR.ink, COLOR.indigo];
+// needs a value picker. Both from the palette: the page's ink, and the oxblood
+// accent — deliberately not indigo, so the toggle still commits a real color
+// change when the config's own `color` row is already set to indigo.
+const COLORS = [COLOR.ink, COLOR.moss];
 
 // The "Layout" scenario alternates fontSize by half a point: every item has to
 // re-measure, while the drawn area changes by ~2%. That isolates measurement
@@ -973,15 +974,15 @@ const ATTRIBUTES: AttrDef[] = [
     section: 'Layout',
     fp: 'c',
     target: 'text',
-    // Same grey/color, same two alphas as backgroundColor below, so the two
+    // Same grey/indigo, same two alphas as backgroundColor below, so the two
     // rows can be paired to price compositing a translucent text color over a
     // translucent background rather than just a flat one.
     options: [
       { label: '(none)' },
       { label: '50% grey', value: `${COLOR.faint}80` },
       { label: '100% grey', value: COLOR.faint },
-      { label: '50% color', value: `${COLOR.indigo}80` },
-      { label: '100% color', value: COLOR.indigo },
+      { label: '50% indigo', value: `${COLOR.indigo}80` },
+      { label: '100% indigo', value: COLOR.indigo },
     ],
   },
   {
@@ -990,16 +991,16 @@ const ATTRIBUTES: AttrDef[] = [
     section: 'Layout',
     fp: 'bg',
     target: 'view',
-    // Grey is the page's own neutral (COLOR.faint); color is the indigo accent
-    // the rest of the sheet already uses. Alpha as an 8-digit hex suffix (80 =
+    // Grey is the page's own neutral (COLOR.faint); indigo is the accent the
+    // rest of the sheet already uses. Alpha as an 8-digit hex suffix (80 =
     // 50%) rather than an rgba() string, so the value is one flat color prop
     // either way, not a format switch between options.
     options: [
       { label: '(none)' },
       { label: '50% grey', value: `${COLOR.faint}80` },
       { label: '100% grey', value: COLOR.faint },
-      { label: '50% color', value: `${COLOR.indigo}80` },
-      { label: '100% color', value: COLOR.indigo },
+      { label: '50% indigo', value: `${COLOR.indigo}80` },
+      { label: '100% indigo', value: COLOR.indigo },
     ],
   },
   {
@@ -1067,11 +1068,12 @@ const ATTRIBUTES: AttrDef[] = [
     fp: 'settle',
     target: 'settle',
     options: [
-      { label: '3s', value: 3_000 },
+      { label: '1s', value: 1_000 },
       { label: '5s', value: 5_000 },
-      { label: '8s', value: 8_000 },
-      { label: '10s', value: 10_000 },
       { label: '15s', value: 15_000 },
+      { label: '30s', value: 30_000 },
+      { label: '45s', value: 45_000 },
+      { label: '60s', value: 60_000 },
     ],
     alwaysInFingerprint: true,
   },
