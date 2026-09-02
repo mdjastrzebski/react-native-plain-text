@@ -19,9 +19,9 @@ For most apps, RN's `<Text>` is a reasonable choice. Two reasons to pick
 
 1. Performance. On screens that mount a lot of single-style labels at once, like
    feeds and long lists, it mounts faster and uses less memory.
-2. Features missing from RN `<Text>`, such as `fontVariationSettings` and
-   `verticalAlign` / `textAlignVertical` on iOS. See
-   [Improvements over RN Text](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles#improvements-over-rn-text).
+2. Features and bug fixes missing from RN `<Text>`:
+   [`verticalAlign` / `textAlignVertical` on iOS and `fontVariationSettings`](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles#improvements-over-rn-text),
+   and [animated text](https://mdjastrzebski.github.io/react-native-plain-text/guide/recipes#animating-text).
 
 You can mix it with `<Text>` in the same screen and only use it where it earns
 its place. A [unified `Text` component](#unified-text-component) uses conditional
