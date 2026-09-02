@@ -194,7 +194,7 @@ ignored when looking at it:
   all (also documented on that row) — its width is pinned to the same value
   across every axis variant regardless of what's requested.
 
-Chasing the real remainder, each hypothesis below was checked with actual
+For the drift that was left, each hypothesis below was checked with actual
 on-device data (via temporary `PTDebug` logs in
 `PlainTextViewManager.measure()`, since removed) rather than reasoned from
 source. Three came back negative; item 1 turned out to be the answer, just

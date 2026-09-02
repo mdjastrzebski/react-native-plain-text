@@ -63,7 +63,7 @@ project's only C++/CMake/JNI, under `android/src/main/jni/`:
   props, sizes a reused off-screen `PlainTextView`, returns
   `YogaMeasureOutput.make(...)`.
 
-### Wiring (the fiddly part)
+### Wiring
 
 - **Registration is by include-shadowing, driven from `react-native.config.js`.**
   Autolinking generates

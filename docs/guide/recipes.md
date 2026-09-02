@@ -3,10 +3,10 @@
 ## Animating text
 
 `PlainText` can be driven per frame from an `Animated.Value` or a Reanimated
-shared value with **no React re-render** — as long as the text goes through
+shared value with **no React re-render**, as long as the text goes through
 `text`, not `children`. `createAnimatedComponent` (both RN core's and
 Reanimated's) writes per-frame updates straight onto the native view by prop
-name; it never re-runs `PlainText`'s render, so the `children` → `text`
+name. It never re-runs `PlainText`'s render, so the `children` → `text`
 remapping never fires and animating `children` is silently dropped.
 
 ### Reanimated
@@ -74,5 +74,5 @@ useEffect(() => {
 The `requestAnimationFrame` step matters on the New Architecture: the listener
 fires several times per frame, and a burst of `setNativeProps` calls can commit
 to the shadow tree out of order, stranding the label on a stale value once the
-animation stops. One write per frame — always the freshest value — avoids it.
+animation stops. One write per frame, always the freshest value, avoids it.
 Reanimated's `useAnimatedProps` handles this for you.

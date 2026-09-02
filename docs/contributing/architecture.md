@@ -11,7 +11,7 @@ see [sync-points.md](sync-points.md)).
    interfaces the native code implements.
 2. **JS wrapper**: `src/PlainText.tsx`. `src/index.tsx` re-exports `PlainText`
    and its types from `./PlainText`, plus `unstable_NativePlainText` (the bare
-   codegen host component). The library is Android/iOS only — there is no web
+   codegen host component). The library is Android/iOS only, with no web
    fallback.
 3. **iOS**: `ios/RNPlainText.mm` (+ `.h`): an `RCTViewComponentView` subclass
    hosting a `UILabel`, applying props in `updateProps:` by diffing

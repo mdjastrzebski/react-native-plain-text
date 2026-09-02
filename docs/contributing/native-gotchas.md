@@ -1,6 +1,7 @@
 # Native gotchas
 
-Learned the hard way. Most of these cost an afternoon the first time.
+Non-obvious platform behavior found while building the library. Each one cost
+time to track down the first time it came up.
 
 ## Builds
 

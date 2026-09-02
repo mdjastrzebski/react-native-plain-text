@@ -40,7 +40,7 @@ closing `textAlignVertical` on iOS closed `verticalAlign` with it.
 
 Same reasoning when RN's own behavior is a known bug, not a platform gap:
 match CSS/web, not RN's bug. `textTransform: 'capitalize'` on iOS is this case
-(react/react-native#34117) — see `ios/PlainTextTextTransform.h`.
+(react/react-native#34117). See `ios/PlainTextTextTransform.h`.
 
 ## Order of work
 

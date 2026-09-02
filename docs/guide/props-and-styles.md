@@ -74,7 +74,7 @@ Open an issue for the one you need. Real-world usage sets the priority.
 
 ## Not supported
 
-Deliberatly excluded:
+Deliberately excluded:
 
 - nested `<Text>` elements and mixed styles
 - press and touch handling: `onPress`, `onLongPress`, `onPressIn`, `onPressOut`,

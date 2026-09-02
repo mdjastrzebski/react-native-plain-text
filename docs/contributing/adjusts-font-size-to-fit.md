@@ -1,7 +1,7 @@
 # `adjustsFontSizeToFit` / `minimumFontScale`
 
 Why the README calls this the most expensive planned item, what RN actually does,
-and the two shapes it could take here. Written before any implementation
+and the two ways it could be built here. Written before any implementation
 attempt. Nothing described below is built.
 
 Line numbers cite the installed **RN 0.83.10** (`node_modules/react-native`).
@@ -12,7 +12,7 @@ substance it is called out.
 
 Every other prop is a pure function of props, applied twice independently: once
 in `measureContent` (or the Kotlin `measure()`) to produce a size, once on the
-mounted view to produce pixels. Nothing is passed between them. That is the whole
+mounted view to produce pixels. Nothing is passed between them. That is the
 basis of [intrinsic-sizing.md](intrinsic-sizing.md), and of the numbers in
 [performance.md](performance.md).
 
@@ -35,7 +35,7 @@ reproduces only in particular layouts.
 
 ## What RN does: runs it twice and lets the view win
 
-Two findings that reframe the problem.
+Two findings that change how to think about the problem.
 
 **Neither platform uses the native widget's autoshrink.** `UILabel`'s
 `adjustsFontSizeToFitWidth` / `minimumScaleFactor` is never touched. RN bisects a
@@ -46,7 +46,7 @@ fit predicate. Android bisects integer pt in
 `TextLayoutManager.adjustSpannableFontToFit` (`TextLayoutManager.kt:889`),
 mutating `ReactAbsoluteSizeSpan`s and `paint.textSize` in place.
 
-So "no native Android equivalent" is not the real obstacle. iOS has no usable
+So "no native Android equivalent" is not the blocker. iOS has no usable
 one either. Android in fact _has_ one (`TextView`'s
 `setAutoSizeTextTypeUniformWithConfiguration`, API 26+) and it is the wrong tool
 for the same reason UIKit's is: both work off the view's assigned bounds, which
@@ -189,14 +189,14 @@ Two consequences:
   [workflow.md](workflow.md), and it should be stated in the README rather than
   implied away.
 - **The formula to copy is the legacy one**, `max(minimumFontScale × fontSize, 4pt)`.
-  It is a two-line detail, which is the point: the cost is `adjustsFontSizeToFit`
+  It is a two-line detail: the cost of this prop is `adjustsFontSizeToFit`
   needing the final frame, not `minimumFontScale`.
 
 Worth an upstream issue. The fix is roughly one line per platform.
 
-## The two shapes this could take
+## Two ways to build it
 
-**Constrained-only: a prop, not a project.** Support it only when the caller
+**Constrained-only: small and self-contained.** Support it only when the caller
 gives the label a definite size. With both axes definite Yoga never calls the
 measure fn, so the shadow node does not participate, no new sync point appears,
 no measurement regression, and there is no box-vs-text disagreement to have
@@ -207,9 +207,9 @@ definite size". The price: the platforms will not pick identical sizes, and
 UIKit's multiline height-fitting is weak: verify on device before committing to
 it, and re-check the interaction with `textRectForBounds:`.
 
-**Full parity: the project.** A state channel from measure to mount, one shrink
-search shared in `cpp/`, and two platform fit-predicates (which on iOS means
-introducing `NSLayoutManager` measurement, per point 3). Everything in
+**Full parity: a large project.** A state channel from measure to mount, one
+shrink search shared in `cpp/`, and two platform fit-predicates (which on iOS
+means introducing `NSLayoutManager` measurement, per point 3). Everything in
 [Why we cannot copy that answer](#why-we-cannot-copy-that-answer) has to be paid.
 
 Nothing has been prototyped, and no numbers here are measured: the cost figures

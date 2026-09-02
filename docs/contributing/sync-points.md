@@ -8,8 +8,8 @@ site carries a `// SYNC:` comment:
 grep -rn "SYNC:" src cpp ios android
 ```
 
-The shared failure mode is worth internalizing: **correct on first render, wrong
-after an update, silent in between.** Review does not reliably catch these.
+They share one failure mode: **correct on first render, wrong after an update,
+silent in between.** Review does not reliably catch these.
 
 ## Any prop
 
@@ -347,7 +347,7 @@ checked and cleared on the first `-updateProps`, it makes that one call apply
 the content build, `numberOfLines` and `lineBreakMode` unconditionally,
 regardless of the diff.
 
-Recycling turns out not to need the same treatment. A recycled view is handed
+Recycling does not need the same treatment. A recycled view is handed
 straight back out to back an unrelated instance's first mount with `_props`
 still holding the previous instance's real values (the base
 `-prepareForRecycle` resets the layers and state it owns, not `_props`), but

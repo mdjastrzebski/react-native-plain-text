@@ -47,7 +47,7 @@ yarn example ios        # build & run on iOS
 yarn example android    # build & run on Android
 ```
 
-The library is iOS/Android only — `PlainText` renders a Fabric native
+The library is iOS/Android only. `PlainText` renders a Fabric native
 component with no web fallback, so there is no `yarn example web`.
 
 To edit native code in an IDE, open `example/ios/PlainTextExample.xcworkspace`
@@ -93,7 +93,7 @@ tested: [performance.md](docs/contributing/performance.md#prop-cost-policy).
 
 Some things in this codebase must be edited together, and **nothing verifies
 them**: no type error, no failing test, and usually nothing wrong on first
-render. The classic shape is a size-affecting prop, whose value has to be
+render. The common case is a size-affecting prop, whose value has to be
 applied identically in the mounted view, in each platform's separate measure
 pass, and in the C++ measurement-cache key.
 
