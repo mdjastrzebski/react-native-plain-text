@@ -81,6 +81,7 @@ export function Section({
 }
 
 export function TextItem({
+  testID,
   label,
   style,
   containerStyle,
@@ -92,6 +93,8 @@ export function TextItem({
   accessibilityProps,
   children,
 }: {
+  // Stable crop target for visual regression captures.
+  testID: string;
   // The value this row varies, set in a caption above the specimen. Keeping it
   // out of the specimen is what lets the specimen be real text rather than a
   // description of itself. Above rather than beside, because a gutter would cost
@@ -119,7 +122,7 @@ export function TextItem({
   const compatOn = useCompatOn();
 
   return (
-    <View style={styles.rowContainer}>
+    <View testID={testID} style={styles.rowContainer}>
       {label != null && <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>}
       {/* Full width, and the overlay's containing block. The grey row inside
           shrink-wraps to PlainText. The overlay must NOT, or it would be handed
@@ -151,7 +154,7 @@ export function TextItem({
           // shrink-wraps to its own measured width but still wraps at the same
           // available width PlainText was measured against, which is what makes
           // the scarlet box edge comparable to the grey one.
-          <View style={styles.overlay}>
+          <View testID={`${testID}-rn-text`} style={styles.overlay}>
             <Text
               // Cast back to what RN accepts. A fontVariationSettings in there is
               // dropped, which is the gap the Font Variation Settings section

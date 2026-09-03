@@ -8,6 +8,15 @@ import { COLOR, VARIABLE } from '../theme';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
+function captureTestID(section: string, specimen: string | number) {
+  const specimenID = String(specimen).replace(/^-/, 'negative-');
+  const slug = `${section}-${specimenID}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `vrt-capture-features-${slug}`;
+}
+
 // One prop per section, one value per row. Rows that stack several props at once
 // live on the Use Cases screen.
 export default function FeaturesScreen({ navigation }: Props) {
@@ -23,6 +32,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {FONT_SIZES.map((fontSize) => (
           <TextItem
             key={fontSize}
+            testID={captureTestID('font-size', fontSize)}
             label={`${fontSize}pt`}
             showText={showText}
             style={{ fontSize }}
@@ -40,13 +50,19 @@ export default function FeaturesScreen({ navigation }: Props) {
           here to tune, just a line to check nothing drops the glyph or clips
           its line height. */}
       <Section title="Emoji">
-        <TextItem label="mixed" showText={showText}>
+        <TextItem testID={captureTestID('emoji', 'mixed')} label="mixed" showText={showText}>
           {EMOJI_SPECIMEN}
         </TextItem>
       </Section>
       <Section title="Font Family" footer={FONT_FAMILY_RESOLUTION_FOOTER}>
         {FONT_FAMILY_RESOLUTION.map(({ label, style }) => (
-          <TextItem key={label} label={label} showText={showText} style={style}>
+          <TextItem
+            key={label}
+            testID={captureTestID('font-family', label)}
+            label={label}
+            showText={showText}
+            style={style}
+          >
             {style.fontFamily}
           </TextItem>
         ))}
@@ -55,6 +71,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {COLORS.map(({ label, color }) => (
           <TextItem
             key={label}
+            testID={captureTestID('color', label)}
             label={label}
             showText={showText}
             style={{ fontSize: SHORT_ROW_SIZE, color }}
@@ -63,6 +80,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
         <TextItem
+          testID={captureTestID('color', 'inverse')}
           label="inverse"
           showText={showText}
           style={{
@@ -78,6 +96,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {FONT_WEIGHTS.map((fontWeight) => (
           <TextItem
             key={fontWeight}
+            testID={captureTestID('font-weight', fontWeight)}
             label={fontWeight}
             showText={showText}
             style={{ fontSize: SHORT_ROW_SIZE, fontWeight }}
@@ -88,6 +107,7 @@ export default function FeaturesScreen({ navigation }: Props) {
       </Section>
       <Section title="Font Style">
         <TextItem
+          testID={captureTestID('font-style', 'italic')}
           label="italic"
           showText={showText}
           style={{ fontSize: SHORT_ROW_SIZE, fontStyle: 'italic' }}
@@ -95,6 +115,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {SPECIMEN}
         </TextItem>
         <TextItem
+          testID={captureTestID('font-style', 'bold-italic')}
           label="bold italic"
           showText={showText}
           style={{ fontSize: SHORT_ROW_SIZE, fontWeight: 'bold', fontStyle: 'italic' }}
@@ -106,6 +127,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {TEXT_ALIGNS.map((textAlign) => (
           <TextItem
             key={textAlign}
+            testID={captureTestID('text-align', textAlign)}
             label={textAlign}
             showText={showText}
             style={[styles.body, { textAlign }]}
@@ -151,7 +173,10 @@ export default function FeaturesScreen({ navigation }: Props) {
           showText={showText}
           containerStyle={styles.baselineRow}
           overlay={
-            <View style={styles.baselineRow}>
+            <View
+              testID="vrt-capture-features-baseline-alignment-rn-text"
+              style={styles.baselineRow}
+            >
               {BASELINE_ALIGNMENT_GLYPHS.map(({ text, fontSize }, index) => (
                 <Text
                   key={text}
@@ -179,6 +204,7 @@ export default function FeaturesScreen({ navigation }: Props) {
       </Section>
       <Section title="Multiline">
         <TextItem
+          testID={captureTestID('multiline', 'wrap')}
           label="wrap"
           showText={showText}
           style={styles.body}
@@ -191,6 +217,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {[1, 2, 3].map((numberOfLines) => (
           <TextItem
             key={numberOfLines}
+            testID={captureTestID('number-of-lines', numberOfLines)}
             label={`${numberOfLines} line${numberOfLines === 1 ? '' : 's'}`}
             showText={showText}
             numberOfLines={numberOfLines}
@@ -208,6 +235,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           and nothing insetted the text. */}
       <Section title="Padding">
         <TextItem
+          testID={captureTestID('padding', 'none')}
           label="none"
           showText={showText}
           style={styles.body}
@@ -216,6 +244,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {PARAGRAPH}
         </TextItem>
         <TextItem
+          testID={captureTestID('padding', 'vertical-16')}
           label="vertical 16"
           showText={showText}
           style={[styles.body, { paddingVertical: 16 }]}
@@ -224,6 +253,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {PARAGRAPH}
         </TextItem>
         <TextItem
+          testID={captureTestID('padding', 'top-28-bottom-4')}
           label="top 28 bottom 4"
           showText={showText}
           style={[styles.body, { paddingTop: 28, paddingBottom: 4 }]}
@@ -235,6 +265,7 @@ export default function FeaturesScreen({ navigation }: Props) {
             this is where a padding-blind measure pass shows up as a clipped or
             overflowing last line. */}
         <TextItem
+          testID={captureTestID('padding', 'all-20-wrapped')}
           label="all 20, wrapped"
           showText={showText}
           style={[styles.body, { padding: 20 }]}
@@ -254,6 +285,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           carries widths, a radius or a style and nothing else. */}
       <Section title="Borders">
         <TextItem
+          testID={captureTestID('borders', 'all-2')}
           label="all 2"
           showText={showText}
           style={[styles.body, styles.bordered, { borderWidth: 2 }]}
@@ -262,6 +294,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {PARAGRAPH}
         </TextItem>
         <TextItem
+          testID={captureTestID('borders', 'radius-12')}
           label="radius 12"
           showText={showText}
           style={[styles.body, styles.bordered, { borderWidth: 2, borderRadius: 12 }]}
@@ -272,6 +305,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {/* Per-side, the accent-bar shape: only the left edge is inset. The color
             comes from `bordered`, so the side widths are the only difference. */}
         <TextItem
+          testID={captureTestID('borders', 'left-6')}
           label="left 6"
           showText={showText}
           style={[styles.body, styles.bordered, { borderLeftWidth: 6 }]}
@@ -280,6 +314,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {PARAGRAPH}
         </TextItem>
         <TextItem
+          testID={captureTestID('borders', 'dashed')}
           label="dashed"
           showText={showText}
           style={[styles.body, styles.bordered, { borderWidth: 2, borderStyle: 'dashed' }]}
@@ -288,6 +323,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {PARAGRAPH}
         </TextItem>
         <TextItem
+          testID={captureTestID('borders', 'all-4-padding-12')}
           label="all 4 + padding 12"
           showText={showText}
           style={[styles.body, styles.bordered, { borderWidth: 4, padding: 12 }]}
@@ -300,6 +336,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {LINE_HEIGHTS.map((lineHeight) => (
           <TextItem
             key={lineHeight}
+            testID={captureTestID('line-height', lineHeight)}
             label={`${lineHeight} / 18`}
             showText={showText}
             style={{ fontSize: 18, lineHeight }}
@@ -320,6 +357,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           return (
             <TextItem
               key={font.label}
+              testID={captureTestID('line-height-clipping', font.label)}
               label={`${lineHeight} / ${fontSize}`}
               showText={showText}
               style={[font.style, { fontSize, lineHeight }]}
@@ -334,6 +372,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {LETTER_SPACINGS.map((letterSpacing) => (
           <TextItem
             key={letterSpacing}
+            testID={captureTestID('letter-spacing', letterSpacing)}
             label={`${letterSpacing > 0 ? '+' : ''}${letterSpacing}`}
             showText={showText}
             style={{ fontSize: SHORT_ROW_SIZE, letterSpacing }}
@@ -346,6 +385,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {ELLIPSIZE_MODES.map((ellipsizeMode) => (
           <TextItem
             key={ellipsizeMode}
+            testID={captureTestID('ellipsize-mode', ellipsizeMode)}
             label={ellipsizeMode}
             showText={showText}
             numberOfLines={1}
@@ -361,6 +401,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
           <TextItem
             key={textDecorationLine}
+            testID={captureTestID('text-decoration-line', textDecorationLine)}
             label={textDecorationLine}
             showText={showText}
             style={{ fontSize: SHORT_ROW_SIZE, textDecorationLine }}
@@ -373,6 +414,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {TEXT_TRANSFORMS.map((textTransform) => (
           <TextItem
             key={textTransform}
+            testID={captureTestID('text-transform', textTransform)}
             label={textTransform}
             showText={showText}
             style={{ fontSize: SHORT_ROW_SIZE, textTransform }}
@@ -382,6 +424,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         ))}
         {/* capitalize's two gotchas: a digit-led word and a contraction. */}
         <TextItem
+          testID={captureTestID('text-transform', 'capitalize-digit-led-word')}
           label="capitalize, digit-led word"
           showText={showText}
           style={{ fontSize: SHORT_ROW_SIZE, textTransform: 'capitalize' }}
@@ -389,6 +432,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {TEXT_TRANSFORM_ORDINAL_SPECIMEN}
         </TextItem>
         <TextItem
+          testID={captureTestID('text-transform', 'capitalize-contraction')}
           label="capitalize, contraction"
           showText={showText}
           style={{ fontSize: SHORT_ROW_SIZE, textTransform: 'capitalize' }}
@@ -400,10 +444,16 @@ export default function FeaturesScreen({ navigation }: Props) {
           Type on iOS, Font size on Android). FONT_SCALING_FOOTER names the path
           for whichever platform is running. */}
       <Section title="Font Scaling" footer={FONT_SCALING_FOOTER}>
-        <TextItem label="default" showText={showText} style={{ fontSize: SHORT_ROW_SIZE }}>
+        <TextItem
+          testID={captureTestID('font-scaling', 'default')}
+          label="default"
+          showText={showText}
+          style={{ fontSize: SHORT_ROW_SIZE }}
+        >
           {SPECIMEN}
         </TextItem>
         <TextItem
+          testID={captureTestID('font-scaling', 'disabled')}
           label="disabled"
           showText={showText}
           style={{ fontSize: SHORT_ROW_SIZE }}
@@ -412,6 +462,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {SPECIMEN}
         </TextItem>
         <TextItem
+          testID={captureTestID('font-scaling', 'max-1-5x')}
           label="max 1.5x"
           showText={showText}
           style={{ fontSize: SHORT_ROW_SIZE }}
@@ -443,7 +494,12 @@ export default function FeaturesScreen({ navigation }: Props) {
           reasons are spelled out in docs/agent/native-gotchas.md. */}
       <Section title="Font Variant" footer={FONT_VARIANT_FOOTER}>
         {/* Baseline to compare every row below against. */}
-        <TextItem label="default" showText={showText} style={fontVariantRow}>
+        <TextItem
+          testID={captureTestID('font-variant', 'system-default')}
+          label="default"
+          showText={showText}
+          style={fontVariantRow}
+        >
           {FONT_VARIANT_SPECIMEN}
         </TextItem>
         {/* Figure spacing first: the pair of values people actually reach for.
@@ -456,6 +512,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {TABULAR_FIGURE_ROWS.map((digits) => (
           <TextItem
             key={`tabular-${digits}`}
+            testID={captureTestID('font-variant-tabular-nums', digits)}
             label="tabular-nums"
             showText={showText}
             style={{ ...fontVariantRow, fontVariant: ['tabular-nums'] }}
@@ -466,6 +523,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {TABULAR_FIGURE_ROWS.map((digits) => (
           <TextItem
             key={`proportional-${digits}`}
+            testID={captureTestID('font-variant-proportional-nums', digits)}
             label="proportional-nums"
             showText={showText}
             style={{ ...fontVariantRow, fontVariant: ['proportional-nums'] }}
@@ -476,12 +534,18 @@ export default function FeaturesScreen({ navigation }: Props) {
         {/* Second baseline, in the serif the feature rows below use, so they have
             something to differ from. On Android it is the same font as the first
             baseline: that platform stays on the system font throughout. */}
-        <TextItem label="default" showText={showText} style={fontVariantFeatureRow}>
+        <TextItem
+          testID={captureTestID('font-variant', 'feature-font-default')}
+          label="default"
+          showText={showText}
+          style={fontVariantFeatureRow}
+        >
           {FONT_VARIANT_SPECIMEN}
         </TextItem>
         {FONT_VARIANTS.map(({ label, fontVariant }) => (
           <TextItem
             key={label}
+            testID={captureTestID('font-variant', label)}
             label={label}
             showText={showText}
             style={{ ...fontVariantFeatureRow, fontVariant }}
@@ -511,6 +575,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {FONT_VARIATION_SETTINGS.map(({ label, fontVariationSettings }) => (
           <TextItem
             key={label}
+            testID={captureTestID('font-variation-settings', label)}
             label={label}
             showText={showText}
             style={{ ...variableFontRow, fontVariationSettings }}
@@ -528,6 +593,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         {VERTICAL_ALIGNS.map((verticalAlign) => (
           <TextItem
             key={verticalAlign}
+            testID={captureTestID('vertical-align', verticalAlign)}
             label={verticalAlign}
             showText={showText}
             style={{ width: '100%', height: 72, fontSize: SHORT_ROW_SIZE, verticalAlign }}
@@ -558,31 +624,61 @@ export default function FeaturesScreen({ navigation }: Props) {
       <Section title="Wrap Detection">
         {/* Control. Nothing to detect: if this one disagrees, the harness is
             wrong, not the wrap logic. */}
-        <TextItem label="control" showText={showText} style={styles.wrapProbe}>
+        <TextItem
+          testID={captureTestID('wrap-detection', 'control')}
+          label="control"
+          showText={showText}
+          style={styles.wrapProbe}
+        >
           {'One short line   '}
         </TextItem>
         {/* Hard breaks, nothing wraps → hug the longest line. */}
-        <TextItem label="hard breaks" showText={showText} style={styles.wrapProbe}>
+        <TextItem
+          testID={captureTestID('wrap-detection', 'hard-breaks')}
+          label="hard breaks"
+          showText={showText}
+          style={styles.wrapProbe}
+        >
           {'Short\nthis line is longest   '}
         </TextItem>
         {/* Same with more paragraphs, and with the longest one in the middle:
             the width comes from a max over paragraphs, so order shouldn't
             matter. */}
-        <TextItem label="longest in middle" showText={showText} style={styles.wrapProbe}>
+        <TextItem
+          testID={captureTestID('wrap-detection', 'longest-in-middle')}
+          label="longest in middle"
+          showText={showText}
+          style={styles.wrapProbe}
+        >
           {'A\nBB\nthis line is longest  \nCCC'}
         </TextItem>
         {/* Same paragraphs, longest one last: the width comes from a max over
             paragraphs, so where it sits shouldn't matter. */}
-        <TextItem label="longest last" showText={showText} style={styles.wrapProbe}>
+        <TextItem
+          testID={captureTestID('wrap-detection', 'longest-last')}
+          label="longest last"
+          showText={showText}
+          style={styles.wrapProbe}
+        >
           {'A\nBB\nCCC\nthis line is longest  '}
         </TextItem>
         {/* No hard break, too long to fit → full constraint width. */}
-        <TextItem label="soft wrap only" showText={showText} style={styles.wrapProbe}>
+        <TextItem
+          testID={captureTestID('wrap-detection', 'soft-wrap-only')}
+          label="soft wrap only"
+          showText={showText}
+          style={styles.wrapProbe}
+        >
           {'No breaks here, but this sentence is long enough that it has to ' +
             'wrap onto several lines.'}
         </TextItem>
         {/* Both a hard break and a soft wrap → full constraint width. */}
-        <TextItem label="break then wrap" showText={showText} style={styles.wrapProbe}>
+        <TextItem
+          testID={captureTestID('wrap-detection', 'break-then-wrap')}
+          label="break then wrap"
+          showText={showText}
+          style={styles.wrapProbe}
+        >
           {'Break then wrap:\nthis second line is long enough that it also ' + 'has to wrap.'}
         </TextItem>
       </Section>
@@ -592,6 +688,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           inspect the native tree for the testID. */}
       <Section title="Accessibility">
         <TextItem
+          testID={captureTestID('accessibility', 'test-id')}
           label="testID"
           showText={showText}
           style={styles.a11yRow}
@@ -600,6 +697,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           &quot;plain-text-demo&quot;, findable in the native tree
         </TextItem>
         <TextItem
+          testID={captureTestID('accessibility', 'label')}
           label="label"
           showText={showText}
           style={styles.a11yRow}
@@ -610,6 +708,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           Overrides the spoken text
         </TextItem>
         <TextItem
+          testID={captureTestID('accessibility', 'role')}
           label="role"
           showText={showText}
           style={styles.a11yRow}
@@ -618,6 +717,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           &quot;header&quot;
         </TextItem>
         <TextItem
+          testID={captureTestID('accessibility', 'role-hint')}
           label="role + hint"
           showText={showText}
           style={styles.a11yRow}
@@ -629,6 +729,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           &quot;link&quot;, hinted
         </TextItem>
         <TextItem
+          testID={captureTestID('accessibility', 'state')}
           label="state"
           showText={showText}
           style={styles.a11yRow}
@@ -637,6 +738,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           disabled
         </TextItem>
         <TextItem
+          testID={captureTestID('accessibility', 'hidden')}
           label="hidden"
           showText={showText}
           style={styles.a11yRow}
@@ -651,6 +753,7 @@ export default function FeaturesScreen({ navigation }: Props) {
       {/* Paired with padding since that's where the effect is visible. */}
       <Section title="Font Padding (Android-only)" footer={FONT_PADDING_FOOTER}>
         <TextItem
+          testID={captureTestID('font-padding', 'default-padding-4')}
           label="default, padding 4"
           showText={showText}
           style={[styles.body, { padding: 4 }]}
@@ -659,6 +762,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           {PARAGRAPH}
         </TextItem>
         <TextItem
+          testID={captureTestID('font-padding', 'disabled-padding-4')}
           label="includeFontPadding false, padding 4"
           showText={showText}
           style={[styles.body, { padding: 4, includeFontPadding: false }]}

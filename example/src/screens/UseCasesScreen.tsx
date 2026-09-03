@@ -50,13 +50,14 @@ export default function UseCasesScreen({ navigation }: Props) {
 // value), so `label` is only the key and the name to talk about it by.
 function UseCaseRow({
   showText,
-  label: _label,
+  label,
   text,
   style,
   ...props
 }: Combination & { showText: boolean }) {
   return (
     <TextItem
+      testID={`vrt-capture-use-cases-${label}`}
       showText={showText}
       // The platform default is pure black, which reads harder than anything else
       // on the page. Every row starts from the palette's ink instead, so the rows
@@ -148,7 +149,7 @@ function UseCaseBaselineRow({
       showText={showText}
       containerStyle={[useCaseStyles.baselineRow, screenStyles.wideRow]}
       overlay={
-        <View style={useCaseStyles.baselineRow}>
+        <View testID={`vrt-capture-use-cases-${label}-rn-text`} style={useCaseStyles.baselineRow}>
           {parts.map((part, index) => (
             <Text key={index} style={[part.style, useCaseStyles.baselineOverlayText]}>
               {part.text}
