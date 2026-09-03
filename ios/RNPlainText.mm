@@ -199,10 +199,8 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
     }
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
-    // Only "auto" needs a paragraph style; "none"/"manual" already match
-    // usesDefaultHyphenation's default of NO.
+    // Only "auto" needs a paragraph style; "none"/"manual" match the default.
     BOOL hasHyphenation = props.hyphens == RNPlainTextHyphens::Auto;
-    // The language is an attributed-string attribute too (NSLanguageIdentifierAttributeName).
     BOOL hasLang = !props.lang.empty();
 
     if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasHyphenation && !hasLang) {
@@ -247,8 +245,7 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
         attributes[NSShadowAttributeName] = shadow;
     }
 
-    // BCP-47 tag driving the hyphenation dictionary and locale-sensitive line
-    // breaking. Foundation's constant.
+    // Drives the hyphenation dictionary and locale-sensitive line breaking.
     if (hasLang) {
         NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
         if (lang != nil) {

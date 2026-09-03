@@ -38,8 +38,7 @@ Size PlainTextShadowNode::measureContent(
     attributes[NSKernAttributeName] = @(props.letterSpacing.value());
   }
 
-  // The language picks the hyphenation dictionary and locale-sensitive line
-  // breaking, so where lines break (and the wrapped height) depends on it.
+  // Language picks the hyphenation dictionary and locale-sensitive breaking.
   if (!props.lang.empty()) {
     NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
     if (lang != nil) {
@@ -60,8 +59,7 @@ Size PlainTextShadowNode::measureContent(
     perLineHeight = static_cast<Float>(lineHeight);
   }
 
-  // Only "auto" moves the soft line breaks; "none"/"manual" already match
-  // usesDefaultHyphenation's default.
+  // Only "auto" changes line breaking; "none"/"manual" match the default.
   if (props.hyphens == RNPlainTextHyphens::Auto) {
     if (paragraphStyle == nil) {
       paragraphStyle = [NSMutableParagraphStyle new];

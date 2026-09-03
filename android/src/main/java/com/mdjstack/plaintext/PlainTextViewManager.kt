@@ -275,13 +275,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // applied for the measured size to match.
     view.setLetterSpacingDip(props.getFloatOr("letterSpacing", 0f))
     view.setLineHeight(props.getFloatOr("lineHeight", 0f))
-    // Hyphenation moves the soft line breaks, so the wrapped height depends on it.
-    // Both feed the same resolution (see PlainTextView.kt); absent keys mean their
-    // codegen defaults, "manual" and "none".
+    // hyphens, android_hyphenationFrequency and lang all move soft line breaks,
+    // so the wrapped height depends on them. First two feed the same resolution
+    // (see PlainTextView.kt).
     view.setHyphens(props?.getString("hyphens"))
     view.setAndroidHyphenationFrequency(props?.getString("android_hyphenationFrequency"))
-    // The locale picks the hyphenation patterns, so it moves the breaks too. Absent
-    // or "" means the default locale: the setter restores it.
     view.setLang(props?.getString("lang")?.ifEmpty { null })
     // Transforms the measured string itself (case changes can change width), so it
     // must be applied before setPlainText below.

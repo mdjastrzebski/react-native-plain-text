@@ -1,7 +1,5 @@
-/*
- * `hyphens`, shared by the mounted view and the shadow node so both see the
- * same text, otherwise the measured box and the drawn text could disagree.
- */
+// `hyphens` text handling, shared by the mounted view and the shadow node so
+// measurement and drawing agree.
 
 #pragma once
 
@@ -10,10 +8,8 @@
 
 namespace facebook::react {
 
-/*
- * Strips soft hyphens (U+00AD) from `text` when `hyphens == None`, to match
- * Android/web. `manual`/`auto` return `text` unchanged.
- */
+// Strips soft hyphens (U+00AD) when hyphens == None (matching Android/web);
+// returns `text` unchanged otherwise.
 NSString *plainTextApplyHyphens(NSString *text, RNPlainTextHyphens hyphens);
 
 } // namespace facebook::react

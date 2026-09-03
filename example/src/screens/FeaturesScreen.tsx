@@ -266,11 +266,8 @@ export default function FeaturesScreen({ navigation }: Props) {
       </Section>
 
       <Section title="Hyphenation" footer={HYPHENATION_FOOTER}>
-        {/* Soft hyphens (U+00AD) pre-inserted at every Duden syllable break in
-            the long compound word (Rei-se-kran-ken-ver-si-che-rung). "none"
-            strips them, so the word stays whole either way; "manual" leaves
-            them, so it breaks at one instead, but only on iOS today — see the
-            known gap in PlainTextViewNativeComponent.ts. */}
+        {/* Specimen carries soft hyphens (U+00AD) at each syllable break.
+            "manual" breaks at one; "none" strips them. */}
         <TextItem
           label='hyphens="none": soft hyphens stripped, word stays whole'
           showText={showText}
@@ -278,8 +275,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         >
           {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
         </TextItem>
-        {/* No soft hyphens in this one: unlike "auto" below, "manual" never
-            invents a break point on its own. */}
+        {/* No soft hyphens: unlike "auto", "manual" invents no break points. */}
         <TextItem
           label='hyphens="manual": no soft hyphens, so no break'
           showText={showText}
@@ -294,8 +290,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         >
           {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
         </TextItem>
-        {/* No soft hyphens in this one: "auto" needs a dictionary lookup, and
-            lang="de" is what picks it (see HYPHENATION_FOOTER). */}
+        {/* "auto" needs a dictionary; lang="de" picks it. */}
         <TextItem
           label='hyphens="auto", lang="de": dictionary hyphenation'
           showText={showText}
@@ -304,7 +299,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         >
           {HYPHENATION_LANG_SPECIMEN}
         </TextItem>
-        {/* Android only: iOS ignores android_hyphenationFrequency entirely. */}
+        {/* Android only: iOS ignores android_hyphenationFrequency. */}
         {Platform.OS === 'android' && (
           <TextItem
             label='android_hyphenationFrequency="full", lang="de": RN <Text> compat'
@@ -935,11 +930,8 @@ const styles = StyleSheet.create({
   wrapProbe: {
     fontSize: 18,
   },
-  // A fixed width, not a percentage: at 100% the compound word fit whole at
-  // the end of its line and the break landed at the space before it instead
-  // of inside it, so none of these rows ever showed a real mid-word hyphen.
-  // ~50% of a typical phone's width, so it doesn't need `wideRow` to resolve
-  // against.
+  // Fixed narrow width: at 100% the word wrapped at the preceding space rather
+  // than mid-word, so no row showed a real hyphen.
   hyphenationRow: {
     width: 210,
     fontSize: 20,
@@ -1001,19 +993,12 @@ const PARAGRAPH_LONG = `${PARAGRAPH} ${PARAGRAPH} ${PARAGRAPH}`;
 // full run of figures in one string, and the pangram carries neither.
 const FONT_VARIANT_SPECIMEN = 'Waffle office 0123456789';
 
-// A long German compound word, long enough to need a mid-word break at 100%
-// width on a phone. Unlike "Donaudampfschifffahrt" (the more famous example),
-// no morpheme boundary sits next to a doubled letter, so wherever a break
-// actually lands is unambiguous to read off, not obscured by two identical
-// glyphs next to each other.
+// German sentence with a long compound word, for dictionary hyphenation ("auto").
 const HYPHENATION_LANG_SPECIMEN =
   'Die Reisekrankenversicherung war früher nur etwas für Geschäftsreisende, heute nutzen sie auch ganz normale Familien.';
 
-// Same sentence, every multi-syllable word split at its full Duden
-// syllabification (not just the compound word): Rei-se-kran-ken-ver-si-che-rung,
-// früh-er, et-was, Ge-schäfts-rei-sen-de, heu-te, nut-zen, nor-ma-le,
-// Fa-mi-li-en. "manual" can hyphenate at any of these, "none" (which strips
-// them) visibly can't.
+// Same sentence with a soft hyphen (U+00AD) at every syllable break, for the
+// "none"/"manual" rows.
 const HYPHENATION_SOFT_HYPHEN_SPECIMEN =
   'Die Rei­se­kran­ken­ver­si­che­rung war früh­er nur et­was für Ge­schäfts­rei­sen­de, heu­te nut­zen sie auch ganz nor­ma­le Fa­mi­li­en.';
 

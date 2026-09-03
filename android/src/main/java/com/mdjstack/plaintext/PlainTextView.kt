@@ -109,8 +109,7 @@ class PlainTextView : AppCompatTextView {
 
   private var appliedLang: String? = null
 
-  // Raw values behind hyphenationFrequency, combined by applyHyphenationFrequency
-  // regardless of which setter last ran. See setHyphens.
+  // Combined by applyHyphenationFrequency regardless of which setter ran last.
   private var hyphens: String? = null
   private var androidHyphenationFrequency: String? = null
 
@@ -564,9 +563,8 @@ class PlainTextView : AppCompatTextView {
     gravity = (gravity and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
   }
 
-  // No counterpart in RN <Text>: lang drives the hyphenation
-  // patterns and locale-sensitive line breaking/glyph selection. Null/empty restores
-  // the default.
+  // lang drives the hyphenation patterns and locale-sensitive line breaking.
+  // Null/empty restores the default locale.
   fun setLang(lang: String?) {
     val normalized = if (lang.isNullOrEmpty()) null else lang
     if (normalized == appliedLang) return
@@ -579,23 +577,16 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
-  // Web-like `hyphens`. 'none'/'auto' override android_hyphenationFrequency;
-  // 'manual' (also the default codegen sends when unset, so it can't be told
-  // apart from "not set") defers to it instead.
-  //
-  // Known gap: 'manual' works on iOS but not here. It maps to NONE below, same
-  // as 'none', because there is no Android setting that breaks only at an
-  // embedded U+00AD: NONE ignores it outright, and any other frequency reaches
-  // it only as a fallback for languages with no hyphenation-pattern data —
-  // for one that has patterns (most), Android picks its own break points
-  // instead of the ones already in the string.
+  // 'none'/'auto' override android_hyphenationFrequency; 'manual'
+  // (indistinguishable from unset, codegen's default) defers to it. 'manual'
+  // maps to NONE like 'none': Android has no setting that breaks only at an
+  // embedded U+00AD (known gap, works on iOS only).
   fun setHyphens(value: String?) {
     hyphens = value
     applyHyphenationFrequency()
   }
 
-  // Mirrors <Text> (ReactTextViewManager#setAndroidHyphenationFrequency). RN <Text>
-  // compat; overridden by hyphens="none"/"auto" above. Android-only, like RN.
+  // RN <Text> compat; overridden by hyphens 'none'/'auto' above.
   fun setAndroidHyphenationFrequency(value: String?) {
     androidHyphenationFrequency = value
     applyHyphenationFrequency()

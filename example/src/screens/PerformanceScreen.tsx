@@ -884,9 +884,7 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
-    // A style key (PlainTextStyle widens it, like fontVariationSettings), hence
-    // `target: 'text'`. 'auto' forces the iOS attributed-string path, 'none'
-    // allocates a stripped copy (docs/contributing/performance.md).
+    // Style key (PlainTextStyle widens it), hence `target: 'text'`.
     key: 'hyphens',
     section: 'Text',
     fp: 'hy',

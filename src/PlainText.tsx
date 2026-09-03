@@ -2,19 +2,13 @@ import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } f
 import type { ComponentRef, Ref } from 'react';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 
-// RN's TextStyle plus the two text styles it has no entry for. Widened, not
-// replaced, so a plain TextStyle stays assignable and each key can be dropped
-// if RN adds it.
+// RN's TextStyle plus two keys it has no entry for. Widened, not replaced, so a
+// plain TextStyle stays assignable.
 export type PlainTextStyle = TextStyle & {
-  // A style rather than a prop because two upstream attempts to add it
-  // (react/react-native#44685, #44667) never merged.
+  // Upstream attempts to add it (react/react-native#44685, #44667) never merged.
   fontVariationSettings?: string;
-  // CSS's `hyphens` property (RN's TextStyle has no hyphenation key on any
-  // platform). 'manual' (default) breaks only at a soft hyphen (U+00AD), 'none'
-  // strips them, 'auto' hyphenates via the platform dictionary (pair with
-  // `lang` on iOS). On Android, 'none'/'auto' win over the
-  // `android_hyphenationFrequency` prop; 'manual' is iOS-only (see
-  // PlainTextViewNativeComponent.ts).
+  // CSS's `hyphens`. 'none'/'auto' beat the android_hyphenationFrequency prop on
+  // Android; 'manual' is iOS-only.
   hyphens?: 'none' | 'manual' | 'auto';
 };
 
@@ -33,14 +27,11 @@ export type PlainTextProps = AccessibilityProps & {
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
-  // `hyphens` is a style, see PlainTextStyle above.
-  //
-  // Android-only, same name and values as RN <Text>'s prop, kept for RN <Text>
-  // compat. iOS ignores it. On Android the `hyphens` style's 'none'/'auto' win
-  // over this when set.
+  // Android-only, like RN <Text>'s prop of the same name. iOS ignores it; the
+  // `hyphens` style's 'none'/'auto' override it.
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
-  // BCP-47 language tag (e.g. 'de', 'de-DE') for the text, driving the
-  // hyphenation dictionary and locale-sensitive line breaking/glyph selection.
+  // BCP-47 language tag (e.g. 'de'); picks the hyphenation dictionary and
+  // locale-sensitive line breaking.
   lang?: string;
   // When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
   // ascent-clipping behavior (RN#29507) for this instance. Unset uses

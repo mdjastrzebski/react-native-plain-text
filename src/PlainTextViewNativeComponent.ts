@@ -80,32 +80,19 @@ export interface NativeProps extends ViewProps {
     'none' | 'uppercase' | 'lowercase' | 'capitalize',
     'none'
   >;
-  // CSS's `hyphens` style, pulled out of `style` by PlainText.tsx (not in RN's
-  // TextStyle, so PlainTextStyle widens it). At the native boundary every style
-  // is a prop.
-  //
-  // iOS: 'manual' (default) is UILabel's natural state, no cost; 'none' strips
-  // soft hyphens (U+00AD) to match Android/Web; 'auto' sets
-  // usesDefaultHyphenation=true. Android: 'none'/'auto' resolve into
-  // android_hyphenationFrequency below (PlainTextView.kt); 'manual' defers to it.
-  //
-  // Known gap: 'manual' works on iOS but not Android. Android's line breaker
-  // only honors an embedded U+00AD when hyphenationFrequency is off NONE, and
-  // even then only as a fallback for languages with no hyphenation-pattern
-  // dictionary — for a language it has patterns for (most), it re-derives its
-  // own break points instead of respecting the ones placed in the string.
-  // There is no Android setting that gives "break only where I put ­".
+  // CSS's `hyphens` style, pulled out of `style` by PlainText.tsx. iOS: 'none'
+  // strips soft hyphens (U+00AD), 'auto' sets usesDefaultHyphenation. Android:
+  // 'none'/'auto' resolve into android_hyphenationFrequency (PlainTextView.kt);
+  // 'manual' defers to it and is iOS-only (Android won't honor an embedded
+  // U+00AD over its own patterns).
   //
   // Cost: medium. 'auto' forces iOS's attributed-string path; 'none' allocates
   // a stripped copy of the text.
   hyphens?: CodegenTypes.WithDefault<'none' | 'manual' | 'auto', 'manual'>;
-  // Android-only, like RN <Text>'s prop of the same name, kept for RN <Text>
-  // compat. iOS ignores it.
+  // Android-only, like RN <Text>'s prop of the same name. iOS ignores it.
   android_hyphenationFrequency?: CodegenTypes.WithDefault<'none' | 'normal' | 'full', 'none'>;
-  // BCP-47 language tag (e.g. 'de', 'de-DE') for the text itself, driving the
-  // hyphenation dictionary and locale-sensitive line breaking/glyph selection.
-  // RN <Text> has no counterpart on either native platform. Empty means unset:
-  // the platform infers (iOS) or uses the view's default locale (Android).
+  // BCP-47 language tag (e.g. 'de'), driving the hyphenation dictionary and
+  // locale-sensitive line breaking. Empty means unset.
   //
   // Cost: medium. Forces iOS's attributed-string path.
   lang?: string;

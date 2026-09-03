@@ -103,9 +103,8 @@ export function TextItem({
   // Omitted by the composite use-case rows: those are whole UI shapes rather than
   // one value, and have nothing to put here.
   label?: string;
-  // PlainTextStyle, not TextStyle: the Font Variation Settings and Hyphenation
-  // rows carry fontVariationSettings / hyphens, which RN has no style key for.
-  // The overlay below casts them away again.
+  // PlainTextStyle, not TextStyle: the fontVariationSettings / hyphens rows use
+  // keys RN has no style entry for. The overlay below casts them away.
   style?: StyleProp<PlainTextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   showText: boolean;
