@@ -89,7 +89,6 @@ export function TextItem({
   ellipsizeMode,
   allowFontScaling,
   maxFontSizeMultiplier,
-  hyphens,
   android_hyphenationFrequency,
   lang,
   accessibilityProps,
@@ -104,9 +103,9 @@ export function TextItem({
   // Omitted by the composite use-case rows: those are whole UI shapes rather than
   // one value, and have nothing to put here.
   label?: string;
-  // PlainTextStyle, not TextStyle: the Font Variation Settings rows carry
-  // fontVariationSettings, which RN has no style key for. The overlay below casts
-  // it away again.
+  // PlainTextStyle, not TextStyle: the Font Variation Settings and Hyphenation
+  // rows carry fontVariationSettings / hyphens, which RN has no style key for.
+  // The overlay below casts them away again.
   style?: StyleProp<PlainTextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   showText: boolean;
@@ -114,7 +113,6 @@ export function TextItem({
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
-  hyphens?: 'none' | 'manual' | 'auto';
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
   lang?: string;
   // Forwarded to both PlainText and the comparison Text so the two expose the
@@ -147,7 +145,6 @@ export function TextItem({
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             unstable_lineHeightClippingIos={compatOn}
-            hyphens={hyphens}
             android_hyphenationFrequency={android_hyphenationFrequency}
             lang={lang}
             {...accessibilityProps}

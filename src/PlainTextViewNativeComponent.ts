@@ -80,8 +80,12 @@ export interface NativeProps extends ViewProps {
     'none' | 'uppercase' | 'lowercase' | 'capitalize',
     'none'
   >;
-  // Web-like `hyphens`. iOS: 'manual' (default) is UILabel's natural state, no
-  // cost; 'none' strips soft hyphens (U+00AD) to match Android/Web; 'auto' sets
+  // CSS's `hyphens` style, pulled out of `style` by PlainText.tsx (not in RN's
+  // TextStyle, so PlainTextStyle widens it). At the native boundary every style
+  // is a prop.
+  //
+  // iOS: 'manual' (default) is UILabel's natural state, no cost; 'none' strips
+  // soft hyphens (U+00AD) to match Android/Web; 'auto' sets
   // usesDefaultHyphenation=true. Android: 'none'/'auto' resolve into
   // android_hyphenationFrequency below (PlainTextView.kt); 'manual' defers to it.
   //

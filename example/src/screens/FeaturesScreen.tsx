@@ -274,8 +274,7 @@ export default function FeaturesScreen({ navigation }: Props) {
         <TextItem
           label='hyphens="none": soft hyphens stripped, word stays whole'
           showText={showText}
-          hyphens="none"
-          style={styles.hyphenationRow}
+          style={[styles.hyphenationRow, { hyphens: 'none' }]}
         >
           {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
         </TextItem>
@@ -284,16 +283,14 @@ export default function FeaturesScreen({ navigation }: Props) {
         <TextItem
           label='hyphens="manual": no soft hyphens, so no break'
           showText={showText}
-          hyphens="manual"
-          style={styles.hyphenationRow}
+          style={[styles.hyphenationRow, { hyphens: 'manual' }]}
         >
           {HYPHENATION_LANG_SPECIMEN}
         </TextItem>
         <TextItem
           label='hyphens="manual" (default): breaks at inserted soft hyphens on iOS, not Android (known gap)'
           showText={showText}
-          hyphens="manual"
-          style={styles.hyphenationRow}
+          style={[styles.hyphenationRow, { hyphens: 'manual' }]}
         >
           {HYPHENATION_SOFT_HYPHEN_SPECIMEN}
         </TextItem>
@@ -303,8 +300,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           label='hyphens="auto", lang="de": dictionary hyphenation'
           showText={showText}
           lang="de"
-          hyphens="auto"
-          style={styles.hyphenationRow}
+          style={[styles.hyphenationRow, { hyphens: 'auto' }]}
         >
           {HYPHENATION_LANG_SPECIMEN}
         </TextItem>

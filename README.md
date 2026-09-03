@@ -95,19 +95,20 @@ Everything below is API-compatible with RN `<Text>`. Most commonly used:
 
 Beyond RN `<Text>`, PlainText adds hyphenation control:
 
-- `hyphens`: `'none' | 'manual' | 'auto'`, matching CSS's `hyphens`. `'manual'`
-  (default) breaks only at a soft hyphen (`­`), `'none'` strips soft hyphens,
-  `'auto'` hyphenates automatically (pair with `lang` on iOS). `'none'`/`'auto'`
-  win over `android_hyphenationFrequency` on Android.
+- `hyphens` **(style)**: `'none' | 'manual' | 'auto'`, matching CSS's `hyphens`.
+  Set it in `style`, like `fontVariationSettings`. `'manual'` (default) breaks
+  only at a soft hyphen (`­`), `'none'` strips soft hyphens, `'auto'` hyphenates
+  automatically (pair with `lang` on iOS). `'none'`/`'auto'` win over
+  `android_hyphenationFrequency` on Android.
   **Known gap:** `'manual'` currently works on iOS only. Android's line
   breaker only honors an explicit soft hyphen as a fallback for languages
   without hyphenation patterns; for a language it has patterns for (most,
   including German), it picks its own break points instead of the ones you
   inserted, so `'manual'` behaves like `'none'` there today.
-- `android_hyphenationFrequency`: Android only, like RN `<Text>`, kept for
-  compat: `'none' | 'normal' | 'full'`. Prefer `hyphens` above.
-- `lang`: BCP-47 language tag (e.g. `'de'`), picking the hyphenation dictionary
-  and locale-sensitive line breaking.
+- `android_hyphenationFrequency` (prop): Android only, like RN `<Text>`, kept
+  for compat: `'none' | 'normal' | 'full'`. Prefer the `hyphens` style above.
+- `lang` (prop): BCP-47 language tag (e.g. `'de'`), picking the hyphenation
+  dictionary and locale-sensitive line breaking.
 
 See
 [Props and styles](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles)

@@ -2,12 +2,21 @@ import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } f
 import type { ComponentRef, Ref } from 'react';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 
-// RN's TextStyle plus the one text style it has no entry for.
-// `fontVariationSettings` is a style rather than a prop because two upstream
-// attempts to add it (react/react-native#44685, #44667) never merged, so
-// the type is widened here instead. Widened, not replaced, so a plain
-// TextStyle stays assignable and this can be dropped if RN adds the key.
-export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
+// RN's TextStyle plus the two text styles it has no entry for. Widened, not
+// replaced, so a plain TextStyle stays assignable and each key can be dropped
+// if RN adds it.
+export type PlainTextStyle = TextStyle & {
+  // A style rather than a prop because two upstream attempts to add it
+  // (react/react-native#44685, #44667) never merged.
+  fontVariationSettings?: string;
+  // CSS's `hyphens` property (RN's TextStyle has no hyphenation key on any
+  // platform). 'manual' (default) breaks only at a soft hyphen (U+00AD), 'none'
+  // strips them, 'auto' hyphenates via the platform dictionary (pair with
+  // `lang` on iOS). On Android, 'none'/'auto' win over the
+  // `android_hyphenationFrequency` prop; 'manual' is iOS-only (see
+  // PlainTextViewNativeComponent.ts).
+  hyphens?: 'none' | 'manual' | 'auto';
+};
 
 // Accessibility, testID, and nativeID/id are ViewProps that the native view
 // already applies; `...accessibilityProps` just forwards them through.
@@ -24,14 +33,11 @@ export type PlainTextProps = AccessibilityProps & {
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
-  // Web-like `hyphens`. On Android, 'none'/'auto' win over
-  // android_hyphenationFrequency below (resolved natively, see PlainTextView.kt).
-  // Known gap: 'manual' (breaking only at an inserted U+00AD) works on iOS but
-  // not Android, which has no way to honor an explicit soft hyphen over its
-  // own hyphenation-pattern algorithm. See PlainTextViewNativeComponent.ts.
-  hyphens?: 'none' | 'manual' | 'auto';
+  // `hyphens` is a style, see PlainTextStyle above.
+  //
   // Android-only, same name and values as RN <Text>'s prop, kept for RN <Text>
-  // compat. iOS ignores it.
+  // compat. iOS ignores it. On Android the `hyphens` style's 'none'/'auto' win
+  // over this when set.
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
   // BCP-47 language tag (e.g. 'de', 'de-DE') for the text, driving the
   // hyphenation dictionary and locale-sensitive line breaking/glyph selection.
@@ -79,7 +85,6 @@ export function mapPlainTextProps({
   ellipsizeMode,
   allowFontScaling,
   maxFontSizeMultiplier,
-  hyphens,
   android_hyphenationFrequency,
   lang,
   unstable_lineHeightClippingIos,
@@ -107,6 +112,7 @@ export function mapPlainTextProps({
     verticalAlign,
     textDecorationLine,
     textTransform,
+    hyphens,
     lineHeight,
     letterSpacing,
     includeFontPadding,

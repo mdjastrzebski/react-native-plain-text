@@ -884,13 +884,13 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
-    // A prop, not a style key, hence `target: 'prop'`; grouped under Text anyway
-    // since it's a text-shaping concern. 'auto' forces the iOS attributed-string
-    // path, 'none' allocates a stripped copy (docs/agent/performance.md).
+    // A style key (PlainTextStyle widens it, like fontVariationSettings), hence
+    // `target: 'text'`. 'auto' forces the iOS attributed-string path, 'none'
+    // allocates a stripped copy (docs/contributing/performance.md).
     key: 'hyphens',
     section: 'Text',
     fp: 'hy',
-    target: 'prop',
+    target: 'text',
     options: [
       { label: '(none)' },
       { label: 'none', value: 'none' },
