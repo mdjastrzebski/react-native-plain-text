@@ -130,6 +130,7 @@ below.
 | Asked for an A/B perf test on the same release build                          | [perf-experiments.md](docs/contributing/perf-experiments.md): the `experiment` prop: how to wire, drive from the perf suite, and conclude one |
 | Comparing `PlainText` to RN's `<Text>`, or explaining why this library exists | [rn-text-history.md](docs/contributing/rn-text-history.md): how RN core measures text, and why it never used `UILabel`                        |
 | Asked about `adjustsFontSizeToFit` / `minimumFontScale`                       | [adjusts-font-size-to-fit.md](docs/contributing/adjusts-font-size-to-fit.md): why it needs the final frame, and the two shapes it could take  |
+| Looking for prior art on what RN `<Text>` bugs/requests people care about     | [rn-text-issues.md](docs/contributing/rn-text-issues.md): ranked survey of RN `<Text>` issues/PRs by reactions, with nested-text ones flagged  |
 
 ### Investigating RN's own implementation
 
