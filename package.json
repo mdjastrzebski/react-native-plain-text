@@ -45,6 +45,8 @@
     "test": "jest",
     "test:cpp": "./scripts/test-cpp.sh",
     "test:android": "node_modules/@react-native/gradle-plugin/gradlew -p android testDebugUnitTest",
+    "vrt:setup:android": "./scripts/setup-android-emulator.sh",
+    "vrt:setup:ios": "./scripts/setup-ios-simulator.sh",
     "validate": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn test:cpp && yarn prepare",
     "release": "release-it --only-version"
   },
