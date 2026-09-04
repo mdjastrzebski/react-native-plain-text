@@ -9,6 +9,6 @@
     "preview": "rspress preview"
   },
   "devDependencies": {
-    "rspress": "1.47.2"
+    "@rspress/core": "^2.0.21"
   }
 }

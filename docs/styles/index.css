@@ -49,16 +49,15 @@
  * The hero name is the library's wordmark, so it gets the example's cover-lockup
  * treatment: light and opened up rather than heavy and tight, because "nothing
  * about this library is loud" and "the positive tracking is what keeps it
- * precise at that size instead of merely wide". The default theme sets this h1
- * bold; this steps it back down. `:has` picks the hero h1 by its tagline
- * sibling, since the element carries no stable class.
+ * precise at that size instead of merely wide". The default theme sets the
+ * title bold; this steps it back down.
  */
-h1:has(+ .rspress-home-hero-tagline) {
+.rp-home-hero__title {
   font-weight: 300;
   letter-spacing: 0.02em;
 }
 
-.rspress-home-hero-tagline {
+.rp-home-hero__tagline {
   font-weight: 400;
 }
 
@@ -67,7 +66,7 @@ h1:has(+ .rspress-home-hero-tagline) {
  * headers (`letterSpacing: 1.1` on 16px) and row labels (`letterSpacing: 0.7`
  * on 10px), both about 0.07em.
  */
-.rspress-sidebar-section-header {
+.rp-sidebar-section-header {
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
@@ -77,6 +76,6 @@ h1:has(+ .rspress-home-hero-tagline) {
  * `fontVariant: ['tabular-nums']`, so the guide's columns of measured
  * milliseconds and kilobytes line up.
  */
-.rspress-doc table {
+.rp-doc table {
   font-variant-numeric: tabular-nums;
 }

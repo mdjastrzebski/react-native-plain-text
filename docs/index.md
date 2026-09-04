@@ -2,7 +2,7 @@
 pageType: home
 
 hero:
-  name: React Native Plain Text
+  name: React Native Plain Text
   tagline: Faster, lighter React Native <Text> alternative for single-style text
   actions:
     - theme: brand
