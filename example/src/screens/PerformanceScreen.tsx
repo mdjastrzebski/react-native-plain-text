@@ -884,6 +884,40 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
+    // Style key (PlainTextStyle widens it), hence `target: 'text'`.
+    key: 'hyphens',
+    section: 'Text',
+    fp: 'hy',
+    target: 'text',
+    options: [
+      { label: '(none)' },
+      { label: 'none', value: 'none' },
+      { label: 'manual', value: 'manual' },
+      { label: 'auto', value: 'auto' },
+    ],
+  },
+  {
+    // RN <Text> compat, priced separately from hyphens above.
+    key: 'android_hyphenationFrequency',
+    section: 'Text',
+    fp: 'ahf',
+    target: 'prop',
+    options: [
+      { label: '(none)' },
+      { label: 'none', value: 'none' },
+      { label: 'normal', value: 'normal' },
+      { label: 'full', value: 'full' },
+    ],
+  },
+  {
+    // 'de' pairs with hyphens="auto" above.
+    key: 'lang',
+    section: 'Text',
+    fp: 'lang',
+    target: 'prop',
+    options: [{ label: '(none)' }, { label: 'en', value: 'en' }, { label: 'de', value: 'de' }],
+  },
+  {
     key: 'numberOfLines',
     section: 'Layout',
     fp: 'nol',
