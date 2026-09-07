@@ -14,7 +14,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "plaintext.example",
-      "appleTeamId": "GTWH34J2C9"
+      "appleTeamId": "GTWH34J2C9",
+      "infoPlist": {
+        "EXDevMenuIsOnboardingFinished": true,
+        "EXDevMenuShowsAtLaunch": false,
+        "EXDevMenuShowFloatingActionButton": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -29,6 +34,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withDevMenuConfigChanges",
       "./plugins/withFontScaleConfigChanges",
       "expo-status-bar",
       [
