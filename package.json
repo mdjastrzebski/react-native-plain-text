@@ -48,6 +48,8 @@
     "vrt:run:android": "./scripts/install-run-android-app.sh",
     "vrt:setup:android": "./scripts/setup-android-emulator.sh",
     "vrt:setup:ios": "./scripts/setup-ios-simulator.sh",
+    "vrt:test:android": "maestro test --platform android --env VRT_DEVICE_NAME=plaintext_vrt_api36_pixel9_arm64_v8a --test-output-dir build/vrt .maestro/vrt.yaml",
+    "vrt:test:ios": "maestro test --platform ios --env VRT_DEVICE_NAME=plaintext_vrt_ios_26_5 --test-output-dir build/vrt .maestro/vrt.yaml",
     "validate": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn test:cpp && yarn prepare",
     "release": "release-it --only-version"
   },

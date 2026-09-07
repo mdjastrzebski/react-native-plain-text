@@ -145,6 +145,7 @@ function UseCaseBaselineRow({
 }: BaselineCombination & { showText: boolean }) {
   return (
     <CompareBox
+      testID={`vrt-capture-use-cases-${label}`}
       label={label}
       showText={showText}
       containerStyle={[useCaseStyles.baselineRow, screenStyles.wideRow]}

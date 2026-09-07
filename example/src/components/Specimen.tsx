@@ -93,7 +93,9 @@ export function TextItem({
   accessibilityProps,
   children,
 }: {
-  // Stable crop target for visual regression captures.
+  // Stable crop target for visual regression captures. It is attached to the
+  // shrink-wrapped specimen below, while the outer row remains free to stretch
+  // across the page for its label and spacing.
   testID: string;
   // The value this row varies, set in a caption above the specimen. Keeping it
   // out of the specimen is what lets the specimen be real text rather than a
@@ -122,14 +124,14 @@ export function TextItem({
   const compatOn = useCompatOn();
 
   return (
-    <View testID={testID} style={styles.rowContainer}>
+    <View style={styles.rowContainer}>
       {label != null && <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>}
       {/* Full width, and the overlay's containing block. The grey row inside
           shrink-wraps to PlainText. The overlay must NOT, or it would be handed
           PlainText's width as its own constraint and could only ever wrap where
           the real difference is that RN wanted a wider box. */}
       <View style={styles.specimen}>
-        <View style={[styles.row, containerStyle]}>
+        <View testID={testID} style={[styles.row, containerStyle]}>
           {/* No explicit height: the native text measures its own size. */}
           <PlainText
             // `base` first so a row that sets its own fontSize (most of them)
@@ -183,12 +185,14 @@ export function TextItem({
 // TextItem's single `text`/`style`, since there is no one style to spread
 // across every sibling.
 export function CompareBox({
+  testID,
   label,
   containerStyle,
   showText,
   overlay,
   children,
 }: {
+  testID: string;
   label?: string;
   containerStyle?: StyleProp<ViewStyle>;
   showText: boolean;
@@ -199,7 +203,9 @@ export function CompareBox({
     <View style={styles.rowContainer}>
       {label != null && <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>}
       <View style={styles.specimen}>
-        <View style={[styles.row, containerStyle]}>{children}</View>
+        <View testID={testID} style={[styles.row, containerStyle]}>
+          {children}
+        </View>
         {showText && <View style={styles.overlay}>{overlay}</View>}
       </View>
     </View>

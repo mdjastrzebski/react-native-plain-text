@@ -169,6 +169,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           Use Cases screen. */}
       <Section title="Baseline alignment">
         <CompareBox
+          testID="vrt-capture-features-baseline-alignment"
           label="H / g / x, ruled at the baseline"
           showText={showText}
           containerStyle={styles.baselineRow}
