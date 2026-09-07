@@ -30,6 +30,14 @@
     },
     "plugins": [
       "./plugins/withFontScaleConfigChanges",
+      [
+        "expo-dev-client",
+        {
+          "showMenuAtLaunch": false,
+          "skipOnboarding": true,
+          "toolsButton": false
+        }
+      ],
       "expo-status-bar",
       [
         "expo-font",
