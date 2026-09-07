@@ -14,12 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "plaintext.example",
-      "appleTeamId": "GTWH34J2C9",
-      "infoPlist": {
-        "EXDevMenuIsOnboardingFinished": true,
-        "EXDevMenuShowsAtLaunch": false,
-        "EXDevMenuShowFloatingActionButton": false
-      }
+      "appleTeamId": "GTWH34J2C9"
     },
     "android": {
       "adaptiveIcon": {
@@ -34,8 +29,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "./plugins/withDevMenuConfigChanges",
       "./plugins/withFontScaleConfigChanges",
+      [
+        "expo-dev-client",
+        {
+          "showMenuAtLaunch": false,
+          "skipOnboarding": true,
+          "toolsButton": false
+        }
+      ],
       "expo-status-bar",
       [
         "expo-font",
