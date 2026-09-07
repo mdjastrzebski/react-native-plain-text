@@ -46,6 +46,7 @@
     "test:cpp": "./scripts/test-cpp.sh",
     "test:android": "node_modules/@react-native/gradle-plugin/gradlew -p android testDebugUnitTest",
     "vrt:run:android": "./scripts/install-run-android-app.sh",
+    "vrt:run:ios": "./scripts/install-run-ios-app.sh",
     "vrt:setup:android": "./scripts/setup-android-emulator.sh",
     "vrt:setup:ios": "./scripts/setup-ios-simulator.sh",
     "vrt:test:android": "maestro test --platform android --env VRT_DEVICE_NAME=plaintext_vrt_api36_pixel9_arm64_v8a --test-output-dir build/vrt .maestro/vrt.yaml",

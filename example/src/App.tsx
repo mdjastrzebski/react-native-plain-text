@@ -146,6 +146,7 @@ const TABS = [
 // each render would remount the stack and re-set the tab's options.
 const TAB_SCREENS = TABS.map(({ title, icon, screens }) => ({
   title,
+  tabBarButtonTestID: `vrt-tab-${title.toLowerCase().replaceAll(' ', '-')}`,
   stack: function Stacked() {
     return (
       <Stack.Navigator>
@@ -231,8 +232,13 @@ export default function App() {
               tabBarInactiveTintColor: COLOR.faint,
             }}
           >
-            {TAB_SCREENS.map(({ title, stack, tabBarIcon }) => (
-              <Tab.Screen key={title} name={title} component={stack} options={{ tabBarIcon }} />
+            {TAB_SCREENS.map(({ title, stack, tabBarIcon, tabBarButtonTestID }) => (
+              <Tab.Screen
+                key={title}
+                name={title}
+                component={stack}
+                options={{ tabBarIcon, tabBarButtonTestID }}
+              />
             ))}
           </Tab.Navigator>
         </NavigationContainer>

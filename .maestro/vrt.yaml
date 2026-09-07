@@ -162,6 +162,19 @@ name: VRT
 
 - evalScript: ${output.captureIndex = 0}
 
+# A prior run can leave the mounted tab's ScrollView below its first specimen.
+# Establish the starting edge before the capture loop, whose traversal is
+# intentionally one-way from top to bottom.
+- scrollUntilVisible:
+    element:
+      id: ${JSON.parse(output.captureIds)[0]}
+    direction: UP
+    timeout: 15000
+    speed: 60
+    waitToSettleTimeoutMs: 500
+    visibilityPercentage: 100
+    centerElement: true
+
 - repeat:
     while:
       true: ${output.captureIndex < JSON.parse(output.captureIds).length}
@@ -182,12 +195,12 @@ name: VRT
       - takeScreenshot:
           path: ${'actual/' + maestro.platform + '/' + output.deviceName + '/' + JSON.parse(output.captureIds)[output.captureIndex]}
           cropOn:
-            id: ${JSON.parse(output.captureIds)[output.captureIndex]}
+            id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
           label: ${'Capture ' + JSON.parse(output.captureIds)[output.captureIndex]}
       - evalScript: ${output.captureIndex++}
 
 - tapOn:
-    text: Use Cases
+    id: vrt-tab-use-cases
 
 - evalScript: >-
     ${output.captureIds = JSON.stringify([
@@ -262,6 +275,16 @@ name: VRT
 
 - evalScript: ${output.captureIndex = 0}
 
+- scrollUntilVisible:
+    element:
+      id: ${JSON.parse(output.captureIds)[0]}
+    direction: UP
+    timeout: 15000
+    speed: 60
+    waitToSettleTimeoutMs: 500
+    visibilityPercentage: 100
+    centerElement: true
+
 - repeat:
     while:
       true: ${output.captureIndex < JSON.parse(output.captureIds).length}
@@ -282,6 +305,6 @@ name: VRT
       - takeScreenshot:
           path: ${'actual/' + maestro.platform + '/' + output.deviceName + '/' + JSON.parse(output.captureIds)[output.captureIndex]}
           cropOn:
-            id: ${JSON.parse(output.captureIds)[output.captureIndex]}
+            id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
           label: ${'Capture ' + JSON.parse(output.captureIds)[output.captureIndex]}
       - evalScript: ${output.captureIndex++}
