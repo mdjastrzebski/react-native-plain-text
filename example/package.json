@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "android:release": "expo run:android --variant release --no-bundler",
     "ios": "expo run:ios",
-    "ios:release": "expo run:ios --configuration Release",
+    "ios:release": "expo run:ios --configuration Release --no-bundler",
     "web": "expo start --web",
     "build:ios": "xcodebuild ONLY_ACTIVE_ARCH=YES -workspace ios/PlainText.xcworkspace -UseNewBuildSystem=YES -scheme PlainText -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -quiet",
     "build:ios:release": "xcodebuild ONLY_ACTIVE_ARCH=YES -workspace ios/PlainText.xcworkspace -UseNewBuildSystem=YES -scheme PlainText -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -quiet",
