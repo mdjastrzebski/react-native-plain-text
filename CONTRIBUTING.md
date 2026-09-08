@@ -93,6 +93,19 @@ captures into `build/vrt/actual/<platform>/<profile>/`. On the first successful
 images to `build/vrt/diff/`. A visual difference makes the command fail. All
 timestamped Maestro diagnostics remain ignored under `build/`.
 
+Use development mode to capture and compare only
+`vrt-capture-features-font-size-48` against its canonical baseline:
+
+```sh
+VRT_MODE_DEV=1 yarn vrt:android test
+VRT_MODE_DEV=1 yarn vrt:ios test
+```
+
+The first development-mode run creates a one-image baseline in the ignored
+`build/vrt/baseline-dev/` directory. Later development runs compare against
+that image. Development mode never creates or updates the production-ready
+baseline under `baselines/`.
+
 To confirm that the app is running with the new architecture, you can check the Metro logs for a message like this:
 
 ```sh

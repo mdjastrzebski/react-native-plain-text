@@ -15,6 +15,12 @@ the complete PNG set there after Maestro succeeds. Once the baseline exists,
 `reg-cli` compares it with the actual images and writes diffs to
 `build/vrt/diff/<platform>/<profile>/`.
 
+Setting `VRT_MODE_DEV=1` captures only the predefined
+`vrt-capture-features-font-size-48` specimen. Its first run creates a one-image
+baseline under the ignored `build/vrt/baseline-dev/` directory, and later runs
+compare against it. Dev mode never creates or modifies the production-ready
+baseline under `baselines/`.
+
 The manifest, metadata, reports, CI lifecycle, and threshold suites below are
 possible extensions rather than requirements for the current implementation.
 

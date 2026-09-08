@@ -152,7 +152,7 @@ name: VRT
       'vrt-capture-features-accessibility-hidden',
       'vrt-capture-features-font-padding-default-padding-4',
       'vrt-capture-features-font-padding-disabled-padding-4',
-    ])}
+    ].filter((id) => VRT_MODE_DEV !== '1' || id === VRT_DEV_CAPTURE_ID))}
 
 - evalScript: ${output.captureIndex = 0}
 
@@ -265,40 +265,42 @@ name: VRT
       'vrt-capture-use-cases-unlimited-lines-narrow-box',
       'vrt-capture-use-cases-scaling-capped-at-1x',
       'vrt-capture-use-cases-scaling-outgrows-box',
-    ])}
+    ].filter((id) => VRT_MODE_DEV !== '1' || id === VRT_DEV_CAPTURE_ID))}
 
-- evalScript: ${output.captureIndex = 0}
-
-- scrollUntilVisible:
-    element:
-      id: ${JSON.parse(output.captureIds)[0]}
-    direction: UP
-    timeout: 15000
-    speed: 60
-    waitToSettleTimeoutMs: 500
-    visibilityPercentage: 100
-    centerElement: true
-
-- repeat:
-    while:
-      true: ${output.captureIndex < JSON.parse(output.captureIds).length}
+- runFlow:
+    when:
+      true: ${JSON.parse(output.captureIds).length > 0}
     commands:
       - scrollUntilVisible:
           element:
-            id: ${JSON.parse(output.captureIds)[output.captureIndex]}
-          direction: DOWN
+            id: ${JSON.parse(output.captureIds)[0]}
+          direction: UP
           timeout: 15000
           speed: 60
           waitToSettleTimeoutMs: 500
           visibilityPercentage: 100
           centerElement: true
-      - extendedWaitUntil:
-          visible:
-            id: ${JSON.parse(output.captureIds)[output.captureIndex]}
-          timeout: 15000
-      - takeScreenshot:
-          path: ${JSON.parse(output.captureIds)[output.captureIndex]}
-          cropOn:
-            id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
-          label: ${'Capture ' + JSON.parse(output.captureIds)[output.captureIndex]}
-      - evalScript: ${output.captureIndex++}
+      - evalScript: ${output.captureIndex = 0}
+      - repeat:
+          while:
+            true: ${output.captureIndex < JSON.parse(output.captureIds).length}
+          commands:
+            - scrollUntilVisible:
+                element:
+                  id: ${JSON.parse(output.captureIds)[output.captureIndex]}
+                direction: DOWN
+                timeout: 15000
+                speed: 60
+                waitToSettleTimeoutMs: 500
+                visibilityPercentage: 100
+                centerElement: true
+            - extendedWaitUntil:
+                visible:
+                  id: ${JSON.parse(output.captureIds)[output.captureIndex]}
+                timeout: 15000
+            - takeScreenshot:
+                path: ${JSON.parse(output.captureIds)[output.captureIndex]}
+                cropOn:
+                  id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
+                label: ${'Capture ' + JSON.parse(output.captureIds)[output.captureIndex]}
+            - evalScript: ${output.captureIndex++}
