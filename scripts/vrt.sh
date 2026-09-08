@@ -56,18 +56,48 @@ run_app() {
 }
 
 run_test() {
-  local profile
+  local actual_dir baseline_dir creating_baseline diff_dir profile
 
   case "$platform" in
     android) profile="$ANDROID_VRT_PROFILE" ;;
     ios) profile="$IOS_VRT_PROFILE" ;;
   esac
 
+  baseline_dir="baselines/$platform/$profile"
+  actual_dir="build/vrt/actual/$platform/$profile"
+  diff_dir="build/vrt/diff/$platform/$profile"
+
+  if [[ -d "$baseline_dir" ]]; then
+    creating_baseline=0
+    printf 'Capturing actual images for %s/%s.\n' "$platform" "$profile"
+  else
+    creating_baseline=1
+    printf 'No baseline found for %s/%s. Creating it in %s.\n' \
+      "$platform" "$profile" "$baseline_dir"
+  fi
+
+  yarn del-cli "$actual_dir" "$diff_dir"
+
   maestro test \
     --platform "$platform" \
-    --env "VRT_PROFILE=$profile" \
-    --test-output-dir build/vrt \
+    --test-output-dir "$actual_dir" \
     .maestro/vrt.yaml
+
+  if [[ "$creating_baseline" -eq 0 ]]; then
+    yarn reg-cli \
+      "$actual_dir" \
+      "$baseline_dir" \
+      "$diff_dir" \
+      --extendedErrors \
+      --json build/vrt/reg.json \
+      --matchingThreshold 0 \
+      --thresholdPixel 0
+  else
+    mkdir -p "baselines/$platform"
+    mv "$actual_dir" "$baseline_dir"
+    printf 'Baseline created in %s. Review and commit the PNG files.\n' \
+      "$baseline_dir"
+  fi
 }
 
 cd "$PROJECT_ROOT"

@@ -4,12 +4,6 @@ name: VRT
 - launchApp:
     clearState: true
 
-- assertTrue:
-    condition: ${VRT_PROFILE != null && VRT_PROFILE.length > 0}
-    label: VRT_PROFILE identifies the baseline environment
-
-- evalScript: ${output.profile = VRT_PROFILE}
-
 - evalScript: >-
     ${output.captureIds = JSON.stringify([
       'vrt-capture-features-font-size-48',
@@ -193,7 +187,7 @@ name: VRT
             id: ${JSON.parse(output.captureIds)[output.captureIndex]}
           timeout: 15000
       - takeScreenshot:
-          path: ${'actual/' + maestro.platform + '/' + output.profile + '/' + JSON.parse(output.captureIds)[output.captureIndex]}
+          path: ${JSON.parse(output.captureIds)[output.captureIndex]}
           cropOn:
             id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
           label: ${'Capture ' + JSON.parse(output.captureIds)[output.captureIndex]}
@@ -303,7 +297,7 @@ name: VRT
             id: ${JSON.parse(output.captureIds)[output.captureIndex]}
           timeout: 15000
       - takeScreenshot:
-          path: ${'actual/' + maestro.platform + '/' + output.profile + '/' + JSON.parse(output.captureIds)[output.captureIndex]}
+          path: ${JSON.parse(output.captureIds)[output.captureIndex]}
           cropOn:
             id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
           label: ${'Capture ' + JSON.parse(output.captureIds)[output.captureIndex]}
