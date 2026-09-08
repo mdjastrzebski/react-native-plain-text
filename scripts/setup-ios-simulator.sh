@@ -2,10 +2,10 @@
 
 set -euo pipefail
 
-IOS_VERSION="${IOS_VERSION:-26.5}"
-IOS_DEVICE_TYPE="${IOS_DEVICE_TYPE:-iPhone 16 Pro}"
-IOS_SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-PlainText VRT iOS ${IOS_VERSION}}"
-OPEN_SIMULATOR="${OPEN_SIMULATOR:-1}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=./vrt-config.sh
+source "$SCRIPT_DIR/vrt-config.sh"
 
 fail() {
   printf 'Error: %s\n' "$*" >&2
@@ -15,9 +15,7 @@ fail() {
 command -v xcrun >/dev/null 2>&1 || fail "Xcode Command Line Tools are not installed."
 xcrun xcodebuild -version >/dev/null 2>&1 || fail "Select a full Xcode installation with xcode-select."
 
-runtime_id="${IOS_RUNTIME_ID:-com.apple.CoreSimulator.SimRuntime.iOS-${IOS_VERSION//./-}}"
-
-if ! xcrun simctl list runtimes available | grep -F "$runtime_id" >/dev/null; then
+if ! xcrun simctl list runtimes available | grep -F "$IOS_RUNTIME_ID" >/dev/null; then
   fail "iOS $IOS_VERSION Simulator runtime is not installed. Install it in Xcode > Settings > Components, or set IOS_VERSION."
 fi
 
@@ -40,7 +38,7 @@ simulator_udid="$(
 
 if [[ -z "$simulator_udid" ]]; then
   printf 'Creating simulator %s...\n' "$IOS_SIMULATOR_NAME"
-  simulator_udid="$(xcrun simctl create "$IOS_SIMULATOR_NAME" "$device_type_id" "$runtime_id")"
+  simulator_udid="$(xcrun simctl create "$IOS_SIMULATOR_NAME" "$device_type_id" "$IOS_RUNTIME_ID")"
 fi
 
 state="$(

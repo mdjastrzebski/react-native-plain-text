@@ -49,6 +49,41 @@ To run the example app on iOS:
 yarn example ios
 ```
 
+To run the complete visual regression workflow, including device setup, the
+Release build, and Maestro captures:
+
+```sh
+yarn vrt android
+yarn vrt ios
+```
+
+Equivalent shortcuts are available:
+
+```sh
+yarn vrt:android
+yarn vrt:ios
+```
+
+Run one stage independently when debugging or retrying a failure:
+
+```sh
+yarn vrt android setup
+yarn vrt android run
+yarn vrt android test
+```
+
+The shortcuts also forward the stage:
+
+```sh
+yarn vrt:android setup
+yarn vrt:android run
+yarn vrt:android test
+
+yarn vrt:ios setup
+yarn vrt:ios run
+yarn vrt:ios test
+```
+
 To confirm that the app is running with the new architecture, you can check the Metro logs for a message like this:
 
 ```sh

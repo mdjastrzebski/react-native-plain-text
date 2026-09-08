@@ -2,17 +2,10 @@
 
 set -euo pipefail
 
-ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-36}"
-ANDROID_PROFILE_KEY="${ANDROID_PROFILE_KEY:-api36-pixel9-arm64-v8a-font1}"
-ANDROID_AVD_NAME="${ANDROID_AVD_NAME:-plaintext_vrt_api36_pixel9_arm64_v8a}"
-ANDROID_DEVICE_TYPE="${ANDROID_DEVICE_TYPE:-pixel_9}"
-ANDROID_SYSTEM_IMAGE="${ANDROID_SYSTEM_IMAGE:-system-images;android-36;google_apis_playstore;arm64-v8a}"
-ANDROID_RUNTIME="${ANDROID_RUNTIME:-API 36 Google Play arm64-v8a}"
-ANDROID_RESOLUTION="${ANDROID_RESOLUTION:-1080x2400}"
-ANDROID_DENSITY="${ANDROID_DENSITY:-420}"
-ANDROID_FONT_SCALE="${ANDROID_FONT_SCALE:-1}"
-ANDROID_LOCALE="${ANDROID_LOCALE:-en-US}"
-ANDROID_TIMEZONE="${ANDROID_TIMEZONE:-UTC}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=./vrt-config.sh
+source "$SCRIPT_DIR/vrt-config.sh"
 
 fail() {
   printf 'Error: %s\n' "$*" >&2
@@ -135,7 +128,7 @@ for _ in {1..120}; do
     "$adb" -s "$running_serial" shell cmd alarm set-timezone "$ANDROID_TIMEZONE"
     printf 'Android VRT emulator is ready: %s (%s)\n' "$ANDROID_AVD_NAME" "$running_serial"
     printf 'Profile: %s, %s, %s at %s dpi, font scale %s, %s, %s\n' \
-      "$ANDROID_PROFILE_KEY" \
+      "$ANDROID_VRT_PROFILE" \
       "$ANDROID_RUNTIME" \
       "$ANDROID_RESOLUTION" \
       "$ANDROID_DENSITY" \
