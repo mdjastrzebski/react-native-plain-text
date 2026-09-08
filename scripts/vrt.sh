@@ -57,8 +57,8 @@ run_app() {
 
 run_test() {
   local actual_dir baseline_dir baseline_parent creating_baseline dev_capture_id
-  local comparison_status dev_mode diff_dir maestro_dir profile report_file
-  local screenshots_dir
+  local comparison_status dev_mode diff_dir json_file maestro_dir profile
+  local report_file screenshots_dir
 
   case "$platform" in
     android) profile="$ANDROID_VRT_PROFILE" ;;
@@ -67,6 +67,7 @@ run_test() {
 
   actual_dir="build/vrt/actual/$platform/$profile"
   diff_dir="build/vrt/diff/$platform/$profile"
+  json_file="build/vrt/report/$platform/$profile.json"
   maestro_dir="build/vrt/maestro/$platform/$profile"
   report_file="build/vrt/report/$platform/$profile.html"
   screenshots_dir="$maestro_dir/screenshots"
@@ -131,7 +132,7 @@ run_test() {
       "$baseline_dir" \
       "$diff_dir" \
       --extendedErrors \
-      --json build/vrt/reg.json \
+      -J "$json_file" \
       --matchingThreshold 0 \
       -R "$report_file" \
       --thresholdPixel 0; then
