@@ -1,5 +1,23 @@
 # Visual Regression Testing Proposal
 
+## Current implementation
+
+The repository currently uses the smallest useful subset of this proposal.
+Maestro navigates the example app and captures cropped PNG files. `reg-cli`
+performs strict image comparison afterward.
+
+Maestro writes its raw bundle to the ignored
+`build/vrt/maestro/<platform>/<profile>/` directory. The wrapper extracts its
+`screenshots/` directory into `build/vrt/actual/<platform>/<profile>/`, leaving
+timestamped command diagnostics under `build/`. When the corresponding
+`baselines/<platform>/<profile>/` directory does not exist, the wrapper moves
+the complete PNG set there after Maestro succeeds. Once the baseline exists,
+`reg-cli` compares it with the actual images and writes diffs to
+`build/vrt/diff/<platform>/<profile>/`.
+
+The manifest, metadata, reports, CI lifecycle, and threshold suites below are
+possible extensions rather than requirements for the current implementation.
+
 ## Recommendation
 
 Use one comparison path for the first implementation:

@@ -56,7 +56,7 @@ run_app() {
 }
 
 run_test() {
-  local actual_dir baseline_dir creating_baseline diff_dir profile
+  local actual_dir baseline_dir creating_baseline diff_dir maestro_dir profile screenshots_dir
 
   case "$platform" in
     android) profile="$ANDROID_VRT_PROFILE" ;;
@@ -66,6 +66,8 @@ run_test() {
   baseline_dir="baselines/$platform/$profile"
   actual_dir="build/vrt/actual/$platform/$profile"
   diff_dir="build/vrt/diff/$platform/$profile"
+  maestro_dir="build/vrt/maestro/$platform/$profile"
+  screenshots_dir="$maestro_dir/screenshots"
 
   if [[ -d "$baseline_dir" ]]; then
     creating_baseline=0
@@ -76,12 +78,18 @@ run_test() {
       "$platform" "$profile" "$baseline_dir"
   fi
 
-  yarn del-cli "$actual_dir" "$diff_dir"
+  yarn del-cli "$actual_dir" "$diff_dir" "$maestro_dir"
 
   maestro test \
     --platform "$platform" \
-    --test-output-dir "$actual_dir" \
+    --test-output-dir "$maestro_dir" \
     .maestro/vrt.yaml
+
+  [[ -d "$screenshots_dir" ]] || \
+    fail "Maestro did not produce a screenshots directory."
+
+  mkdir -p "build/vrt/actual/$platform"
+  mv "$screenshots_dir" "$actual_dir"
 
   if [[ "$creating_baseline" -eq 0 ]]; then
     yarn reg-cli \
