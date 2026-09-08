@@ -5,10 +5,10 @@ name: VRT
     clearState: true
 
 - assertTrue:
-    condition: ${VRT_DEVICE_NAME != null && VRT_DEVICE_NAME.length > 0}
-    label: VRT_DEVICE_NAME identifies the baseline device
+    condition: ${VRT_PROFILE != null && VRT_PROFILE.length > 0}
+    label: VRT_PROFILE identifies the baseline environment
 
-- evalScript: ${output.deviceName = VRT_DEVICE_NAME}
+- evalScript: ${output.profile = VRT_PROFILE}
 
 - evalScript: >-
     ${output.captureIds = JSON.stringify([
@@ -193,7 +193,7 @@ name: VRT
             id: ${JSON.parse(output.captureIds)[output.captureIndex]}
           timeout: 15000
       - takeScreenshot:
-          path: ${'actual/' + maestro.platform + '/' + output.deviceName + '/' + JSON.parse(output.captureIds)[output.captureIndex]}
+          path: ${'actual/' + maestro.platform + '/' + output.profile + '/' + JSON.parse(output.captureIds)[output.captureIndex]}
           cropOn:
             id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
           label: ${'Capture ' + JSON.parse(output.captureIds)[output.captureIndex]}
@@ -303,7 +303,7 @@ name: VRT
             id: ${JSON.parse(output.captureIds)[output.captureIndex]}
           timeout: 15000
       - takeScreenshot:
-          path: ${'actual/' + maestro.platform + '/' + output.deviceName + '/' + JSON.parse(output.captureIds)[output.captureIndex]}
+          path: ${'actual/' + maestro.platform + '/' + output.profile + '/' + JSON.parse(output.captureIds)[output.captureIndex]}
           cropOn:
             id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
           label: ${'Capture ' + JSON.parse(output.captureIds)[output.captureIndex]}

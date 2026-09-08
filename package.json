@@ -51,8 +51,8 @@
     "vrt:setup:ios": "./scripts/setup-ios-simulator.sh",
     "vrt:run:android": "yarn android:release --device plaintext_vrt_api36_pixel9_arm64_v8a",
     "vrt:run:ios": "yarn ios:release --device \"${IOS_SIMULATOR_NAME:-PlainText VRT iOS 26.5}\"",
-    "vrt:test:android": "maestro test --platform android --env VRT_DEVICE_NAME=plaintext_vrt_api36_pixel9_arm64_v8a --test-output-dir build/vrt .maestro/vrt.yaml",
-    "vrt:test:ios": "maestro test --platform ios --env VRT_DEVICE_NAME=plaintext_vrt_ios_26_5 --test-output-dir build/vrt .maestro/vrt.yaml",
+    "vrt:test:android": "maestro test --platform android --env VRT_PROFILE=plaintext_vrt_api36_pixel9_arm64_v8a --test-output-dir build/vrt .maestro/vrt.yaml",
+    "vrt:test:ios": "maestro test --platform ios --env VRT_PROFILE=plaintext_vrt_ios_26_5 --test-output-dir build/vrt .maestro/vrt.yaml",
     "validate": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn test:cpp && yarn prepare",
     "release": "release-it --only-version"
   },
