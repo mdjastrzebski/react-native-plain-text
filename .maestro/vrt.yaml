@@ -89,6 +89,7 @@ name: VRT
       'vrt-capture-features-borders-radius-12',
       'vrt-capture-features-borders-left-6',
       'vrt-capture-features-borders-dashed',
+      'vrt-capture-features-borders-all-4-padding-12',
       'vrt-capture-features-line-height-18',
       'vrt-capture-features-line-height-26',
       'vrt-capture-features-line-height-36',

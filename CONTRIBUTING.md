@@ -91,7 +91,11 @@ captures into `build/vrt/actual/<platform>/<profile>/`. On the first successful
 `baselines/<platform>/<profile>/` for review and commit. Later runs use
 `reg-cli` to compare actual images with that baseline and write comparison
 images to `build/vrt/diff/`. A visual difference makes the command fail. All
-timestamped Maestro diagnostics remain ignored under `build/`.
+timestamped Maestro diagnostics remain ignored under `build/`. When comparison
+images exist, the wrapper also writes the built-in `reg-cli` HTML report to
+`build/vrt/report/<platform>/<profile>.html` and prints the command that opens
+it. The report provides diff, side-by-side, slider, blend, and toggle views of
+the baseline and actual images.
 
 Use development mode to capture and compare only
 `vrt-capture-features-font-size-48` against its canonical baseline:

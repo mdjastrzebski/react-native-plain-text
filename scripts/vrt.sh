@@ -57,7 +57,8 @@ run_app() {
 
 run_test() {
   local actual_dir baseline_dir baseline_parent creating_baseline dev_capture_id
-  local dev_mode diff_dir maestro_dir profile screenshots_dir
+  local comparison_status dev_mode diff_dir maestro_dir profile report_file
+  local screenshots_dir
 
   case "$platform" in
     android) profile="$ANDROID_VRT_PROFILE" ;;
@@ -67,6 +68,7 @@ run_test() {
   actual_dir="build/vrt/actual/$platform/$profile"
   diff_dir="build/vrt/diff/$platform/$profile"
   maestro_dir="build/vrt/maestro/$platform/$profile"
+  report_file="build/vrt/report/$platform/$profile.html"
   screenshots_dir="$maestro_dir/screenshots"
   dev_capture_id="vrt-capture-features-font-size-48"
   dev_mode="${VRT_MODE_DEV:-0}"
@@ -124,14 +126,25 @@ run_test() {
   mv "$screenshots_dir" "$actual_dir"
 
   if [[ "$creating_baseline" -eq 0 ]]; then
-    yarn reg-cli \
+    if yarn reg-cli \
       "$actual_dir" \
       "$baseline_dir" \
       "$diff_dir" \
       --extendedErrors \
       --json build/vrt/reg.json \
       --matchingThreshold 0 \
-      --thresholdPixel 0
+      -R "$report_file" \
+      --thresholdPixel 0; then
+      comparison_status=0
+    else
+      comparison_status=$?
+    fi
+
+    if [[ -n "$(find "$diff_dir" -type f -print -quit 2>/dev/null)" ]]; then
+      printf '\nOpen the visual comparison report:\n  open %s\n' "$report_file"
+    fi
+
+    return "$comparison_status"
   else
     mkdir -p "$baseline_parent"
     mv "$actual_dir" "$baseline_dir"
