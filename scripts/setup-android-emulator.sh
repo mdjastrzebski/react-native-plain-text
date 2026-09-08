@@ -61,6 +61,24 @@ adb="$ANDROID_SDK_ROOT/platform-tools/adb"
 [[ -x "$emulator" ]] || fail "Android Emulator not found at $emulator."
 [[ -x "$adb" ]] || fail "adb not found at $adb."
 
+has_android_device_type() {
+  "$avdmanager" list device \
+    | grep -Fi -- "or \"$ANDROID_DEVICE_TYPE\"" >/dev/null
+}
+
+if ! has_android_device_type; then
+  printf 'Android device profile %s is not installed. Updating Android SDK Command-line Tools...\n' \
+    "$ANDROID_DEVICE_TYPE"
+  "$sdkmanager" --install "cmdline-tools;latest"
+
+  avdmanager="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager"
+  [[ -x "$avdmanager" ]] || fail \
+    "avdmanager was not installed at $avdmanager."
+
+  has_android_device_type || fail \
+    "Android device profile '$ANDROID_DEVICE_TYPE' is unavailable after updating cmdline-tools;latest."
+fi
+
 if ! "$sdkmanager" --list_installed | grep -F "$ANDROID_SYSTEM_IMAGE" >/dev/null; then
   printf 'Installing %s...\n' "$ANDROID_SYSTEM_IMAGE"
   "$sdkmanager" "$ANDROID_SYSTEM_IMAGE"
