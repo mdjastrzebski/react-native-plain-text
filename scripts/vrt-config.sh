@@ -15,6 +15,11 @@ export ANDROID_FONT_SCALE="${ANDROID_FONT_SCALE:-1}"
 export ANDROID_LOCALE="${ANDROID_LOCALE:-en-US}"
 export ANDROID_TIMEZONE="${ANDROID_TIMEZONE:-UTC}"
 
+export VRT_DEV_SERVER_PORT="${VRT_DEV_SERVER_PORT:-8081}"
+default_vrt_dev_client_url="exp+react-native-plain-text-example://expo-development-client/?url=http%3A%2F%2Flocalhost%3A${VRT_DEV_SERVER_PORT}"
+export VRT_DEV_CLIENT_URL="${VRT_DEV_CLIENT_URL:-$default_vrt_dev_client_url}"
+unset default_vrt_dev_client_url
+
 export IOS_VERSION="${IOS_VERSION:-26.5}"
 export IOS_DEVICE_TYPE="${IOS_DEVICE_TYPE:-iPhone 16 Pro}"
 export IOS_SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-PlainText VRT iOS ${IOS_VERSION}}"

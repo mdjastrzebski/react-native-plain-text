@@ -105,10 +105,15 @@ run_test() {
 
   yarn del-cli "$actual_dir" "$diff_dir" "$maestro_dir"
 
+  if [[ "$dev_mode" -eq 1 && "$platform" == "android" ]]; then
+    adb reverse "tcp:$VRT_DEV_SERVER_PORT" "tcp:$VRT_DEV_SERVER_PORT"
+  fi
+
   maestro test \
     --platform "$platform" \
     --env "VRT_MODE_DEV=$dev_mode" \
     --env "VRT_DEV_CAPTURE_ID=$dev_capture_id" \
+    --env "VRT_DEV_CLIENT_URL=$VRT_DEV_CLIENT_URL" \
     --test-output-dir "$maestro_dir" \
     .maestro/vrt.yaml
 

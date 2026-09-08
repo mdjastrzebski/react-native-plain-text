@@ -21,6 +21,13 @@ baseline under the ignored `build/vrt/baseline-dev/` directory, and later runs
 compare against it. Dev mode never creates or modifies the production-ready
 baseline under `baselines/`.
 
+Dev mode does not use Maestro's normal `launchApp` command. Clearing app state
+removes the Expo development client's remembered Metro server, and launching
+the package without a URL opens its launcher. The wrapper forwards Metro's
+default port `8081` on Android, and Maestro opens the generated
+`expo-development-client` URL instead. `VRT_DEV_SERVER_PORT` and
+`VRT_DEV_CLIENT_URL` can override those defaults.
+
 The manifest, metadata, reports, CI lifecycle, and threshold suites below are
 possible extensions rather than requirements for the current implementation.
 

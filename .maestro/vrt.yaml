@@ -1,8 +1,19 @@
 appId: plaintext.example
 name: VRT
 ---
-- launchApp:
-    clearState: true
+- runFlow:
+    when:
+      true: ${VRT_MODE_DEV !== '1'}
+    commands:
+      - launchApp:
+          clearState: true
+
+- runFlow:
+    when:
+      true: ${VRT_MODE_DEV === '1'}
+    commands:
+      - stopApp
+      - openLink: ${VRT_DEV_CLIENT_URL}
 
 - evalScript: >-
     ${output.captureIds = JSON.stringify([

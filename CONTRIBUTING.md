@@ -101,6 +101,12 @@ VRT_MODE_DEV=1 yarn vrt:android test
 VRT_MODE_DEV=1 yarn vrt:ios test
 ```
 
+Development mode expects the Expo development server on port `8081`. On
+Android, the wrapper forwards that port to the host and Maestro opens the Expo
+development-client URL directly. This avoids the development-client launcher
+screen that a plain app launch would show. Override `VRT_DEV_SERVER_PORT` and
+`VRT_DEV_CLIENT_URL` together when Metro uses a different port or scheme.
+
 The first development-mode run creates a one-image baseline in the ignored
 `build/vrt/baseline-dev/` directory. Later development runs compare against
 that image. Development mode never creates or updates the production-ready
