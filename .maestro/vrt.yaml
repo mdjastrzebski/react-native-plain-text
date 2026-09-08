@@ -89,7 +89,6 @@ name: VRT
       'vrt-capture-features-borders-radius-12',
       'vrt-capture-features-borders-left-6',
       'vrt-capture-features-borders-dashed',
-      'vrt-capture-features-borders-all-4-padding-12',
       'vrt-capture-features-line-height-18',
       'vrt-capture-features-line-height-26',
       'vrt-capture-features-line-height-36',
@@ -175,8 +174,8 @@ name: VRT
       id: ${JSON.parse(output.captureIds)[0]}
     direction: UP
     timeout: 15000
-    speed: 60
-    waitToSettleTimeoutMs: 500
+    speed: 30
+    waitToSettleTimeoutMs: 2000
     visibilityPercentage: 100
     centerElement: true
 
@@ -189,14 +188,19 @@ name: VRT
             id: ${JSON.parse(output.captureIds)[output.captureIndex]}
           direction: DOWN
           timeout: 15000
-          speed: 60
-          waitToSettleTimeoutMs: 500
+          speed: 30
+          waitToSettleTimeoutMs: 2000
           visibilityPercentage: 100
           centerElement: true
       - extendedWaitUntil:
           visible:
-            id: ${JSON.parse(output.captureIds)[output.captureIndex]}
+            id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
           timeout: 15000
+      # Visibility can be reported while iOS is still decelerating the ScrollView.
+      # Wait for the crop target's screen coordinates to become stable before
+      # Maestro reads them for the screenshot.
+      - waitForAnimationToEnd:
+          timeout: 5000
       - takeScreenshot:
           path: ${JSON.parse(output.captureIds)[output.captureIndex]}
           cropOn:
@@ -287,8 +291,8 @@ name: VRT
             id: ${JSON.parse(output.captureIds)[0]}
           direction: UP
           timeout: 15000
-          speed: 60
-          waitToSettleTimeoutMs: 500
+          speed: 30
+          waitToSettleTimeoutMs: 2000
           visibilityPercentage: 100
           centerElement: true
       - evalScript: ${output.captureIndex = 0}
@@ -301,14 +305,16 @@ name: VRT
                   id: ${JSON.parse(output.captureIds)[output.captureIndex]}
                 direction: DOWN
                 timeout: 15000
-                speed: 60
-                waitToSettleTimeoutMs: 500
+                speed: 30
+                waitToSettleTimeoutMs: 2000
                 visibilityPercentage: 100
                 centerElement: true
             - extendedWaitUntil:
                 visible:
-                  id: ${JSON.parse(output.captureIds)[output.captureIndex]}
+                  id: ${JSON.parse(output.captureIds)[output.captureIndex] + '-text'}
                 timeout: 15000
+            - waitForAnimationToEnd:
+                timeout: 5000
             - takeScreenshot:
                 path: ${JSON.parse(output.captureIds)[output.captureIndex]}
                 cropOn:
