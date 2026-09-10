@@ -2,12 +2,15 @@ import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } f
 import type { ComponentRef, Ref } from 'react';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 
-// RN's TextStyle plus the one text style it has no entry for.
-// `fontVariationSettings` is a style rather than a prop because two upstream
-// attempts to add it (react/react-native#44685, #44667) never merged, so
-// the type is widened here instead. Widened, not replaced, so a plain
-// TextStyle stays assignable and this can be dropped if RN adds the key.
-export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
+// RN's TextStyle plus two keys it has no entry for. Widened, not replaced, so a
+// plain TextStyle stays assignable.
+export type PlainTextStyle = TextStyle & {
+  // Upstream attempts to add it (react/react-native#44685, #44667) never merged.
+  fontVariationSettings?: string;
+  // CSS's `hyphens`. 'none'/'auto' beat the android_hyphenationFrequency prop on
+  // Android; 'manual' is iOS-only.
+  hyphens?: 'none' | 'manual' | 'auto';
+};
 
 // Accessibility, testID, and nativeID/id are ViewProps that the native view
 // already applies; `...accessibilityProps` just forwards them through.
@@ -24,6 +27,12 @@ export type PlainTextProps = AccessibilityProps & {
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  // Android-only, like RN <Text>'s prop of the same name. iOS ignores it; the
+  // `hyphens` style's 'none'/'auto' override it.
+  android_hyphenationFrequency?: 'none' | 'normal' | 'full';
+  // BCP-47 language tag (e.g. 'de'); picks the hyphenation dictionary and
+  // locale-sensitive line breaking.
+  lang?: string;
   // When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
   // ascent-clipping behavior (RN#29507) for this instance. Unset uses
   // PlainText's fix. `unstable_` marks that its shape/default may change
@@ -67,6 +76,8 @@ export function mapPlainTextProps({
   ellipsizeMode,
   allowFontScaling,
   maxFontSizeMultiplier,
+  android_hyphenationFrequency,
+  lang,
   unstable_lineHeightClippingIos,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
@@ -92,6 +103,7 @@ export function mapPlainTextProps({
     verticalAlign,
     textDecorationLine,
     textTransform,
+    hyphens,
     lineHeight,
     letterSpacing,
     includeFontPadding,
@@ -126,6 +138,9 @@ export function mapPlainTextProps({
     ellipsizeMode,
     allowFontScaling,
     maxFontSizeMultiplier,
+    hyphens,
+    android_hyphenationFrequency,
+    lang,
     includeFontPadding,
     lineHeightClippingIos: unstable_lineHeightClippingIos,
     style: viewStyle,

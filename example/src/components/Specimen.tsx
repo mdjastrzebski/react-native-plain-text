@@ -89,6 +89,8 @@ export function TextItem({
   ellipsizeMode,
   allowFontScaling,
   maxFontSizeMultiplier,
+  android_hyphenationFrequency,
+  lang,
   accessibilityProps,
   children,
 }: {
@@ -101,9 +103,8 @@ export function TextItem({
   // Omitted by the composite use-case rows: those are whole UI shapes rather than
   // one value, and have nothing to put here.
   label?: string;
-  // PlainTextStyle, not TextStyle: the Font Variation Settings rows carry
-  // fontVariationSettings, which RN has no style key for. The overlay below casts
-  // it away again.
+  // PlainTextStyle, not TextStyle: the fontVariationSettings / hyphens rows use
+  // keys RN has no style entry for. The overlay below casts them away.
   style?: StyleProp<PlainTextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   showText: boolean;
@@ -111,6 +112,8 @@ export function TextItem({
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  android_hyphenationFrequency?: 'none' | 'normal' | 'full';
+  lang?: string;
   // Forwarded to both PlainText and the comparison Text so the two expose the
   // same accessibility surface (testID, role, label, ...) to the native tree.
   accessibilityProps?: AccessibilityProps & { testID?: string };
@@ -141,6 +144,8 @@ export function TextItem({
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             unstable_lineHeightClippingIos={compatOn}
+            android_hyphenationFrequency={android_hyphenationFrequency}
+            lang={lang}
             {...accessibilityProps}
           >
             {children}
@@ -158,6 +163,7 @@ export function TextItem({
               ellipsizeMode={ellipsizeMode}
               allowFontScaling={allowFontScaling}
               maxFontSizeMultiplier={maxFontSizeMultiplier}
+              android_hyphenationFrequency={android_hyphenationFrequency}
               {...accessibilityProps}
             >
               {children}

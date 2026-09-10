@@ -7,6 +7,7 @@
 #import <cmath>
 
 #import "PlainTextFont.h"
+#import "PlainTextHyphenation.h"
 #import "PlainTextTextTransform.h"
 
 namespace facebook::react {
@@ -22,6 +23,7 @@ Size PlainTextShadowNode::measureContent(
 
   NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
   text = plainTextApplyTextTransform(text, props.textTransform);
+  text = plainTextApplyHyphens(text, props.hyphens);
 
   // Base scale comes from the layout context (Fabric seeds it from
   // RCTFontSizeMultiplier, same as the mounted view). Clamping matches the
@@ -36,17 +38,37 @@ Size PlainTextShadowNode::measureContent(
     attributes[NSKernAttributeName] = @(props.letterSpacing.value());
   }
 
+  // Language picks the hyphenation dictionary and locale-sensitive breaking.
+  if (!props.lang.empty()) {
+    NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
+    if (lang != nil) {
+      attributes[NSLanguageIdentifierAttributeName] = lang;
+    }
+  }
+
   // The per-line height used to cap numberOfLines: the pinned lineHeight when
   // set, otherwise the font's natural line height.
   Float perLineHeight = static_cast<Float>(font.lineHeight);
+  NSMutableParagraphStyle *paragraphStyle = nil;
   if (props.lineHeight > 0) {
     // Scaled by the same multiplier as the font (mirrors RNPlainText.mm).
     CGFloat lineHeight = props.lineHeight * fontSizeMultiplier;
-    NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
+    paragraphStyle = [NSMutableParagraphStyle new];
     paragraphStyle.minimumLineHeight = lineHeight;
     paragraphStyle.maximumLineHeight = lineHeight;
-    attributes[NSParagraphStyleAttributeName] = paragraphStyle;
     perLineHeight = static_cast<Float>(lineHeight);
+  }
+
+  // Only "auto" changes line breaking; "none"/"manual" match the default.
+  if (props.hyphens == RNPlainTextHyphens::Auto) {
+    if (paragraphStyle == nil) {
+      paragraphStyle = [NSMutableParagraphStyle new];
+    }
+    paragraphStyle.usesDefaultHyphenation = YES;
+  }
+
+  if (paragraphStyle != nil) {
+    attributes[NSParagraphStyleAttributeName] = paragraphStyle;
   }
 
   // Measured with the same engine that renders the UILabel (CoreText via

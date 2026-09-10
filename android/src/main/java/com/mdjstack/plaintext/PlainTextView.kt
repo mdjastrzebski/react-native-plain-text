@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
+import android.os.LocaleList
 import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
@@ -105,6 +106,12 @@ class PlainTextView : AppCompatTextView {
   // onConfigurationChanged (API 31+) without invalidating this field, silently
   // resetting a variable font's axes, benign, self-heals on the next font/axis change.
   private var appliedBaseTypeface: Typeface? = baseTypeface
+
+  private var appliedLang: String? = null
+
+  // Combined by applyHyphenationFrequency regardless of which setter ran last.
+  private var hyphens: String? = null
+  private var androidHyphenationFrequency: String? = null
 
   // Reused by PlainTextViewManager for measurement. Never attached to a window, so
   // posting measureAndLayout would queue forever.
@@ -554,6 +561,58 @@ class PlainTextView : AppCompatTextView {
       else -> Gravity.TOP
     }
     gravity = (gravity and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
+  }
+
+  // lang drives the hyphenation patterns and locale-sensitive line breaking.
+  // Null/empty restores the default locale.
+  fun setLang(lang: String?) {
+    val normalized = if (lang.isNullOrEmpty()) null else lang
+    if (normalized == appliedLang) return
+    appliedLang = normalized
+
+    textLocales = if (normalized == null) {
+      LocaleList.getAdjustedDefault()
+    } else {
+      LocaleList(Locale.forLanguageTag(normalized))
+    }
+  }
+
+  // 'none'/'auto' override android_hyphenationFrequency; 'manual'
+  // (indistinguishable from unset, codegen's default) defers to it. 'manual'
+  // maps to NONE like 'none': Android has no setting that breaks only at an
+  // embedded U+00AD (known gap, works on iOS only).
+  fun setHyphens(value: String?) {
+    hyphens = value
+    applyHyphenationFrequency()
+  }
+
+  // RN <Text> compat; overridden by hyphens 'none'/'auto' above.
+  fun setAndroidHyphenationFrequency(value: String?) {
+    androidHyphenationFrequency = value
+    applyHyphenationFrequency()
+  }
+
+  // "full" prefers FULL_FAST on API 33+: perf-only, not a prop value.
+  private fun applyHyphenationFrequency() {
+    val frequency = when (hyphens) {
+      "auto" -> "full"
+      "none" -> "none"
+      else -> androidHyphenationFrequency
+    }
+    val value = when (frequency) {
+      null, "none" -> Layout.HYPHENATION_FREQUENCY_NONE
+      "normal" -> Layout.HYPHENATION_FREQUENCY_NORMAL
+      "full" ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Layout.HYPHENATION_FREQUENCY_FULL_FAST
+        else Layout.HYPHENATION_FREQUENCY_FULL
+      else -> {
+        FLog.w(ReactConstants.TAG, "Invalid android_hyphenationFrequency: $frequency")
+        Layout.HYPHENATION_FREQUENCY_NONE
+      }
+    }
+
+    if (hyphenationFrequency == value) return
+    hyphenationFrequency = value
   }
 
   // 0 means unlimited, matching <Text>. It also bounds the off-screen measure pass.

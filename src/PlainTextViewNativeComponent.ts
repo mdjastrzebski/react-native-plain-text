@@ -80,6 +80,22 @@ export interface NativeProps extends ViewProps {
     'none' | 'uppercase' | 'lowercase' | 'capitalize',
     'none'
   >;
+  // CSS's `hyphens` style, pulled out of `style` by PlainText.tsx. iOS: 'none'
+  // strips soft hyphens (U+00AD), 'auto' sets usesDefaultHyphenation. Android:
+  // 'none'/'auto' resolve into android_hyphenationFrequency (PlainTextView.kt);
+  // 'manual' defers to it and is iOS-only (Android won't honor an embedded
+  // U+00AD over its own patterns).
+  //
+  // Cost: medium. 'auto' forces iOS's attributed-string path; 'none' allocates
+  // a stripped copy of the text.
+  hyphens?: CodegenTypes.WithDefault<'none' | 'manual' | 'auto', 'manual'>;
+  // Android-only, like RN <Text>'s prop of the same name. iOS ignores it.
+  android_hyphenationFrequency?: CodegenTypes.WithDefault<'none' | 'normal' | 'full', 'none'>;
+  // BCP-47 language tag (e.g. 'de'), driving the hyphenation dictionary and
+  // locale-sensitive line breaking. Empty means unset.
+  //
+  // Cost: medium. Forces iOS's attributed-string path.
+  lang?: string;
   // 0 means unlimited. Caps rendered lines and the shadow node's measured intrinsic height.
   numberOfLines?: CodegenTypes.WithDefault<CodegenTypes.Int32, 0>;
   ellipsizeMode?: CodegenTypes.WithDefault<'head' | 'middle' | 'tail' | 'clip', 'tail'>;

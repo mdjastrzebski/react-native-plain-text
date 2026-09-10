@@ -62,6 +62,15 @@ folly::dynamic serializeProps(const RNPlainTextProps &props) {
   if (props.textTransform != RNPlainTextTextTransform::None) {
     serializedProps["textTransform"] = toString(props.textTransform);
   }
+  if (props.hyphens != RNPlainTextHyphens::Manual) {
+    serializedProps["hyphens"] = toString(props.hyphens);
+  }
+  if (props.android_hyphenationFrequency != RNPlainTextAndroid_hyphenationFrequency::None) {
+    serializedProps["android_hyphenationFrequency"] = toString(props.android_hyphenationFrequency);
+  }
+  if (!props.lang.empty()) {
+    serializedProps["lang"] = props.lang;
+  }
   if (props.numberOfLines != 0) {
     serializedProps["numberOfLines"] = props.numberOfLines;
   }
