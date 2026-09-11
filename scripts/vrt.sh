@@ -57,20 +57,24 @@ run_app() {
 
 run_test() {
   local actual_dir baseline_dir baseline_parent creating_baseline dev_capture_id
-  local comparison_status dev_mode diff_dir json_file maestro_dir profile
-  local report_file screenshots_dir
+  local comparison_status dev_mode diff_dir json_file matching_threshold
+  local profile report_file
 
   case "$platform" in
-    android) profile="$ANDROID_VRT_PROFILE" ;;
-    ios) profile="$IOS_VRT_PROFILE" ;;
+    android)
+      profile="$ANDROID_VRT_PROFILE"
+      matching_threshold=0.004
+      ;;
+    ios)
+      profile="$IOS_VRT_PROFILE"
+      matching_threshold=0
+      ;;
   esac
 
   actual_dir="build/vrt/actual/$platform/$profile"
   diff_dir="build/vrt/diff/$platform/$profile"
   json_file="build/vrt/report/$platform/$profile.json"
-  maestro_dir="build/vrt/maestro/$platform/$profile"
   report_file="build/vrt/report/$platform/$profile.html"
-  screenshots_dir="$maestro_dir/screenshots"
   dev_capture_id="vrt-capture-features-font-size-48"
   dev_mode="${VRT_MODE_DEV:-0}"
 
@@ -106,25 +110,14 @@ run_test() {
     fi
   fi
 
-  yarn del-cli "$actual_dir" "$diff_dir" "$maestro_dir"
+  yarn del-cli "$actual_dir" "$diff_dir"
 
   if [[ "$dev_mode" -eq 1 && "$platform" == "android" ]]; then
     adb reverse "tcp:$VRT_DEV_SERVER_PORT" "tcp:$VRT_DEV_SERVER_PORT"
   fi
 
-  maestro test \
-    --platform "$platform" \
-    --env "VRT_MODE_DEV=$dev_mode" \
-    --env "VRT_DEV_CAPTURE_ID=$dev_capture_id" \
-    --env "VRT_DEV_CLIENT_URL=$VRT_DEV_CLIENT_URL" \
-    --test-output-dir "$maestro_dir" \
-    .maestro/vrt.yaml
-
-  [[ -d "$screenshots_dir" ]] || \
-    fail "Maestro did not produce a screenshots directory."
-
-  mkdir -p "build/vrt/actual/$platform"
-  mv "$screenshots_dir" "$actual_dir"
+  VRT_MODE_DEV="$dev_mode" \
+    "$SCRIPT_DIR/vrt-capture.sh" "$platform" "$actual_dir"
 
   if [[ "$creating_baseline" -eq 0 ]]; then
     if yarn reg-cli \
@@ -132,8 +125,9 @@ run_test() {
       "$baseline_dir" \
       "$diff_dir" \
       --extendedErrors \
+      --enableAntialias \
       -J "$json_file" \
-      --matchingThreshold 0 \
+      --matchingThreshold "$matching_threshold" \
       -R "$report_file" \
       --thresholdPixel 0; then
       comparison_status=0

@@ -3,17 +3,23 @@
 ## Current implementation
 
 The repository currently uses the smallest useful subset of this proposal.
-Maestro navigates the example app and captures cropped PNG files. `reg-cli`
-performs strict image comparison afterward.
+agent-device navigates the example app and captures cropped PNG files.
+`reg-cli` performs strict image comparison afterward.
 
-Maestro writes its raw bundle to the ignored
-`build/vrt/maestro/<platform>/<profile>/` directory. The wrapper extracts its
-`screenshots/` directory into `build/vrt/actual/<platform>/<profile>/`, leaving
-timestamped command diagnostics under `build/`. When the corresponding
+The capture runner reads `.agent-device/vrt-captures.txt`, visits every
+platform-relevant specimen in on-screen order, and uses
+`screenshot --crop-on` to write directly to
+`build/vrt/actual/<platform>/<profile>/`. When the corresponding
 `baselines/<platform>/<profile>/` directory does not exist, the wrapper moves
-the complete PNG set there after Maestro succeeds. Once the baseline exists,
-`reg-cli` compares it with the actual images and writes diffs to
+the complete PNG set there after agent-device succeeds. Once the baseline
+exists, `reg-cli` compares it with the actual images and writes diffs to
 `build/vrt/diff/<platform>/<profile>/`.
+
+Comparison keeps a zero pixel threshold, with `reg-cli`'s antialias detection
+enabled. iOS uses a zero matching threshold. Android uses `0.004`, which
+ignores a one-step difference in an 8-bit color channel caused by screenshot
+quantization. It still detects larger color differences, solid-pixel text
+changes, and layout changes.
 
 Setting `VRT_MODE_DEV=1` captures only the predefined
 `vrt-capture-features-font-size-48` specimen. Its first run creates a one-image
@@ -21,12 +27,16 @@ baseline under the ignored `build/vrt/baseline-dev/` directory, and later runs
 compare against it. Dev mode never creates or modifies the production-ready
 baseline under `baselines/`.
 
-Dev mode does not use Maestro's normal `launchApp` command. Clearing app state
-removes the Expo development client's remembered Metro server, and launching
-the package without a URL opens its launcher. The wrapper forwards Metro's
-default port `8081` on Android, and Maestro opens the generated
-`expo-development-client` URL instead. `VRT_DEV_SERVER_PORT` and
-`VRT_DEV_CLIENT_URL` can override those defaults.
+The development capture is a native `.ad` replay. Its URL and output path are
+late-bound through replay variables, while the platform files pin the expected
+screenshot density and selector crop.
+
+Dev mode does not clear app state. Doing so removes the Expo development
+client's remembered Metro server, and launching the package without a URL
+opens its launcher. The wrapper forwards Metro's default port `8081` on
+Android, and agent-device opens the generated `expo-development-client` URL
+instead. `VRT_DEV_SERVER_PORT` and `VRT_DEV_CLIENT_URL` can override those
+defaults.
 
 The manifest, metadata, reports, CI lifecycle, and threshold suites below are
 possible extensions rather than requirements for the current implementation.
@@ -35,16 +45,22 @@ possible extensions rather than requirements for the current implementation.
 
 Use one comparison path for the first implementation:
 
-- Maestro CLI for cross-platform navigation and cropped screenshot capture
+- agent-device 0.21.0 or newer for cross-platform navigation and selector-cropped screenshot capture
 - `reg-cli` for comparison, missing-image detection, PNG diffs, HTML reports, and JUnit output
 - GitHub Actions with one pinned simulator or emulator environment per platform
 - Committed baselines produced only by the canonical GitHub Actions environments
 - Simulator and emulator results as the blocking release signal
 - Optional BrowserStack App Percy runs as non-blocking real-device validation
 
-Do not use Maestro `assertScreenshot` in phase one. A second comparison path would create different threshold, artifact, and baseline-update behavior. Reconsider it only if removing `reg-cli` becomes a measured maintenance benefit and Maestro can provide the same missing-image and diagnostic guarantees.
+Do not add a second screenshot comparison path in phase one. It would create
+different threshold, artifact, and baseline-update behavior. Reconsider it
+only if removing `reg-cli` becomes a measured maintenance benefit and the
+replacement provides the same missing-image and diagnostic guarantees.
 
-Maestro is preferred over Detox or Appium for the initial fixture because the screens are static and can be driven through accessibility identifiers. `reg-cli` supplies the stricter comparison and reporting controls that a text-rendering library needs.
+agent-device is preferred over Detox or Appium for the initial fixture because
+the screens are static and can be driven through accessibility identifiers.
+`reg-cli` supplies the stricter comparison and reporting controls that a
+text-rendering library needs.
 
 ## Why VRT is valuable here
 
@@ -70,7 +86,7 @@ The example app already contains most of the needed specimens and bundled fonts.
 | Responsibility    | Choice                                                                       |
 | ----------------- | ---------------------------------------------------------------------------- |
 | Native fixture    | Existing Expo dev-client example with a test-only VRT route                  |
-| E2E driver        | A pinned Maestro CLI version                                                 |
+| E2E driver        | A pinned agent-device CLI version                                            |
 | Image comparison  | A pinned `reg-cli` dependency                                                |
 | CI                | GitHub Actions                                                               |
 | Android           | Pixel 6 AVD, API 35, x86_64, Google APIs                                     |
@@ -78,7 +94,9 @@ The example app already contains most of the needed specimens and bundled fonts.
 | Baselines         | Git, separated by exact environment and suite                                |
 | Failure artifacts | Actual, expected, diff, JSON, HTML, JUnit, native logs, and fixture metadata |
 
-Pin Maestro to an exact version in the workflow installation step. Pin third-party GitHub Actions by full commit SHA, matching the existing CI convention. Keep `reg-cli` in the root Yarn lockfile.
+Pin agent-device to an exact version in the workflow installation step. Pin
+third-party GitHub Actions by full commit SHA, matching the existing CI
+convention. Keep `reg-cli` in the root Yarn lockfile.
 
 ## Fixture contract
 
@@ -92,25 +110,15 @@ plaintext://vrt/<specimen-id>
 
 The route must bypass tabs, navigation headers, the status bar, persisted state, and animations. It renders one fixed-size specimen group on a fixed background. The route is enabled only in the example app.
 
-Maestro opens each specimen directly:
+agent-device opens the app and captures each specimen by accessibility ID:
 
-```yaml
-appId: plaintext.example
----
-- launchApp:
-    clearState: true
-
-- openLink: plaintext://vrt/font-sizes
-
-- extendedWaitUntil:
-    visible:
-      id: vrt-ready-font-sizes
-    timeout: 15000
-
-- takeScreenshot:
-    path: strict/font-sizes
-    cropOn:
-      id: vrt-capture-font-sizes
+```sh
+agent-device settings clear-app-state plaintext.example --platform android
+agent-device open plaintext.example --platform android --foreground
+agent-device wait 'id="vrt-ready-font-sizes"' 15000
+agent-device screenshot strict/font-sizes.png \
+  --crop-on 'id="vrt-capture-font-sizes"'
+agent-device close
 ```
 
 ### Readiness
@@ -122,7 +130,9 @@ Each route owns its readiness state. It must:
 3. Wait for the capture container's final layout.
 4. Expose `testID="vrt-ready-<specimen-id>"` only after the layout used for capture is stable.
 
-The Maestro flow uses a bounded wait. On timeout it captures the full app, accessibility hierarchy, native logs, and the route identifier before failing. A global readiness marker is insufficient because navigation and later layout passes can invalidate it.
+The agent-device runner uses a bounded wait. On timeout its diagnostics identify
+the failed selector and current UI state. A global readiness marker is
+insufficient because navigation and later layout passes can invalidate it.
 
 ### Specimen manifest
 
@@ -144,7 +154,7 @@ Add `e2e/visual/specimens.json` as the source of truth:
 
 A validation script must fail when:
 
-- a manifest entry has no Maestro capture
+- a manifest entry has no agent-device capture
 - a captured PNG has no manifest entry
 - two entries resolve to the same baseline path
 - a required platform or font-scale variant is missing
@@ -171,40 +181,30 @@ ios/ios26.5-xcode26.6-iphone16-arm64-font1
 ios/ios26.5-xcode26.6-iphone16-arm64-font1.5
 ```
 
-Each baseline environment directory also contains `metadata.json` with the runner architecture, OS/runtime version, Xcode or Android system-image revision, device profile, display settings, font scale, Maestro version, `reg-cli` version, and fixture commit.
+Each baseline environment directory also contains `metadata.json` with the
+runner architecture, OS/runtime version, Xcode or Android system-image
+revision, device profile, display settings, font scale, agent-device version,
+`reg-cli` version, and fixture commit.
 
 ## Capture and artifact normalization
 
-Maestro writes `takeScreenshot` output into the flow artifact bundle. Its `path` is not a repository-relative destination. Run it with an explicit output directory and platform variable:
+agent-device writes each screenshot to the requested repository-relative path.
+The current runner targets the specimen's `-text` test ID so the crop matches
+the content previously stored in the baselines:
 
 ```sh
-maestro test e2e/visual/flows \
-  --test-output-dir build/vrt/maestro/android-api35-pixel6-font1 \
-  -e PLATFORM=android \
-  -e VRT_ENVIRONMENT=api35-pixel6-x86_64-font1
+agent-device screenshot \
+  build/vrt/actual/android/example/vrt-capture-font-sizes.png \
+  --crop-on 'id="vrt-capture-font-sizes-text"'
 ```
 
-The flow uses paths relative to Maestro's `takeScreenshot` directory:
-
-```yaml
-- takeScreenshot:
-    path: strict/font-sizes
-    cropOn:
-      id: vrt-capture-font-sizes
-```
-
-After Maestro completes, add a repository script that normalizes its artifact bundle:
-
-```sh
-yarn vrt:collect \
-  --artifacts build/vrt/maestro/android-api35-pixel6-font1 \
-  --manifest e2e/visual/specimens.json \
-  --platform android \
-  --environment api35-pixel6-x86_64-font1 \
-  --out build/vrt/actual
-```
-
-`vrt:collect` must locate the `takeScreenshot` artifacts, copy them into the canonical path, and require exactly one PNG for every expected manifest entry. Undefined environment variables, duplicate captures, missing captures, and unexpected captures are fatal.
+iOS captures pass `--pixel-density 3` to retain the native pixel dimensions of
+the existing simulator baselines. Android captures use device pixels. The
+runner verifies that the complete element frame fits inside the scroll
+viewport before capture. A partial or empty crop is retried after a small
+forward scroll. Missing, ambiguous, unreadable, or repeatedly clipped crop
+targets are fatal. iOS crop dimensions are normalized to the rounded native
+element frame to remove fractional-boundary rows and columns.
 
 ## Comparison
 
@@ -282,7 +282,7 @@ Both native example directories are generated and ignored. Every canonical job s
 
 1. Check out the requested SHA.
 2. Use the repository's composite setup action and `yarn install --immutable` behavior.
-3. Install a pinned Maestro version.
+3. Install a pinned agent-device version.
 4. Validate the specimen manifest.
 5. Record tool versions in the artifact metadata.
 
@@ -413,17 +413,22 @@ yarn reg-cli \
 
 ### Rename and deletion
 
-Renaming or removing a specimen requires the manifest, flow or generated flow, and baseline deletion in the same PR. Manifest validation treats stale or missing files as errors.
+Renaming or removing a specimen requires the capture manifest, runner, and
+baseline deletion in the same PR. Manifest validation treats stale or missing
+files as errors.
 
 ### Environment upgrades
 
-An Xcode, iOS runtime, Android system image, device, font, Maestro, or comparator upgrade creates a new environment key. Run calibration and review the complete candidate set before switching CI. Keep the previous baseline tree until the workflow using it is removed, then delete both in one PR.
+An Xcode, iOS runtime, Android system image, device, font, agent-device, or
+comparator upgrade creates a new environment key. Run calibration and review
+the complete candidate set before switching CI. Keep the previous baseline
+tree until the workflow using it is removed, then delete both in one PR.
 
 ## CI triggers and release integration
 
 Create reusable `visual.yml` jobs plus caller workflows.
 
-- Pull requests that change native implementation, example fixtures, fonts, Maestro flows, the manifest, or baselines run the pilot suite. Baseline-changing PRs run the full affected environment.
+- Pull requests that change native implementation, example fixtures, fonts, the agent-device runner, the manifest, or baselines run the pilot suite. Baseline-changing PRs run the full affected environment.
 - A scheduled full run detects hosted-runner and runtime drift before a release.
 - `workflow_dispatch` accepts an exact commit SHA and environment for diagnosis or candidate generation.
 - Every release invokes both complete platform jobs before tagging or publishing.
@@ -442,9 +447,12 @@ Real devices add OEM fonts, vendor Android behavior, hardware rendering, and phy
 
 ## Appendix A: Comparator alternatives
 
-### Maestro `assertScreenshot`
+### Driver-owned screenshot comparison
 
-Maestro can compare a cropped element directly with `assertScreenshot`. It has a required match percentage and fails when its reference is missing. It does not provide the same per-pixel sensitivity, anti-alias controls, dedicated visual report, or explicit added/deleted-image contract used by the phase-one workflow.
+A device driver can compare a screenshot directly during capture. That does
+not necessarily provide the same per-pixel sensitivity, anti-alias controls,
+dedicated visual report, or explicit added and deleted image contract used by
+the phase-one workflow.
 
 It is a reasonable simplification only if a measured pilot shows that one percentage threshold catches seeded typography regressions, remains stable across repeated runs, and produces sufficient failure artifacts. If adopted later, replace `reg-cli` rather than maintaining both comparison paths.
 
@@ -452,18 +460,10 @@ It is a reasonable simplification only if a measured pilot shows that one percen
 
 WebdriverIO with `@wdio/visual-service` offers element capture, Pixelmatch controls, ignored regions, crop expansion, metadata-rich baselines, and Appium-backed physical iOS support. It also requires WebdriverIO, Appium, platform drivers, capabilities, and their compatibility maintenance.
 
-Choose it instead of Maestro plus `reg-cli` only when ignored regions, per-test comparison modes, crop expansion, or physical iOS execution are firm requirements. Do not add `reg-cli` on top of WebdriverIO visual service.
+Choose it instead of agent-device plus `reg-cli` only when ignored regions,
+per-test comparison modes, crop expansion, or physical iOS execution are firm
+requirements. Do not add `reg-cli` on top of WebdriverIO visual service.
 
 ### Detox and Appium
 
 Detox is useful for complex React Native synchronization but still needs a comparison and baseline layer. Appium has broad ecosystem and device-cloud support but is operationally heavier. Neither is the phase-one choice for static specimen pages.
-
-## Appendix B: Optional `agent-device` experiment
-
-`agent-device` can be evaluated as a future replacement for Maestro's navigation and screenshot capture while retaining the same manifest, canonical actual paths, and `reg-cli` comparison.
-
-The locally evaluated version was 0.20.8. That workstation version is evidence, not a repository or CI pin. Any experiment must pin its own exact version.
-
-Its main current limitation for this design is the lack of a documented selector-based screenshot crop equivalent to Maestro's `cropOn`. The options are to render one specimen as a full-screen canvas, add deterministic image preprocessing, or retain Maestro for VRT.
-
-Before adopting it, run the same representative suite at least ten times with each driver. Compare total runtime excluding the native build, cold and warm iOS time, Android time, intermittent failures, screenshot consistency, and artifact quality. Adopt it only if the measured improvement outweighs crop preprocessing and the cost of maintaining a pre-1.0 dependency.

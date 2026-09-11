@@ -1,0 +1,7 @@
+open "plaintext.example" "${VRT_DEV_CLIENT_URL}" --relaunch
+press id=vrt-tab-features
+scroll top
+wait "id=\"vrt-capture-features-font-size-48-text\"" 15000
+wait "stable" 500 5000
+screenshot "${VRT_SCREENSHOT}" --crop-on "id=\"vrt-capture-features-font-size-48-text\""
+close

@@ -50,7 +50,7 @@ yarn example ios
 ```
 
 To run the complete visual regression workflow, including device setup, the
-Release build, and Maestro captures:
+Release build, and agent-device captures:
 
 ```sh
 yarn vrt android
@@ -84,18 +84,18 @@ yarn vrt:ios run
 yarn vrt:ios test
 ```
 
-Maestro writes its raw artifact bundle to
-`build/vrt/maestro/<platform>/<profile>/`. The wrapper extracts only the PNG
-captures into `build/vrt/actual/<platform>/<profile>/`. On the first successful
-`test` run for a profile, it moves those PNGs to
+The capture stage requires `agent-device` 0.21.0 or newer. It scrolls to each
+specimen by test ID and uses `screenshot --crop-on` to write PNG captures into
+`build/vrt/actual/<platform>/<profile>/`. On the first successful `test` run
+for a profile, it moves those PNGs to
 `baselines/<platform>/<profile>/` for review and commit. Later runs use
 `reg-cli` to compare actual images with that baseline and write comparison
 images to `build/vrt/diff/`. A visual difference makes the command fail. All
-timestamped Maestro diagnostics remain ignored under `build/`. When comparison
-images exist, the wrapper also writes the built-in `reg-cli` HTML and JSON
-reports to `build/vrt/report/<platform>/<profile>.{html,json}` and prints the
-command that opens the HTML file. The report provides diff, side-by-side,
-slider, blend, and toggle views of the baseline and actual images.
+generated VRT files remain ignored under `build/`. When comparison images
+exist, the wrapper also writes the built-in `reg-cli` HTML and JSON reports to
+`build/vrt/report/<platform>/<profile>.{html,json}` and prints the command that
+opens the HTML file. The report provides diff, side-by-side, slider, blend, and
+toggle views of the baseline and actual images.
 
 Use development mode to capture and compare only
 `vrt-capture-features-font-size-48` against its canonical baseline:
@@ -106,10 +106,12 @@ VRT_MODE_DEV=1 yarn vrt:ios test
 ```
 
 Development mode expects the Expo development server on port `8081`. On
-Android, the wrapper forwards that port to the host and Maestro opens the Expo
-development-client URL directly. This avoids the development-client launcher
-screen that a plain app launch would show. Override `VRT_DEV_SERVER_PORT` and
-`VRT_DEV_CLIENT_URL` together when Metro uses a different port or scheme.
+Android, the wrapper forwards that port to the host and agent-device opens the
+Expo development-client URL directly. This avoids the development-client
+launcher screen that a plain app launch would show. Override
+`VRT_DEV_SERVER_PORT` and `VRT_DEV_CLIENT_URL` together when Metro uses a
+different port or scheme. The development capture runs as a native `.ad`
+replay from `.agent-device/vrt-dev-<platform>.ad`.
 
 The first development-mode run creates a one-image baseline in the ignored
 `build/vrt/baseline-dev/` directory. Later development runs compare against
