@@ -84,10 +84,14 @@ yarn vrt:ios run
 yarn vrt:ios test
 ```
 
-The capture stage requires `agent-device` 0.21.0 or newer. It scrolls to each
-specimen by test ID and uses `screenshot --crop-on` to write PNG captures into
-`build/vrt/actual/<platform>/<profile>/`. On the first successful `test` run
-for a profile, it moves those PNGs to
+The capture stage requires `agent-device` 0.21.0 or newer. The app root renders
+`AppVrt` when the incoming deep link contains a `testID` query parameter and
+renders the regular app otherwise. For each manifest entry, agent-device opens
+`exp+react-native-plain-text-example://vrt?testID=<testID>` and uses
+`screenshot --crop-on` to write the one rendered specimen into
+`build/vrt/actual/<platform>/<profile>/`. This avoids tab navigation and
+scrolling through the specimen book. On the first successful `test` run for a
+profile, it moves those PNGs to
 `baselines/<platform>/<profile>/` for review and commit. Later runs use
 `reg-cli` to compare actual images with that baseline and write comparison
 images to `build/vrt/diff/`. A visual difference makes the command fail. All
@@ -112,6 +116,12 @@ launcher screen that a plain app launch would show. Override
 `VRT_DEV_SERVER_PORT` and `VRT_DEV_CLIENT_URL` together when Metro uses a
 different port or scheme. The development capture runs as a native `.ad`
 replay from `.agent-device/vrt-dev-<platform>.ad`.
+
+Start Metro before using development mode:
+
+```sh
+yarn example start
+```
 
 The first development-mode run creates a one-image baseline in the ignored
 `build/vrt/baseline-dev/` directory. Later development runs compare against

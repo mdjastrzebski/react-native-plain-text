@@ -21,8 +21,7 @@ session_name="plaintext-vrt-$platform"
 dev_capture_id="vrt-capture-features-font-size-48"
 dev_mode="${VRT_MODE_DEV:-0}"
 session_open=0
-viewport_top=""
-viewport_bottom=""
+current_deep_link=""
 
 [[ "$platform" == "android" || "$platform" == "ios" ]] || \
   fail "Platform must be 'android' or 'ios'."
@@ -93,56 +92,22 @@ close_session() {
 
 trap close_session EXIT
 
-open_app() {
-  run_quiet settings clear-app-state "$app_id"
-  run_quiet open "$app_id" --foreground
-
-  session_open=1
-  run_quiet wait "id=\"$dev_capture_id-text\"" 15000
-  set_viewport_bounds
-}
-
 reattach_app() {
   local output
 
   printf 'Reattaching expired agent-device session.\n'
-  if ! output="$(agent_device open "$app_id" --foreground 2>&1)"; then
+  if ! output="$(agent_device open "$app_id" "$current_deep_link" --foreground 2>&1)"; then
     printf '%s\n' "$output" >&2
     return 1
   fi
 
   session_open=1
-  set_viewport_bounds
-}
-
-set_viewport_bounds() {
-  local bounds output
-
-  if ! output="$(agent_device snapshot --force-full --json 2>&1)"; then
-    printf '%s\n' "$output" >&2
-    return 1
-  fi
-
-  bounds="$(
-    jq -r '
-      [
-        (.data.snapshot.nodes // .data.nodes)[]
-        | select((.type // "") | endswith("ScrollView"))
-      ]
-      | sort_by(.depth // 0)
-      | last
-      | .rect
-      | select(.)
-      | "\(.y) \(.y + .height)"
-    ' <<< "$output"
-  )"
-  [[ -n "$bounds" ]] || fail "Could not resolve the VRT ScrollView viewport."
-  read -r viewport_top viewport_bottom <<< "$bounds"
 }
 
 run_dev_replay() {
   local replay_file="$PROJECT_ROOT/.agent-device/vrt-dev-$platform.ad"
   local screenshot="$actual_dir/$dev_capture_id.png"
+  local dev_client_url="${VRT_DEV_CLIENT_URL}&testID=$dev_capture_id"
   local output
 
   [[ -f "$replay_file" ]] || fail "Replay not found at $replay_file."
@@ -150,7 +115,7 @@ run_dev_replay() {
 
   if ! output="$(
     agent_device replay "$replay_file" \
-      --env "VRT_DEV_CLIENT_URL=$VRT_DEV_CLIENT_URL" \
+      --env "VRT_DEV_CLIENT_URL=$dev_client_url" \
       --env "VRT_SCREENSHOT=$screenshot" 2>&1
   )"; then
     printf '%s\n' "$output" >&2
@@ -159,46 +124,6 @@ run_dev_replay() {
 
   session_open=0
   [[ -f "$screenshot" ]] || fail "agent-device did not write $screenshot."
-}
-
-scroll_until_visible() {
-  local direction="$1"
-  local selector="$2"
-  local attrs_output scroll_direction
-  local attempts=0
-
-  while [[ "$attempts" -lt 24 ]]; do
-    if attrs_output="$(agent_device get attrs "$selector" --json 2>/dev/null)"; then
-      if jq -e \
-        --argjson viewport_top "$viewport_top" \
-        --argjson viewport_bottom "$viewport_bottom" \
-        '
-          .data.node.rect as $rect
-          | $rect.y >= ($viewport_top + 1)
-            and ($rect.y + $rect.height) <= ($viewport_bottom - 1)
-        ' <<< "$attrs_output" >/dev/null; then
-        return
-      fi
-
-      scroll_direction="$(
-        jq -r \
-          --argjson viewport_top "$viewport_top" \
-          'if .data.node.rect.y < $viewport_top then "up" else "down" end' \
-          <<< "$attrs_output"
-      )"
-    elif [[ "$attempts" -lt 8 ]]; then
-      scroll_direction="$direction"
-    elif [[ "$direction" == "down" ]]; then
-      scroll_direction="up"
-    else
-      scroll_direction="down"
-    fi
-
-    attempts=$((attempts + 1))
-    run_quiet scroll "$scroll_direction" 0.65 --duration-ms 800 --settle
-  done
-
-  fail "Could not reach $selector after $attempts scrolls."
 }
 
 normalize_ios_crop() {
@@ -280,27 +205,20 @@ capture_crop() {
   fail "The crop for $capture_id remained partly off screen."
 }
 
-capture_group() {
-  local requested_group="$1"
-  local current_group=""
-  local capture_platform capture_id scroll_selector
-
-  run_quiet scroll top --settle
+capture_all() {
+  local capture_platform capture_id
 
   while read -r capture_platform capture_id; do
-    if [[ "$capture_platform" == "#" ]]; then
-      if [[ "$capture_id" == "features" || "$capture_id" == "use-cases" ]]; then
-        current_group="$capture_id"
-      fi
-      continue
-    fi
-    [[ "$current_group" == "$requested_group" ]] || continue
+    [[ "$capture_platform" == "#" || -z "$capture_platform" ]] && continue
     [[ "$capture_platform" == "all" || "$capture_platform" == "$platform" ]] || continue
     [[ "$dev_mode" -eq 0 || "$capture_id" == "$dev_capture_id" ]] || continue
 
     printf 'Capturing %s\n' "$capture_id"
-    scroll_selector="id=\"$capture_id-text\""
-    scroll_until_visible down "$scroll_selector"
+    current_deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
+    run_quiet open "$app_id" "$current_deep_link" --foreground
+    session_open=1
+    run_quiet wait "id=\"$capture_id-text\"" 15000
+    run_quiet wait stable 200 5000
     capture_crop "$capture_id"
   done < "$capture_manifest"
 }
@@ -312,12 +230,8 @@ if [[ "$dev_mode" -eq 1 ]]; then
   exit 0
 fi
 
-open_app
-capture_group features
-
-run_quiet press 'id="vrt-tab-use-cases"' --settle
-run_quiet wait 'id="vrt-capture-use-cases-hero-heading"' 15000
-capture_group use-cases
+run_quiet settings clear-app-state "$app_id"
+capture_all
 
 agent_device close >/dev/null
 session_open=0

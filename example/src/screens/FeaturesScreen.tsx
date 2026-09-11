@@ -22,6 +22,10 @@ function captureTestID(section: string, specimen: string | number) {
 export default function FeaturesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
+  return <FeaturesSpecimens showText={showText} />;
+}
+
+export function FeaturesSpecimens({ showText }: { showText: boolean }) {
   return (
     <ScrollView style={screenStyles.scroll} contentContainerStyle={screenStyles.container}>
       <Cover

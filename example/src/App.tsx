@@ -1,11 +1,5 @@
 import { useCallback } from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import {
-  useFonts,
-  Inter_300Light_Italic,
-  Inter_400Regular,
-  Inter_600SemiBold,
-} from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer, type NavigationState } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -23,6 +17,7 @@ import PerformanceScreen from './screens/PerformanceScreen';
 import UseCasesScreen from './screens/UseCasesScreen';
 import AndroidTextClippingScreen from './screens/AndroidTextClippingScreen';
 import OtherExamplesScreen from './screens/OtherExamplesScreen';
+import { useExampleFonts } from './fonts';
 
 const Tab = createBottomTabNavigator();
 // One pair of components, used by all four stacks: `Navigator` and `Screen` are
@@ -175,24 +170,7 @@ const TAB_SCREENS = TABS.map(({ title, icon, screens }) => ({
 // resolves to the system font, which is precisely the failure the section exists
 // to show, so those rows would lie for as long as the load took.
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    Inter_300Light_Italic,
-    Inter_400Regular,
-    Inter_600SemiBold,
-    'NotoSans-Bold': require('../assets/fonts/NotoSans-Bold.ttf'),
-    'NotoSans-BoldItalic': require('../assets/fonts/NotoSans-BoldItalic.ttf'),
-    'NotoSans-ExtraBold': require('../assets/fonts/NotoSans-ExtraBold.ttf'),
-    'NotoSans-ExtraLight': require('../assets/fonts/NotoSans-ExtraLight.ttf'),
-    'NotoSans-ExtraLightItalic': require('../assets/fonts/NotoSans-ExtraLightItalic.ttf'),
-    'NotoSans-Light': require('../assets/fonts/NotoSans-Light.ttf'),
-    'NotoSans-LightItalic': require('../assets/fonts/NotoSans-LightItalic.ttf'),
-    'NotoSans-Medium': require('../assets/fonts/NotoSans-Medium.ttf'),
-    'NotoSans-MediumItalic': require('../assets/fonts/NotoSans-MediumItalic.ttf'),
-    'NotoSans-Regular': require('../assets/fonts/NotoSans-Regular.ttf'),
-    'NotoSans-RegularItalic': require('../assets/fonts/NotoSans-RegularItalic.ttf'),
-    'NotoSans-SemiBold': require('../assets/fonts/NotoSans-SemiBold.ttf'),
-    'NotoSans-SemiBoldItalic': require('../assets/fonts/NotoSans-SemiBoldItalic.ttf'),
-  });
+  const fontsLoaded = useExampleFonts();
 
   // Which tab was selected, kept across app kills for the rest of the session.
   const [initialTabName, setSelectedTab] = useSessionState<string | undefined>(

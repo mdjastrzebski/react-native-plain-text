@@ -1,0 +1,37 @@
+import { StyleSheet } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { CompareTextProvider } from './components/CompareText';
+import { VrtSpecimenProvider } from './components/Specimen';
+import { useExampleFonts } from './fonts';
+import { FeaturesSpecimens } from './screens/FeaturesScreen';
+import { UseCaseSpecimens } from './screens/UseCasesScreen';
+
+export default function AppVrt({ testID }: { testID: string }) {
+  const fontsLoaded = useExampleFonts();
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  const specimens = testID.startsWith('vrt-capture-features-') ? (
+    <FeaturesSpecimens showText={false} />
+  ) : testID.startsWith('vrt-capture-use-cases-') ? (
+    <UseCaseSpecimens showText={false} />
+  ) : null;
+
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <CompareTextProvider>
+          <VrtSpecimenProvider testID={testID}>{specimens}</VrtSpecimenProvider>
+        </CompareTextProvider>
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

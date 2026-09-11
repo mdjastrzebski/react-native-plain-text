@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Children, createContext, isValidElement, useContext, type ReactNode } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,6 +11,22 @@ import {
 import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { useCompatOn } from './CompareText';
 import { COLOR } from '../theme';
+
+const VrtSpecimenContext = createContext<string | undefined>(undefined);
+
+export function VrtSpecimenProvider({ testID, children }: { testID: string; children: ReactNode }) {
+  return <VrtSpecimenContext.Provider value={testID}>{children}</VrtSpecimenContext.Provider>;
+}
+
+function containsVrtSpecimen(children: ReactNode, testID: string): boolean {
+  return Children.toArray(children).some((child) => {
+    if (!isValidElement<{ testID?: string; children?: ReactNode }>(child)) {
+      return false;
+    }
+
+    return child.props.testID === testID || containsVrtSpecimen(child.props.children, testID);
+  });
+}
 
 // The specimen-book furniture both screens are set in: the title page, the
 // section headings and the row that puts one PlainText against the RN <Text>
@@ -32,6 +48,11 @@ export function Cover({
   lockup?: { glyph: string; title: string };
   blurb: string;
 }) {
+  const vrtTestID = useContext(VrtSpecimenContext);
+  if (vrtTestID != null) {
+    return null;
+  }
+
   return (
     <View style={styles.cover}>
       {/* The two of them set side by side: a specimen book's "Aa" and the name of
@@ -64,6 +85,11 @@ export function Section({
   spacedRows?: boolean;
   children: ReactNode;
 }) {
+  const vrtTestID = useContext(VrtSpecimenContext);
+  if (vrtTestID != null && !containsVrtSpecimen(children, vrtTestID)) {
+    return null;
+  }
+
   return (
     <View style={[styles.section, spacedRows === true && styles.spacedSection]}>
       {/* Tracked caps with a rule running out to the margin. Caps rather than a
@@ -120,7 +146,12 @@ export function TextItem({
   accessibilityProps?: AccessibilityProps & { testID?: string };
   children: string;
 }) {
+  const vrtTestID = useContext(VrtSpecimenContext);
   const compatOn = useCompatOn();
+
+  if (vrtTestID != null && vrtTestID !== testID) {
+    return null;
+  }
 
   return (
     <View testID={testID} style={styles.rowContainer}>
@@ -198,6 +229,11 @@ export function CompareBox({
   overlay: ReactNode;
   children: ReactNode;
 }) {
+  const vrtTestID = useContext(VrtSpecimenContext);
+  if (vrtTestID != null && vrtTestID !== testID) {
+    return null;
+  }
+
   return (
     <View testID={testID} style={styles.rowContainer}>
       {label != null && <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>}

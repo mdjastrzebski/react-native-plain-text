@@ -16,6 +16,7 @@ export ANDROID_LOCALE="${ANDROID_LOCALE:-en-US}"
 export ANDROID_TIMEZONE="${ANDROID_TIMEZONE:-UTC}"
 
 export VRT_DEV_SERVER_PORT="${VRT_DEV_SERVER_PORT:-8081}"
+export VRT_APP_SCHEME="${VRT_APP_SCHEME:-exp+react-native-plain-text-example}"
 default_vrt_dev_client_url="exp+react-native-plain-text-example://expo-development-client/?url=http%3A%2F%2Flocalhost%3A${VRT_DEV_SERVER_PORT}"
 export VRT_DEV_CLIENT_URL="${VRT_DEV_CLIENT_URL:-$default_vrt_dev_client_url}"
 unset default_vrt_dev_client_url

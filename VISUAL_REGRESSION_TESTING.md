@@ -3,12 +3,16 @@
 ## Current implementation
 
 The repository currently uses the smallest useful subset of this proposal.
-agent-device navigates the example app and captures cropped PNG files.
-`reg-cli` performs strict image comparison afterward.
+The root renders `AppVrt` when its deep link contains a `testID` query parameter
+and renders the regular app otherwise. agent-device opens one specimen at a
+time through the app's URL scheme and captures a cropped PNG. `reg-cli`
+performs strict image comparison afterward.
 
-The capture runner reads `.agent-device/vrt-captures.txt`, visits every
-platform-relevant specimen in on-screen order, and uses
-`screenshot --crop-on` to write directly to
+The capture runner reads `.agent-device/vrt-captures.txt` and opens every
+platform-relevant specimen as
+`exp+react-native-plain-text-example://vrt?testID=<testID>`. `AppVrt` filters
+the shared Features and Use Cases specimen trees so only that test ID is mounted. The
+runner uses `screenshot --crop-on` to write directly to
 `build/vrt/actual/<platform>/<profile>/`. When the corresponding
 `baselines/<platform>/<profile>/` directory does not exist, the wrapper moves
 the complete PNG set there after agent-device succeeds. Once the baseline
@@ -35,8 +39,8 @@ Dev mode does not clear app state. Doing so removes the Expo development
 client's remembered Metro server, and launching the package without a URL
 opens its launcher. The wrapper forwards Metro's default port `8081` on
 Android, and agent-device opens the generated `expo-development-client` URL
-instead. `VRT_DEV_SERVER_PORT` and `VRT_DEV_CLIENT_URL` can override those
-defaults.
+with the specimen test ID as a query parameter. `VRT_DEV_SERVER_PORT` and
+`VRT_DEV_CLIENT_URL` can override those defaults.
 
 The manifest, metadata, reports, CI lifecycle, and threshold suites below are
 possible extensions rather than requirements for the current implementation.
@@ -102,22 +106,28 @@ convention. Keep `reg-cli` in the root Yarn lockfile.
 
 ### Entry point
 
-Add an Expo URL scheme such as `plaintext` and a non-production route with this shape:
+Use the example app's Expo development-client URL scheme and a non-production
+route with this shape:
 
 ```text
-plaintext://vrt/<specimen-id>
+exp+react-native-plain-text-example://vrt?testID=<testID>
 ```
 
-The route must bypass tabs, navigation headers, the status bar, persisted state, and animations. It renders one fixed-size specimen group on a fixed background. The route is enabled only in the example app.
+The route bypasses tabs, navigation headers, persisted state, animations, and
+the long scrolling specimen pages. It renders one specimen on the same fixed
+background and with the same available width as the normal example screen.
 
 agent-device opens the app and captures each specimen by accessibility ID:
 
 ```sh
 agent-device settings clear-app-state plaintext.example --platform android
-agent-device open plaintext.example --platform android --foreground
-agent-device wait 'id="vrt-ready-font-sizes"' 15000
-agent-device screenshot strict/font-sizes.png \
-  --crop-on 'id="vrt-capture-font-sizes"'
+agent-device open plaintext.example \
+  'exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48' \
+  --platform android \
+  --foreground
+agent-device wait 'id="vrt-capture-features-font-size-48-text"' 15000
+agent-device screenshot strict/font-size-48.png \
+  --crop-on 'id="vrt-capture-features-font-size-48-text"'
 agent-device close
 ```
 
@@ -199,12 +209,11 @@ agent-device screenshot \
 ```
 
 iOS captures pass `--pixel-density 3` to retain the native pixel dimensions of
-the existing simulator baselines. Android captures use device pixels. The
-runner verifies that the complete element frame fits inside the scroll
-viewport before capture. A partial or empty crop is retried after a small
-forward scroll. Missing, ambiguous, unreadable, or repeatedly clipped crop
-targets are fatal. iOS crop dimensions are normalized to the rounded native
-element frame to remove fractional-boundary rows and columns.
+the existing simulator baselines. Android captures use device pixels. Each
+deep link mounts its target near the top of the VRT root, so no scrolling or
+viewport discovery is required. Missing, ambiguous, unreadable, or clipped
+crop targets are fatal. iOS crop dimensions are normalized to the rounded
+native element frame to remove fractional-boundary rows and columns.
 
 ## Comparison
 
