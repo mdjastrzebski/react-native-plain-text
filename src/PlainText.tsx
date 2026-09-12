@@ -34,15 +34,6 @@ export function mapPlainTextProps({
   unstable_lineHeightClippingIos,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
-  if (__DEV__ && text != null && children != null) {
-    warnOnce(
-      'plain-text-text-and-children',
-      'PlainText: both `text` and `children` were set; `text` takes precedence. Pass only one.'
-    );
-  }
-
-  // Text-style props don't flow through the native ViewProps, so pull them
-  // out of the flattened style and pass them explicitly.
   const {
     color,
     fontSize,
