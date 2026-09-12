@@ -7,76 +7,10 @@
 
 #import "PlainTextComponentDescriptor.h"
 #import "PlainTextFont.h"
-#import "PlainTextTextTransform.h"
+#import "PlainTextProps.h"
 #import "RCTFabricComponentsPlugins.h"
 
 using namespace facebook::react;
-
-static NSTextAlignment RNPlainTextAlignmentFromProp(RNPlainTextTextAlign textAlign)
-{
-    switch (textAlign) {
-        case RNPlainTextTextAlign::Left:
-            return NSTextAlignmentLeft;
-        case RNPlainTextTextAlign::Right:
-            return NSTextAlignmentRight;
-        case RNPlainTextTextAlign::Center:
-            return NSTextAlignmentCenter;
-        case RNPlainTextTextAlign::Justify:
-            return NSTextAlignmentJustified;
-        case RNPlainTextTextAlign::Auto:
-            return NSTextAlignmentNatural;
-    }
-}
-
-// textDecorationLine is a space-joined set of "underline"/"line-through"; substring presence toggles each independently, mirroring RN <Text>.
-static BOOL RNPlainTextHasUnderline(const std::string &textDecorationLine)
-{
-    return textDecorationLine.find("underline") != std::string::npos;
-}
-
-static BOOL RNPlainTextHasLineThrough(const std::string &textDecorationLine)
-{
-    return textDecorationLine.find("line-through") != std::string::npos;
-}
-
-// verticalAlign (the cross-platform CSS style) wins over textAlignVertical when set
-// (matches RN <Text>'s Text.js), and its 'middle' maps to textAlignVertical's 'center'.
-// This merge used to run in JS (PlainText.tsx's resolveTextAlignVertical); moved here
-// per docs/contributing/performance.md#prop-cost-policy.
-// SYNC: PlainTextView.kt's applyVerticalAlignGravity must resolve identically.
-static RNPlainTextTextAlignVertical RNPlainTextResolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign)
-{
-    if (!verticalAlign.has_value()) {
-        return textAlignVertical;
-    }
-    if (verticalAlign.value() == "middle") {
-        return RNPlainTextTextAlignVertical::Center;
-    }
-    if (verticalAlign.value() == "top") {
-        return RNPlainTextTextAlignVertical::Top;
-    }
-    if (verticalAlign.value() == "bottom") {
-        return RNPlainTextTextAlignVertical::Bottom;
-    }
-    if (verticalAlign.value() == "auto") {
-        return RNPlainTextTextAlignVertical::Auto;
-    }
-    return textAlignVertical;
-}
-
-static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
-{
-    switch (ellipsizeMode) {
-        case RNPlainTextEllipsizeMode::Head:
-            return NSLineBreakByTruncatingHead;
-        case RNPlainTextEllipsizeMode::Middle:
-            return NSLineBreakByTruncatingMiddle;
-        case RNPlainTextEllipsizeMode::Tail:
-            return NSLineBreakByTruncatingTail;
-        case RNPlainTextEllipsizeMode::Clip:
-            return NSLineBreakByClipping;
-    }
-}
 
 // textAlignVertical is Android-only in RN core, so RN's <Text> on iOS always
 // top-aligns. That is a gap in RN rather than a difference to preserve (see

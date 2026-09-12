@@ -7,7 +7,7 @@
 #import <cmath>
 
 #import "PlainTextFont.h"
-#import "PlainTextTextTransform.h"
+#import "PlainTextProps.h"
 
 namespace facebook::react {
 

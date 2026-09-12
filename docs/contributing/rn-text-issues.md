@@ -52,7 +52,7 @@ checked against the actual bot comment, not the API's `merged` field or issue
   implements it on both platforms
   ([PlainText.tsx:94](../../src/PlainText.tsx),
   [PlainTextView.kt](../../android/src/main/java/com/mdjstack/plaintext/PlainTextView.kt),
-  [PlainTextTextTransform.mm](../../ios/PlainTextTextTransform.mm)). High
+  [PlainTextProps.mm](../../ios/PlainTextProps.mm)). High
   reaction counts on old issues aren't a reliable signal of what's still
   missing — check current behavior before trusting the number.
 

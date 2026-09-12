@@ -620,7 +620,7 @@ private fun toEffectivePixel(
 
 // Mirrors <Text> (com.facebook.react.views.text.TextTransform, reimplemented here
 // since that one is internal to RN's own module). Capitalize already matches CSS
-// here; see ios/PlainTextTextTransform.h for why iOS needs its own implementation.
+// here; see ios/PlainTextProps.h for why iOS needs its own implementation.
 private fun applyTextTransform(text: String, textTransform: String?): String {
   // EXPENSIVE: allocates a transformed copy per call (docs/contributing/performance.md).
   return when (textTransform) {
