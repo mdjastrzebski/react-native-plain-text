@@ -2,9 +2,9 @@
 
 #import "PlainTextFontCache.h"
 #import "PlainTextFontCacheKey.h"
-#import "PlainTextFontLookupTables.h"
 #import "PlainTextFontSizing.h"
 #import "PlainTextFontVariations.h"
+#import "PlainTextProps.h"
 
 #import <CoreText/CoreText.h>
 #import <React/RCTFont.h>
