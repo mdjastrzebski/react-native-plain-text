@@ -12,7 +12,7 @@ import org.robolectric.annotation.Config
 // Covers the verticalAlign/textAlignVertical merge moved out of JS
 // (PlainText.tsx's former resolveTextAlignVertical) into applyVerticalAlignGravity,
 // per docs/contributing/performance.md#prop-cost-policy.
-// SYNC: mirrors RNPlainText.mm's RNPlainTextResolveVerticalAlign.
+// SYNC: mirrors PlainTextProps.mm's plainTextResolveVerticalAlign.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Config.NEWEST_SDK])
 class PlainTextViewVerticalAlignTest {

@@ -35,7 +35,7 @@ NSString *plainTextApplyTextTransform(NSString *text, RNPlainTextTextTransform t
     }
 }
 
-NSTextAlignment RNPlainTextAlignmentFromProp(RNPlainTextTextAlign textAlign)
+NSTextAlignment plainTextAlignmentFromProp(RNPlainTextTextAlign textAlign)
 {
     switch (textAlign) {
         case RNPlainTextTextAlign::Left:
@@ -51,17 +51,17 @@ NSTextAlignment RNPlainTextAlignmentFromProp(RNPlainTextTextAlign textAlign)
     }
 }
 
-BOOL RNPlainTextHasUnderline(const std::string &textDecorationLine)
+BOOL plainTextHasUnderline(const std::string &textDecorationLine)
 {
     return textDecorationLine.find("underline") != std::string::npos;
 }
 
-BOOL RNPlainTextHasLineThrough(const std::string &textDecorationLine)
+BOOL plainTextHasLineThrough(const std::string &textDecorationLine)
 {
     return textDecorationLine.find("line-through") != std::string::npos;
 }
 
-RNPlainTextTextAlignVertical RNPlainTextResolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign)
+RNPlainTextTextAlignVertical plainTextResolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign)
 {
     if (!verticalAlign.has_value()) {
         return textAlignVertical;
@@ -81,7 +81,7 @@ RNPlainTextTextAlignVertical RNPlainTextResolveVerticalAlign(RNPlainTextTextAlig
     return textAlignVertical;
 }
 
-NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
+NSLineBreakMode plainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
 {
     switch (ellipsizeMode) {
         case RNPlainTextEllipsizeMode::Head:

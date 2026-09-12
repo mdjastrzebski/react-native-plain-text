@@ -617,7 +617,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           both straight to native rather than resolving one from the other in JS
           (see docs/contributing/performance.md#prop-cost-policy), so the merge
           rows below exercise PlainTextView.kt's applyVerticalAlignGravity and
-          RNPlainText.mm's RNPlainTextResolveVerticalAlign directly. */}
+          PlainTextProps.mm's plainTextResolveVerticalAlign directly. */}
       <Section title="Vertical Align" footer={VERTICAL_ALIGN_FOOTER}>
         {VERTICAL_ALIGNS.map((verticalAlign) => (
           <TextItem

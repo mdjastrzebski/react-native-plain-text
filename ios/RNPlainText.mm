@@ -111,7 +111,7 @@ using namespace facebook::react;
     CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, RCTFontSizeMultiplier());
     UIFont *font = plainTextFont(props, fontSizeMultiplier);
     UIColor *color = props.color.has_value() ? RCTUIColorFromSharedColor(props.color.value()) : [UIColor blackColor];
-    NSTextAlignment alignment = RNPlainTextAlignmentFromProp(props.textAlign);
+    NSTextAlignment alignment = plainTextAlignmentFromProp(props.textAlign);
     NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
     text = plainTextApplyTextTransform(text, props.textTransform);
 
@@ -121,8 +121,8 @@ using namespace facebook::react;
     BOOL hasLineThrough = NO;
     if (props.textDecorationLine.has_value()) {
         const std::string &textDecorationLine = props.textDecorationLine.value();
-        hasUnderline = RNPlainTextHasUnderline(textDecorationLine);
-        hasLineThrough = RNPlainTextHasLineThrough(textDecorationLine);
+        hasUnderline = plainTextHasUnderline(textDecorationLine);
+        hasLineThrough = plainTextHasLineThrough(textDecorationLine);
     }
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
@@ -135,7 +135,7 @@ using namespace facebook::react;
         _label.textAlignment = alignment;
         _label.text = text;
         _label.verticalTextShift = 0;
-        _label.verticalAlignment = RNPlainTextResolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
+        _label.verticalAlignment = plainTextResolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
         return;
     }
 
@@ -172,7 +172,7 @@ using namespace facebook::react;
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     paragraphStyle.alignment = alignment;
     // A paragraph style overrides the label's own lineBreakMode, so carry ellipsizeMode into it too.
-    paragraphStyle.lineBreakMode = RNPlainTextLineBreakModeFromProp(props.ellipsizeMode);
+    paragraphStyle.lineBreakMode = plainTextLineBreakModeFromProp(props.ellipsizeMode);
 
     CGFloat verticalTextShift = 0;
     if (hasLineHeight) {
@@ -193,7 +193,7 @@ using namespace facebook::react;
         }
     }
     _label.verticalTextShift = verticalTextShift;
-    _label.verticalAlignment = RNPlainTextResolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
+    _label.verticalAlignment = plainTextResolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
 
     attributes[NSParagraphStyleAttributeName] = paragraphStyle;
     _label.attributedText = [[NSAttributedString alloc] initWithString:text attributes:attributes];
@@ -254,7 +254,7 @@ using namespace facebook::react;
     }
 
     if (_forceApplyProps || oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode) {
-        _label.lineBreakMode = RNPlainTextLineBreakModeFromProp(newViewProps.ellipsizeMode);
+        _label.lineBreakMode = plainTextLineBreakModeFromProp(newViewProps.ellipsizeMode);
     }
 
     _forceApplyProps = NO;

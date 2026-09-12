@@ -22,14 +22,14 @@ namespace facebook::react {
  */
 NSString *plainTextApplyTextTransform(NSString *text, RNPlainTextTextTransform textTransform);
 
-NSTextAlignment RNPlainTextAlignmentFromProp(RNPlainTextTextAlign textAlign);
+NSTextAlignment plainTextAlignmentFromProp(RNPlainTextTextAlign textAlign);
 
 /*
  * textDecorationLine is a space-joined set of "underline"/"line-through";
  * substring presence toggles each independently, mirroring RN <Text>.
  */
-BOOL RNPlainTextHasUnderline(const std::string &textDecorationLine);
-BOOL RNPlainTextHasLineThrough(const std::string &textDecorationLine);
+BOOL plainTextHasUnderline(const std::string &textDecorationLine);
+BOOL plainTextHasLineThrough(const std::string &textDecorationLine);
 
 /*
  * verticalAlign (the cross-platform CSS style) wins over textAlignVertical when
@@ -38,8 +38,8 @@ BOOL RNPlainTextHasLineThrough(const std::string &textDecorationLine);
  * moved here per docs/contributing/performance.md#prop-cost-policy.
  * SYNC: PlainTextView.kt's applyVerticalAlignGravity must resolve identically.
  */
-RNPlainTextTextAlignVertical RNPlainTextResolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign);
+RNPlainTextTextAlignVertical plainTextResolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign);
 
-NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode);
+NSLineBreakMode plainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode);
 
 } // namespace facebook::react
