@@ -31,14 +31,14 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
   using ConcreteViewShadowNode::ConcreteViewShadowNode;
 
   /*
-   * Declared just to compute `measurementInputsChanged_` here, the only point
+   * Declared just to compute `measurementDirty_` here, the only point
    * where the source node's old props and the new props are both reachable:
    * the base subobject is initialized first, so `getConcreteProps()` already
    * returns the new props while `sourceShadowNode` still holds the old ones.
    */
   PlainTextShadowNode(const ShadowNode &sourceShadowNode, const ShadowNodeFragment &fragment)
       : ConcreteViewShadowNode(sourceShadowNode, fragment),
-        measurementInputsChanged_(shouldRevisionDirtyMeasurement(sourceShadowNode, fragment, getConcreteProps()))
+        measurementDirty_(shouldRevisionDirtyMeasurement(sourceShadowNode, fragment, getConcreteProps()))
   {
   }
 
@@ -66,13 +66,13 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
    */
   bool shouldNewRevisionDirtyMeasurement(const ShadowNode &, const ShadowNodeFragment &) const override
   {
-    return measurementInputsChanged_;
+    return measurementDirty_;
   }
 
  private:
   // Whether this revision's props measure differently from the previous one.
   // True on the create path, which never clones and never consults it.
-  bool measurementInputsChanged_{true};
+  bool measurementDirty_{true};
 };
 
 } // namespace facebook::react
