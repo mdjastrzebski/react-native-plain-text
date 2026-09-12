@@ -2,36 +2,24 @@ import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } f
 import type { ComponentRef, Ref } from 'react';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 
-// RN's TextStyle plus the one text style it has no entry for.
-// `fontVariationSettings` is a style rather than a prop because two upstream
-// attempts to add it (react/react-native#44685, #44667) never merged, so
-// the type is widened here instead. Widened, not replaced, so a plain
-// TextStyle stays assignable and this can be dropped if RN adds the key.
 export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
 
-// Accessibility, testID, and nativeID/id are ViewProps that the native view
-// already applies; `...accessibilityProps` just forwards them through.
 export type PlainTextProps = AccessibilityProps & {
   children?: string;
-  // Use instead of `children` when driving text from
-  // `Animated.createAnimatedComponent` (RN core or Reanimated): both push
-  // per-frame updates straight onto the host ref via a prop name, bypassing
-  // PlainText's render entirely, so animating `children` is silently
-  // dropped. Wins over `children` when both are set.
+  /// Alias to `children`, to be used for animating text with Animated/Reanimated
   text?: string;
   style?: StyleProp<PlainTextStyle>;
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
-  // When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
-  // ascent-clipping behavior (RN#29507) for this instance. Unset uses
-  // PlainText's fix. `unstable_` marks that its shape/default may change
-  // without a major version bump. No-op on Android.
-  unstable_lineHeightClippingIos?: boolean;
   testID?: string;
   nativeID?: string;
   id?: string;
+
+  /// When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
+  // ascent-clipping behavior (RN#29507) for this instance.
+  unstable_lineHeightClippingIos?: boolean;
 };
 
 const FONT_VARIANT_SEPARATORS = /[\s,]+/;
