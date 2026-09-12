@@ -11,13 +11,19 @@
 
 namespace facebook::react {
 
+// Rounds up to the nearest device pixel, not the nearest whole point, same as
+// RN's own <Text>.
+static Float ceilToPixel(Float value, Float pointScaleFactor)
+{
+  return static_cast<Float>(std::ceil(value * pointScaleFactor) / pointScaleFactor);
+}
+
 // SYNC: must mirror what the mounted UILabel renders (RNPlainText.mm's
 // applyContentFromProps), and every prop read here must appear in
 // `measurementInputsEqual`, or measured size drifts from drawn text. Font is
 // the exception, since both sides go through plainTextFont (PlainTextFont.h).
-Size PlainTextShadowNode::measureContent(
-    const LayoutContext &layoutContext,
-    const LayoutConstraints &layoutConstraints) const {
+Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const
+{
   const auto &props = getConcreteProps();
 
   NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
@@ -82,21 +88,16 @@ Size PlainTextShadowNode::measureContent(
     measured = CGSizeMake(layoutConstraints.maximumSize.width, constrained.size.height);
   }
 
-  // Rounds up to the nearest device pixel, not the nearest whole point, same
-  // as RN's own <Text> (RCTTextLayoutManager.mm's identical formula) — whole
-  // points threw away real sub-point precision (thirds at 3x), which is what
-  // put PlainText's box a full point taller than RN's for some lineHeights.
   CGFloat pointScaleFactor = layoutContext.pointScaleFactor;
   Size size{
-      .width = static_cast<Float>(std::ceil(measured.width * pointScaleFactor) / pointScaleFactor),
-      .height = static_cast<Float>(std::ceil(measured.height * pointScaleFactor) / pointScaleFactor),
+      .width = ceilToPixel(static_cast<Float>(measured.width), pointScaleFactor),
+      .height = ceilToPixel(static_cast<Float>(measured.height), pointScaleFactor),
   };
 
   // Cap height to numberOfLines (0 = unlimited), matching UILabel's own line
   // clamp. min() avoids inflating text that already fits in fewer lines.
   if (props.numberOfLines > 0) {
-    Float maxHeight =
-        static_cast<Float>(std::ceil(props.numberOfLines * perLineHeight * pointScaleFactor) / pointScaleFactor);
+    Float maxHeight = ceilToPixel(props.numberOfLines * perLineHeight, pointScaleFactor);
     size.height = std::min(size.height, maxHeight);
   }
 
