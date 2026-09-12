@@ -45,11 +45,7 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
   static ShadowNodeTraits BaseTraits() {
     auto traits = ConcreteViewShadowNode::BaseTraits();
     traits.set(ShadowNodeTraits::Trait::LeafYogaNode);
-    // MeasurableYogaNode: registers `measureContent` as the Yoga measure fn.
     traits.set(ShadowNodeTraits::Trait::MeasurableYogaNode);
-    // BaselineYogaNode: registers `baseline` as the Yoga baseline fn, so a
-    // `alignItems: "baseline"` row aligns this node on its text baseline
-    // instead of defaulting to its bottom edge.
     traits.set(ShadowNodeTraits::Trait::BaselineYogaNode);
     return traits;
   }
@@ -74,10 +70,8 @@ class PlainTextShadowNode final : public ConcreteViewShadowNode<
   }
 
  private:
-  /*
-   * Whether this revision's props measure differently from the previous one.
-   * True on the create path, which never clones and never consults it.
-   */
+  // Whether this revision's props measure differently from the previous one.
+  // True on the create path, which never clones and never consults it.
   bool measurementInputsChanged_{true};
 };
 
