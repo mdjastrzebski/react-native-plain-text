@@ -12,12 +12,6 @@
 
 using namespace facebook::react;
 
-// Mirrors RN's RCTEffectiveFontSizeMultiplierFromTextAttributes, reading RCTFontSizeMultiplier() directly since this runs on the main thread.
-static CGFloat RNPlainTextFontSizeMultiplier(const RNPlainTextProps &props)
-{
-    return plainTextFontSizeMultiplier(props, RCTFontSizeMultiplier());
-}
-
 static NSTextAlignment RNPlainTextAlignmentFromProp(RNPlainTextTextAlign textAlign)
 {
     switch (textAlign) {
@@ -179,7 +173,8 @@ static NSLineBreakMode RNPlainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode
 // SYNC: PlainTextShadowNode::measureContent must mirror every attribute set here (font excepted, both go through plainTextFont) or measured size won't match drawn text.
 - (void)applyContentFromProps:(const RNPlainTextProps &)props
 {
-    CGFloat fontSizeMultiplier = RNPlainTextFontSizeMultiplier(props);
+    // Mirrors RN's RCTEffectiveFontSizeMultiplierFromTextAttributes, reading RCTFontSizeMultiplier() directly since this runs on the main thread.
+    CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, RCTFontSizeMultiplier());
     UIFont *font = plainTextFont(props, fontSizeMultiplier);
     UIColor *color = props.color.has_value() ? RCTUIColorFromSharedColor(props.color.value()) : [UIColor blackColor];
     NSTextAlignment alignment = RNPlainTextAlignmentFromProp(props.textAlign);
