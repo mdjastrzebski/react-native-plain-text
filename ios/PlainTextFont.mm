@@ -113,7 +113,7 @@ static NSArray<NSDictionary *> *fontFeatureSettings(const std::vector<std::strin
     return nil;
   }
 
-  NSDictionary<NSString *, NSDictionary *> *descriptors = fontVariantDescriptors();
+  NSDictionary<NSString *, NSDictionary *> *descriptors = plainTextFontVariantDescriptors();
   NSMutableArray<NSDictionary *> *features = [NSMutableArray arrayWithCapacity:fontVariant.size()];
   for (const std::string &variant : fontVariant) {
     NSString *name = [NSString stringWithUTF8String:variant.c_str()];
@@ -164,7 +164,7 @@ static NSString *computeFaceName(
     return nil;
   }
 
-  BOOL isItalic = isItalicFromProp(fontStyleProp);
+  BOOL isItalic = plainTextIsItalicFromProp(fontStyleProp);
   NSString *faceName = closestFaceNameInFamily(cachedFontNamesForFamilyName(familyName), fontWeight, isItalic, NO);
   if (faceName != nil) {
     return faceName;
@@ -227,7 +227,7 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
   const std::vector<std::string> &fontVariant = arrayPropOrEmpty(props.fontVariant);
   const std::string &fontVariationSettings = stringPropOrEmpty(props.fontVariationSettings);
 
-  RCTFontWeight weight = fontWeightFromProp(fontWeight);
+  RCTFontWeight weight = plainTextFontWeightFromProp(fontWeight);
   UIFont *font = nil;
   // "System" is RCTFont.mm's special-case name for the system font (no family is actually registered as "System"), so it's excluded here rather than failing the family lookup and logging.
   if (!fontFamily.empty() && fontFamily != "System") {
@@ -291,7 +291,7 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
   const std::string &fontVariationSettings = stringPropOrEmpty(props.fontVariationSettings);
 
   CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
-  bool italic = isItalicFromProp(fontStyle);
+  bool italic = plainTextIsItalicFromProp(fontStyle);
   std::string faceKey = faceCacheKey(fontFamily, fontWeight, fontStyle);
   std::string cacheKey = fontCacheKey(faceKey, fontSize, fontVariant, fontVariationSettings);
   NSString *key = [NSString stringWithUTF8String:cacheKey.c_str()];

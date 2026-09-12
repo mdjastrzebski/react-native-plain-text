@@ -68,16 +68,17 @@ RNPlainTextTextAlignVertical plainTextResolveVerticalAlign(RNPlainTextTextAlignV
     if (!verticalAlign.has_value()) {
         return textAlignVertical;
     }
-    if (verticalAlign.value() == "middle") {
+    const std::string &align = verticalAlign.value();
+    if (align == "middle") {
         return RNPlainTextTextAlignVertical::Center;
     }
-    if (verticalAlign.value() == "top") {
+    if (align == "top") {
         return RNPlainTextTextAlignVertical::Top;
     }
-    if (verticalAlign.value() == "bottom") {
+    if (align == "bottom") {
         return RNPlainTextTextAlignVertical::Bottom;
     }
-    if (verticalAlign.value() == "auto") {
+    if (align == "auto") {
         return RNPlainTextTextAlignVertical::Auto;
     }
     return textAlignVertical;
@@ -97,32 +98,36 @@ NSLineBreakMode plainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsiz
     }
 }
 
-RCTFontWeight fontWeightFromProp(const std::string &fontWeight)
+RCTFontWeight plainTextFontWeightFromProp(const std::string &fontWeight)
 {
-    static NSDictionary<NSString *, NSNumber *> *weights = @{
-        @"normal" : @(UIFontWeightRegular),
-        @"bold" : @(UIFontWeightBold),
-        @"100" : @(UIFontWeightUltraLight),
-        @"200" : @(UIFontWeightThin),
-        @"300" : @(UIFontWeightLight),
-        @"400" : @(UIFontWeightRegular),
-        @"500" : @(UIFontWeightMedium),
-        @"600" : @(UIFontWeightSemibold),
-        @"700" : @(UIFontWeightBold),
-        @"800" : @(UIFontWeightHeavy),
-        @"900" : @(UIFontWeightBlack),
-    };
-    NSString *key = [NSString stringWithUTF8String:fontWeight.c_str()];
-    NSNumber *weight = weights[key];
-    return weight != nil ? (RCTFontWeight)weight.doubleValue : UIFontWeightRegular;
+    if (fontWeight == "normal" || fontWeight == "400") {
+        return UIFontWeightRegular;
+    } else if (fontWeight == "bold" || fontWeight == "700") {
+        return UIFontWeightBold;
+    } else if (fontWeight == "100") {
+        return UIFontWeightUltraLight;
+    } else if (fontWeight == "200") {
+        return UIFontWeightThin;
+    } else if (fontWeight == "300") {
+        return UIFontWeightLight;
+    } else if (fontWeight == "500") {
+        return UIFontWeightMedium;
+    } else if (fontWeight == "600") {
+        return UIFontWeightSemibold;
+    } else if (fontWeight == "800") {
+        return UIFontWeightHeavy;
+    } else if (fontWeight == "900") {
+        return UIFontWeightBlack;
+    }
+    return UIFontWeightRegular;
 }
 
-bool isItalicFromProp(const std::string &fontStyle)
+bool plainTextIsItalicFromProp(const std::string &fontStyle)
 {
     return fontStyle == "italic" || fontStyle == "oblique";
 }
 
-NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors(void)
+NSDictionary<NSString *, NSDictionary *> *plainTextFontVariantDescriptors(void)
 {
 #define RNPlainTextFeature(type, selector) \
     @{UIFontFeatureTypeIdentifierKey : @(type), UIFontFeatureSelectorIdentifierKey : @(selector)}
