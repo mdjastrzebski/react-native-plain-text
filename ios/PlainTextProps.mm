@@ -37,7 +37,7 @@ NSString *applyTextTransform(NSString *text, RNPlainTextTextTransform textTransf
     }
 }
 
-NSTextAlignment alignmentFromProp(RNPlainTextTextAlign textAlign)
+NSTextAlignment textAlignmentFromProp(RNPlainTextTextAlign textAlign)
 {
     switch (textAlign) {
         case RNPlainTextTextAlign::Left:
@@ -53,12 +53,12 @@ NSTextAlignment alignmentFromProp(RNPlainTextTextAlign textAlign)
     }
 }
 
-BOOL hasUnderline(const std::string &textDecorationLine)
+BOOL textDecorationHasUnderline(const std::string &textDecorationLine)
 {
     return textDecorationLine.find("underline") != std::string::npos;
 }
 
-BOOL hasLineThrough(const std::string &textDecorationLine)
+BOOL textDecorationHasLineThrough(const std::string &textDecorationLine)
 {
     return textDecorationLine.find("line-through") != std::string::npos;
 }

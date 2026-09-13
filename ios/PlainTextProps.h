@@ -30,14 +30,14 @@ namespace facebook::react::plaintext {
  */
 NSString *applyTextTransform(NSString *text, RNPlainTextTextTransform textTransform);
 
-NSTextAlignment alignmentFromProp(RNPlainTextTextAlign textAlign);
+NSTextAlignment textAlignmentFromProp(RNPlainTextTextAlign textAlign);
 
 /*
  * textDecorationLine is a space-joined set of "underline"/"line-through";
  * substring presence toggles each independently, mirroring RN <Text>.
  */
-BOOL hasUnderline(const std::string &textDecorationLine);
-BOOL hasLineThrough(const std::string &textDecorationLine);
+BOOL textDecorationHasUnderline(const std::string &textDecorationLine);
+BOOL textDecorationHasLineThrough(const std::string &textDecorationLine);
 
 /*
  * verticalAlign (the cross-platform CSS style) wins over textAlignVertical when

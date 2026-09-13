@@ -213,13 +213,13 @@ static NSString *resolvedFaceName(
                                  }];
 }
 
-CGFloat fontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier)
+CGFloat resolveFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier)
 {
   return clampFontSizeMultiplier(props.allowFontScaling, props.maxFontSizeMultiplier, baseMultiplier);
 }
 
 // The resolution resolveFont()'s cache wraps, for an already-scaled fontSize and faceKey.
-static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &faceKey, CGFloat fontSize, bool italic)
+static UIFont *computeFont(const RNPlainTextProps &props, const std::string &faceKey, CGFloat fontSize, bool italic)
 {
   const std::string &fontFamily = stringPropOrEmpty(props.fontFamily);
   const std::string &fontWeight = stringPropOrEmpty(props.fontWeight);
@@ -278,7 +278,7 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
   return font;
 }
 
-// SYNC: `fontCacheKey` (PlainTextFontCacheKey.h) must cover every input this and resolvedFont read.
+// SYNC: `fontCacheKey` (PlainTextFontCacheKey.h) must cover every input this and computeFont read.
 UIFont *resolveFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
 {
   static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache =
@@ -298,7 +298,7 @@ UIFont *resolveFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
 
   return [resolvedFontsCache objectForKey:key
                                      orSet:^UIFont * {
-                                       return resolvedFont(props, faceKey, fontSize, italic);
+                                       return computeFont(props, faceKey, fontSize, italic);
                                      }];
 }
 

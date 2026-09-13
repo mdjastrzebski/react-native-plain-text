@@ -11,6 +11,8 @@
 
 namespace facebook::react {
 
+using namespace plaintext;
+
 // Rounds up to the nearest device pixel, not the nearest whole point, same as
 // RN's own <Text>.
 static Float ceilToPixel(Float value, Float pointScaleFactor)
@@ -21,19 +23,19 @@ static Float ceilToPixel(Float value, Float pointScaleFactor)
 // SYNC: must mirror what the mounted UILabel renders (RNPlainText.mm's
 // applyContentFromProps), and every prop read here must appear in
 // `measurementInputsEqual`, or measured size drifts from drawn text. Font is
-// the exception, since both sides go through plaintext::resolveFont (PlainTextFont.h).
+// the exception, since both sides go through resolveFont (PlainTextFont.h).
 Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const
 {
   const auto &props = getConcreteProps();
 
   NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
-  text = plaintext::applyTextTransform(text, props.textTransform);
+  text = applyTextTransform(text, props.textTransform);
 
   // Base scale comes from the layout context (Fabric seeds it from
   // RCTFontSizeMultiplier, same as the mounted view). Clamping matches the
   // mounted view so measured and drawn sizes agree.
-  CGFloat fontSizeMultiplier = plaintext::fontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
-  UIFont *font = plaintext::resolveFont(props, fontSizeMultiplier);
+  CGFloat fontSizeMultiplier = resolveFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
+  UIFont *font = resolveFont(props, fontSizeMultiplier);
 
   NSMutableDictionary<NSAttributedStringKey, id> *attributes = [NSMutableDictionary dictionary];
   attributes[NSFontAttributeName] = font;
@@ -118,8 +120,8 @@ Float PlainTextShadowNode::baseline(
     Size /*size*/) const {
   const auto &props = getConcreteProps();
 
-  CGFloat fontSizeMultiplier = plaintext::fontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
-  UIFont *font = plaintext::resolveFont(props, fontSizeMultiplier);
+  CGFloat fontSizeMultiplier = resolveFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
+  UIFont *font = resolveFont(props, fontSizeMultiplier);
 
   CGFloat ascender = font.ascender;
 

@@ -17,14 +17,6 @@
 namespace facebook::react::plaintext {
 
 /*
- * Effective accessibility font-size multiplier: `baseMultiplier` when
- * allowFontScaling is on, clamped by maxFontSizeMultiplier when that is >= 1,
- * and 1 otherwise. Shared so the view and shadow node apply identical
- * clamping despite reading their base multiplier from different places.
- */
-CGFloat fontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier);
-
-/*
  * The UIFont for these props, at `props.fontSize` scaled by
  * `fontSizeMultiplier`. Cached, keyed on the six inputs that reach UIFont:
  * fontFamily, fontSize, fontWeight, italic, fontVariant and
@@ -38,5 +30,13 @@ CGFloat fontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier
  * both thread-safe.
  */
 UIFont *resolveFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier);
+
+/*
+ * Effective accessibility font-size multiplier: `baseMultiplier` when
+ * allowFontScaling is on, clamped by maxFontSizeMultiplier when that is >= 1,
+ * and 1 otherwise. Shared so the view and shadow node apply identical
+ * clamping despite reading their base multiplier from different places.
+ */
+CGFloat resolveFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier);
 
 } // namespace facebook::react::plaintext
