@@ -59,7 +59,7 @@ Exists to _locate_ a change, not to judge it.
 - **Span:** React render and reconciliation, the Fabric commit (cloning the
   shadow tree, resolving props), and Yoga layout — including the synchronous hop
   into native text measurement that every self-measured node makes during layout
-  ([sync-points.md](sync-points.md#a-prop-that-affects-measured-size)). It stops
+  ([sync-points.md](sync-points.md#set-2--a-prop-that-affects-measured-size)). It stops
   when React hands the committed tree off; the actual mounting of platform views
   happens afterwards on the UI thread and is _not_ in this number.
 

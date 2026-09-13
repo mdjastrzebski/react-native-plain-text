@@ -52,7 +52,7 @@ While it was live, this surfaced two other, permanent bugs, both now fixed
 and documented where the next reader would actually look for them rather
 than here: [native-gotchas.md](native-gotchas.md#android) (mutating a paint
 flag alone doesn't invalidate/redraw the view) and
-[sync-points.md](sync-points.md#a-prop-that-affects-measured-size)
+[sync-points.md](sync-points.md#set-2--a-prop-that-affects-measured-size)
 (`experiment` was missing from `measurementInputsEqual`, so toggling it
 alone never re-triggered a remeasure). Both are worth knowing before wiring
 the next experiment onto either the mounted view's paint or measurement.
@@ -274,7 +274,7 @@ Before this, the prop was used to A/B Android's off-screen measuring view:
 `PlainTextViewManager.measureView()` reusing one `ThreadLocal` view (baseline)
 vs. constructing a fresh one per node (experiment). Baseline won, and
 `measureView()` is unconditional again. See
-[sync-points.md](sync-points.md#the-reused-measuring-view) for that
+[sync-points.md](sync-points.md#set-4--the-reused-measuring-view-android) for that
 experiment's history.
 
 ## Wiring up a new experiment
@@ -299,7 +299,7 @@ experiment's history.
      `updateProps:` (iOS).
    - An experiment can need both: measurement and the mounted view must still
      agree per the _three-way default contract_
-     ([sync-points.md](sync-points.md#the-three-way-default-contract)) if it
+     ([sync-points.md](sync-points.md#set-3--the-three-way-default-contract)) if it
      affects measured size.
 4. **Drive it from the perf suite.** `example/src/screens/PerformanceScreen.tsx`
    already has a `Params` row for it (`ATTRIBUTES`, `key: 'experiment'`,
@@ -328,7 +328,7 @@ permanent cost-policy violation waiting to happen (see
    Don't remove the prop itself. Rebuilding this plumbing per experiment is
    the thing this mechanism exists to avoid.
 4. **Update this doc's "Current state" section and
-   [sync-points.md](sync-points.md#the-reused-measuring-view)** with what was
+   [sync-points.md](sync-points.md#set-4--the-reused-measuring-view-android)** with what was
    tried and what was decided, the way the measuring-view entry does: a
    history trail here is what tells the next agent an idea's already been
    tested, and what it cost to find out.

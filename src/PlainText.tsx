@@ -20,6 +20,8 @@ export type PlainTextProps = AccessibilityProps & {
 
   /// When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
   /// ascent-clipping behavior (RN#29507) for this instance.
+  // SYNC: renamed to the bare lineHeightClippingIos past this file — see
+  // docs/contributing/sync-points.md#set-13--lineheightclippingios-one-prop-renamed-at-the-js-boundary.
   unstable_lineHeightClippingIos?: boolean;
 };
 

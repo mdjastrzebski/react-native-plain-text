@@ -193,6 +193,7 @@ static NSString *computeFaceName(
 
 // Cached separately from the font since face resolution doesn't depend on fontSize, so a new size costs one instantiation, not another family scan.
 // SYNC: `faceKey` (PlainTextFontCacheKey.h) must cover every input this and computeFaceName read.
+// See docs/contributing/sync-points.md#set-7--the-ios-font-cache-key.
 static NSString *resolvedFaceName(
     const std::string &fontFamily,
     const std::string &faceKey,
@@ -279,6 +280,7 @@ static UIFont *computeFont(const RNPlainTextProps &props, const std::string &fac
 }
 
 // SYNC: `fontCacheKey` (PlainTextFontCacheKey.h) must cover every input this and computeFont read.
+// See docs/contributing/sync-points.md#set-7--the-ios-font-cache-key.
 UIFont *resolveFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
 {
   static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache =

@@ -6,7 +6,7 @@
  * read to pick a face or build the `UIFont`. A new one read there and left out
  * here doesn't fail: it applies once, then the cache silently serves that
  * first result back for every other value of the missing input. See
- * docs/contributing/sync-points.md#the-ios-font-cache-key.
+ * docs/contributing/sync-points.md#set-7--the-ios-font-cache-key.
  */
 
 #pragma once

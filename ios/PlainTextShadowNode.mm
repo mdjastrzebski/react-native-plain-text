@@ -24,6 +24,7 @@ static Float ceilToPixel(Float value, Float pointScaleFactor)
 // applyContentFromProps), and every prop read here must appear in
 // `measurementInputsEqual`, or measured size drifts from drawn text. Font is
 // the exception, since both sides go through resolveFont (PlainTextFont.h).
+// See docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size.
 Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const
 {
   const auto &props = getConcreteProps();

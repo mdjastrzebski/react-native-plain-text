@@ -41,7 +41,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // never does, so every mount lands here. Calling it would hand this a previously-used
   // PlainTextView carrying stale text/font/color, which is what RN's own
   // ReactTextViewManager answers with recycleView(). See
-  // docs/contributing/sync-points.md#recycled-view-state, the same failure as the iOS fix in
+  // docs/contributing/sync-points.md#set-10--recycled-view-state-ios, the same failure as the iOS fix in
   // RNPlainText.mm, not ported here.
   public override fun createViewInstance(context: ThemedReactContext): PlainTextView {
     return PlainTextView(context)
@@ -49,6 +49,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
 
   // The @ReactProp setters below only record state (see the batching block in
   // PlainTextView). This runs once per transaction rather than once per prop.
+  // SYNC: must run before the off-screen measure below. See
+  // docs/contributing/sync-points.md#set-5--deferred-prop-application-android-dirty-flags.
   override fun onAfterUpdateTransaction(view: PlainTextView) {
     super.onAfterUpdateTransaction(view)
     view.flushPendingUpdates()
@@ -62,7 +64,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // minus padding/border.
   //
   // SYNC: iOS gets this for free: RCTViewComponentView lays the contentView out at
-  // layoutMetrics.getContentFrame(), already inset by the same contentInsets.
+  // layoutMetrics.getContentFrame(), already inset by the same contentInsets. See
+  // docs/contributing/sync-points.md#set-14--padding-and-border-width-not-props.
   override fun setPadding(view: PlainTextView, left: Int, top: Int, right: Int, bottom: Int) {
     view.setPadding(left, top, right, bottom)
   }
@@ -233,7 +236,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // SYNC: two invariants, neither checked by anything: every fallback above must match
   // the default in the generated Props.h (the C++ side omits props at default), and
   // every prop must be set on every call, not only when its key is present (the
-  // off-screen view is reused across nodes).
+  // off-screen view is reused across nodes). See
+  // docs/contributing/sync-points.md#set-3--the-three-way-default-contract and
+  // docs/contributing/sync-points.md#set-4--the-reused-measuring-view-android.
   override fun measure(
     context: Context,
     localData: ReadableMap?,
@@ -284,7 +289,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // first line's baseline falls instead of the measured size, so
     // `alignItems: "baseline"` can align on it (Yoga's baseline fn calls
     // through to here via PlainTextShadowNode::baseline). Packed into the
-    // height slot since a baseline query never needs the width back.
+    // height slot since a baseline query never needs the width back. See
+    // docs/contributing/sync-points.md#set-15--the-__baseline-marker-string-android.
     if (props?.hasKey(BASELINE_QUERY_PROP) == true) {
       return YogaMeasureOutput.make(0f, PixelUtil.toDIPFromPixel(view.baseline.toFloat()))
     }
@@ -357,7 +363,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   companion object {
     const val NAME = "RNPlainText"
 
-    // SYNC: matches the literal in PlainTextMeasurementsManager.cpp's baseline().
+    // SYNC: matches the literal in PlainTextMeasurementsManager.cpp's baseline(). See
+    // docs/contributing/sync-points.md#set-15--the-__baseline-marker-string-android.
     private const val BASELINE_QUERY_PROP = "__baseline"
   }
 }

@@ -116,7 +116,7 @@ prop setters (`ReactTextView.java:609,627,633,639,645,710`). `main` added an
    - On Android the loop derives `textSize` from the current `textSize`: RN's is
      literally `ratio = current / previous` mutating `paint.textSize`, which is
      the pattern the shared-scratch-view rule in
-     [sync-points.md](sync-points.md#the-reused-measuring-view) exists to forbid.
+     [sync-points.md](sync-points.md#set-4--the-reused-measuring-view-android) exists to forbid.
      The result must also not leak into the state `markScaledSizesDirty()`
      re-derives from, or a Dynamic Type change compounds shrink on shrink.
 

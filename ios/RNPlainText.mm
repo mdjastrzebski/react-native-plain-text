@@ -106,6 +106,8 @@ using namespace plaintext;
 
 // Once lineHeight or letterSpacing is set, text/font/color/alignment must go through an NSAttributedString since UILabel has no plain properties for them.
 // SYNC: PlainTextShadowNode::measureContent must mirror every attribute set here (font excepted, both go through resolveFont) or measured size won't match drawn text.
+// See docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size
+// and docs/contributing/sync-points.md#set-10--recycled-view-state-ios.
 - (void)applyContentFromProps:(const RNPlainTextProps &)props
 {
     // Mirrors RN's RCTEffectiveFontSizeMultiplierFromTextAttributes, reading RCTFontSizeMultiplier() directly since this runs on the main thread.
@@ -202,6 +204,7 @@ using namespace plaintext;
 
 // A Dynamic Type change alone touches no prop, so updateProps's diff never fires; re-derive content here since UIKit calls this independent of Fabric.
 // SYNC: PlainTextView.onConfigurationChanged is the Android counterpart and must cover the same set of scaled values.
+// See docs/contributing/sync-points.md#set-8--anything-derived-from-the-os-text-size-setting.
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection
 {
     [super traitCollectionDidChange:previousTraitCollection];

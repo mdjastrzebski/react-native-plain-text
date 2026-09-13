@@ -42,7 +42,7 @@ class PlainTextView : AppCompatTextView {
   //
   // SYNC: toEffectivePixel/calculateLetterSpacing below are pure top-level functions
   // because Kotlin's init-order check doesn't see through method calls. See
-  // docs/contributing/sync-points.md.
+  // docs/contributing/sync-points.md#set-11--construction-time-state-android.
 
   private var fontSizeSp: Float = 14f
   // Mirrors RN's <Text> (TextAttributes): sp sizes track the OS text-size setting
@@ -99,7 +99,7 @@ class PlainTextView : AppCompatTextView {
   // never ran.
   //
   // SYNC: only assigned from applyTypeface and the restore in applyVariationSettings.
-  // See docs/contributing/sync-points.md.
+  // See docs/contributing/sync-points.md#set-5--deferred-prop-application-android-dirty-flags.
   //
   // Known quirk: the OS "Bold text" setting reapplies the typeface via
   // onConfigurationChanged (API 31+) without invalidating this field, silently
@@ -159,7 +159,8 @@ class PlainTextView : AppCompatTextView {
   // init-order check looks.
   //
   // SYNC: a new prop feeding shared work must set its own dirty flag, and flags must
-  // be applied here in dependency order, or it silently does nothing.
+  // be applied here in dependency order, or it silently does nothing. See
+  // docs/contributing/sync-points.md#set-5--deferred-prop-application-android-dirty-flags.
   fun flushPendingUpdates() {
     if (dirtyFontSize) {
       dirtyFontSize = false
@@ -183,7 +184,7 @@ class PlainTextView : AppCompatTextView {
     // SYNC: must run after applyTypeface, since axes are baked into a derived Typeface, so
     // a new base typeface arrives with none. Reordering silently drops the axes
     // whenever a font prop changes in the same transaction. See
-    // docs/contributing/sync-points.md#deferred-prop-application.
+    // docs/contributing/sync-points.md#set-5--deferred-prop-application-android-dirty-flags.
     applyVariationSettings()
     if (dirtyText) {
       dirtyText = false
@@ -241,7 +242,7 @@ class PlainTextView : AppCompatTextView {
 
   // SYNC: everything derived from the OS text-size setting must be reachable from
   // here, iOS's traitCollectionDidChange must cover the same set. See
-  // docs/contributing/sync-points.md.
+  // docs/contributing/sync-points.md#set-8--anything-derived-from-the-os-text-size-setting.
   private fun markScaledSizesDirty() {
     dirtyFontSize = true
     dirtyText = true // lineHeight span is scaled too.
@@ -474,6 +475,12 @@ class PlainTextView : AppCompatTextView {
 
     // Not expensive despite appearances: every applyStyles path is interned, via
     // ReactFontManager's or Typeface's own caches.
+    //
+    // SYNC: must resolve against the fixed baseTypeface, never the live typeface —
+    // applyStyles derives from the typeface passed in when fontFamily is null, so
+    // chaining off the current value would leak one node's font into the next on
+    // the shared measuring view. See
+    // docs/contributing/sync-points.md#set-4--the-reused-measuring-view-android.
     val resolved = ReactTypefaceUtils.applyStyles(
       baseTypeface,
       if (fontStyle == Typeface.ITALIC) Typeface.ITALIC else Typeface.NORMAL,
@@ -535,7 +542,8 @@ class PlainTextView : AppCompatTextView {
   // (matches RN <Text>'s Text.js), and its 'middle' maps to textAlignVertical's
   // 'center'. This merge used to run in JS (PlainText.tsx's resolveTextAlignVertical);
   // moved here per docs/contributing/performance.md#prop-cost-policy.
-  // SYNC: PlainTextProps.mm's resolveVerticalAlign must resolve identically.
+  // SYNC: PlainTextProps.mm's resolveVerticalAlign must resolve identically. See
+  // docs/contributing/sync-points.md#set-12--the-verticalalign-and-textalignvertical-merge.
   fun setVerticalAlign(verticalAlign: String?) {
     rawVerticalAlign = verticalAlign
     applyVerticalAlignGravity()

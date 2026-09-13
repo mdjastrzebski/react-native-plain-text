@@ -39,7 +39,8 @@ class PlainTextMeasurementsManager {
    * measurement, so this can't be computed here either): `size` is passed as
    * both the min and max constraint so `RNPlainTextManager.measure` lays out
    * the off-screen TextView at exactly that size, and a `__baseline` marker
-   * prop (SYNC: matches `BASELINE_QUERY_PROP` in `PlainTextViewManager.kt`)
+   * prop (SYNC: matches `BASELINE_QUERY_PROP` in `PlainTextViewManager.kt`,
+   * see docs/contributing/sync-points.md#set-15--the-__baseline-marker-string-android)
    * tells it to pack `TextView.getBaseline()` into the returned value instead
    * of the measured size.
    */

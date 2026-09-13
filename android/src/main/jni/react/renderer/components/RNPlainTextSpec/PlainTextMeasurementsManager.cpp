@@ -15,7 +15,8 @@ namespace {
 // keeps a stale size after an update: correct on first render, wrong later.
 // Shared by `measure()` and `baseline()` below: both size the same off-screen
 // TextView through the same props, so serializing them once keeps the two in
-// step by construction instead of by two copies staying manually in sync.
+// step by construction instead of by two copies staying manually in sync. See
+// docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size.
 //
 // Only non-default props are serialized, since each entry costs a
 // folly::dynamic insert and a JNI-visible map slot per node.
@@ -23,7 +24,8 @@ namespace {
 // SYNC: that makes the defaults a three-way contract: the value in each
 // condition below, the default in the generated Props.h, and the fallback in
 // RNPlainTextManager.measure() for the same key. A mismatch silently measures
-// at the wrong size, since an omitted key means "default", not "not set".
+// at the wrong size, since an omitted key means "default", not "not set". See
+// docs/contributing/sync-points.md#set-3--the-three-way-default-contract.
 folly::dynamic serializeProps(const RNPlainTextProps &props) {
   folly::dynamic serializedProps = folly::dynamic::object;
   if (props.text.has_value()) {
@@ -162,7 +164,7 @@ Float PlainTextMeasurementsManager::baseline(
   // SYNC: matches BASELINE_QUERY_PROP in PlainTextViewManager.kt. Never a
   // real prop, just a marker telling `measure()` on the Java side to pack
   // `TextView.getBaseline()` into the return value instead of the measured
-  // size.
+  // size. See docs/contributing/sync-points.md#set-15--the-__baseline-marker-string-android.
   serializedProps["__baseline"] = true;
 
   local_ref<ReadableMap::javaobject> propsRM =

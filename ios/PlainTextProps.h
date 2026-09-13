@@ -44,7 +44,8 @@ BOOL textDecorationHasLineThrough(const std::string &textDecorationLine);
  * set (matches RN <Text>'s Text.js), and its 'middle' maps to textAlignVertical's
  * 'center'. This merge used to run in JS (PlainText.tsx's resolveTextAlignVertical);
  * moved here per docs/contributing/performance.md#prop-cost-policy.
- * SYNC: PlainTextView.kt's applyVerticalAlignGravity must resolve identically.
+ * SYNC: PlainTextView.kt's applyVerticalAlignGravity must resolve identically. See
+ * docs/contributing/sync-points.md#set-12--the-verticalalign-and-textalignvertical-merge.
  */
 RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign);
 

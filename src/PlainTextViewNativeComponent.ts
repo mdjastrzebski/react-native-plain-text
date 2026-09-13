@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 
 // SYNC: this spec is the source of truth for props. Changing one touches several
-// other files that nothing checks automatically (see docs/contributing/sync-points.md).
+// other files that nothing checks automatically. See
+// docs/contributing/sync-points.md#set-1--any-prop-the-four-layer-flow.
 //
 // `Cost:` lines rate a prop that is *set*, per docs/contributing/performance.md#prop-cost-policy.
 // Unmarked props are light, and a set prop left at default still costs a check.

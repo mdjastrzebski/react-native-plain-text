@@ -21,7 +21,7 @@ import com.facebook.react.viewmanagers.RNPlainTextManagerDelegate;
  *
  * <p>SYNC: a {@code @ReactProp} for anything the codegen spec doesn't declare is never called.
  * A new view-style prop belongs here, not as an annotation on {@link PlainTextViewManager}. See
- * docs/contributing/sync-points.md#padding-and-border-width-which-are-not-props.
+ * docs/contributing/sync-points.md#set-14--padding-and-border-width-not-props.
  *
  * <p>Java rather than Kotlin, unlike the rest of the library: subclassing the generated Java
  * delegate from Kotlin fails to compile (the two {@code receiveCommand} overloads collapse onto

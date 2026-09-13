@@ -4,6 +4,7 @@ namespace facebook::react {
 
 // SYNC: every prop either platform's `measureContent` reads. Missing one here
 // keeps a stale size after an update: correct on first render, wrong later.
+// See docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size.
 bool measurementInputsEqual(
     const RNPlainTextProps &a,
     const RNPlainTextProps &b) {

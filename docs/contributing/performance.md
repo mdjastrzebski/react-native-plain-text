@@ -80,7 +80,7 @@ the argument for expressing a new iOS text feature as one if it has the choice.
 ### Where the "unused is free" rule gets tested
 
 - **The reused measuring view sets every size-affecting prop on every call**, at
-  its default when absent ([sync-points.md](sync-points.md#the-reused-measuring-view)).
+  its default when absent ([sync-points.md](sync-points.md#set-4--the-reused-measuring-view-android)).
   So an unused prop is not skipped there the way Fabric skips it on the mounted
   view. Its setter runs once per node per measure pass with the default value,
   which is exactly why a setter must early-out on that value without allocating.
@@ -243,7 +243,7 @@ per commit rather than per node (Fabric serializes layout per thread, so every
 call within one pass shares a surface), so the reuse win holds there too.
 
 Reuse forced three fixes, all documented as invariants in
-[sync-points.md](sync-points.md#the-reused-measuring-view): every
+[sync-points.md](sync-points.md#set-4--the-reused-measuring-view-android): every
 size-affecting prop must be set unconditionally on each call. Nothing in the
 view may derive new state from its own current state (this is why
 `updateTypeface()` resolves against a fixed `baseTypeface`, it was leaking one
@@ -318,7 +318,7 @@ record state and set a dirty flag. `flushPendingUpdates()` does the work once, f
 `onAfterUpdateTransaction` (which `ViewManager.updateProperties` calls after the
 whole transaction) and before the off-screen measure, never from the view's
 `init`, which seeds the two values it needs itself (see
-[sync-points.md](sync-points.md#construction-time-state)).
+[sync-points.md](sync-points.md#set-11--construction-time-state-android)).
 
 Mirrors how RN's `<Text>` applies a single prebuilt `ReactTextUpdate`.
 
@@ -689,7 +689,7 @@ layout regardless. On mounted views the re-layout post is already coalesced by
 `relayoutPosted`.
 
 So the guard would trade a field, and the field-ordering hazard in
-[sync-points.md](sync-points.md#construction-time-state), for a saved
+[sync-points.md](sync-points.md#set-11--construction-time-state-android), for a saved
 `nullLayouts()`. Revisit only if a profile shows layout invalidation in this path.
 
 ## Open opportunities
@@ -793,8 +793,8 @@ mount cost after the fixes: ~300 µs.
 
 Three of the changes above traded automatic correctness for speed, and the cost
 is manual coupling that nothing verifies: serializing only non-default props
-across JNI ([the three-way default contract](sync-points.md#the-three-way-default-contract)),
-reusing the off-screen measuring view ([sync-points.md](sync-points.md#the-reused-measuring-view)),
+across JNI ([the three-way default contract](sync-points.md#set-3--the-three-way-default-contract)),
+reusing the off-screen measuring view ([sync-points.md](sync-points.md#set-4--the-reused-measuring-view-android)),
 and comparing measurement inputs on clone
 ([intrinsic-sizing.md](intrinsic-sizing.md#measurement-invalidation-both-platforms)).
 Each is marked in code with `// SYNC:` comments:
