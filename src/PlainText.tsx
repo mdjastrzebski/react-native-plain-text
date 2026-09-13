@@ -1,7 +1,7 @@
 import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } from 'react-native';
 import type { ComponentRef, Ref } from 'react';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
-import { normalizeFontVariant, warnOnce } from './utils';
+import { normalizeFontVariant } from './utils';
 
 export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
 
