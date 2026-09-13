@@ -127,46 +127,46 @@ bool plainTextIsItalicFromProp(const std::string &fontStyle)
     return fontStyle == "italic" || fontStyle == "oblique";
 }
 
+#define FontFeature(type, selector) \
+    @{UIFontFeatureTypeIdentifierKey : @(type), UIFontFeatureSelectorIdentifierKey : @(selector)}
+
 NSDictionary<NSString *, NSDictionary *> *plainTextFontVariantDescriptors(void)
 {
-#define RNPlainTextFeature(type, selector) \
-    @{UIFontFeatureTypeIdentifierKey : @(type), UIFontFeatureSelectorIdentifierKey : @(selector)}
     static NSDictionary<NSString *, NSDictionary *> *descriptors = @{
-        @"small-caps" : RNPlainTextFeature(kLowerCaseType, kLowerCaseSmallCapsSelector),
-        @"oldstyle-nums" : RNPlainTextFeature(kNumberCaseType, kLowerCaseNumbersSelector),
-        @"lining-nums" : RNPlainTextFeature(kNumberCaseType, kUpperCaseNumbersSelector),
-        @"tabular-nums" : RNPlainTextFeature(kNumberSpacingType, kMonospacedNumbersSelector),
-        @"proportional-nums" : RNPlainTextFeature(kNumberSpacingType, kProportionalNumbersSelector),
-        @"common-ligatures" : RNPlainTextFeature(kLigaturesType, kCommonLigaturesOnSelector),
-        @"no-common-ligatures" : RNPlainTextFeature(kLigaturesType, kCommonLigaturesOffSelector),
-        @"discretionary-ligatures" : RNPlainTextFeature(kLigaturesType, kRareLigaturesOnSelector),
-        @"no-discretionary-ligatures" : RNPlainTextFeature(kLigaturesType, kRareLigaturesOffSelector),
-        @"historical-ligatures" : RNPlainTextFeature(kLigaturesType, kHistoricalLigaturesOnSelector),
-        @"no-historical-ligatures" : RNPlainTextFeature(kLigaturesType, kHistoricalLigaturesOffSelector),
-        @"contextual" : RNPlainTextFeature(kContextualAlternatesType, kContextualAlternatesOnSelector),
-        @"no-contextual" : RNPlainTextFeature(kContextualAlternatesType, kContextualAlternatesOffSelector),
-        @"stylistic-one" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltOneOnSelector),
-        @"stylistic-two" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwoOnSelector),
-        @"stylistic-three" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltThreeOnSelector),
-        @"stylistic-four" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFourOnSelector),
-        @"stylistic-five" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFiveOnSelector),
-        @"stylistic-six" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSixOnSelector),
-        @"stylistic-seven" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSevenOnSelector),
-        @"stylistic-eight" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltEightOnSelector),
-        @"stylistic-nine" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltNineOnSelector),
-        @"stylistic-ten" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTenOnSelector),
-        @"stylistic-eleven" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltElevenOnSelector),
-        @"stylistic-twelve" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwelveOnSelector),
-        @"stylistic-thirteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltThirteenOnSelector),
-        @"stylistic-fourteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFourteenOnSelector),
-        @"stylistic-fifteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltFifteenOnSelector),
-        @"stylistic-sixteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSixteenOnSelector),
-        @"stylistic-seventeen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltSeventeenOnSelector),
-        @"stylistic-eighteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltEighteenOnSelector),
-        @"stylistic-nineteen" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltNineteenOnSelector),
-        @"stylistic-twenty" : RNPlainTextFeature(kStylisticAlternativesType, kStylisticAltTwentyOnSelector),
+        @"small-caps" : FontFeature(kLowerCaseType, kLowerCaseSmallCapsSelector),
+        @"oldstyle-nums" : FontFeature(kNumberCaseType, kLowerCaseNumbersSelector),
+        @"lining-nums" : FontFeature(kNumberCaseType, kUpperCaseNumbersSelector),
+        @"tabular-nums" : FontFeature(kNumberSpacingType, kMonospacedNumbersSelector),
+        @"proportional-nums" : FontFeature(kNumberSpacingType, kProportionalNumbersSelector),
+        @"common-ligatures" : FontFeature(kLigaturesType, kCommonLigaturesOnSelector),
+        @"no-common-ligatures" : FontFeature(kLigaturesType, kCommonLigaturesOffSelector),
+        @"discretionary-ligatures" : FontFeature(kLigaturesType, kRareLigaturesOnSelector),
+        @"no-discretionary-ligatures" : FontFeature(kLigaturesType, kRareLigaturesOffSelector),
+        @"historical-ligatures" : FontFeature(kLigaturesType, kHistoricalLigaturesOnSelector),
+        @"no-historical-ligatures" : FontFeature(kLigaturesType, kHistoricalLigaturesOffSelector),
+        @"contextual" : FontFeature(kContextualAlternatesType, kContextualAlternatesOnSelector),
+        @"no-contextual" : FontFeature(kContextualAlternatesType, kContextualAlternatesOffSelector),
+        @"stylistic-one" : FontFeature(kStylisticAlternativesType, kStylisticAltOneOnSelector),
+        @"stylistic-two" : FontFeature(kStylisticAlternativesType, kStylisticAltTwoOnSelector),
+        @"stylistic-three" : FontFeature(kStylisticAlternativesType, kStylisticAltThreeOnSelector),
+        @"stylistic-four" : FontFeature(kStylisticAlternativesType, kStylisticAltFourOnSelector),
+        @"stylistic-five" : FontFeature(kStylisticAlternativesType, kStylisticAltFiveOnSelector),
+        @"stylistic-six" : FontFeature(kStylisticAlternativesType, kStylisticAltSixOnSelector),
+        @"stylistic-seven" : FontFeature(kStylisticAlternativesType, kStylisticAltSevenOnSelector),
+        @"stylistic-eight" : FontFeature(kStylisticAlternativesType, kStylisticAltEightOnSelector),
+        @"stylistic-nine" : FontFeature(kStylisticAlternativesType, kStylisticAltNineOnSelector),
+        @"stylistic-ten" : FontFeature(kStylisticAlternativesType, kStylisticAltTenOnSelector),
+        @"stylistic-eleven" : FontFeature(kStylisticAlternativesType, kStylisticAltElevenOnSelector),
+        @"stylistic-twelve" : FontFeature(kStylisticAlternativesType, kStylisticAltTwelveOnSelector),
+        @"stylistic-thirteen" : FontFeature(kStylisticAlternativesType, kStylisticAltThirteenOnSelector),
+        @"stylistic-fourteen" : FontFeature(kStylisticAlternativesType, kStylisticAltFourteenOnSelector),
+        @"stylistic-fifteen" : FontFeature(kStylisticAlternativesType, kStylisticAltFifteenOnSelector),
+        @"stylistic-sixteen" : FontFeature(kStylisticAlternativesType, kStylisticAltSixteenOnSelector),
+        @"stylistic-seventeen" : FontFeature(kStylisticAlternativesType, kStylisticAltSeventeenOnSelector),
+        @"stylistic-eighteen" : FontFeature(kStylisticAlternativesType, kStylisticAltEighteenOnSelector),
+        @"stylistic-nineteen" : FontFeature(kStylisticAlternativesType, kStylisticAltNineteenOnSelector),
+        @"stylistic-twenty" : FontFeature(kStylisticAlternativesType, kStylisticAltTwentyOnSelector),
     };
-#undef RNPlainTextFeature
     return descriptors;
 }
 
