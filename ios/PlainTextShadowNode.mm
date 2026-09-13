@@ -21,19 +21,19 @@ static Float ceilToPixel(Float value, Float pointScaleFactor)
 // SYNC: must mirror what the mounted UILabel renders (RNPlainText.mm's
 // applyContentFromProps), and every prop read here must appear in
 // `measurementInputsEqual`, or measured size drifts from drawn text. Font is
-// the exception, since both sides go through plainTextFont (PlainTextFont.h).
+// the exception, since both sides go through plaintext::resolveFont (PlainTextFont.h).
 Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const
 {
   const auto &props = getConcreteProps();
 
   NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
-  text = plainTextApplyTextTransform(text, props.textTransform);
+  text = plaintext::applyTextTransform(text, props.textTransform);
 
   // Base scale comes from the layout context (Fabric seeds it from
   // RCTFontSizeMultiplier, same as the mounted view). Clamping matches the
   // mounted view so measured and drawn sizes agree.
-  CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
-  UIFont *font = plainTextFont(props, fontSizeMultiplier);
+  CGFloat fontSizeMultiplier = plaintext::fontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
+  UIFont *font = plaintext::resolveFont(props, fontSizeMultiplier);
 
   NSMutableDictionary<NSAttributedStringKey, id> *attributes = [NSMutableDictionary dictionary];
   attributes[NSFontAttributeName] = font;
@@ -118,8 +118,8 @@ Float PlainTextShadowNode::baseline(
     Size /*size*/) const {
   const auto &props = getConcreteProps();
 
-  CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
-  UIFont *font = plainTextFont(props, fontSizeMultiplier);
+  CGFloat fontSizeMultiplier = plaintext::fontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
+  UIFont *font = plaintext::resolveFont(props, fontSizeMultiplier);
 
   CGFloat ascender = font.ascender;
 

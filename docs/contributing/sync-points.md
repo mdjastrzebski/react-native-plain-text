@@ -31,7 +31,7 @@ count. All five, or the box and the text disagree:
 
 The two iOS sites are the ones that have to agree _attribute by attribute_, with
 one exception: the `UIFont` itself is not mirrored. `fontFamily`, `fontSize`,
-`fontWeight` and `fontStyle` all go through `plainTextFont`
+`fontWeight` and `fontStyle` all go through `plaintext::resolveFont`
 (`ios/PlainTextFont.h`), so a change to font resolution lands on both sides at
 once. A new prop that feeds the font belongs in there, not in either caller.
 
@@ -44,7 +44,7 @@ instead (also unrounded, matching RN), so it stays a sync point between them.
 ## The iOS font cache key
 
 `ios/PlainTextFontCacheKey.cpp` builds the keys behind `resolvedFaceName`'s and
-`plainTextFont`'s caches (`ios/PlainTextFont.mm`) from a fixed list of inputs:
+`plaintext::resolveFont`'s caches (`ios/PlainTextFont.mm`) from a fixed list of inputs:
 `faceCacheKey` takes `fontFamily`, `fontWeight` and the raw `fontStyle` string
 (not a converted bool, an empty string and `"normal"` both mean "not italic"
 but must key separately, since `computeFaceName`'s face-name fallback tells

@@ -14,7 +14,7 @@
 #import <string>
 #import <vector>
 
-namespace facebook::react {
+namespace facebook::react::plaintext {
 
 namespace {
 constinit const std::string kEmptyString;
@@ -113,7 +113,7 @@ static NSArray<NSDictionary *> *fontFeatureSettings(const std::vector<std::strin
     return nil;
   }
 
-  NSDictionary<NSString *, NSDictionary *> *descriptors = plainTextFontVariantDescriptors();
+  NSDictionary<NSString *, NSDictionary *> *descriptors = fontVariantDescriptors();
   NSMutableArray<NSDictionary *> *features = [NSMutableArray arrayWithCapacity:fontVariant.size()];
   for (const std::string &variant : fontVariant) {
     NSString *name = [NSString stringWithUTF8String:variant.c_str()];
@@ -164,7 +164,7 @@ static NSString *computeFaceName(
     return nil;
   }
 
-  BOOL isItalic = plainTextIsItalicFromProp(fontStyleProp);
+  BOOL isItalic = isItalicFromProp(fontStyleProp);
   NSString *faceName = closestFaceNameInFamily(cachedFontNamesForFamilyName(familyName), fontWeight, isItalic, NO);
   if (faceName != nil) {
     return faceName;
@@ -213,12 +213,12 @@ static NSString *resolvedFaceName(
                                  }];
 }
 
-CGFloat plainTextFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier)
+CGFloat fontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier)
 {
   return clampFontSizeMultiplier(props.allowFontScaling, props.maxFontSizeMultiplier, baseMultiplier);
 }
 
-// The resolution plainTextFont's cache wraps, for an already-scaled fontSize and faceKey.
+// The resolution resolveFont()'s cache wraps, for an already-scaled fontSize and faceKey.
 static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &faceKey, CGFloat fontSize, bool italic)
 {
   const std::string &fontFamily = stringPropOrEmpty(props.fontFamily);
@@ -227,7 +227,7 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
   const std::vector<std::string> &fontVariant = arrayPropOrEmpty(props.fontVariant);
   const std::string &fontVariationSettings = stringPropOrEmpty(props.fontVariationSettings);
 
-  RCTFontWeight weight = plainTextFontWeightFromProp(fontWeight);
+  RCTFontWeight weight = fontWeightFromProp(fontWeight);
   UIFont *font = nil;
   // "System" is RCTFont.mm's special-case name for the system font (no family is actually registered as "System"), so it's excluded here rather than failing the family lookup and logging.
   if (!fontFamily.empty() && fontFamily != "System") {
@@ -279,7 +279,7 @@ static UIFont *resolvedFont(const RNPlainTextProps &props, const std::string &fa
 }
 
 // SYNC: `fontCacheKey` (PlainTextFontCacheKey.h) must cover every input this and resolvedFont read.
-UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
+UIFont *resolveFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
 {
   static PlainTextFontCache<NSString *, UIFont *> *resolvedFontsCache =
       [[PlainTextFontCache alloc] initWithCountLimit:kFontCacheCountLimit];
@@ -291,7 +291,7 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
   const std::string &fontVariationSettings = stringPropOrEmpty(props.fontVariationSettings);
 
   CGFloat fontSize = scaledFontSize(props.fontSize, fontSizeMultiplier);
-  bool italic = plainTextIsItalicFromProp(fontStyle);
+  bool italic = isItalicFromProp(fontStyle);
   std::string faceKey = faceCacheKey(fontFamily, fontWeight, fontStyle);
   std::string cacheKey = fontCacheKey(faceKey, fontSize, fontVariant, fontVariationSettings);
   NSString *key = [NSString stringWithUTF8String:cacheKey.c_str()];
@@ -302,4 +302,4 @@ UIFont *plainTextFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier)
                                      }];
 }
 
-} // namespace facebook::react
+} // namespace facebook::react::plaintext

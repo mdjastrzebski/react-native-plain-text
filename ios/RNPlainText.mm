@@ -104,16 +104,16 @@ using namespace facebook::react;
 }
 
 // Once lineHeight or letterSpacing is set, text/font/color/alignment must go through an NSAttributedString since UILabel has no plain properties for them.
-// SYNC: PlainTextShadowNode::measureContent must mirror every attribute set here (font excepted, both go through plainTextFont) or measured size won't match drawn text.
+// SYNC: PlainTextShadowNode::measureContent must mirror every attribute set here (font excepted, both go through plaintext::resolveFont) or measured size won't match drawn text.
 - (void)applyContentFromProps:(const RNPlainTextProps &)props
 {
     // Mirrors RN's RCTEffectiveFontSizeMultiplierFromTextAttributes, reading RCTFontSizeMultiplier() directly since this runs on the main thread.
-    CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, RCTFontSizeMultiplier());
-    UIFont *font = plainTextFont(props, fontSizeMultiplier);
+    CGFloat fontSizeMultiplier = plaintext::fontSizeMultiplier(props, RCTFontSizeMultiplier());
+    UIFont *font = plaintext::resolveFont(props, fontSizeMultiplier);
     UIColor *color = props.color.has_value() ? RCTUIColorFromSharedColor(props.color.value()) : [UIColor blackColor];
-    NSTextAlignment alignment = plainTextAlignmentFromProp(props.textAlign);
+    NSTextAlignment alignment = plaintext::alignmentFromProp(props.textAlign);
     NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
-    text = plainTextApplyTextTransform(text, props.textTransform);
+    text = plaintext::applyTextTransform(text, props.textTransform);
 
     BOOL hasLineHeight = props.lineHeight > 0;
     BOOL hasLetterSpacing = props.letterSpacing.has_value();
@@ -121,8 +121,8 @@ using namespace facebook::react;
     BOOL hasLineThrough = NO;
     if (props.textDecorationLine.has_value()) {
         const std::string &textDecorationLine = props.textDecorationLine.value();
-        hasUnderline = plainTextHasUnderline(textDecorationLine);
-        hasLineThrough = plainTextHasLineThrough(textDecorationLine);
+        hasUnderline = plaintext::hasUnderline(textDecorationLine);
+        hasLineThrough = plaintext::hasLineThrough(textDecorationLine);
     }
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
@@ -135,7 +135,7 @@ using namespace facebook::react;
         _label.textAlignment = alignment;
         _label.text = text;
         _label.verticalTextShift = 0;
-        _label.verticalAlignment = plainTextResolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
+        _label.verticalAlignment = plaintext::resolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
         return;
     }
 
@@ -172,7 +172,7 @@ using namespace facebook::react;
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     paragraphStyle.alignment = alignment;
     // A paragraph style overrides the label's own lineBreakMode, so carry ellipsizeMode into it too.
-    paragraphStyle.lineBreakMode = plainTextLineBreakModeFromProp(props.ellipsizeMode);
+    paragraphStyle.lineBreakMode = plaintext::lineBreakModeFromProp(props.ellipsizeMode);
 
     CGFloat verticalTextShift = 0;
     if (hasLineHeight) {
@@ -193,7 +193,7 @@ using namespace facebook::react;
         }
     }
     _label.verticalTextShift = verticalTextShift;
-    _label.verticalAlignment = plainTextResolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
+    _label.verticalAlignment = plaintext::resolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
 
     attributes[NSParagraphStyleAttributeName] = paragraphStyle;
     _label.attributedText = [[NSAttributedString alloc] initWithString:text attributes:attributes];
@@ -254,7 +254,7 @@ using namespace facebook::react;
     }
 
     if (_forceApplyProps || oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode) {
-        _label.lineBreakMode = plainTextLineBreakModeFromProp(newViewProps.ellipsizeMode);
+        _label.lineBreakMode = plaintext::lineBreakModeFromProp(newViewProps.ellipsizeMode);
     }
 
     _forceApplyProps = NO;

@@ -2,7 +2,7 @@
 
 #import <CoreText/CoreText.h>
 
-namespace facebook::react {
+namespace facebook::react::plaintext {
 
 // See PlainTextProps.h: uppercases only each word's first character.
 static NSString *capitalizedString(NSString *text)
@@ -22,7 +22,7 @@ static NSString *capitalizedString(NSString *text)
     return result;
 }
 
-NSString *plainTextApplyTextTransform(NSString *text, RNPlainTextTextTransform textTransform)
+NSString *applyTextTransform(NSString *text, RNPlainTextTextTransform textTransform)
 {
     // EXPENSIVE: allocates a transformed copy per call (docs/contributing/performance.md).
     switch (textTransform) {
@@ -37,7 +37,7 @@ NSString *plainTextApplyTextTransform(NSString *text, RNPlainTextTextTransform t
     }
 }
 
-NSTextAlignment plainTextAlignmentFromProp(RNPlainTextTextAlign textAlign)
+NSTextAlignment alignmentFromProp(RNPlainTextTextAlign textAlign)
 {
     switch (textAlign) {
         case RNPlainTextTextAlign::Left:
@@ -53,17 +53,17 @@ NSTextAlignment plainTextAlignmentFromProp(RNPlainTextTextAlign textAlign)
     }
 }
 
-BOOL plainTextHasUnderline(const std::string &textDecorationLine)
+BOOL hasUnderline(const std::string &textDecorationLine)
 {
     return textDecorationLine.find("underline") != std::string::npos;
 }
 
-BOOL plainTextHasLineThrough(const std::string &textDecorationLine)
+BOOL hasLineThrough(const std::string &textDecorationLine)
 {
     return textDecorationLine.find("line-through") != std::string::npos;
 }
 
-RNPlainTextTextAlignVertical plainTextResolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign)
+RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign)
 {
     if (!verticalAlign.has_value()) {
         return textAlignVertical;
@@ -84,7 +84,7 @@ RNPlainTextTextAlignVertical plainTextResolveVerticalAlign(RNPlainTextTextAlignV
     return textAlignVertical;
 }
 
-NSLineBreakMode plainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
+NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
 {
     switch (ellipsizeMode) {
         case RNPlainTextEllipsizeMode::Head:
@@ -98,7 +98,7 @@ NSLineBreakMode plainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsiz
     }
 }
 
-RCTFontWeight plainTextFontWeightFromProp(const std::string &fontWeight)
+RCTFontWeight fontWeightFromProp(const std::string &fontWeight)
 {
     if (fontWeight == "normal" || fontWeight == "400") {
         return UIFontWeightRegular;
@@ -122,7 +122,7 @@ RCTFontWeight plainTextFontWeightFromProp(const std::string &fontWeight)
     return UIFontWeightRegular;
 }
 
-bool plainTextIsItalicFromProp(const std::string &fontStyle)
+bool isItalicFromProp(const std::string &fontStyle)
 {
     return fontStyle == "italic" || fontStyle == "oblique";
 }
@@ -130,7 +130,7 @@ bool plainTextIsItalicFromProp(const std::string &fontStyle)
 #define FontFeature(type, selector) \
     @{UIFontFeatureTypeIdentifierKey : @(type), UIFontFeatureSelectorIdentifierKey : @(selector)}
 
-NSDictionary<NSString *, NSDictionary *> *plainTextFontVariantDescriptors(void)
+NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors(void)
 {
     static NSDictionary<NSString *, NSDictionary *> *descriptors = @{
         @"small-caps" : FontFeature(kLowerCaseType, kLowerCaseSmallCapsSelector),
@@ -170,4 +170,4 @@ NSDictionary<NSString *, NSDictionary *> *plainTextFontVariantDescriptors(void)
     return descriptors;
 }
 
-} // namespace facebook::react
+} // namespace facebook::react::plaintext

@@ -1,10 +1,10 @@
 /*
  * Prop-to-platform-value conversions. Most are for <RNPlainText>'s mounted
- * view only; plainTextApplyTextTransform is the exception, shared with the
+ * view only; applyTextTransform is the exception, shared with the
  * shadow node so both transform the same text the same way, otherwise the
  * measured box and the drawn text could disagree.
  *
- * plainTextFontWeightFromProp, plainTextIsItalicFromProp and plainTextFontVariantDescriptors mirror
+ * fontWeightFromProp, isItalicFromProp and fontVariantDescriptors mirror
  * RCTFont.mm's own prop-name lookup tables, feeding PlainTextFont.mm's font
  * resolution.
  */
@@ -18,7 +18,7 @@
 
 #import <string>
 
-namespace facebook::react {
+namespace facebook::react::plaintext {
 
 /*
  * Applies `textTransform` to `text`. Uppercase/lowercase mirror RN's own
@@ -28,16 +28,16 @@ namespace facebook::react {
  * from CSS and from Android (react/react-native#34117). This matches CSS
  * and Android instead, uppercasing only each word's first character.
  */
-NSString *plainTextApplyTextTransform(NSString *text, RNPlainTextTextTransform textTransform);
+NSString *applyTextTransform(NSString *text, RNPlainTextTextTransform textTransform);
 
-NSTextAlignment plainTextAlignmentFromProp(RNPlainTextTextAlign textAlign);
+NSTextAlignment alignmentFromProp(RNPlainTextTextAlign textAlign);
 
 /*
  * textDecorationLine is a space-joined set of "underline"/"line-through";
  * substring presence toggles each independently, mirroring RN <Text>.
  */
-BOOL plainTextHasUnderline(const std::string &textDecorationLine);
-BOOL plainTextHasLineThrough(const std::string &textDecorationLine);
+BOOL hasUnderline(const std::string &textDecorationLine);
+BOOL hasLineThrough(const std::string &textDecorationLine);
 
 /*
  * verticalAlign (the cross-platform CSS style) wins over textAlignVertical when
@@ -46,9 +46,9 @@ BOOL plainTextHasLineThrough(const std::string &textDecorationLine);
  * moved here per docs/contributing/performance.md#prop-cost-policy.
  * SYNC: PlainTextView.kt's applyVerticalAlignGravity must resolve identically.
  */
-RNPlainTextTextAlignVertical plainTextResolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign);
+RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign);
 
-NSLineBreakMode plainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode);
+NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode);
 
 /*
  * Mirrors RCTFont.mm's core weight map (RCTConvert RCTFontWeight): the named
@@ -56,7 +56,7 @@ NSLineBreakMode plainTextLineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsiz
  * since codegen can't type fontWeight as an enum. Unrecognized or empty input
  * maps to UIFontWeightRegular, RCTFont.mm's own default.
  */
-RCTFontWeight plainTextFontWeightFromProp(const std::string &fontWeight);
+RCTFontWeight fontWeightFromProp(const std::string &fontWeight);
 
 /*
  * Mirrors RCTFont.mm's RCTFontStyle map: "italic" and "oblique" are italic,
@@ -65,13 +65,13 @@ RCTFontWeight plainTextFontWeightFromProp(const std::string &fontWeight);
  * apart from an explicit "normal" check the raw string themselves (see
  * computeFaceName in PlainTextFont.mm).
  */
-bool plainTextIsItalicFromProp(const std::string &fontStyle);
+bool isItalicFromProp(const std::string &fontStyle);
 
 /*
  * Mirrors RCTFont.mm's RCTFontVariantDescriptor map: each fontVariant name
  * maps to the type/selector identifier pair UIFontDescriptor takes.
  * Unrecognized names have no entry, as RN drops them.
  */
-NSDictionary<NSString *, NSDictionary *> *plainTextFontVariantDescriptors(void);
+NSDictionary<NSString *, NSDictionary *> *fontVariantDescriptors(void);
 
-} // namespace facebook::react
+} // namespace facebook::react::plaintext

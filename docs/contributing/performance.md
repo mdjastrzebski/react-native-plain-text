@@ -414,7 +414,7 @@ unmeasured follow-ups are in Open Opportunities below.
 `RNPlainTextFontFromProps` in `RNPlainText.mm` and a hand-duplicated copy in
 `PlainTextShadowNode::measureContent` resolved the same `UIFont` from the same
 props, so mounting 1000 items ran 2000 uncached resolutions for what is usually
-a single distinct font. Both now call `plainTextFont`, backed by an `NSCache`
+a single distinct font. Both now call `plaintext::resolveFont`, backed by an `NSCache`
 keyed on the only six inputs that reach `UIFont`: family, size, weight, italic,
 variants and variation settings.
 
@@ -806,5 +806,5 @@ debug, so account for it before optimizing further in this area.
 
 [Sharing iOS font resolution](#share-and-cache-ios-font-resolution-iosplaintextfonthmm)
 went the other way and removed one: the two copies of `RNPlainTextFontFromProps`
-were a sync point on their own, and folding them into `plainTextFont` was what
+were a sync point on their own, and folding them into `plaintext::resolveFont` was what
 made caching worth doing.
