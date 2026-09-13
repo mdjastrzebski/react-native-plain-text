@@ -535,7 +535,7 @@ class PlainTextView : AppCompatTextView {
   // (matches RN <Text>'s Text.js), and its 'middle' maps to textAlignVertical's
   // 'center'. This merge used to run in JS (PlainText.tsx's resolveTextAlignVertical);
   // moved here per docs/contributing/performance.md#prop-cost-policy.
-  // SYNC: PlainTextProps.mm's plainTextResolveVerticalAlign must resolve identically.
+  // SYNC: PlainTextProps.mm's resolveVerticalAlign must resolve identically.
   fun setVerticalAlign(verticalAlign: String?) {
     rawVerticalAlign = verticalAlign
     applyVerticalAlignGravity()
