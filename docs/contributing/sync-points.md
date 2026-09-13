@@ -65,9 +65,6 @@ most props only touch a few.
 
 ---
 
-
----
-
 ## Set 2 — A prop that affects measured size
 
 **Props (exactly the list `measurementInputsEqual` compares):**
@@ -127,9 +124,6 @@ callers instead (also unrounded, matching RN), so it stays a sync point between 
 
 ---
 
-
----
-
 ## Set 3 — The three-way default contract
 
 **Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list. Two flavors, both three-way:
@@ -164,9 +158,6 @@ callers instead (also unrounded, matching RN), so it stays a sync point between 
 
 ---
 
-
----
-
 ## Set 4 — The reused measuring view (Android)
 
 **Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list — all of them must be (re-)applied on
@@ -186,16 +177,13 @@ every `measure()` call, since the view is shared across nodes.
 
 Every `PlainTextView` also needs non-null `LayoutParams`, seeded in the constructor: a view that was measured but never
 added to a parent reaches `checkForRelayout()` from `setText()`, which dereferences `layoutParams.width`. That covers
-the scratch view and any mounted view whose insert was dropped. `PlainTextViewLayoutParamsTest` pins this (`yarn
-test:android`, which CI runs but `yarn validate` does not).
+the scratch view and any mounted view whose insert was dropped — it is not about mount ordering.
+`PlainTextViewLayoutParamsTest` pins this (`yarn test:android`, which CI runs but `yarn validate` does not).
 
 This sharing is unconditional: a fresh view per measure was the alternative an earlier perf-suite A/B test measured
 against, and it lost. The internal `experiment` prop (not part of `PlainText`'s public props — one generic on/off switch
 for whatever the perf suite is currently A/B testing, see `src/PlainTextViewNativeComponent.ts`) is declared but unread
 on both platforms for now, ready for whatever gets A/B tested next.
-
----
-
 
 ---
 
@@ -265,9 +253,6 @@ Props that map onto a single cheap independent write apply inline — no dirty f
 
 ---
 
-
----
-
 ## Set 6 — Optional zero-valued props
 
 **Props:** `letterSpacing`, `textShadowOffsetWidth`, `textShadowOffsetHeight` — all three declared `WithDefault<Float,
@@ -282,9 +267,6 @@ null>`.
 - Android native code — maps absent optional Floats back to `0`; no unset/zero distinction on that platform
 - `cpp/PlainTextMeasurementHelpers.cpp` → `measurementInputsEqual` — `letterSpacing` belongs here as the optional itself
   (text shadow is draw-only, so its fields do not — see [Set 2](#set-2--a-prop-that-affects-measured-size))
-
----
-
 
 ---
 
@@ -310,9 +292,6 @@ tells them apart. `fontCacheKey` adds `fontSize`, `fontVariant` and `fontVariati
 applies once and then serves that first value back for every other one, keyed as if nothing had changed. Both caches are
 unbounded (`familyNamesCache`, `faceNamesCache`) or bounded only by count (`resolvedFontsCache`,
 `kFontCacheCountLimit`), so nothing evicts the stale entry on its own.
-
----
-
 
 ---
 
@@ -347,9 +326,6 @@ developing.
 
 ---
 
-
----
-
 ## Set 9 — Both platforms' shadow node headers
 
 **Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list, indirectly — this set is about the
@@ -363,9 +339,6 @@ shared *traits/overrides* the two headers declare to support measurement, not in
 
 **Contract:** these are separate files with the same traits and overrides. A change to one usually belongs in the other.
 Only the invalidation logic is genuinely shared, in `cpp/PlainTextMeasurementHelpers.{h,cpp}`.
-
----
-
 
 ---
 
@@ -402,6 +375,23 @@ instance's real values, but nothing between that instance's last `-updateProps` 
 plain diff is already correct — real prop differences apply normally, and a coincidental match means `_label` already
 shows the right thing.
 
+**This is why there is no "reset every `_label` property to its default" routine, and why a new prop doesn't need one.**
+`applyContentFromProps` fully determines the label's state (font, color, alignment, `text`/`attributedText`,
+`verticalTextShift`), and the forced apply on first mount runs it before anything is on screen, so a fresh view needs no
+separate seeding. Two earlier, rejected versions of this fix show why that's the right place to stop:
+
+- An earlier version re-armed `_forceApplyProps` in `-prepareForRecycle`, modeled on `RCTViewComponentView`'s own
+  diff-blind safety net for its `_props`-diffed properties (`-updateLayoutMetrics` sets `_needsInvalidateLayer = YES`
+  unconditionally, rebuilding background/border layers every layout pass no matter what the diff concluded). It was
+  removed: the recycling bug this was meant to fix actually occurred *with* that re-arm in place (the logs show
+  `_forceApplyProps` forcing `applyContentFromProps` to run), and the real cause was inside `applyContentFromProps`
+  itself (the `attributedText` issue below) — so the re-arm was never doing anything for that failure, and speculative
+  insurance against an undemonstrated one isn't worth the extra state.
+- An earlier version also reset `_label` directly in `-prepareForRecycle`. It made correctness depend on that reset
+  staying prop-for-prop in step with `applyContentFromProps` forever, which is exactly the kind of silent sync point
+  this document exists to avoid. If a `_label` property is ever set outside `applyContentFromProps`/`updateProps`, that
+  reasoning breaks and it needs its own handling.
+
 **One property inside `applyContentFromProps` needs its own explicit handling: `attributedText`.** Text content is
 carried on either `.text` (plain path) or `.attributedText` (letterSpacing, lineHeight, underline/strikethrough), only
 one set per call. Apple documents that setting `.text` also clears `.attributedText`, but a real repro (recycled from an
@@ -409,12 +399,16 @@ instance with `letterSpacing` into one without) showed the old kerning surviving
 `_label.attributedText = nil` explicitly before `.text`. A future rewrite of `applyContentFromProps` must keep doing
 this — the failure is invisible until something is recycled from the attributed path into the plain one.
 
-Android likely doesn't share this hazard: `PlainTextView.applyText()` has the same plain-vs-spanned duality
+Android likely doesn't share this specific hazard: `PlainTextView.applyText()` has the same plain-vs-spanned duality
 (`setText(value)` vs. a `SpannableString` carrying the `lineHeight` span), but both branches go through the single
-`setText()` entry point, so there's no second backing store for a stale span to hide in.
-
----
-
+`setText()` entry point, so there's no second backing store for a stale span to hide in. It has no recycling reset of
+any kind either: `PlainTextView`/`PlainTextViewManager` reset nothing on reuse, where RN's own `ReactTextViewManager`
+overrides `prepareToRecycleView` and calls `ReactTextView.recycleView()` from there, resetting at unmount on the way
+*into* the pool. Reset at that end, not the other: `ViewManager.recycleView(reactContext, view)` is a differently-scoped
+hook with a confusingly identical name, called from `createViewInstance` on the way back *out* of the pool, and RN's
+text manager leaves it alone. Either way the reset costs nothing while `setupViewRecycling()` goes uncalled, and it is
+the first thing opting in has to bring: **a pooled view would arrive carrying the previous instance's text, font and
+color, and `init`'s seeding only runs for a genuinely new one.**
 
 ---
 
@@ -430,7 +424,9 @@ nothing measured.
 Kotlin runs property initializers and `init` blocks in declaration order, so a field declared **below** `init` still
 holds its zero-default while `init` runs (`allowFontScaling` false rather than true, `letterSpacingDip` `0f` rather than
 `NaN`, `fontWeight` `0` rather than `UNSET`, a null `baseTypeface`). Anything `init` reads, directly or through a call,
-therefore gets the wrong value — no crash, just the wrong font or size on every view.
+therefore gets the wrong value — no crash, just the wrong font or size on every view. `init` currently reads only the
+four fields above, but which ones it reads is not a property you want a future edit to have to re-derive, hence the
+blanket "declare every field above `init`" rule below rather than "declare only the fields `init` happens to read."
 
 **Files / rules:**
 
@@ -442,9 +438,6 @@ therefore gets the wrong value — no crash, just the wrong font or size on ever
 
 `requestLayout()` is a separate case field order cannot fix: `TextView`'s constructor calls it before any initializer
 runs, so `measureAndLayout` is null there. The `width == 0 || height == 0` guard is what makes that safe.
-
----
-
 
 ---
 
@@ -461,16 +454,13 @@ identically.
 **Files:**
 
 - `ios/PlainTextProps.h` / `.mm` → `resolveVerticalAlign` — the iOS resolution
-- `PlainTextView.kt`:538 → `applyVerticalAlignGravity` (called from `setVerticalAlign`) — the Android resolution, must
+- `PlainTextView.kt`:552 → `applyVerticalAlignGravity` (called from `setVerticalAlign`) — the Android resolution, must
   match `resolveVerticalAlign` output-for-output
 - `android/src/test/java/com/mdjstack/plaintext/PlainTextViewVerticalAlignTest.kt` — pins the Android side of the
   contract; doesn't run against iOS, so it can't catch the two drifting apart on its own
 
 **Failure mode:** a text node with both props set, or with `verticalAlign: 'middle'`, resolves to a different vertical
 position on iOS than on Android — visually wrong, nothing throws.
-
----
-
 
 ---
 
@@ -489,9 +479,6 @@ does **not** affect `measureContent`/`measure()` (the shift it gates is draw-onl
 either way), so it's excluded from [Set 2](#set-2--a-prop-that-affects-measured-size) and
 [Set 3](#set-3--the-three-way-default-contract). Android no-ops it (`PlainTextViewManager.setLineHeightClippingIos`):
 the TextKit bug it reverts (RN#29507) has no Android counterpart.
-
----
-
 
 ---
 
@@ -524,9 +511,6 @@ on every call (see [Set 4](#set-4--the-reused-measuring-view-android)).
 
 ---
 
-
----
-
 ## Set 15 — The `__baseline` marker string (Android)
 
 **Props:** none — `"__baseline"` is an internal marker key stuffed into the serialized props map, never a real
@@ -549,9 +533,6 @@ serialized props.
 
 **Failure mode:** a mismatch doesn't fail loudly — `measure()` never takes the baseline branch, and `baseline()`
 silently gets back the measured height packed into the wrong slot instead of `TextView.getBaseline()`.
-
----
-
 
 ---
 
