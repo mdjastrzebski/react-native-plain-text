@@ -31,24 +31,34 @@ find_android_sdk() {
   fi
 }
 
-find_sdk_tool() {
+sdk_tool_candidates() {
   local tool="$1"
   local candidate
 
-  if command -v "$tool" >/dev/null 2>&1; then
-    command -v "$tool"
-    return
-  fi
-
   for candidate in \
     "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/$tool" \
+    "$ANDROID_SDK_ROOT"/cmdline-tools/latest-*/bin/"$tool" \
+    "$ANDROID_SDK_ROOT"/cmdline-tools/*/bin/"$tool" \
     "$ANDROID_SDK_ROOT/cmdline-tools/bin/$tool" \
     "$ANDROID_SDK_ROOT/tools/bin/$tool"; do
     if [[ -x "$candidate" ]]; then
       printf '%s\n' "$candidate"
-      return
     fi
   done
+
+  command -v "$tool" 2>/dev/null || true
+}
+
+find_sdk_tool() {
+  local tool="$1"
+  local candidate
+
+  while IFS= read -r candidate; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done < <(sdk_tool_candidates "$tool")
 
   fail "$tool not found. Install Android SDK Command-line Tools."
 }
@@ -91,22 +101,36 @@ fi
 [[ "$installed_emulator_version" == "$ANDROID_EMULATOR_VERSION" ]] || fail \
   "Android Emulator $ANDROID_EMULATOR_VERSION is required, but sdkmanager provides ${installed_emulator_version:-none}. Update the VRT profile and baselines intentionally."
 
-has_android_device_type() {
-  "$avdmanager" list device \
+avdmanager_has_device_type() {
+  local candidate="$1"
+
+  "$candidate" list device \
     | grep -Fi -- "or \"$ANDROID_DEVICE_TYPE\"" >/dev/null
 }
 
-if ! has_android_device_type; then
+find_avdmanager_with_device_type() {
+  local candidate
+
+  while IFS= read -r candidate; do
+    if [[ -x "$candidate" ]] && avdmanager_has_device_type "$candidate"; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done < <(sdk_tool_candidates avdmanager)
+
+  return 1
+}
+
+if matching_avdmanager="$(find_avdmanager_with_device_type)"; then
+  avdmanager="$matching_avdmanager"
+else
   printf 'Android device profile %s is not installed. Updating Android SDK Command-line Tools...\n' \
     "$ANDROID_DEVICE_TYPE"
   "$sdkmanager" --install "cmdline-tools;latest"
 
-  avdmanager="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager"
-  [[ -x "$avdmanager" ]] || fail \
-    "avdmanager was not installed at $avdmanager."
-
-  has_android_device_type || fail \
+  matching_avdmanager="$(find_avdmanager_with_device_type)" || fail \
     "Android device profile '$ANDROID_DEVICE_TYPE' is unavailable after updating cmdline-tools;latest."
+  avdmanager="$matching_avdmanager"
 fi
 
 if ! "$sdkmanager" --list_installed | grep -F "$ANDROID_SYSTEM_IMAGE" >/dev/null; then

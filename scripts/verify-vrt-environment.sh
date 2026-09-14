@@ -48,9 +48,21 @@ case "$platform" in
     [[ -n "$android_sdk_root" ]] || fail \
       "ANDROID_HOME or ANDROID_SDK_ROOT must identify the Android SDK."
 
-    sdkmanager="$android_sdk_root/cmdline-tools/latest/bin/sdkmanager"
+    sdkmanager=""
+    for candidate in \
+      "$android_sdk_root/cmdline-tools/latest/bin/sdkmanager" \
+      "$android_sdk_root"/cmdline-tools/latest-*/bin/sdkmanager \
+      "$android_sdk_root"/cmdline-tools/*/bin/sdkmanager \
+      "$android_sdk_root/cmdline-tools/bin/sdkmanager" \
+      "$android_sdk_root/tools/bin/sdkmanager"; do
+      if [[ -x "$candidate" ]]; then
+        sdkmanager="$candidate"
+        break
+      fi
+    done
     adb="$android_sdk_root/platform-tools/adb"
-    [[ -x "$sdkmanager" ]] || fail "sdkmanager not found at $sdkmanager."
+    [[ -n "$sdkmanager" ]] || fail \
+      "sdkmanager not found under $android_sdk_root."
     [[ -x "$adb" ]] || fail "adb not found at $adb."
 
     IFS=';' read -r package_type system_api target expected_architecture \
