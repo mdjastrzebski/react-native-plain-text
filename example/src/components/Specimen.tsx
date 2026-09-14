@@ -90,6 +90,13 @@ export function Section({
     return null;
   }
 
+  // VRT captures isolate one specimen. The section title and footer describe
+  // the surrounding specimen book, so including them adds unrelated pixels to
+  // the capture.
+  if (vrtTestID != null) {
+    return children;
+  }
+
   return (
     <View style={[styles.section, spacedRows === true && styles.spacedSection]}>
       {/* Tracked caps with a rule running out to the margin. Caps rather than a
@@ -155,7 +162,9 @@ export function TextItem({
 
   return (
     <View testID={testID} style={styles.rowContainer}>
-      {label != null && <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>}
+      {vrtTestID == null && label != null && (
+        <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>
+      )}
       {/* Full width, and the overlay's containing block. The grey row inside
           shrink-wraps to PlainText. The overlay must NOT, or it would be handed
           PlainText's width as its own constraint and could only ever wrap where
@@ -236,7 +245,9 @@ export function CompareBox({
 
   return (
     <View testID={testID} style={styles.rowContainer}>
-      {label != null && <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>}
+      {vrtTestID == null && label != null && (
+        <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>
+      )}
       <View style={styles.specimen}>
         <View testID={`${testID}-text`} style={[styles.row, containerStyle]}>
           {children}
