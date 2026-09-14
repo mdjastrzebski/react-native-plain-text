@@ -53,6 +53,7 @@ To run the complete visual regression workflow, including device setup, the
 Release build, and agent-device captures:
 
 ```sh
+git submodule update --init --depth 1 baselines
 yarn vrt android
 yarn vrt ios
 ```
@@ -92,7 +93,10 @@ renders the regular app otherwise. For each manifest entry, agent-device opens
 `build/vrt/actual/<platform>/<profile>/`. This avoids tab navigation and
 scrolling through the specimen book. On the first successful `test` run for a
 profile, it moves those PNGs to
-`baselines/<platform>/<profile>/` for review and commit. Later runs use
+`baselines/<platform>/<profile>/` for review and commit in the
+[`react-native-plain-text-artifactory`](https://github.com/troZee/react-native-plain-text-artifactory)
+repository. The `baselines/` directory is a shallow submodule pinned to the
+exact reviewed artifact commit. Later runs use
 `reg-cli` to compare actual images with that baseline and write comparison
 images to `build/vrt/diff/`. A visual difference makes the command fail. All
 generated VRT files remain ignored under `build/`. When comparison images
@@ -127,6 +131,14 @@ The first development-mode run creates a one-image baseline in the ignored
 `build/vrt/baseline-dev/` directory. Later development runs compare against
 that image. Development mode never creates or updates the production-ready
 baseline under `baselines/`.
+
+To update production baselines, create and check out a branch inside the
+`baselines/` submodule, commit the reviewed images there, and push that branch
+to the artifact repository. Then stage the updated submodule pointer in this
+repository. Cross-link the artifact and library pull requests so the image
+changes and the code change can be reviewed together. Actual captures, diffs,
+reports, and logs remain ignored under `build/` and belong in temporary CI
+artifacts rather than either Git repository.
 
 To confirm that the app is running with the new architecture, you can check the Metro logs for a message like this:
 

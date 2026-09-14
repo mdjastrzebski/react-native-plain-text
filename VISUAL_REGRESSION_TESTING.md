@@ -19,6 +19,12 @@ the complete PNG set there after agent-device succeeds. Once the baseline
 exists, `reg-cli` compares it with the actual images and writes diffs to
 `build/vrt/diff/<platform>/<profile>/`.
 
+`baselines/` is a shallow Git submodule pinned to an exact commit in
+[`react-native-plain-text-artifactory`](https://github.com/troZee/react-native-plain-text-artifactory).
+Initialize it before a production comparison with
+`git submodule update --init --depth 1 baselines`. Actual captures, diffs,
+reports, and logs remain temporary CI artifacts outside both repositories.
+
 Comparison keeps a zero pixel threshold, with `reg-cli`'s antialias detection
 enabled. iOS uses a zero matching threshold. Android uses `0.004`, which
 ignores a one-step difference in an 8-bit color channel caused by screenshot
@@ -95,7 +101,7 @@ The example app already contains most of the needed specimens and bundled fonts.
 | CI                | GitHub Actions                                                               |
 | Android           | Pixel 6 AVD, API 35, x86_64, Google APIs                                     |
 | iOS               | iPhone 16 Simulator with explicit Xcode and iOS runtime versions             |
-| Baselines         | Git, separated by exact environment and suite                                |
+| Baselines         | Pinned artifact-repository submodule, separated by environment and suite     |
 | Failure artifacts | Actual, expected, diff, JSON, HTML, JUnit, native logs, and fixture metadata |
 
 Pin agent-device to an exact version in the workflow installation step. Pin
@@ -400,7 +406,10 @@ The setup script must read each effective value back and write it to `metadata.j
 
 ### Updating baselines
 
-Baseline changes are ordinary reviewed PR changes. Generate them in the canonical workflow, not on a developer workstation.
+Baseline changes are ordinary reviewed PR changes in the artifact repository.
+Generate them in the canonical workflow, not on a developer workstation. Each
+library PR that changes baselines also updates the pinned `baselines/`
+submodule commit and cross-links the artifact PR for image review.
 
 For a baseline-changing PR:
 
@@ -423,8 +432,9 @@ yarn reg-cli \
 ### Rename and deletion
 
 Renaming or removing a specimen requires the capture manifest, runner, and
-baseline deletion in the same PR. Manifest validation treats stale or missing
-files as errors.
+baseline deletion in linked library and artifact PRs. The library PR must pin
+the artifact commit containing that deletion. Manifest validation treats stale
+or missing files as errors.
 
 ### Environment upgrades
 

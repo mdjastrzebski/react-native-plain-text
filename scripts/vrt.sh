@@ -97,6 +97,10 @@ run_test() {
         "$dev_capture_id"
     fi
   else
+    if [[ ! -e "$PROJECT_ROOT/baselines/.git" ]]; then
+      fail "The baseline submodule is not initialized. Run 'git submodule update --init --depth 1 baselines'."
+    fi
+
     baseline_parent="baselines/$platform"
     baseline_dir="$baseline_parent/$profile"
 
@@ -147,7 +151,7 @@ run_test() {
     if [[ "$dev_mode" -eq 1 ]]; then
       printf 'Ignored dev baseline created in %s.\n' "$baseline_dir"
     else
-      printf 'Baseline created in %s. Review and commit the PNG files.\n' \
+      printf 'Baseline created in %s. Commit it in the baseline repository, then update the submodule pointer in this repository.\n' \
         "$baseline_dir"
     fi
   fi
