@@ -38,10 +38,20 @@ case "$stage" in
 esac
 
 run_setup() {
+  local setup_script setup_status
+
   case "$platform" in
-    android) "$SCRIPT_DIR/setup-android-emulator.sh" ;;
-    ios) "$SCRIPT_DIR/setup-ios-simulator.sh" ;;
+    android) setup_script="$SCRIPT_DIR/setup-android-emulator.sh" ;;
+    ios) setup_script="$SCRIPT_DIR/setup-ios-simulator.sh" ;;
   esac
+
+  if "$setup_script"; then
+    "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"
+  else
+    setup_status=$?
+    "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform" || true
+    return "$setup_status"
+  fi
 }
 
 run_app() {

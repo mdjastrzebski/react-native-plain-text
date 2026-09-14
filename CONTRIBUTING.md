@@ -69,6 +69,14 @@ yarn vrt:android
 yarn vrt:ios
 ```
 
+The setup stage verifies and records the rendering environment in
+`build/vrt/environment/<platform>.txt`. Android uses the exact emulator and
+system-image revisions declared in `scripts/vrt-config.sh`, creates an uncached
+AVD, wipes its data, and disables snapshots. iOS uses the declared Xcode and
+runtime builds, then erases the named simulator before booting it. CI caches
+the immutable Android system image and CocoaPods dependencies, but never
+caches mutable emulator or simulator state.
+
 Run one stage independently when debugging or retrying a failure:
 
 ```sh

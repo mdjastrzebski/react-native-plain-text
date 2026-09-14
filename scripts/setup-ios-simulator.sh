@@ -15,9 +15,24 @@ fail() {
 command -v xcrun >/dev/null 2>&1 || fail "Xcode Command Line Tools are not installed."
 xcrun xcodebuild -version >/dev/null 2>&1 || fail "Select a full Xcode installation with xcode-select."
 
+actual_xcode_version="$(xcrun xcodebuild -version | awk 'NR == 1 { print $2 }')"
+actual_xcode_build="$(xcrun xcodebuild -version | awk 'NR == 2 { print $3 }')"
+[[ "$actual_xcode_version" == "$IOS_XCODE_VERSION" ]] || fail \
+  "Xcode $IOS_XCODE_VERSION is required, but Xcode $actual_xcode_version is selected."
+[[ "$actual_xcode_build" == "$IOS_XCODE_BUILD" ]] || fail \
+  "Xcode build $IOS_XCODE_BUILD is required, but build $actual_xcode_build is selected."
+
 if ! xcrun simctl list runtimes available | grep -F "$IOS_RUNTIME_ID" >/dev/null; then
   fail "iOS $IOS_VERSION Simulator runtime is not installed. Install it in Xcode > Settings > Components, or set IOS_VERSION."
 fi
+
+actual_runtime_build="$(
+  xcrun simctl list runtimes --json \
+    | jq -r --arg runtime "$IOS_RUNTIME_ID" \
+      '.runtimes[] | select(.identifier == $runtime) | .buildversion'
+)"
+[[ "$actual_runtime_build" == "$IOS_RUNTIME_BUILD" ]] || fail \
+  "iOS $IOS_VERSION runtime build $IOS_RUNTIME_BUILD is required, but build ${actual_runtime_build:-none} is installed."
 
 device_type_id="${IOS_DEVICE_TYPE_ID:-}"
 if [[ -z "$device_type_id" ]]; then
@@ -47,12 +62,23 @@ state="$(
     | sed -E 's/.*\(([^()]*)\)[[:space:]]*$/\1/'
 )"
 
-if [[ "$state" != "Booted" ]]; then
-  printf 'Booting simulator %s...\n' "$IOS_SIMULATOR_NAME"
-  xcrun simctl boot "$simulator_udid"
+if [[ "$state" == "Booted" ]]; then
+  printf 'Shutting down simulator %s...\n' "$IOS_SIMULATOR_NAME"
+  xcrun simctl shutdown "$simulator_udid"
 fi
 
+printf 'Erasing simulator %s...\n' "$IOS_SIMULATOR_NAME"
+xcrun simctl erase "$simulator_udid"
+
+printf 'Booting simulator %s...\n' "$IOS_SIMULATOR_NAME"
+xcrun simctl boot "$simulator_udid"
 xcrun simctl bootstatus "$simulator_udid" -b
+xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLanguages \
+  -array "$IOS_LANGUAGE"
+xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLocale \
+  -string "$IOS_LOCALE"
+xcrun simctl ui "$simulator_udid" appearance "$IOS_APPEARANCE"
+xcrun simctl ui "$simulator_udid" content_size "$IOS_CONTENT_SIZE"
 xcrun simctl status_bar "$simulator_udid" override \
   --time 9:41 \
   --batteryLevel 100 \

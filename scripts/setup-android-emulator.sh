@@ -66,6 +66,31 @@ adb="$ANDROID_SDK_ROOT/platform-tools/adb"
 [[ -x "$emulator" ]] || fail "Android Emulator not found at $emulator."
 [[ -x "$adb" ]] || fail "adb not found at $adb."
 
+installed_package_version() {
+  local package="$1"
+
+  "$sdkmanager" --list_installed \
+    | awk -F '|' -v package="$package" '
+        {
+          name = $1
+          version = $2
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", version)
+        }
+        name == package { print version; exit }
+      '
+}
+
+installed_emulator_version="$(installed_package_version emulator)"
+if [[ "$installed_emulator_version" != "$ANDROID_EMULATOR_VERSION" ]]; then
+  printf 'Installing Android Emulator %s...\n' "$ANDROID_EMULATOR_VERSION"
+  "$sdkmanager" --install emulator
+  installed_emulator_version="$(installed_package_version emulator)"
+fi
+
+[[ "$installed_emulator_version" == "$ANDROID_EMULATOR_VERSION" ]] || fail \
+  "Android Emulator $ANDROID_EMULATOR_VERSION is required, but sdkmanager provides ${installed_emulator_version:-none}. Update the VRT profile and baselines intentionally."
+
 has_android_device_type() {
   "$avdmanager" list device \
     | grep -Fi -- "or \"$ANDROID_DEVICE_TYPE\"" >/dev/null
@@ -88,6 +113,10 @@ if ! "$sdkmanager" --list_installed | grep -F "$ANDROID_SYSTEM_IMAGE" >/dev/null
   printf 'Installing %s...\n' "$ANDROID_SYSTEM_IMAGE"
   "$sdkmanager" "$ANDROID_SYSTEM_IMAGE"
 fi
+
+installed_system_image_revision="$(installed_package_version "$ANDROID_SYSTEM_IMAGE")"
+[[ "$installed_system_image_revision" == "$ANDROID_SYSTEM_IMAGE_REVISION" ]] || fail \
+  "Android system image revision $ANDROID_SYSTEM_IMAGE_REVISION is required, but revision ${installed_system_image_revision:-none} is installed. Update the VRT profile and baselines intentionally."
 
 if ! "$avdmanager" list avd | grep -F "Name: $ANDROID_AVD_NAME" >/dev/null; then
   printf 'Creating AVD %s...\n' "$ANDROID_AVD_NAME"
