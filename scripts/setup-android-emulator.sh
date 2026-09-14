@@ -118,7 +118,7 @@ if [[ -z "$running_serial" ]]; then
     -avd "$ANDROID_AVD_NAME"
     -gpu auto
     -no-boot-anim
-    -no-snapshot-save
+    -no-snapshot
     -prop "persist.sys.locale=$ANDROID_LOCALE"
     -skin "$ANDROID_RESOLUTION"
     -timezone "$ANDROID_TIMEZONE"

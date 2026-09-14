@@ -111,6 +111,29 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
+      - name: Resolve Android VRT system image
+        id: android-vrt-system-image
+        shell: bash
+        run: |
+          source scripts/vrt-config.sh
+          IFS=';' read -r package_type api target architecture <<< "$ANDROID_SYSTEM_IMAGE"
+
+          if [[ "$package_type" != "system-images" || -z "$api" || -z "$target" || -z "$architecture" ]]; then
+            printf 'Invalid Android system image package: %s\n' "$ANDROID_SYSTEM_IMAGE" >&2
+            exit 1
+          fi
+
+          printf 'path=%s/system-images/%s/%s/%s\n' \
+            "$ANDROID_HOME" "$api" "$target" "$architecture" >> "$GITHUB_OUTPUT"
+          printf 'key=android-system-image-v1-%s-%s-%s-%s-%s\n' \
+            "$RUNNER_OS" "$RUNNER_ARCH" "$api" "$target" "$architecture" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Android VRT system image
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ steps.android-vrt-system-image.outputs.path }}
+          key: ${{ steps.android-vrt-system-image.outputs.key }}
+
       # This calls the shared profile, emulator setup, Release build, baseline
       # sync, agent-device capture, and reg-cli comparison used locally.
       - name: Run Android visual regression tests
