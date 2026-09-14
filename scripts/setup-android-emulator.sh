@@ -65,6 +65,23 @@ find_sdk_tool() {
   fail "$tool not found. Install Android SDK Command-line Tools."
 }
 
+install_sdk_package() {
+  local sdkmanager_path="$1"
+  shift
+  local status
+
+  # sdkmanager may prompt for licenses that are not covered by the runner's
+  # preinstalled Android license files (for example, ARM system images).
+  # Disable pipefail just for this pipeline because yes is expected to receive
+  # SIGPIPE once sdkmanager has read all the answers it needs.
+  set +o pipefail
+  yes | "$sdkmanager_path" --install "$@"
+  status="${PIPESTATUS[1]}"
+  set -o pipefail
+
+  return "$status"
+}
+
 ANDROID_SDK_ROOT="$(find_android_sdk)"
 export ANDROID_HOME="$ANDROID_SDK_ROOT"
 export ANDROID_SDK_ROOT
@@ -81,7 +98,7 @@ adb="$ANDROID_SDK_ROOT/platform-tools/adb"
 installed_emulator_version="$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" emulator)"
 if [[ "$installed_emulator_version" != "$ANDROID_EMULATOR_VERSION" ]]; then
   printf 'Installing Android Emulator %s...\n' "$ANDROID_EMULATOR_VERSION"
-  "$sdkmanager" --install emulator
+  install_sdk_package "$sdkmanager" emulator
   installed_emulator_version="$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" emulator)"
 fi
 
@@ -91,7 +108,7 @@ fi
 avdmanager_has_device_type() {
   local candidate="$1"
 
-  "$candidate" list device \
+  "$candidate" list device 2>/dev/null \
     | grep -Fi -- "or \"$ANDROID_DEVICE_TYPE\"" >/dev/null
 }
 
@@ -113,16 +130,22 @@ if matching_avdmanager="$(find_avdmanager_with_device_type)"; then
 else
   printf 'Android device profile %s is not installed. Updating Android SDK Command-line Tools...\n' \
     "$ANDROID_DEVICE_TYPE"
-  "$sdkmanager" --install "cmdline-tools;latest"
+  install_sdk_package "$sdkmanager" "cmdline-tools;latest"
 
   matching_avdmanager="$(find_avdmanager_with_device_type)" || fail \
     "Android device profile '$ANDROID_DEVICE_TYPE' is unavailable after updating cmdline-tools;latest."
   avdmanager="$matching_avdmanager"
 fi
 
+# Keep both tools from the same command-line tools installation. On hosted
+# runners, updating a stale `latest` directory can install the new package as
+# `latest-2`; continuing with the original sdkmanager would use the stale tool.
+sdkmanager="${avdmanager%/avdmanager}/sdkmanager"
+[[ -x "$sdkmanager" ]] || fail "sdkmanager not found next to $avdmanager."
+
 if [[ -z "$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" "$ANDROID_SYSTEM_IMAGE")" ]]; then
   printf 'Installing %s...\n' "$ANDROID_SYSTEM_IMAGE"
-  "$sdkmanager" "$ANDROID_SYSTEM_IMAGE"
+  install_sdk_package "$sdkmanager" "$ANDROID_SYSTEM_IMAGE"
 fi
 
 installed_system_image_revision="$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" "$ANDROID_SYSTEM_IMAGE")"
