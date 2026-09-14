@@ -19,17 +19,77 @@ means rather than what the benchmark decided it means.
 | **commit**      | `performance.mark` / `performance.measure`                               | The JS-thread slice: React render, Fabric commit, Yoga layout |
 | **memory/view** | `react-native-memory-footprint`                                          | Process footprint delta ÷ number of views                     |
 
-**interaction** is the headline. It is React Native's analogue of the web's
-[INP](https://web.dev/articles/inp): when an event's handler causes rendering
-updates, RN's `EventPerformanceLogger` holds the entry until the shadow tree
-mounts and reports `duration = mountTime - eventStartTime`. It starts at the
-_native_ event timestamp, so it includes the input-dispatch latency the user
-really waits through, typically ~13&nbsp;ms more than a JS-side timer would
-show.
+Both are wall-clock times in milliseconds, taken against the same press, on the
+same thread's clock. They are nested: **`commit` is a prefix of `interaction`**,
+and the two are meant to be read as a pair.
 
-**commit** exists to locate a change, not to judge it: `interaction - commit` is
-roughly what mounting cost, which is what tells you whether a regression landed
-on the JS thread or the UI thread.
+### `interaction` — press to mounted
+
+The headline. RN's analogue of the web's [INP](https://web.dev/articles/inp).
+
+- **How the harness captures it.** A `PerformanceObserver` is registered for
+  `event` entries at `durationThreshold: 0` (the `0` overrides the spec default,
+  which would drop short events). When a scenario button is pressed, the handler
+  records `performance.now()` as the run's start; the observer later keeps the
+  longest `event` entry whose `startTime` is within 1&nbsp;s of it. A single
+  press emits several entries (`touchstart`, `touchend`, `click`…) and only the
+  one whose handler triggered the render waits for the mount, so it is by far the
+  longest. The number is read at the end of the settle window, by which point
+  every entry for that press has landed.
+- **What RN puts in it.** When an event's handler causes rendering updates,
+  `EventPerformanceLogger` holds the `event` entry open until the resulting
+  shadow tree is mounted, then reports
+  `duration = mountTime - eventStartTime`. `eventStartTime` is the _native_
+  event timestamp, stamped before any JS runs.
+- **Span:** native touch dispatch → JS handler → React render → Fabric commit →
+  Yoga layout (with the native text-measurement sync hops) → the UI-thread mount
+  of the new platform views. It ends at mount, not at pixels.
+
+### `commit` — the JS-thread slice
+
+Exists to _locate_ a change, not to judge it.
+
+- **How the harness captures it.** The press handler calls
+  `performance.mark('plaintext-bench:press')` synchronously, immediately before
+  the `setState` that triggers the render. A post-commit effect then calls
+  `performance.measure('plaintext-bench:press:<scenario>', 'plaintext-bench:press')`.
+  The mark is a User Timing mark rather than a bare timestamp so the span also
+  appears in React Native DevTools' Performance panel, named per scenario so
+  runs stay separable there.
+- **Span:** React render and reconciliation, the Fabric commit (cloning the
+  shadow tree, resolving props), and Yoga layout — including the synchronous hop
+  into native text measurement that every self-measured node makes during layout
+  ([sync-points.md](sync-points.md#set-2--a-prop-that-affects-measured-size)). It stops
+  when React hands the committed tree off; the actual mounting of platform views
+  happens afterwards on the UI thread and is _not_ in this number.
+
+### What each stage lands in
+
+Press → pixels, and which metric each stage falls inside:
+
+| Pipeline stage                                                                                          | Thread    | In `commit` | In `interaction` |
+| ------------------------------------------------------------------------------------------------------- | --------- | :---------: | :--------------: |
+| Native touch dispatch — event stamped, JS handler invoked                                               | UI/native |     no      |       yes        |
+| React render: components re-run, element tree reconciled                                                | JS        |     yes     |       yes        |
+| Fabric commit: new shadow tree cloned, props resolved                                                   | JS        |     yes     |       yes        |
+| Yoga layout, incl. the sync hop into native text measurement per node                                   | JS        |     yes     |       yes        |
+| _`commit` ends here_ (`performance.measure` in the post-commit effect)                                  |           |      —      |        —         |
+| Mount: shadow-tree diff → mutation instructions (Create/Insert/Update…)                                 | UI        |     no      |       yes        |
+| Mount: create/update the platform views (`UILabel`, `TextView`), set props, position to computed frames | UI        |     no      |       yes        |
+| _`interaction` ends here_ (`EventPerformanceLogger` closes the `event` entry on first mount)            |           |      —      |        —         |
+| Rasterization, layer compositing, the frame the user sees                                               | UI/GPU    |     no      |        no        |
+| Any _later_ commit (placeholder → content, timer, network response)                                     | —         |     no      |        no        |
+
+So `commit` and `interaction` share the whole JS-thread half — render, Fabric
+commit, Yoga layout, and the native measurement calls layout makes. What
+`interaction` adds on top is the two ends that never touch JS: the native
+input-dispatch latency at the front (a near-constant ~13&nbsp;ms the user really
+waits through, which a JS-side timer never sees) and the UI-thread mount at the
+back. `interaction - commit` is therefore roughly `dispatch latency + mount
+cost`; since dispatch latency barely moves, a change in that difference between
+two runs of one scenario on one device is a change in mounting cost. That is the
+whole reason both numbers are reported: `commit` moving means a regression landed
+on the JS thread, `interaction - commit` moving means it landed on the UI thread.
 
 ## What it does not cover
 

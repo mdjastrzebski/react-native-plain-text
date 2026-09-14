@@ -1,0 +1,29 @@
+import { MemoryUsageChart, MountTimeChart, PerfChartsProvider } from '../components/PerfBarChart';
+
+# Performance
+
+<PerfChartsProvider>
+
+## Mount time
+
+<MountTimeChart />
+
+Mount time is React Native's _interaction time_, the `event` duration reported
+by `PerformanceObserver`. It's an INP-like metric covering input dispatch,
+React render, Fabric commit, Yoga layout with text measurement, and native
+view creation, but not rasterization. Self-measured from the example app as an
+average of 3 runs; see
+[measuring.md](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/docs/contributing/measuring.md)
+for details.
+
+## Memory usage
+
+<MemoryUsageChart />
+
+Memory per view is the difference between memory footprint snapshots taken
+before and after mounting 5000 views, divided by the number of views.
+Self-measured from the example app as an average of 3 runs; see
+[measuring.md](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/docs/contributing/measuring.md)
+for details.
+
+</PerfChartsProvider>

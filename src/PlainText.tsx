@@ -1,29 +1,97 @@
-import { Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
+import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } from 'react-native';
+import type { ComponentRef, Ref } from 'react';
+import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
+import { normalizeFontVariant } from './utils';
 
-// Same widened type as PlainText.native.tsx, see there for why.
 export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
 
-export type PlainTextProps = Omit<TextProps, 'children' | 'style'> & {
+export type PlainTextProps = AccessibilityProps & {
   children?: string;
+  /// Alias to `children`, to be used for animating text with Animated/Reanimated
+  text?: string;
   style?: StyleProp<PlainTextStyle>;
-  // No-op here: the bug it works around (RN#29507) is iOS-only, so there is
-  // nothing for it to override on web. Kept in the type so call sites don't
-  // need a platform branch just to pass it.
+  numberOfLines?: number;
+  ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
+  allowFontScaling?: boolean;
+  maxFontSizeMultiplier?: number;
+  testID?: string;
+  nativeID?: string;
+  id?: string;
+
+  /// When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
+  /// ascent-clipping behavior (RN#29507) for this instance.
+  // SYNC: renamed to the bare lineHeightClippingIos past this file — see
+  // docs/contributing/sync-points.md#set-13--lineheightclippingios-one-prop-renamed-at-the-js-boundary.
   unstable_lineHeightClippingIos?: boolean;
 };
 
-// Web / fallback implementation. No translation needed: CSS supports
-// `font-variation-settings` natively and react-native-web passes unrecognized
-// style keys through to it.
-export function PlainText({
+export function mapPlainTextProps({
   children,
+  text,
   style,
-  unstable_lineHeightClippingIos: _unstable_lineHeightClippingIos,
-  ...rest
-}: PlainTextProps) {
-  return (
-    <Text style={style as StyleProp<TextStyle>} {...rest}>
-      {children}
-    </Text>
-  );
+  numberOfLines,
+  ellipsizeMode,
+  allowFontScaling,
+  maxFontSizeMultiplier,
+  unstable_lineHeightClippingIos,
+  ...accessibilityProps
+}: PlainTextProps): NativeProps {
+  const {
+    color,
+    fontSize,
+    fontFamily,
+    fontWeight,
+    fontStyle,
+    fontVariant,
+    fontVariationSettings,
+    textAlign,
+    textAlignVertical,
+    verticalAlign,
+    textDecorationLine,
+    textTransform,
+    lineHeight,
+    letterSpacing,
+    includeFontPadding,
+    textShadowColor,
+    textShadowOffset,
+    textShadowRadius,
+    ...viewStyle
+  } = StyleSheet.flatten(style) ?? {};
+
+  return {
+    ...accessibilityProps,
+    text: text ?? children,
+    color,
+    fontSize,
+    fontFamily,
+    fontWeight: fontWeight != null ? String(fontWeight) : undefined,
+    fontStyle,
+    fontVariant: normalizeFontVariant(fontVariant),
+    fontVariationSettings,
+    textAlign,
+    textAlignVertical,
+    verticalAlign,
+    textDecorationLine,
+    textTransform,
+    textShadowColor,
+    textShadowOffsetWidth: textShadowOffset?.width,
+    textShadowOffsetHeight: textShadowOffset?.height,
+    textShadowRadius,
+    lineHeight,
+    letterSpacing,
+    numberOfLines,
+    ellipsizeMode,
+    allowFontScaling,
+    maxFontSizeMultiplier,
+    includeFontPadding,
+    lineHeightClippingIos: unstable_lineHeightClippingIos,
+    style: viewStyle,
+  };
+}
+
+type PlainTextRef = ComponentRef<typeof PlainTextViewNativeComponent>;
+
+export function PlainText({ ref, ...props }: PlainTextProps & { ref?: Ref<PlainTextRef> }) {
+  const nativeProps = mapPlainTextProps(props);
+  return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }

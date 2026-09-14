@@ -8,8 +8,8 @@
     "android:release": "expo run:android --variant release --no-bundler",
     "ios": "expo run:ios",
     "ios:release": "expo run:ios --configuration Release --no-bundler",
-    "web": "expo start --web",
-    "build:web": "expo export --platform web"
+    "build:ios": "xcodebuild ONLY_ACTIVE_ARCH=YES -workspace ios/PlainTextExample.xcworkspace -UseNewBuildSystem=YES -scheme PlainTextExample -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -quiet",
+    "build:android": "cd android && ./gradlew assembleDebug -DtestBuildType=debug -Dorg.gradle.jvmargs=-Xmx4g"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -22,14 +22,14 @@
     "expo-font": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
     "react-native": "0.86.2",
     "react-native-memory-footprint": "^0.1.0",
     "react-native-mmkv": "^4.3.2",
     "react-native-nitro-modules": "0.35.9",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
-    "react-native-web": "~0.21.0"
+    "react-native-worklets": "0.10.1"
   },
   "private": true,
   "devDependencies": {

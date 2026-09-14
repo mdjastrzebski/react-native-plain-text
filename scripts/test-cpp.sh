@@ -3,7 +3,7 @@
 # The C++ unit tests. Run with `yarn test:cpp`.
 #
 # There is no framework and no build system here on purpose: every unit under
-# test is dependency-free C++ (see docs/agent/workflow.md), so the compiler on
+# test is dependency-free C++ (see docs/contributing/workflow.md), so the compiler on
 # PATH builds it with no include paths, no pod install and no NDK. A test file
 # is a `main` that prints its failures and exits nonzero.
 #

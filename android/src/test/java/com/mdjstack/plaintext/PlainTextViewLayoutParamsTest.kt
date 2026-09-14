@@ -13,7 +13,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 // A view that was measured but never added to a parent reaches checkForRelayout() from
-// setText(), which dereferences layoutParams.width. See docs/agent/sync-points.md.
+// setText(), which dereferences layoutParams.width. See docs/contributing/sync-points.md.
 @RunWith(RobolectricTestRunner::class)
 // Robolectric has no image for compileSdkVersion 36, so run on the newest it ships.
 @Config(sdk = [Config.NEWEST_SDK])

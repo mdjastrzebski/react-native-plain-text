@@ -1,0 +1,144 @@
+.chart {
+  margin: 1.5rem 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.toggle {
+  display: inline-flex;
+  border: 1px solid var(--rp-c-divider);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.toggleButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--rp-c-text-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.toggleButton:not(:last-child) {
+  border-right: 1px solid var(--rp-c-divider);
+}
+
+.toggleButtonActive {
+  background: var(--rp-c-brand);
+  color: #fff;
+}
+
+.row {
+  margin-bottom: 1.5rem;
+}
+
+.plot {
+  margin-top: 2px;
+}
+
+.lane {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 16px;
+  margin-bottom: 5px;
+  gap: 4px 6px;
+}
+
+.laneName {
+  flex: 0 0 7.5rem;
+  font-size: 11px;
+  color: var(--rp-c-text-2);
+  white-space: nowrap;
+}
+
+.barTrack {
+  position: relative;
+  flex: 1 1 90px;
+  height: 16px;
+  min-width: 60px;
+}
+
+.bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  overflow: visible;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
+}
+
+.barBaseline {
+  background: var(--rp-c-text-3, #9aa);
+}
+
+/* Muted, closer to RN Text than to PlainText: NativeText performs like the baseline. */
+.barNative {
+  background: color-mix(in srgb, var(--rp-c-text-3, #9aa) 70%, var(--rp-c-brand) 30%);
+}
+
+.barPlain {
+  background: var(--rp-c-brand-dark, var(--rp-c-brand));
+}
+
+/* Narrow value label set inside the bar itself, so it never claims its own column. */
+.barValue {
+  padding-left: 6px;
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+}
+
+/* % improvement vs RN Text, its own fixed-width column right after the bar. */
+.pill {
+  flex: 0 0 76px;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--rp-c-text-2);
+  white-space: nowrap;
+}
+
+.caption {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--rp-c-text-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .barValue,
+  .pill {
+    transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .lane {
+    gap: 2px;
+  }
+
+  .laneName {
+    flex-basis: 5rem;
+  }
+
+  /* No room next to the bar: drop the pill to its own line, right-aligned
+     across the full row width instead of stacking under the bar's column. */
+  .pill {
+    flex: 1 0 100%;
+    text-align: right;
+  }
+}

@@ -1,7 +1,7 @@
 {
   "name": "react-native-plain-text",
-  "version": "0.8.0",
-  "description": "A faster, lower-memory React Native <Text> alternative for simple, single-style text",
+  "version": "0.8.2",
+  "description": "Faster, lighter React Native <Text> for single-style text",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
@@ -37,6 +37,7 @@
   "scripts": {
     "example": "yarn workspace react-native-plain-text-example",
     "android:release": "yarn example android:release",
+    "docs": "yarn workspace react-native-plain-text-docs",
     "clean": "del-cli lib tests/cpp/build",
     "ios:release": "yarn example ios:release",
     "prepare": "bob build",
@@ -88,6 +89,7 @@
     "@react-native/eslint-config": "0.86.2",
     "@react-native/jest-preset": "0.86.2",
     "@release-it/conventional-changelog": "^11.0.1",
+    "@testing-library/react-native": "^14.0.1",
     "@types/react": "^19.2.0",
     "agent-device": "0.21.0",
     "del-cli": "^7.0.0",
@@ -101,6 +103,7 @@
     "react-native-builder-bob": "^0.43.0",
     "reg-cli": "0.18.16",
     "release-it": "^20.2.0",
+    "test-renderer": "^1.2.0",
     "turbo": "^2.9.16",
     "typescript": "^6.0.3"
   },
@@ -109,7 +112,8 @@
     "react-native": "*"
   },
   "workspaces": [
-    "example"
+    "example",
+    "docs"
   ],
   "packageManager": "yarn@4.11.0",
   "react-native-builder-bob": {

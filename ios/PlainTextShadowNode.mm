@@ -7,36 +7,42 @@
 #import <cmath>
 
 #import "PlainTextFont.h"
-#import "PlainTextTextTransform.h"
+#import "PlainTextProps.h"
 
 namespace facebook::react {
+
+using namespace plaintext;
+
+// Rounds up to the nearest device pixel, not the nearest whole point, same as
+// RN's own <Text>.
+static Float ceilToPixel(Float value, Float pointScaleFactor)
+{
+  return static_cast<Float>(std::ceil(value * pointScaleFactor) / pointScaleFactor);
+}
 
 // SYNC: must mirror what the mounted UILabel renders (RNPlainText.mm's
 // applyContentFromProps), and every prop read here must appear in
 // `measurementInputsEqual`, or measured size drifts from drawn text. Font is
-// the exception, since both sides go through plainTextFont (PlainTextFont.h).
-Size PlainTextShadowNode::measureContent(
-    const LayoutContext &layoutContext,
-    const LayoutConstraints &layoutConstraints) const {
+// the exception, since both sides go through resolveFont (PlainTextFont.h).
+// See docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size.
+Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, const LayoutConstraints &layoutConstraints) const
+{
   const auto &props = getConcreteProps();
 
-  NSString *text = [NSString stringWithUTF8String:props.text.c_str()];
-  if (text == nil) {
-    text = @"";
-  }
-  text = plainTextApplyTextTransform(text, props.textTransform);
+  NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
+  text = applyTextTransform(text, props.textTransform);
 
   // Base scale comes from the layout context (Fabric seeds it from
   // RCTFontSizeMultiplier, same as the mounted view). Clamping matches the
   // mounted view so measured and drawn sizes agree.
-  CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
-  UIFont *font = plainTextFont(props, fontSizeMultiplier);
+  CGFloat fontSizeMultiplier = resolveFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
+  UIFont *font = resolveFont(props, fontSizeMultiplier);
 
   NSMutableDictionary<NSAttributedStringKey, id> *attributes = [NSMutableDictionary dictionary];
   attributes[NSFontAttributeName] = font;
 
-  if (props.hasLetterSpacing) {
-    attributes[NSKernAttributeName] = @(props.letterSpacing);
+  if (props.letterSpacing.has_value()) {
+    attributes[NSKernAttributeName] = @(props.letterSpacing.value());
   }
 
   // The per-line height used to cap numberOfLines: the pinned lineHeight when
@@ -63,7 +69,7 @@ Size PlainTextShadowNode::measureContent(
   // so that width is exactly what's needed to avoid wrapping. Deliberately
   // uses the same API that does the wrapping, since cheaper stand-ins have to
   // predict CoreText's rules and measured slower in practice (see
-  // docs/agent/performance.md).
+  // docs/contributing/performance.md).
   CGRect unconstrained = [text boundingRectWithSize:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)
                                             options:NSStringDrawingUsesLineFragmentOrigin
                                          attributes:attributes
@@ -85,21 +91,16 @@ Size PlainTextShadowNode::measureContent(
     measured = CGSizeMake(layoutConstraints.maximumSize.width, constrained.size.height);
   }
 
-  // Rounds up to the nearest device pixel, not the nearest whole point, same
-  // as RN's own <Text> (RCTTextLayoutManager.mm's identical formula) — whole
-  // points threw away real sub-point precision (thirds at 3x), which is what
-  // put PlainText's box a full point taller than RN's for some lineHeights.
   CGFloat pointScaleFactor = layoutContext.pointScaleFactor;
   Size size{
-      .width = static_cast<Float>(std::ceil(measured.width * pointScaleFactor) / pointScaleFactor),
-      .height = static_cast<Float>(std::ceil(measured.height * pointScaleFactor) / pointScaleFactor),
+      .width = ceilToPixel(static_cast<Float>(measured.width), pointScaleFactor),
+      .height = ceilToPixel(static_cast<Float>(measured.height), pointScaleFactor),
   };
 
   // Cap height to numberOfLines (0 = unlimited), matching UILabel's own line
   // clamp. min() avoids inflating text that already fits in fewer lines.
   if (props.numberOfLines > 0) {
-    Float maxHeight =
-        static_cast<Float>(std::ceil(props.numberOfLines * perLineHeight * pointScaleFactor) / pointScaleFactor);
+    Float maxHeight = ceilToPixel(props.numberOfLines * perLineHeight, pointScaleFactor);
     size.height = std::min(size.height, maxHeight);
   }
 
@@ -120,8 +121,8 @@ Float PlainTextShadowNode::baseline(
     Size /*size*/) const {
   const auto &props = getConcreteProps();
 
-  CGFloat fontSizeMultiplier = plainTextFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
-  UIFont *font = plainTextFont(props, fontSizeMultiplier);
+  CGFloat fontSizeMultiplier = resolveFontSizeMultiplier(props, layoutContext.fontSizeMultiplier);
+  UIFont *font = resolveFont(props, fontSizeMultiplier);
 
   CGFloat ascender = font.ascender;
 

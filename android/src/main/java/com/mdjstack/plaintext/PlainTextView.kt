@@ -42,7 +42,7 @@ class PlainTextView : AppCompatTextView {
   //
   // SYNC: toEffectivePixel/calculateLetterSpacing below are pure top-level functions
   // because Kotlin's init-order check doesn't see through method calls. See
-  // docs/agent/sync-points.md.
+  // docs/contributing/sync-points.md#set-11--construction-time-state-android.
 
   private var fontSizeSp: Float = 14f
   // Mirrors RN's <Text> (TextAttributes): sp sizes track the OS text-size setting
@@ -59,6 +59,14 @@ class PlainTextView : AppCompatTextView {
   // before it reaches TextView.
   private var textTransform: String? = null
 
+  // Applied directly to `paint` rather than through a dirty flag: like
+  // textDecorationLine, this view always renders a single uniform run, so there's
+  // nothing to coalesce.
+  private var textShadowColor: Int = DEFAULT_TEXT_SHADOW_COLOR
+  private var textShadowOffsetDx: Float = 0f
+  private var textShadowOffsetDy: Float = 0f
+  private var textShadowRadius: Float = 0f
+
   private var fontFamily: String? = null
   private var fontWeight: Int = ReactConstants.UNSET
   private var fontStyle: Int = ReactConstants.UNSET
@@ -71,6 +79,15 @@ class PlainTextView : AppCompatTextView {
   // the typeface it was applied to).
   private var appliedVariationSettings: String? = null
 
+  // The isSubpixelText/isLinearText value applyTypeface last set on `paint`. Tracked
+  // separately from appliedBaseTypeface: toggling this value alone (no font prop
+  // change) leaves the resolved typeface identical, so the setTypeface side effect
+  // below that would otherwise force TextView to rebuild/redraw never fires. Without
+  // this, the paint flags flip in memory but the mounted view keeps drawing its
+  // stale, already-built Layout, invisible unless something else (a width change, a
+  // remount) happens to force a redraw too.
+  private var appliedHasCustomStyleSpan: Boolean = false
+
   // Never the live typeface: applyStyles derives from whatever is passed when
   // fontFamily is null, so chaining would leak a should-be-cleared font between nodes
   // through the reused measuring view.
@@ -82,7 +99,7 @@ class PlainTextView : AppCompatTextView {
   // never ran.
   //
   // SYNC: only assigned from applyTypeface and the restore in applyVariationSettings.
-  // See docs/agent/sync-points.md.
+  // See docs/contributing/sync-points.md#set-5--deferred-prop-application-android-dirty-flags.
   //
   // Known quirk: the OS "Bold text" setting reapplies the typeface via
   // onConfigurationChanged (API 31+) without invalidating this field, silently
@@ -142,7 +159,8 @@ class PlainTextView : AppCompatTextView {
   // init-order check looks.
   //
   // SYNC: a new prop feeding shared work must set its own dirty flag, and flags must
-  // be applied here in dependency order, or it silently does nothing.
+  // be applied here in dependency order, or it silently does nothing. See
+  // docs/contributing/sync-points.md#set-5--deferred-prop-application-android-dirty-flags.
   fun flushPendingUpdates() {
     if (dirtyFontSize) {
       dirtyFontSize = false
@@ -166,7 +184,7 @@ class PlainTextView : AppCompatTextView {
     // SYNC: must run after applyTypeface, since axes are baked into a derived Typeface, so
     // a new base typeface arrives with none. Reordering silently drops the axes
     // whenever a font prop changes in the same transaction. See
-    // docs/agent/sync-points.md#deferred-prop-application.
+    // docs/contributing/sync-points.md#set-5--deferred-prop-application-android-dirty-flags.
     applyVariationSettings()
     if (dirtyText) {
       dirtyText = false
@@ -224,7 +242,7 @@ class PlainTextView : AppCompatTextView {
 
   // SYNC: everything derived from the OS text-size setting must be reachable from
   // here, iOS's traitCollectionDidChange must cover the same set. See
-  // docs/agent/sync-points.md.
+  // docs/contributing/sync-points.md#set-8--anything-derived-from-the-os-text-size-setting.
   private fun markScaledSizesDirty() {
     dirtyFontSize = true
     dirtyText = true // lineHeight span is scaled too.
@@ -288,6 +306,41 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
+  // Mirrors <Text> (ShadowStyleSpan): paints only when there's something to draw,
+  // unlike iOS which gates on whether textShadowOffset was provided.
+  private fun applyTextShadow() {
+    if ((textShadowOffsetDx != 0f || textShadowOffsetDy != 0f || textShadowRadius != 0f) &&
+      Color.alpha(textShadowColor) != 0
+    ) {
+      paint.setShadowLayer(textShadowRadius, textShadowOffsetDx, textShadowOffsetDy, textShadowColor)
+    } else {
+      paint.clearShadowLayer()
+    }
+    invalidate()
+  }
+
+  fun setTextShadowColor(color: Int?) {
+    textShadowColor = color ?: DEFAULT_TEXT_SHADOW_COLOR
+    applyTextShadow()
+  }
+
+  fun setTextShadowOffsetWidth(width: Float) {
+    textShadowOffsetDx = PixelUtil.toPixelFromDIP(width)
+    applyTextShadow()
+  }
+
+  fun setTextShadowOffsetHeight(height: Float) {
+    textShadowOffsetDy = PixelUtil.toPixelFromDIP(height)
+    applyTextShadow()
+  }
+
+  // Unlike the offset above, not converted from DIP: RN takes textShadowRadius as
+  // raw pixels for setShadowLayer.
+  fun setTextShadowRadius(radius: Float) {
+    textShadowRadius = radius
+    applyTextShadow()
+  }
+
   // Mirrors <Text> (TextAttributeProps#fontFamily): resolved via ReactFontManager, so
   // fonts bundled the RN way (assets/fonts, or registered natively) work here too.
   fun setFontFamily(fontFamily: String?) {
@@ -310,7 +363,7 @@ class PlainTextView : AppCompatTextView {
   // Mirrors <Text> (TextAttributeProps#setFontVariant): an OpenType feature-settings
   // string on the paint, not the typeface. Deliberately unguarded: Paint early-outs
   // on an equal string, and the invalidation is redundant with setText anyway. See
-  // docs/agent/performance.md before adding a guard.
+  // docs/contributing/performance.md before adding a guard.
   fun setFontVariant(fontVariant: ReadableArray?) {
     fontFeatureSettings = ReactTypefaceUtils.parseFontVariant(fontVariant)
   }
@@ -343,7 +396,7 @@ class PlainTextView : AppCompatTextView {
     // Cross-view cache: appliedVariationSettings and applyTypeface's identity check
     // only catch one view redoing its own work. N mounted views at the same font +
     // axes each start uncached, so each pays for its own native derivation. See
-    // docs/agent/performance.md.
+    // docs/contributing/performance.md.
     val base = appliedBaseTypeface
     if (settings != null && base != null) {
       val cached = variationTypefaceCache.get(VariationCacheKey(base, settings))
@@ -402,8 +455,32 @@ class PlainTextView : AppCompatTextView {
   }
 
   private fun applyTypeface() {
+    // Mirrors RN's CustomStyleSpan condition (TextLayoutManager.kt): any of the
+    // three set at all attaches it, regardless of value. Its apply() turns both
+    // flags on; a plain paint never does. Closes a sub-px width/glyph-position
+    // drift against RN's <Text>, only visible once one of these is customized.
+    // See docs/contributing/perf-experiments.md.
+    val hasCustomStyleSpan =
+      fontStyle != ReactConstants.UNSET || fontWeight != ReactConstants.UNSET || fontFamily != null
+    paint.isSubpixelText = hasCustomStyleSpan
+    paint.isLinearText = hasCustomStyleSpan
+    if (hasCustomStyleSpan != appliedHasCustomStyleSpan) {
+      appliedHasCustomStyleSpan = hasCustomStyleSpan
+      // EXPENSIVE: forces a re-layout (docs/contributing/performance.md). Paint flags
+      // don't self-invalidate; usually setTypeface below does it for us, but not
+      // when the resolved typeface doesn't change (e.g. fontStyle="normal").
+      requestLayout()
+      invalidate()
+    }
+
     // Not expensive despite appearances: every applyStyles path is interned, via
     // ReactFontManager's or Typeface's own caches.
+    //
+    // SYNC: must resolve against the fixed baseTypeface, never the live typeface —
+    // applyStyles derives from the typeface passed in when fontFamily is null, so
+    // chaining off the current value would leak one node's font into the next on
+    // the shared measuring view. See
+    // docs/contributing/sync-points.md#set-4--the-reused-measuring-view-android.
     val resolved = ReactTypefaceUtils.applyStyles(
       baseTypeface,
       if (fontStyle == Typeface.ITALIC) Typeface.ITALIC else Typeface.NORMAL,
@@ -451,10 +528,34 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
+  private var rawTextAlignVertical: String? = null
+  private var rawVerticalAlign: String? = null
+
   // Mirrors <Text> (ReactTextView#setGravityVertical): vertical bits only, moves text
   // only when the view is taller than it. Android-only, like RN.
   fun setTextAlignVertical(textAlignVertical: String?) {
-    val vertical = when (textAlignVertical) {
+    rawTextAlignVertical = textAlignVertical
+    applyVerticalAlignGravity()
+  }
+
+  // The cross-platform verticalAlign style; wins over textAlignVertical when set
+  // (matches RN <Text>'s Text.js), and its 'middle' maps to textAlignVertical's
+  // 'center'. This merge used to run in JS (PlainText.tsx's resolveTextAlignVertical);
+  // moved here per docs/contributing/performance.md#prop-cost-policy.
+  // SYNC: PlainTextProps.mm's resolveVerticalAlign must resolve identically. See
+  // docs/contributing/sync-points.md#set-12--the-verticalalign-and-textalignvertical-merge.
+  fun setVerticalAlign(verticalAlign: String?) {
+    rawVerticalAlign = verticalAlign
+    applyVerticalAlignGravity()
+  }
+
+  private fun applyVerticalAlignGravity() {
+    val resolved = when (rawVerticalAlign) {
+      null -> rawTextAlignVertical
+      "middle" -> "center"
+      else -> rawVerticalAlign
+    }
+    val vertical = when (resolved) {
       "top" -> Gravity.TOP
       "bottom" -> Gravity.BOTTOM
       "center" -> Gravity.CENTER_VERTICAL
@@ -506,9 +607,13 @@ class PlainTextView : AppCompatTextView {
   }
 }
 
+// Mirrors <Text> (TextAttributeProps.DEFAULT_TEXT_SHADOW_COLOR): translucent black,
+// used when textShadowColor is unset but the shadow is otherwise enabled.
+private const val DEFAULT_TEXT_SHADOW_COLOR = 0x55000000
+
 // Mirrors <Text> (TextAttributes#getEffective*): sp -> px through the OS setting,
 // clamped by maxFontSizeMultiplier; raw DIP when scaling is off. Pure and top-level
-// since init seeds textSize through it. See docs/agent/sync-points.md.
+// since init seeds textSize through it. See docs/contributing/sync-points.md.
 private fun toEffectivePixel(
   sp: Float,
   allowFontScaling: Boolean,
@@ -523,9 +628,9 @@ private fun toEffectivePixel(
 
 // Mirrors <Text> (com.facebook.react.views.text.TextTransform, reimplemented here
 // since that one is internal to RN's own module). Capitalize already matches CSS
-// here; see ios/PlainTextTextTransform.h for why iOS needs its own implementation.
+// here; see ios/PlainTextProps.h for why iOS needs its own implementation.
 private fun applyTextTransform(text: String, textTransform: String?): String {
-  // EXPENSIVE: allocates a transformed copy per call (docs/agent/performance.md).
+  // EXPENSIVE: allocates a transformed copy per call (docs/contributing/performance.md).
   return when (textTransform) {
     "uppercase" -> text.uppercase(Locale.getDefault())
     "lowercase" -> text.lowercase(Locale.getDefault())
@@ -554,7 +659,7 @@ private data class VariationCacheKey(val baseTypeface: Typeface, val settings: S
 // Shared across every PlainTextView, including the measuring view. Bounded since
 // settings is a continuous value an animating screen could grow without limit, same
 // reasoning as the iOS font cache's countLimit
-// (docs/agent/performance.md#share-and-cache-ios-font-resolution).
+// (docs/contributing/performance.md#share-and-cache-ios-font-resolution).
 //
 // LruCache synchronizes internally, needed since measure() runs on the layout thread
 // and mount on the UI thread, and both reach this.

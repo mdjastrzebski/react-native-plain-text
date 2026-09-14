@@ -1,0 +1,354 @@
+import { describe, expect, it } from '@jest/globals';
+import { createRef, type ComponentRef } from 'react';
+import type { TextStyle } from 'react-native';
+import { render, screen } from '@testing-library/react-native';
+import { PlainText, mapPlainTextProps } from '../PlainText';
+import PlainTextViewNativeComponent from '../PlainTextViewNativeComponent';
+
+it('maps PlainText props to native component props', () => {
+  const nativeProps = mapPlainTextProps({
+    accessibilityLabel: 'Greeting',
+    children: 'Hello',
+    numberOfLines: 2,
+    style: {
+      fontVariant: 'small-caps, tabular-nums',
+      fontWeight: 600,
+      letterSpacing: 0,
+      padding: 4,
+      textShadowOffset: { width: 1, height: 2 },
+      verticalAlign: 'middle',
+    },
+  });
+
+  expect(nativeProps).toMatchObject({
+    accessibilityLabel: 'Greeting',
+    fontVariant: ['small-caps', 'tabular-nums'],
+    fontWeight: '600',
+    letterSpacing: 0,
+    numberOfLines: 2,
+    style: { padding: 4 },
+    text: 'Hello',
+    verticalAlign: 'middle',
+    textShadowOffsetHeight: 2,
+    textShadowOffsetWidth: 1,
+  });
+});
+
+describe('<PlainText />', () => {
+  it('renders the native component with the mapped native props', async () => {
+    await render(
+      <PlainText numberOfLines={2} style={{ fontSize: 12, padding: 4 }}>
+        Hello
+      </PlainText>
+    );
+
+    // `text` and `fontSize` are native-only props produced by the mapper;
+    // seeing them on the host element means the wrapper ran end to end.
+    expect(screen.root).toHaveProp('text', 'Hello');
+    expect(screen.root).toHaveProp('fontSize', 12);
+    expect(screen.root).toHaveProp('numberOfLines', 2);
+    // Text-style keys are pulled out of `style`; layout keys stay behind.
+    expect(screen.root).toHaveProp('style', { padding: 4 });
+
+    expect(screen.toJSON()).toMatchInlineSnapshot(`
+<RNPlainText
+  fontSize={12}
+  numberOfLines={2}
+  style={
+    {
+      "padding": 4,
+    }
+  }
+  text="Hello"
+/>
+`);
+  });
+
+  it('renders with the text prop', async () => {
+    await render(<PlainText text="Hello" />);
+
+    expect(screen.root).toHaveProp('text', 'Hello');
+  });
+
+  it('forwards ref to the underlying native view', async () => {
+    const ref = createRef<ComponentRef<typeof PlainTextViewNativeComponent>>();
+
+    await render(<PlainText ref={ref}>Hello</PlainText>);
+
+    expect(ref.current).not.toBeNull();
+  });
+});
+
+describe('mapPlainTextProps', () => {
+  it('maps children to text', () => {
+    expect(mapPlainTextProps({ children: 'Hello' }).text).toBe('Hello');
+    expect(mapPlainTextProps({}).text).toBeUndefined();
+  });
+
+  it('maps the text prop directly', () => {
+    expect(mapPlainTextProps({ text: 'Hello' }).text).toBe('Hello');
+  });
+
+  it('forwards non-style props unchanged', () => {
+    expect(
+      mapPlainTextProps({
+        numberOfLines: 3,
+        ellipsizeMode: 'middle',
+        allowFontScaling: false,
+        maxFontSizeMultiplier: 1.4,
+      })
+    ).toMatchObject({
+      numberOfLines: 3,
+      ellipsizeMode: 'middle',
+      allowFontScaling: false,
+      maxFontSizeMultiplier: 1.4,
+    });
+  });
+
+  it('forwards plain text-style props unchanged', () => {
+    const nativeProps = mapPlainTextProps({
+      style: {
+        color: '#f00',
+        fontSize: 18,
+        fontFamily: 'Georgia',
+        fontStyle: 'italic',
+        fontVariationSettings: "'wght' 700",
+        textAlign: 'center',
+        textDecorationLine: 'underline',
+        textTransform: 'uppercase',
+        lineHeight: 24,
+        letterSpacing: 1.5,
+        includeFontPadding: false,
+        textShadowColor: '#00f',
+        textShadowRadius: 3,
+      },
+    });
+
+    expect(nativeProps).toMatchObject({
+      color: '#f00',
+      fontSize: 18,
+      fontFamily: 'Georgia',
+      fontStyle: 'italic',
+      fontVariationSettings: "'wght' 700",
+      textAlign: 'center',
+      textDecorationLine: 'underline',
+      textTransform: 'uppercase',
+      lineHeight: 24,
+      letterSpacing: 1.5,
+      includeFontPadding: false,
+      textShadowColor: '#00f',
+      textShadowRadius: 3,
+    });
+  });
+
+  describe('fontWeight', () => {
+    it('stringifies a numeric weight', () => {
+      expect(mapPlainTextProps({ style: { fontWeight: 600 } }).fontWeight).toBe('600');
+    });
+
+    it('passes a string weight through', () => {
+      expect(mapPlainTextProps({ style: { fontWeight: 'bold' } }).fontWeight).toBe('bold');
+    });
+
+    it('is undefined when unset', () => {
+      expect(mapPlainTextProps({}).fontWeight).toBeUndefined();
+    });
+  });
+
+  describe('fontVariant', () => {
+    it('splits a comma-separated string', () => {
+      expect(
+        mapPlainTextProps({ style: { fontVariant: 'small-caps, tabular-nums' } }).fontVariant
+      ).toEqual(['small-caps', 'tabular-nums']);
+    });
+
+    it('splits a space-separated string', () => {
+      expect(
+        mapPlainTextProps({ style: { fontVariant: 'small-caps tabular-nums' } }).fontVariant
+      ).toEqual(['small-caps', 'tabular-nums']);
+    });
+
+    it('collapses mixed and repeated separators and trims edges', () => {
+      expect(
+        mapPlainTextProps({ style: { fontVariant: ' small-caps ,, tabular-nums ' } }).fontVariant
+      ).toEqual(['small-caps', 'tabular-nums']);
+    });
+
+    it('maps a separator-only string to undefined', () => {
+      expect(mapPlainTextProps({ style: { fontVariant: '  ' } }).fontVariant).toBeUndefined();
+    });
+
+    it('passes an array through by reference (no copy)', () => {
+      const fontVariant: TextStyle['fontVariant'] = ['small-caps', 'tabular-nums'];
+      expect(mapPlainTextProps({ style: { fontVariant } }).fontVariant).toBe(fontVariant);
+    });
+
+    it('is undefined when unset', () => {
+      expect(mapPlainTextProps({}).fontVariant).toBeUndefined();
+    });
+  });
+
+  describe('textAlignVertical / verticalAlign', () => {
+    // The merge (verticalAlign wins when set, its 'middle' maps to 'center') is
+    // native-side now, per docs/contributing/performance.md#prop-cost-policy.
+    // JS only has to forward both raw values unmodified; the merge itself is
+    // covered by the native tests (PlainTextViewTest.kt / RNPlainTextTests.mm).
+    it('passes textAlignVertical through unmodified', () => {
+      expect(mapPlainTextProps({ style: { textAlignVertical: 'bottom' } }).textAlignVertical).toBe(
+        'bottom'
+      );
+    });
+
+    it('passes verticalAlign through unmodified', () => {
+      expect(mapPlainTextProps({ style: { verticalAlign: 'middle' } }).verticalAlign).toBe(
+        'middle'
+      );
+    });
+
+    it('is undefined when neither is set', () => {
+      expect(mapPlainTextProps({}).textAlignVertical).toBeUndefined();
+      expect(mapPlainTextProps({}).verticalAlign).toBeUndefined();
+    });
+
+    it('does not forward verticalAlign through style', () => {
+      expect(mapPlainTextProps({ style: { verticalAlign: 'middle' } }).style).toEqual({});
+    });
+  });
+
+  describe('text shadow', () => {
+    it('splits textShadowOffset into width/height', () => {
+      expect(
+        mapPlainTextProps({ style: { textShadowOffset: { width: 1, height: 2 } } })
+      ).toMatchObject({
+        textShadowOffsetWidth: 1,
+        textShadowOffsetHeight: 2,
+      });
+    });
+
+    it('keeps a zero offset (present, not dropped to undefined)', () => {
+      expect(
+        mapPlainTextProps({ style: { textShadowOffset: { width: 0, height: 0 } } })
+      ).toMatchObject({
+        textShadowOffsetWidth: 0,
+        textShadowOffsetHeight: 0,
+      });
+    });
+
+    it('leaves width/height unset when the offset is absent', () => {
+      expect(
+        mapPlainTextProps({ style: { textShadowColor: '#000', textShadowRadius: 4 } })
+      ).toMatchObject({
+        textShadowOffsetWidth: undefined,
+        textShadowOffsetHeight: undefined,
+        textShadowColor: '#000',
+        textShadowRadius: 4,
+      });
+    });
+  });
+
+  describe('letterSpacing', () => {
+    it('forwards the value when set, including 0', () => {
+      expect(mapPlainTextProps({ style: { letterSpacing: 0 } })).toMatchObject({
+        letterSpacing: 0,
+      });
+      expect(mapPlainTextProps({ style: { letterSpacing: 2 } })).toMatchObject({
+        letterSpacing: 2,
+      });
+    });
+
+    it('leaves letterSpacing undefined when unset', () => {
+      expect(mapPlainTextProps({})).toMatchObject({
+        letterSpacing: undefined,
+      });
+    });
+  });
+
+  describe('lineHeightClippingIos', () => {
+    it('forwards unstable_lineHeightClippingIos under the native name', () => {
+      expect(
+        mapPlainTextProps({ unstable_lineHeightClippingIos: true }).lineHeightClippingIos
+      ).toBe(true);
+      expect(
+        mapPlainTextProps({ unstable_lineHeightClippingIos: false }).lineHeightClippingIos
+      ).toBe(false);
+    });
+
+    it('is undefined when unset (native WithDefault applies)', () => {
+      expect(mapPlainTextProps({}).lineHeightClippingIos).toBeUndefined();
+    });
+  });
+
+  describe('style splitting', () => {
+    it('pulls text-style keys out and keeps layout styles in style', () => {
+      const nativeProps = mapPlainTextProps({
+        style: {
+          color: 'red',
+          fontSize: 12,
+          padding: 4,
+          margin: 8,
+          flex: 1,
+          backgroundColor: 'blue',
+        },
+      });
+
+      expect(nativeProps.color).toBe('red');
+      expect(nativeProps.fontSize).toBe(12);
+      expect(nativeProps.style).toEqual({
+        padding: 4,
+        margin: 8,
+        flex: 1,
+        backgroundColor: 'blue',
+      });
+    });
+
+    it('flattens an array style (last value wins)', () => {
+      const nativeProps = mapPlainTextProps({
+        style: [
+          { fontSize: 10, padding: 1 },
+          { fontSize: 20, margin: 2 },
+        ],
+      });
+
+      expect(nativeProps.fontSize).toBe(20);
+      expect(nativeProps.style).toEqual({ padding: 1, margin: 2 });
+    });
+
+    it('defaults to an empty style object when no style is given', () => {
+      expect(mapPlainTextProps({}).style).toEqual({});
+    });
+  });
+
+  describe('pass-through of remaining props', () => {
+    it('forwards accessibility and identifier props', () => {
+      expect(
+        mapPlainTextProps({
+          accessibilityLabel: 'Greeting',
+          accessibilityRole: 'header',
+          accessibilityState: { disabled: true },
+          testID: 'greeting',
+          nativeID: 'greeting-native',
+          id: 'greeting-id',
+        })
+      ).toMatchObject({
+        accessibilityLabel: 'Greeting',
+        accessibilityRole: 'header',
+        accessibilityState: { disabled: true },
+        testID: 'greeting',
+        nativeID: 'greeting-native',
+        id: 'greeting-id',
+      });
+    });
+
+    it('does not leak consumed props into the output', () => {
+      const nativeProps = mapPlainTextProps({
+        children: 'x',
+        unstable_lineHeightClippingIos: true,
+        style: { fontSize: 10 },
+      });
+
+      expect(nativeProps).not.toHaveProperty('children');
+      expect(nativeProps).not.toHaveProperty('unstable_lineHeightClippingIos');
+      expect(nativeProps.style).toEqual({});
+    });
+  });
+});

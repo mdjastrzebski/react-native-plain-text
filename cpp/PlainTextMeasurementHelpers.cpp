@@ -4,6 +4,7 @@ namespace facebook::react {
 
 // SYNC: every prop either platform's `measureContent` reads. Missing one here
 // keeps a stale size after an update: correct on first render, wrong later.
+// See docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size.
 bool measurementInputsEqual(
     const RNPlainTextProps &a,
     const RNPlainTextProps &b) {
@@ -13,12 +14,12 @@ bool measurementInputsEqual(
       a.fontVariationSettings == b.fontVariationSettings &&
       a.lineHeight == b.lineHeight &&
       a.letterSpacing == b.letterSpacing &&
-      a.hasLetterSpacing == b.hasLetterSpacing &&
       a.textTransform == b.textTransform &&
       a.numberOfLines == b.numberOfLines &&
       a.allowFontScaling == b.allowFontScaling &&
       a.maxFontSizeMultiplier == b.maxFontSizeMultiplier &&
-      a.includeFontPadding == b.includeFontPadding;
+      a.includeFontPadding == b.includeFontPadding &&
+      a.experiment == b.experiment;
 }
 
 bool shouldRevisionDirtyMeasurement(

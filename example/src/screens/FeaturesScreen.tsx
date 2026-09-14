@@ -1,10 +1,38 @@
-import { Platform, ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { useEffect, useRef, type ComponentRef } from 'react';
+import {
+  Animated as RNAnimated,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type TextStyle,
+} from 'react-native';
+import ReanimatedAnimated, { useAnimatedProps, useSharedValue } from 'react-native-reanimated';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { useCompareText } from '../components/CompareText';
 import { CompareBox, Cover, Section, TextItem, screenStyles } from '../components/Specimen';
+import { TextScrubber } from '../components/TextScrubber';
 import { COLOR, VARIABLE } from '../theme';
+
+// `text`, not `children`: createAnimatedComponent writes updates onto the host
+// ref by prop name, bypassing PlainText's render and its children -> text remap.
+const RNAnimatedPlainText = RNAnimated.createAnimatedComponent(PlainText);
+const ReanimatedPlainText = ReanimatedAnimated.createAnimatedComponent(PlainText);
+
+// The scrubber (0-100) reveals this phrase one character at a time. Each step is
+// a new string length, so PlainText re-measures its intrinsic size every frame.
+// `'worklet'` lets the same function run on the RN Animated and Reanimated sides.
+const REVEAL_PHRASE = 'The quick brown fox jumps over the lazy dog.';
+
+function revealPhrase(value: number): string {
+  'worklet';
+  const clamped = value < 0 ? 0 : value > 100 ? 100 : value;
+  const count = Math.round((clamped / 100) * REVEAL_PHRASE.length);
+  return REVEAL_PHRASE.slice(0, count);
+}
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
@@ -26,8 +54,57 @@ export default function FeaturesScreen({ navigation }: Props) {
 }
 
 export function FeaturesSpecimens({ showText }: { showText: boolean }) {
+  // `.interpolate()` can't produce an arbitrary string, so the RN Animated side
+  // bridges the value to `text` by hand: a listener + `setNativeProps`. The
+  // listener fires several times per frame; on Fabric that burst of commits can
+  // land out of order and strand a stale value, so coalesce to one write per
+  // frame. Reanimated's `useAnimatedProps` (below) needs none of this.
+  const rnValue = useRef(new RNAnimated.Value(0)).current;
+  const rnAnimatedRef = useRef<ComponentRef<typeof RNAnimatedPlainText>>(null);
+  useEffect(() => {
+    let frame: number | null = null;
+    let pending = '';
+    const flush = () => {
+      frame = null;
+      rnAnimatedRef.current?.setNativeProps({ text: pending });
+    };
+    const id = rnValue.addListener(({ value }) => {
+      pending = revealPhrase(value);
+      if (frame == null) frame = requestAnimationFrame(flush);
+    });
+    return () => {
+      rnValue.removeListener(id);
+      if (frame != null) cancelAnimationFrame(frame);
+    };
+  }, [rnValue]);
+
+  const reanimatedValue = useSharedValue(0);
+  const reanimatedProps = useAnimatedProps(() => ({
+    text: revealPhrase(reanimatedValue.value),
+  }));
+  const onScrub = (value: number) => {
+    rnValue.setValue(value);
+    reanimatedValue.value = value;
+  };
+
+  // Scroll-lock during the drag is an imperative native-prop toggle, not state:
+  // a re-render here would be pointless and would inflate the render count below.
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const onDragStateChange = (dragging: boolean) => {
+    scrollRef.current?.setNativeProps({ scrollEnabled: !dragging });
+  };
+
+  // Neither animated side re-renders this screen while scrubbing; the counter
+  // shown below the rows stays at 1 to prove it.
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+
   return (
-    <ScrollView style={screenStyles.scroll} contentContainerStyle={screenStyles.container}>
+    <ScrollView
+      ref={scrollRef}
+      style={screenStyles.scroll}
+      contentContainerStyle={screenStyles.container}
+    >
       <Cover
         lockup={{ glyph: 'Aa', title: 'PlainText' }}
         blurb="A faster, lower-memory React Native <Text> alternative for simple, single-style text."
@@ -415,6 +492,19 @@ export function FeaturesSpecimens({ showText }: { showText: boolean }) {
           </TextItem>
         ))}
       </Section>
+      <Section title="Text Shadow">
+        {TEXT_SHADOWS.map(({ label, style }) => (
+          <TextItem
+            key={label}
+            testID={captureTestID('text-shadow', label)}
+            label={label}
+            showText={showText}
+            style={{ fontSize: SHORT_ROW_SIZE, ...style }}
+          >
+            {SPECIMEN}
+          </TextItem>
+        ))}
+      </Section>
       <Section title="Text Transform" footer={TEXT_TRANSFORM_FOOTER}>
         {TEXT_TRANSFORMS.map((textTransform) => (
           <TextItem
@@ -496,7 +586,7 @@ export function FeaturesSpecimens({ showText }: { showText: boolean }) {
           Where that adds up to a visible difference is no-common-ligatures: the
           gray box drops the ffl/ffi ligatures and the overlay keeps them, now on
           both platforms, since the serif and Roboto both carry them. Both
-          reasons are spelled out in docs/agent/native-gotchas.md. */}
+          reasons are spelled out in docs/contributing/native-gotchas.md. */}
       <Section title="Font Variant" footer={FONT_VARIANT_FOOTER}>
         {/* Baseline to compare every row below against. */}
         <TextItem
@@ -566,7 +656,7 @@ export function FeaturesSpecimens({ showText }: { showText: boolean }) {
             the font's default instance on every row while the grey box moves.
             Two PRs tried to add it to core and both went stale unmerged
             (react/react-native#44685 for iOS, #44667 for Android). See
-            docs/agent/native-gotchas.md.
+            docs/contributing/native-gotchas.md.
           - Every row needs a font whose file carries an fvar table, which no
             system font usably does: SF keeps its axes private, and Roboto is
             only variable from Android 12. Hence the bundled Open Sans (see
@@ -590,16 +680,21 @@ export function FeaturesSpecimens({ showText }: { showText: boolean }) {
         ))}
       </Section>
       {/* Android-only in RN <Text>, closed on iOS here (see
-          docs/agent/workflow.md#when-rn-itself-has-the-platform-gap). Each box
-          is taller than its text so the position is visible. Rows drive this
-          through `verticalAlign`, which RN aliases onto `textAlignVertical` in
-          JS, so it covers both props. */}
+          docs/contributing/workflow.md#when-rn-itself-has-the-platform-gap). Each box
+          is taller than its text so the position is visible. Two native props reach
+          the same gravity, and both get their own rows: `textAlignVertical` (the
+          Android-native name) and `verticalAlign` (RN's cross-platform CSS name,
+          which RN's own Text.js aliases onto textAlignVertical). PlainText passes
+          both straight to native rather than resolving one from the other in JS
+          (see docs/contributing/performance.md#prop-cost-policy), so the merge
+          rows below exercise PlainTextView.kt's applyVerticalAlignGravity and
+          PlainTextProps.mm's plainTextResolveVerticalAlign directly. */}
       <Section title="Vertical Align" footer={VERTICAL_ALIGN_FOOTER}>
         {VERTICAL_ALIGNS.map((verticalAlign) => (
           <TextItem
             key={verticalAlign}
             testID={captureTestID('vertical-align', verticalAlign)}
-            label={verticalAlign}
+            label={`verticalAlign: ${verticalAlign}`}
             showText={showText}
             style={{ width: '100%', height: 72, fontSize: SHORT_ROW_SIZE, verticalAlign }}
             containerStyle={screenStyles.wideRow}
@@ -607,6 +702,42 @@ export function FeaturesSpecimens({ showText }: { showText: boolean }) {
             {SPECIMEN}
           </TextItem>
         ))}
+        {/* Same three positions, driven by the other prop, so a row here should
+            land identically to its verticalAlign counterpart above: 'center' is
+            textAlignVertical's own name for what 'middle' means to verticalAlign. */}
+        {TEXT_ALIGN_VERTICALS.map((textAlignVertical) => (
+          <TextItem
+            key={textAlignVertical}
+            testID={captureTestID('text-align-vertical', textAlignVertical)}
+            label={`textAlignVertical: ${textAlignVertical}`}
+            showText={showText}
+            style={{ width: '100%', height: 72, fontSize: SHORT_ROW_SIZE, textAlignVertical }}
+            containerStyle={screenStyles.wideRow}
+          >
+            {SPECIMEN}
+          </TextItem>
+        ))}
+        {/* Both set, disagreeing: verticalAlign wins (matches RN <Text>'s
+            Text.js), so this should render identically to the "verticalAlign:
+            bottom" row above despite asking textAlignVertical for the opposite. */}
+        <TextItem
+          testID={captureTestID(
+            'vertical-align',
+            'both-set-text-align-vertical-top-vertical-align-bottom'
+          )}
+          label="both set: textAlignVertical top, verticalAlign bottom"
+          showText={showText}
+          style={{
+            width: '100%',
+            height: 72,
+            fontSize: SHORT_ROW_SIZE,
+            textAlignVertical: 'top',
+            verticalAlign: 'bottom',
+          }}
+          containerStyle={screenStyles.wideRow}
+        >
+          {SPECIMEN}
+        </TextItem>
       </Section>
       {/*
         Measured *width*, which is the one thing wrap detection decides. RN
@@ -776,6 +907,22 @@ export function FeaturesSpecimens({ showText }: { showText: boolean }) {
           {PARAGRAPH}
         </TextItem>
       </Section>
+      <Section title="Animating text" footer={ANIMATING_TEXT_FOOTER} spacedRows>
+        <View style={styles.animatingRow}>
+          <Text style={styles.animatingLabel}>ANIMATED (RN CORE)</Text>
+          <RNAnimatedPlainText ref={rnAnimatedRef} style={styles.animatingText} text="" />
+        </View>
+        <View style={styles.animatingRow}>
+          <Text style={styles.animatingLabel}>REANIMATED</Text>
+          <ReanimatedPlainText
+            style={styles.animatingText}
+            text=""
+            animatedProps={reanimatedProps}
+          />
+        </View>
+        <Text style={styles.renderCountLabel}>RENDER COUNT: {renderCount.current}</Text>
+        <TextScrubber onChange={onScrub} onDragStateChange={onDragStateChange} />
+      </Section>
     </ScrollView>
   );
 }
@@ -864,6 +1011,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLOR.inkSoft,
   },
+  animatingRow: {
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  animatingLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.7,
+    color: COLOR.faint,
+  },
+  animatingText: {
+    fontSize: 18,
+    color: COLOR.ink,
+    backgroundColor: COLOR.wash,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  renderCountLabel: {
+    alignSelf: 'center',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.7,
+    color: COLOR.faint,
+  },
 });
 
 // Specimen strings. Every value a row varies now lives in the label gutter, so
@@ -925,6 +1096,11 @@ const FONT_SCALING_FOOTER = Platform.select({
 
 const VERTICAL_ALIGNS = ['top', 'middle', 'bottom'] as const;
 
+// textAlignVertical's own names for the same three positions ('center' rather
+// than verticalAlign's 'middle'). 'auto' is left out: it is the unset default,
+// already shown implicitly by every other section's rows.
+const TEXT_ALIGN_VERTICALS = ['top', 'center', 'bottom'] as const;
+
 const VERTICAL_ALIGN_FOOTER = Platform.select({
   ios: 'RN Text: Android-only ',
 });
@@ -949,6 +1125,31 @@ const TEXT_DECORATION_LINES = [
   'line-through',
   'underline line-through',
 ] as const;
+
+// "offset only" shows iOS drawing with no radius set, since its gate is
+// textShadowOffset alone. "radius only" is the asymmetric case: no shadow on
+// iOS, but Android still draws (see the platform note on the offset props in
+// PlainTextViewNativeComponent.ts).
+//
+// textShadowColor is excluded from compareText/overlayText (Specimen.tsx): a
+// shadow sits behind the glyphs, so flattening it there would fight the
+// overlay's multiply blend. "colored" keeps its own indigo instead.
+const TEXT_SHADOWS: { label: string; style: TextStyle }[] = [
+  { label: 'offset only', style: { textShadowOffset: { width: 2, height: 2 } } },
+  {
+    label: 'blurred',
+    style: { textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 4 },
+  },
+  {
+    label: 'colored',
+    style: {
+      textShadowOffset: { width: 2, height: 2 },
+      textShadowRadius: 2,
+      textShadowColor: COLOR.indigo,
+    },
+  },
+  { label: 'radius only (no iOS shadow)', style: { textShadowRadius: 4 } },
+];
 
 const TEXT_TRANSFORMS = ['none', 'lowercase', 'uppercase', 'capitalize'] as const;
 
@@ -988,7 +1189,7 @@ const FONT_VARIANT_FEATURE_FAMILY = Platform.select({ ios: 'Baskerville', defaul
 // show any of this on Android. RN only attaches the span that carries
 // fontFeatureSettings when fontStyle, fontWeight or fontFamily is set too, so
 // fontVariant on its own renders unchanged there (see
-// docs/agent/native-gotchas.md). Applied to both sides rather than to the overlay
+// docs/contributing/native-gotchas.md). Applied to both sides rather than to the overlay
 // alone, so the comparison stays apples-to-apples: it is a no-op for PlainText,
 // which already resolves fontStyle 'normal' the same as unset. It does nudge RN's
 // own paint (the span also sets isSubpixelText/isLinearText), which is
@@ -1035,7 +1236,7 @@ const FONT_VARIANTS: { label: string; fontVariant?: TextStyle['fontVariant'] }[]
 ];
 
 // Per-platform: the RN <Text> gaps and the fonts differ. Detail in
-// docs/agent/native-gotchas.md.
+// docs/contributing/native-gotchas.md.
 const FONT_VARIANT_FOOTER = Platform.select({
   ios: 'RN <Text> ignores the ligature values. (no-common-ligatures row)',
   default:
@@ -1279,6 +1480,9 @@ const FONT_FAMILY_RESOLUTION_FOOTER = Platform.select({
   ios: 'Compare Text should agree on every row. Inter_* are expo-font aliases, one per cut.',
   default: 'The built-in rows are Android analogs. Inter_* are expo-font aliases, one per cut.',
 });
+
+const ANIMATING_TEXT_FOOTER =
+  'PlainText wrapped in createAnimatedComponent from Animated RN API and RN Reanimated package.';
 
 const FONT_PADDING_FOOTER = Platform.select({
   ios: 'Both rows should look identical here.',

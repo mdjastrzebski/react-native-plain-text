@@ -13,6 +13,7 @@
     "references/",
     "example/ios/",
     "example/android/",
+    "docs/doc_build/",
     ".yarn/"
   ]
 }

@@ -1,0 +1,45 @@
+# Installation
+
+import { PackageManagerTabs } from '@theme';
+
+<PackageManagerTabs command="install react-native-plain-text" />
+
+This is a native module, so you need to rebuild the app.
+
+Requires React Native's New Architecture (Fabric).
+
+## Usage
+
+```jsx
+import { PlainText } from 'react-native-plain-text';
+
+<PlainText style={{ fontSize: 16 }}>Hello there 👋</PlainText>;
+```
+
+## Unified `Text` component
+
+`<PlainText>` is API-compatible with React Native `<Text>`, so you can define a selector component:
+`<PlainText>` for simple strings, falling back to RN `<Text>` for nested text. Use it anywhere
+you'd use `<Text>`.
+
+This pattern gives you Plain Text's performance benefits across the app without changing any call sites.
+
+```tsx
+import { use } from 'react';
+import { Text as RnText, unstable_TextAncestorContext, type TextProps } from 'react-native';
+import { PlainText, type PlainTextProps } from 'react-native-plain-text';
+
+export function Text({ children, ...rest }: TextProps) {
+  const isNestedText = use(unstable_TextAncestorContext);
+  if (typeof children === 'string' && !isNestedText) {
+    return <PlainText {...(rest as PlainTextProps)}>{children}</PlainText>;
+  }
+
+  return <RnText {...rest}>{children}</RnText>;
+}
+```
+
+You can also apply this conditional rendering inside an existing centralized Text component
+(e.g. design system) instead of adding a separate component.
+
+RN's `unstable_TextAncestorContext` is `true` when the text renders inside another `<Text>`.

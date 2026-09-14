@@ -9,9 +9,10 @@ see [sync-points.md](sync-points.md)).
 1. **Codegen spec**: `src/PlainTextViewNativeComponent.ts`. The `NativeProps`
    interface is the source of truth. Codegen turns it into the C++/Kotlin
    interfaces the native code implements.
-2. **JS wrapper**: `src/PlainText.native.tsx` (native) and `src/PlainText.tsx`
-   (web fallback, renders RN `<Text>`). `src/index.tsx` re-exports from
-   `./PlainText`.
+2. **JS wrapper**: `src/PlainText.tsx`. `src/index.tsx` re-exports `PlainText`
+   and its types from `./PlainText`, plus `unstable_NativePlainText` (the bare
+   codegen host component). The library is Android/iOS only, with no web
+   fallback.
 3. **iOS**: `ios/RNPlainText.mm` (+ `.h`): an `RCTViewComponentView` subclass
    hosting a `UILabel`, applying props in `updateProps:` by diffing
    `oldViewProps`/`newViewProps`.
@@ -39,7 +40,7 @@ prefixed names left are the generated ones we implement:
 
 - **Text-style props (e.g. `fontSize`) are not part of RN `ViewProps`**, so they
   don't reach the native view through `style`. The pattern (see
-  `PlainText.native.tsx`): accept a `TextStyle` `style`, `StyleSheet.flatten`
+  `PlainText.tsx`): accept a `TextStyle` `style`, `StyleSheet.flatten`
   it, destructure the text-style keys out, pass them as explicit codegen props,
   and forward the remaining layout styles as `style`.
 - **A prop nobody sets must cost a check.** No allocation, no font resolution,
@@ -52,6 +53,12 @@ prefixed names left are the generated ones we implement:
   Do **not** import `react-native/Libraries/Types/CodegenTypes`, this project
   uses the strict API (`customConditions` in `tsconfig.json`), which blocks
   `react-native/Libraries/*` subpaths.
+- The native component enables `generateOptionalProperties`, so an optional
+  prop without a default becomes `std::optional` in generated C++. Codegen
+  currently gives a plain optional `Float` a synthetic `0` default
+  ([RN#55315](https://github.com/facebook/react-native/issues/55315)), so use
+  `WithDefault<Float, null>` when native code needs to distinguish unset from
+  an explicit zero.
 
 ## Example app
 

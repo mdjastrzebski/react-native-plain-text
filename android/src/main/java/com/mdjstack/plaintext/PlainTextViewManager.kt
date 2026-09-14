@@ -1,7 +1,9 @@
 package com.mdjstack.plaintext
 
 import android.content.Context
+import android.text.Layout
 import android.view.View
+import kotlin.math.ceil
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
@@ -39,7 +41,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // never does, so every mount lands here. Calling it would hand this a previously-used
   // PlainTextView carrying stale text/font/color, which is what RN's own
   // ReactTextViewManager answers with recycleView(). See
-  // docs/agent/sync-points.md#recycled-view-state, the same failure as the iOS fix in
+  // docs/contributing/sync-points.md#set-10--recycled-view-state-ios, the same failure as the iOS fix in
   // RNPlainText.mm, not ported here.
   public override fun createViewInstance(context: ThemedReactContext): PlainTextView {
     return PlainTextView(context)
@@ -47,6 +49,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
 
   // The @ReactProp setters below only record state (see the batching block in
   // PlainTextView). This runs once per transaction rather than once per prop.
+  // SYNC: must run before the off-screen measure below. See
+  // docs/contributing/sync-points.md#set-5--deferred-prop-application-android-dirty-flags.
   override fun onAfterUpdateTransaction(view: PlainTextView) {
     super.onAfterUpdateTransaction(view)
     view.flushPendingUpdates()
@@ -60,7 +64,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // minus padding/border.
   //
   // SYNC: iOS gets this for free: RCTViewComponentView lays the contentView out at
-  // layoutMetrics.getContentFrame(), already inset by the same contentInsets.
+  // layoutMetrics.getContentFrame(), already inset by the same contentInsets. See
+  // docs/contributing/sync-points.md#set-14--padding-and-border-width-not-props.
   override fun setPadding(view: PlainTextView, left: Int, top: Int, right: Int, bottom: Int) {
     view.setPadding(left, top, right, bottom)
   }
@@ -115,9 +120,46 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setTextAlignVertical(textAlignVertical)
   }
 
+  @ReactProp(name = "verticalAlign")
+  override fun setVerticalAlign(view: PlainTextView?, verticalAlign: String?) {
+    view?.setVerticalAlign(verticalAlign)
+  }
+
   @ReactProp(name = "textDecorationLine")
   override fun setTextDecorationLine(view: PlainTextView?, textDecorationLine: String?) {
     view?.setTextDecorationLine(textDecorationLine)
+  }
+
+  @ReactProp(name = "textShadowColor", customType = "Color")
+  override fun setTextShadowColor(view: PlainTextView?, textShadowColor: Int?) {
+    view?.setTextShadowColor(textShadowColor)
+  }
+
+  // Two methods per optional Float prop (as in RN's ReactDrawerLayoutManager): the
+  // @ReactProp view-config reflection rejects a boxed Float ("Unrecognized type:
+  // java.lang.Float"), so the primitive overload registers the prop and the
+  // unannotated nullable override is what the codegen delegate calls at runtime.
+  @ReactProp(name = "textShadowOffsetWidth")
+  fun setTextShadowOffsetWidth(view: PlainTextView?, textShadowOffsetWidth: Float) {
+    view?.setTextShadowOffsetWidth(textShadowOffsetWidth)
+  }
+
+  override fun setTextShadowOffsetWidth(view: PlainTextView?, textShadowOffsetWidth: Float?) {
+    view?.setTextShadowOffsetWidth(textShadowOffsetWidth ?: 0f)
+  }
+
+  @ReactProp(name = "textShadowOffsetHeight")
+  fun setTextShadowOffsetHeight(view: PlainTextView?, textShadowOffsetHeight: Float) {
+    view?.setTextShadowOffsetHeight(textShadowOffsetHeight)
+  }
+
+  override fun setTextShadowOffsetHeight(view: PlainTextView?, textShadowOffsetHeight: Float?) {
+    view?.setTextShadowOffsetHeight(textShadowOffsetHeight ?: 0f)
+  }
+
+  @ReactProp(name = "textShadowRadius")
+  override fun setTextShadowRadius(view: PlainTextView?, textShadowRadius: Float) {
+    view?.setTextShadowRadius(textShadowRadius)
   }
 
   @ReactProp(name = "textTransform")
@@ -130,14 +172,14 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setLineHeight(lineHeight)
   }
 
+  // See the textShadowOffset* pair above for why this prop needs two methods.
   @ReactProp(name = "letterSpacing")
-  override fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float) {
+  fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float) {
     view?.setLetterSpacingDip(letterSpacing)
   }
 
-  // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as `experiment`.
-  @ReactProp(name = "hasLetterSpacing", defaultBoolean = false)
-  override fun setHasLetterSpacing(view: PlainTextView?, hasLetterSpacing: Boolean) {
+  override fun setLetterSpacing(view: PlainTextView?, letterSpacing: Float?) {
+    view?.setLetterSpacingDip(letterSpacing ?: 0f)
   }
 
   @ReactProp(name = "numberOfLines")
@@ -166,16 +208,13 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.includeFontPadding = includeFontPadding
   }
 
-  // No-op: nothing on Android currently reads `experiment` (measureView()
-  // always shares the off-screen view below, since the alternative it once gated
-  // measured slower). Declared for a future perf-suite A/B test, like iOS.
+  // Unread: no experiment is currently using it. See docs/contributing/perf-experiments.md.
   @ReactProp(name = "experiment", defaultBoolean = false)
   override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
   }
 
-  // iOS-only concern (see PlainTextViewNativeComponent.ts). No-op here, same as
-  // `hasLetterSpacing`: Android's TextView never had the ascent-clipping bug
-  // this reverts to on iOS.
+  // iOS-only concern (see PlainTextViewNativeComponent.ts). Android's TextView
+  // never had the ascent-clipping bug this reverts to on iOS.
   @ReactProp(name = "lineHeightClippingIos", defaultBoolean = false)
   override fun setLineHeightClippingIos(view: PlainTextView?, lineHeightClippingIos: Boolean) {
   }
@@ -197,7 +236,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   // SYNC: two invariants, neither checked by anything: every fallback above must match
   // the default in the generated Props.h (the C++ side omits props at default), and
   // every prop must be set on every call, not only when its key is present (the
-  // off-screen view is reused across nodes).
+  // off-screen view is reused across nodes). See
+  // docs/contributing/sync-points.md#set-3--the-three-way-default-contract and
+  // docs/contributing/sync-points.md#set-4--the-reused-measuring-view-android.
   override fun measure(
     context: Context,
     localData: ReadableMap?,
@@ -213,15 +254,13 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setAllowFontScaling(props.getBooleanOr("allowFontScaling", true))
     view.setMaxFontSizeMultiplier(props.getFloatOr("maxFontSizeMultiplier", 0f))
     view.setFontSizeSp(props.getFloatOr("fontSize", 14f))
-    // props serializes an unset fontFamily as "" (the C++ std::string default),
-    // not null. Normalize so this matches the setFontFamily prop setter path.
-    view.setFontFamily(props?.getString("fontFamily")?.ifEmpty { null })
-    view.setFontWeight(props?.getString("fontWeight")?.ifEmpty { null })
-    view.setFontStyle(props?.getString("fontStyle")?.ifEmpty { null })
+    view.setFontFamily(props?.getString("fontFamily"))
+    view.setFontWeight(props?.getString("fontWeight"))
+    view.setFontStyle(props?.getString("fontStyle"))
     // fontVariant and fontVariationSettings both change glyph shapes/advances, so the
     // measured size depends on them.
     view.setFontVariant(props?.getArray("fontVariant"))
-    view.setVariationSettings(props?.getString("fontVariationSettings")?.ifEmpty { null })
+    view.setVariationSettings(props?.getString("fontVariationSettings"))
     // letterSpacing widens the text and lineHeight grows each line, so both must be
     // applied for the measured size to match.
     view.setLetterSpacingDip(props.getFloatOr("letterSpacing", 0f))
@@ -250,13 +289,36 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // first line's baseline falls instead of the measured size, so
     // `alignItems: "baseline"` can align on it (Yoga's baseline fn calls
     // through to here via PlainTextShadowNode::baseline). Packed into the
-    // height slot since a baseline query never needs the width back.
+    // height slot since a baseline query never needs the width back. See
+    // docs/contributing/sync-points.md#set-15--the-__baseline-marker-string-android.
     if (props?.hasKey(BASELINE_QUERY_PROP) == true) {
       return YogaMeasureOutput.make(0f, PixelUtil.toDIPFromPixel(view.baseline.toFloat()))
     }
 
+    // Intrinsic width straight from Layout.getDesiredWidth, RN's own
+    // TextLayoutManager.createLayout entry point, instead of TextView.onMeasure's
+    // private getDesiredWidth() (compound drawables, mMaxWidth/mMinWidth, gravity,
+    // autosize). The two agree for most strings but drift apart by typeface, only
+    // visible when width isn't EXACTLY (an EXACTLY box takes its width from Yoga on
+    // both sides, never from either engine's own measurement).
+    //
+    // EXPENSIVE for custom-styled text (docs/contributing/performance.md): the paint's
+    // isSubpixelText/isLinearText push this onto Android's unhinted glyph path.
+    // ~2.5% extra mount cost measured; see docs/contributing/perf-experiments.md.
+    val rawDesiredWidth =
+      if (widthMode != YogaMeasureMode.EXACTLY) {
+        ceil(Layout.getDesiredWidth(view.text, view.paint).toDouble()).toInt()
+      } else null
+    val measuredWidth =
+      if (rawDesiredWidth != null) {
+        if (widthMode == YogaMeasureMode.AT_MOST) minOf(rawDesiredWidth, width.toInt())
+        else rawDesiredWidth
+      } else {
+        view.measuredWidth
+      }
+
     return YogaMeasureOutput.make(
-      PixelUtil.toDIPFromPixel(view.measuredWidth.toFloat()),
+      PixelUtil.toDIPFromPixel(measuredWidth.toFloat()),
       PixelUtil.toDIPFromPixel(view.measuredHeight.toFloat())
     )
   }
@@ -301,7 +363,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   companion object {
     const val NAME = "RNPlainText"
 
-    // SYNC: matches the literal in PlainTextMeasurementsManager.cpp's baseline().
+    // SYNC: matches the literal in PlainTextMeasurementsManager.cpp's baseline(). See
+    // docs/contributing/sync-points.md#set-15--the-__baseline-marker-string-android.
     private const val BASELINE_QUERY_PROP = "__baseline"
   }
 }
