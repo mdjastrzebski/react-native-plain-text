@@ -19,11 +19,12 @@ the complete PNG set there after agent-device succeeds. Once the baseline
 exists, `reg-cli` compares it with the actual images and writes diffs to
 `build/vrt/diff/<platform>/<profile>/`.
 
-`baselines/` is a shallow Git submodule pinned to an exact commit in
+`baselines/` is a shallow Git submodule backed by
 [`react-native-plain-text-artifactory`](https://github.com/troZee/react-native-plain-text-artifactory).
-Initialize it before a production comparison with
-`git submodule update --init --depth 1 baselines`. Actual captures, diffs,
-reports, and logs remain temporary CI artifacts outside both repositories.
+Before a production VRT test, the wrapper initializes it when needed, syncs its
+configured URL, and checks out the latest commit from `origin/main`. Actual
+captures, diffs, reports, and logs remain temporary CI artifacts outside both
+repositories.
 
 Comparison keeps a zero pixel threshold, with `reg-cli`'s antialias detection
 enabled. iOS uses a zero matching threshold. Android uses `0.004`, which

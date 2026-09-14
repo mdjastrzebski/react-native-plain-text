@@ -55,6 +55,12 @@ run_app() {
   esac
 }
 
+sync_baselines() {
+  printf 'Syncing the baseline submodule with origin/main.\n'
+  git submodule sync -- baselines
+  git submodule update --init --remote --depth 1 --checkout baselines
+}
+
 run_test() {
   local actual_dir baseline_dir baseline_parent creating_baseline dev_capture_id
   local comparison_status dev_mode diff_dir json_file matching_threshold
@@ -97,9 +103,7 @@ run_test() {
         "$dev_capture_id"
     fi
   else
-    if [[ ! -e "$PROJECT_ROOT/baselines/.git" ]]; then
-      fail "The baseline submodule is not initialized. Run 'git submodule update --init --depth 1 baselines'."
-    fi
+    sync_baselines
 
     baseline_parent="baselines/$platform"
     baseline_dir="$baseline_parent/$profile"

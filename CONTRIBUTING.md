@@ -53,10 +53,14 @@ To run the complete visual regression workflow, including device setup, the
 Release build, and agent-device captures:
 
 ```sh
-git submodule update --init --depth 1 baselines
 yarn vrt android
 yarn vrt ios
 ```
+
+The production test stage initializes the baseline submodule when needed, syncs
+its configured URL, and checks out the latest `origin/main` commit before
+capturing images. Git stops the update instead of overwriting uncommitted work
+inside `baselines/`.
 
 Equivalent shortcuts are available:
 
@@ -95,9 +99,9 @@ scrolling through the specimen book. On the first successful `test` run for a
 profile, it moves those PNGs to
 `baselines/<platform>/<profile>/` for review and commit in the
 [`react-native-plain-text-artifactory`](https://github.com/troZee/react-native-plain-text-artifactory)
-repository. The `baselines/` directory is a shallow submodule pinned to the
-exact reviewed artifact commit. Later runs use
-`reg-cli` to compare actual images with that baseline and write comparison
+repository. The `baselines/` directory is a shallow submodule. The VRT wrapper
+updates it to the latest reviewed artifact commit on `origin/main`. Later runs
+use `reg-cli` to compare actual images with that baseline and write comparison
 images to `build/vrt/diff/`. A visual difference makes the command fail. All
 generated VRT files remain ignored under `build/`. When comparison images
 exist, the wrapper also writes the built-in `reg-cli` HTML and JSON reports to
