@@ -89,6 +89,7 @@
     "@react-native/jest-preset": "0.86.2",
     "@release-it/conventional-changelog": "^11.0.1",
     "@types/react": "^19.2.0",
+    "agent-device": "0.21.0",
     "del-cli": "^7.0.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",

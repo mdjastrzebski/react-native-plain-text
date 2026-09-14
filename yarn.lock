@@ -4005,6 +4005,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"agent-device@npm:0.21.0":
+  version: 0.21.0
+  resolution: "agent-device@npm:0.21.0"
+  peerDependencies:
+    ai: ^6.0.0 || ^7.0.0
+  peerDependenciesMeta:
+    ai:
+      optional: true
+  bin:
+    agent-device: bin/agent-device.mjs
+  checksum: 10c0/020fd5cb0b5463a7c1a6238ba1c0a26517371acfd32bb1c45c729684bf71babaf207156197f34062ac75d92354fb1ff48e157b49fee50185c8f98cbba685b2ce
+  languageName: node
+  linkType: hard
+
 "ajv@npm:^6.14.0":
   version: 6.15.0
   resolution: "ajv@npm:6.15.0"
@@ -10680,6 +10694,7 @@ __metadata:
     "@react-native/jest-preset": "npm:0.86.2"
     "@release-it/conventional-changelog": "npm:^11.0.1"
     "@types/react": "npm:^19.2.0"
+    agent-device: "npm:0.21.0"
     del-cli: "npm:^7.0.0"
     eslint: "npm:^9.39.4"
     eslint-config-prettier: "npm:^10.1.8"

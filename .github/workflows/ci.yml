@@ -86,3 +86,70 @@ jobs:
 
       - name: Build package
         run: yarn prepare
+
+  vrt-android:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      # Keep the shared VRT profile intact. Only suppress the emulator window
+      # because GitHub-hosted runners have no interactive desktop.
+      ANDROID_EMULATOR_HEADLESS: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # This calls the shared profile, emulator setup, Release build, baseline
+      # sync, agent-device capture, and reg-cli comparison used locally.
+      - name: Run Android visual regression tests
+        run: yarn vrt:android
+
+      - name: Upload Android visual regression results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-android
+          path: |
+            build/vrt
+            /tmp/react-native-plain-text-vrt-emulator.log
+          if-no-files-found: ignore
+
+  vrt-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      # Match the Xcode and iOS runtime used to produce the checked-in profile.
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+      OPEN_SIMULATOR: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      # This calls the shared profile, simulator setup, Release build, baseline
+      # sync, agent-device capture, and reg-cli comparison used locally.
+      - name: Run iOS visual regression tests
+        run: yarn vrt:ios
+
+      - name: Upload iOS visual regression results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-ios
+          path: build/vrt
+          if-no-files-found: ignore

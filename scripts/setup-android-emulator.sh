@@ -12,6 +12,11 @@ fail() {
   exit 1
 }
 
+case "$ANDROID_EMULATOR_HEADLESS" in
+  0 | 1) ;;
+  *) fail "ANDROID_EMULATOR_HEADLESS must be '0' or '1'." ;;
+esac
+
 find_android_sdk() {
   if [[ -n "${ANDROID_HOME:-}" ]]; then
     printf '%s\n' "$ANDROID_HOME"
@@ -109,16 +114,23 @@ find_running_serial() {
 running_serial="$(find_running_serial)"
 
 if [[ -z "$running_serial" ]]; then
+  emulator_args=(
+    -avd "$ANDROID_AVD_NAME"
+    -gpu auto
+    -no-boot-anim
+    -no-snapshot-save
+    -prop "persist.sys.locale=$ANDROID_LOCALE"
+    -skin "$ANDROID_RESOLUTION"
+    -timezone "$ANDROID_TIMEZONE"
+    -wipe-data
+  )
+
+  if [[ "$ANDROID_EMULATOR_HEADLESS" == "1" ]]; then
+    emulator_args+=(-no-window -noaudio)
+  fi
+
   printf 'Starting AVD %s...\n' "$ANDROID_AVD_NAME"
-  "$emulator" \
-    -avd "$ANDROID_AVD_NAME" \
-    -gpu auto \
-    -no-boot-anim \
-    -no-snapshot-save \
-    -prop "persist.sys.locale=$ANDROID_LOCALE" \
-    -skin "$ANDROID_RESOLUTION" \
-    -timezone "$ANDROID_TIMEZONE" \
-    -wipe-data \
+  "$emulator" "${emulator_args[@]}" \
     >/tmp/react-native-plain-text-vrt-emulator.log 2>&1 &
 
   for _ in {1..60}; do
