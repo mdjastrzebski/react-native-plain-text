@@ -6,6 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck source=./vrt-config.sh
 source "$SCRIPT_DIR/vrt-config.sh"
+# shellcheck source=./android-sdk-packages.sh
+source "$SCRIPT_DIR/android-sdk-packages.sh"
 
 fail() {
   printf 'Error: %s\n' "$*" >&2
@@ -76,26 +78,11 @@ adb="$ANDROID_SDK_ROOT/platform-tools/adb"
 [[ -x "$emulator" ]] || fail "Android Emulator not found at $emulator."
 [[ -x "$adb" ]] || fail "adb not found at $adb."
 
-installed_package_version() {
-  local package="$1"
-
-  "$sdkmanager" --list_installed \
-    | awk -F '|' -v package="$package" '
-        {
-          name = $1
-          version = $2
-          gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
-          gsub(/^[[:space:]]+|[[:space:]]+$/, "", version)
-        }
-        name == package { print version; exit }
-      '
-}
-
-installed_emulator_version="$(installed_package_version emulator)"
+installed_emulator_version="$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" emulator)"
 if [[ "$installed_emulator_version" != "$ANDROID_EMULATOR_VERSION" ]]; then
   printf 'Installing Android Emulator %s...\n' "$ANDROID_EMULATOR_VERSION"
   "$sdkmanager" --install emulator
-  installed_emulator_version="$(installed_package_version emulator)"
+  installed_emulator_version="$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" emulator)"
 fi
 
 [[ "$installed_emulator_version" == "$ANDROID_EMULATOR_VERSION" ]] || fail \
@@ -133,12 +120,12 @@ else
   avdmanager="$matching_avdmanager"
 fi
 
-if ! "$sdkmanager" --list_installed | grep -F "$ANDROID_SYSTEM_IMAGE" >/dev/null; then
+if [[ -z "$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" "$ANDROID_SYSTEM_IMAGE")" ]]; then
   printf 'Installing %s...\n' "$ANDROID_SYSTEM_IMAGE"
   "$sdkmanager" "$ANDROID_SYSTEM_IMAGE"
 fi
 
-installed_system_image_revision="$(installed_package_version "$ANDROID_SYSTEM_IMAGE")"
+installed_system_image_revision="$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" "$ANDROID_SYSTEM_IMAGE")"
 [[ "$installed_system_image_revision" == "$ANDROID_SYSTEM_IMAGE_REVISION" ]] || fail \
   "Android system image revision $ANDROID_SYSTEM_IMAGE_REVISION is required, but revision ${installed_system_image_revision:-none} is installed. Update the VRT profile and baselines intentionally."
 

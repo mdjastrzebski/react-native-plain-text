@@ -7,6 +7,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # shellcheck source=./vrt-config.sh
 source "$SCRIPT_DIR/vrt-config.sh"
+# shellcheck source=./android-sdk-packages.sh
+source "$SCRIPT_DIR/android-sdk-packages.sh"
 
 fail() {
   printf 'Error: %s\n' "$*" >&2
@@ -70,27 +72,12 @@ case "$platform" in
     [[ "$package_type" == "system-images" && -n "$system_api" && -n "$target" && -n "$expected_architecture" ]] || \
       fail "Invalid Android system image package: $ANDROID_SYSTEM_IMAGE"
 
-    installed_package_version() {
-      local package="$1"
-
-      "$sdkmanager" --list_installed \
-        | awk -F '|' -v package="$package" '
-            {
-              name = $1
-              version = $2
-              gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
-              gsub(/^[[:space:]]+|[[:space:]]+$/, "", version)
-            }
-            name == package { print version; exit }
-          '
-    }
-
     record profile "$ANDROID_VRT_PROFILE"
     expect emulator_version "$ANDROID_EMULATOR_VERSION" \
-      "$(installed_package_version emulator)"
+      "$(installed_android_sdk_package_version "$android_sdk_root" emulator)"
     record system_image "$ANDROID_SYSTEM_IMAGE"
     expect system_image_revision "$ANDROID_SYSTEM_IMAGE_REVISION" \
-      "$(installed_package_version "$ANDROID_SYSTEM_IMAGE")"
+      "$(installed_android_sdk_package_version "$android_sdk_root" "$ANDROID_SYSTEM_IMAGE")"
 
     running_serial=""
     while read -r serial; do
