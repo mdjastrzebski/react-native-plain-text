@@ -1,0 +1,149 @@
+name: Visual Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  merge_group:
+    types:
+      - checks_requested
+
+permissions:
+  contents: read
+
+concurrency:
+  # A PR number cannot collide when different forks use the same branch name.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Keep main and merge-queue runs intact because they gate integration.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  vrt-android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      # Local Apple Silicon runs retain the arm64 defaults from vrt-config.sh.
+      # CI uses the equivalent x86_64 image supported by hosted Linux runners
+      # and explicitly compares it with the reviewed cross-ABI baseline.
+      VRT_HOST_ARCHITECTURE: x86_64
+      ANDROID_AVD_NAME: plaintext_vrt_api36_pixel9_x86_64
+      ANDROID_VRT_PROFILE: plaintext_vrt_api36_pixel9_x86_64
+      ANDROID_VRT_BASELINE_PROFILE: plaintext_vrt_api36_pixel9_arm64_v8a
+      ANDROID_SYSTEM_IMAGE: system-images;android-36;google_apis_playstore;x86_64
+      ANDROID_RUNTIME: API 36 Google Play x86_64
+      ANDROID_EMULATOR_HEADLESS: 1
+      VRT_RESET_DEVICE: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # GitHub's Linux runners expose /dev/kvm, but the emulator needs explicit
+      # access before it can use hardware acceleration.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Resolve Android VRT system image
+        id: android-vrt-system-image
+        shell: bash
+        run: |
+          source scripts/vrt-config.sh
+          IFS=';' read -r package_type api target architecture <<< "$ANDROID_SYSTEM_IMAGE"
+
+          if [[ "$package_type" != "system-images" || -z "$api" || -z "$target" || -z "$architecture" ]]; then
+            printf 'Invalid Android system image package: %s\n' "$ANDROID_SYSTEM_IMAGE" >&2
+            exit 1
+          fi
+
+          printf 'path=%s/system-images/%s/%s/%s\n' \
+            "$ANDROID_HOME" "$api" "$target" "$architecture" >> "$GITHUB_OUTPUT"
+          printf 'key=android-system-image-v1-%s-%s-%s-%s-%s\n' \
+            "$RUNNER_OS" "$RUNNER_ARCH" "$api" "$target" \
+            "$architecture-revision-$ANDROID_SYSTEM_IMAGE_REVISION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Android VRT system image
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ steps.android-vrt-system-image.outputs.path }}
+          key: ${{ steps.android-vrt-system-image.outputs.key }}
+
+      # The shared command sets up a clean emulator, builds the Release app,
+      # syncs baselines, captures specimens, and runs reg-cli.
+      - name: Run Android visual regression tests
+        run: yarn vrt:android
+
+      - name: Upload Android visual regression results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-android-${{ github.run_attempt }}
+          path: |
+            build/vrt
+            /tmp/react-native-plain-text-vrt-emulator.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  vrt-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+      OPEN_SIMULATOR: 0
+      VRT_RESET_DEVICE: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Resolve iOS VRT cache profile
+        id: ios-vrt-cache-profile
+        shell: bash
+        run: |
+          source scripts/vrt-config.sh
+          printf 'key=ios-pods-v1-%s-%s-xcode-%s-%s-cocoapods-%s\n' \
+            "$RUNNER_OS" "$RUNNER_ARCH" "$IOS_XCODE_VERSION" \
+            "$IOS_XCODE_BUILD" "$(pod --version)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache CocoaPods
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            example/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ steps.ios-vrt-cache-profile.outputs.key }}-${{ hashFiles('example/ios/Podfile.lock', 'yarn.lock') }}
+
+      # The shared command sets up a clean simulator, builds the Release app,
+      # syncs baselines, captures specimens, and runs reg-cli.
+      - name: Run iOS visual regression tests
+        run: yarn vrt:ios
+
+      - name: Upload iOS visual regression results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-ios-${{ github.run_attempt }}
+          path: build/vrt
+          if-no-files-found: ignore
+          retention-days: 7

@@ -12,6 +12,10 @@ export VRT_RESET_DEVICE="${VRT_RESET_DEVICE:-0}"
 export ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-36}"
 export ANDROID_AVD_NAME="${ANDROID_AVD_NAME:-plaintext_vrt_api${ANDROID_API_LEVEL}_pixel9_arm64_v8a}"
 export ANDROID_VRT_PROFILE="${ANDROID_VRT_PROFILE:-$ANDROID_AVD_NAME}"
+# A CI host may need a different guest ABI while still comparing the same
+# Android device/API rendering contract. Keep the capture profile truthful and
+# make cross-profile baseline reuse explicit instead of hiding it in the name.
+export ANDROID_VRT_BASELINE_PROFILE="${ANDROID_VRT_BASELINE_PROFILE:-$ANDROID_VRT_PROFILE}"
 export ANDROID_DEVICE_TYPE="${ANDROID_DEVICE_TYPE:-pixel_9}"
 export ANDROID_SYSTEM_IMAGE="${ANDROID_SYSTEM_IMAGE:-system-images;android-${ANDROID_API_LEVEL};google_apis_playstore;arm64-v8a}"
 export ANDROID_SYSTEM_IMAGE_REVISION="${ANDROID_SYSTEM_IMAGE_REVISION:-7}"

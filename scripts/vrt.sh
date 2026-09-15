@@ -73,16 +73,18 @@ sync_baselines() {
 
 run_test() {
   local actual_dir baseline_dir baseline_parent creating_baseline dev_capture_id
-  local comparison_status dev_mode diff_dir json_file matching_threshold
+  local baseline_profile comparison_status dev_mode diff_dir json_file matching_threshold
   local profile report_file
 
   case "$platform" in
     android)
       profile="$ANDROID_VRT_PROFILE"
+      baseline_profile="$ANDROID_VRT_BASELINE_PROFILE"
       matching_threshold=0.004
       ;;
     ios)
       profile="$IOS_VRT_PROFILE"
+      baseline_profile="$profile"
       matching_threshold=0
       ;;
   esac
@@ -116,11 +118,12 @@ run_test() {
     sync_baselines
 
     baseline_parent="baselines/$platform"
-    baseline_dir="$baseline_parent/$profile"
+    baseline_dir="$baseline_parent/$baseline_profile"
 
     if [[ -d "$baseline_dir" ]]; then
       creating_baseline=0
-      printf 'Capturing actual images for %s/%s.\n' "$platform" "$profile"
+      printf 'Capturing actual images for %s/%s against baseline profile %s.\n' \
+        "$platform" "$profile" "$baseline_profile"
     else
       creating_baseline=1
       printf 'No baseline found for %s/%s. Creating it in %s.\n' \

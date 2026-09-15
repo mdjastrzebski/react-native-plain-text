@@ -225,6 +225,7 @@ if [[ -z "$running_serial" ]]; then
   emulator_args=(
     -avd "$ANDROID_AVD_NAME"
     -gpu "$emulator_gpu"
+    -no-metrics
     -no-boot-anim
     -no-snapshot
     -prop "persist.sys.locale=$ANDROID_LOCALE"

@@ -93,15 +93,32 @@ close_session() {
 trap close_session EXIT
 
 reattach_app() {
-  local output
-
   printf 'Reattaching expired agent-device session.\n'
-  if ! output="$(agent_device open "$app_id" "$current_deep_link" --foreground 2>&1)"; then
-    printf '%s\n' "$output" >&2
-    return 1
-  fi
+  open_deep_link
+}
 
-  session_open=1
+open_deep_link() {
+  local attempt output
+
+  for attempt in {1..5}; do
+    if output="$(
+      agent_device open "$app_id" "$current_deep_link" --foreground 2>&1
+    )"; then
+      session_open=1
+      return
+    fi
+
+    if [[ "$platform" != "ios" || \
+      "$output" != *"Error (COMMAND_FAILED): Simulator device failed to open"* || \
+      "$attempt" -eq 5 ]]; then
+      printf '%s\n' "$output" >&2
+      return 1
+    fi
+
+    printf 'iOS simulator refused the deep link; retrying (%d/5).\n' \
+      "$attempt" >&2
+    sleep "$attempt"
+  done
 }
 
 run_dev_replay() {
@@ -215,8 +232,7 @@ capture_all() {
 
     printf 'Capturing %s\n' "$capture_id"
     current_deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
-    run_quiet open "$app_id" "$current_deep_link" --foreground
-    session_open=1
+    open_deep_link
     run_quiet wait "id=\"$capture_id-text\"" 15000
     run_quiet wait stable 200 5000
     capture_crop "$capture_id"

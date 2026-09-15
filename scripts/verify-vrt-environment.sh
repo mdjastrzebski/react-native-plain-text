@@ -73,6 +73,7 @@ case "$platform" in
       fail "Invalid Android system image package: $ANDROID_SYSTEM_IMAGE"
 
     record profile "$ANDROID_VRT_PROFILE"
+    record baseline_profile "$ANDROID_VRT_BASELINE_PROFILE"
     expect emulator_version "$ANDROID_EMULATOR_VERSION" \
       "$(installed_android_sdk_package_version "$android_sdk_root" emulator)"
     record system_image "$ANDROID_SYSTEM_IMAGE"
