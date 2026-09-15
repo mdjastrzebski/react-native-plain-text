@@ -38,24 +38,28 @@ command -v agent-device >/dev/null 2>&1 || \
 
 case "$platform" in
   android)
-    target_args=(--device "$ANDROID_AVD_NAME")
-    devices_output="$(agent-device devices --platform android --json)"
-    resolved_device="$(
-      jq -r --arg configured "$ANDROID_AVD_NAME" '
-        [
-          .data.devices[]
-          | select(.booted)
-          | select(
-              .id == $configured
-              or .name == $configured
-              or (.name | gsub(" "; "_")) == $configured
-            )
-          | .id
-        ][0] // empty
-      ' <<< "$devices_output"
-    )"
-    if [[ -n "$resolved_device" ]]; then
-      target_args=(--serial "$resolved_device")
+    if [[ -n "${ANDROID_SERIAL:-}" ]]; then
+      target_args=(--serial "$ANDROID_SERIAL")
+    else
+      target_args=(--device "$ANDROID_AVD_NAME")
+      devices_output="$(agent-device devices --platform android --json)"
+      resolved_device="$(
+        jq -r --arg configured "$ANDROID_AVD_NAME" '
+          [
+            .data.devices[]
+            | select(.booted)
+            | select(
+                .id == $configured
+                or .name == $configured
+                or (.name | gsub(" "; "_")) == $configured
+              )
+            | .id
+          ][0] // empty
+        ' <<< "$devices_output"
+      )"
+      if [[ -n "$resolved_device" ]]; then
+        target_args=(--serial "$resolved_device")
+      fi
     fi
     ;;
   ios) target_args=(--device "$IOS_SIMULATOR_NAME") ;;

@@ -108,12 +108,15 @@ reuses a matching booted device so it does not disrupt development. CI caches
 the immutable Android system image and CocoaPods dependencies, but never
 caches mutable emulator or simulator state.
 
-Android VRT uses the Linux runner's KVM acceleration and the API 36 x86_64
-image in CI, while local Apple Silicon runs keep the arm64 image. The CI capture
-has its own truthful environment/profile name but compares with the reviewed
-arm64 baseline through
-`ANDROID_VRT_BASELINE_PROFILE`; both images use the same Android API, system
-image revision, device profile, resolution, density, and software renderer.
+Android VRT uses `reactivecircus/android-emulator-runner` with the Linux
+runner's KVM acceleration and the API 36 x86_64 image in CI. The action owns
+AVD creation, boot, and teardown; the repository scripts normalize the booted
+device and run the same Release build, capture, and comparison stages used
+locally. Local Apple Silicon runs keep the arm64 image. The CI capture has its
+own truthful environment/profile name but compares with the reviewed arm64
+baseline through `ANDROID_VRT_BASELINE_PROFILE`; both images use the same
+Android API, system image revision, device profile, resolution, density, and
+software renderer.
 
 Android SDK revisions are fail-closed constraints. `sdkmanager` can install
 only the revision currently published for an emulator or system-image package,

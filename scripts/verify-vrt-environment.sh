@@ -40,7 +40,12 @@ expect() {
 : > "$metadata_file"
 record platform "$platform"
 expect host_architecture "$VRT_HOST_ARCHITECTURE" "$(uname -m)"
-record host_os "$(sw_vers -productVersion) ($(sw_vers -buildVersion))"
+case "$(uname -s)" in
+  Darwin) host_os="$(sw_vers -productVersion) ($(sw_vers -buildVersion))" ;;
+  Linux) host_os="$(. /etc/os-release && printf '%s' "$PRETTY_NAME")" ;;
+  *) host_os="$(uname -sr)" ;;
+esac
+record host_os "$host_os"
 expect agent_device_version "$VRT_AGENT_DEVICE_VERSION" \
   "$(agent-device --version)"
 
@@ -76,6 +81,8 @@ case "$platform" in
     record baseline_profile "$ANDROID_VRT_BASELINE_PROFILE"
     expect emulator_version "$ANDROID_EMULATOR_VERSION" \
       "$(installed_android_sdk_package_version "$android_sdk_root" emulator)"
+    expect emulator_build "$ANDROID_EMULATOR_BUILD" \
+      "$(installed_android_sdk_package_build "$android_sdk_root" emulator)"
     record system_image "$ANDROID_SYSTEM_IMAGE"
     expect system_image_revision "$ANDROID_SYSTEM_IMAGE_REVISION" \
       "$(installed_android_sdk_package_version "$android_sdk_root" "$ANDROID_SYSTEM_IMAGE")"

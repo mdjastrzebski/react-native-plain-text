@@ -29,11 +29,19 @@ jobs:
       # CI uses the equivalent x86_64 image supported by hosted Linux runners
       # and explicitly compares it with the reviewed cross-ABI baseline.
       VRT_HOST_ARCHITECTURE: x86_64
+      ANDROID_API_LEVEL: 36
       ANDROID_AVD_NAME: plaintext_vrt_api36_pixel9_x86_64
       ANDROID_VRT_PROFILE: plaintext_vrt_api36_pixel9_x86_64
       ANDROID_VRT_BASELINE_PROFILE: plaintext_vrt_api36_pixel9_arm64_v8a
+      ANDROID_DEVICE_TYPE: pixel_9
       ANDROID_SYSTEM_IMAGE: system-images;android-36;google_apis_playstore;x86_64
       ANDROID_RUNTIME: API 36 Google Play x86_64
+      ANDROID_EMULATOR_BUILD: 15917651
+      ANDROID_RESOLUTION: 1080x2400
+      ANDROID_DENSITY: 420
+      ANDROID_FONT_SCALE: 1
+      ANDROID_LOCALE: en-US
+      ANDROID_TIMEZONE: UTC
       ANDROID_EMULATOR_HEADLESS: 1
       VRT_RESET_DEVICE: 1
 
@@ -86,10 +94,35 @@ jobs:
           path: ${{ steps.android-vrt-system-image.outputs.path }}
           key: ${{ steps.android-vrt-system-image.outputs.key }}
 
-      # The shared command sets up a clean emulator, builds the Release app,
-      # syncs baselines, captures specimens, and runs reg-cli.
       - name: Run Android visual regression tests
-        run: yarn vrt:android
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          target: google_apis_playstore
+          arch: x86_64
+          profile: ${{ env.ANDROID_DEVICE_TYPE }}
+          cores: 4
+          avd-name: ${{ env.ANDROID_AVD_NAME }}
+          force-avd-creation: true
+          emulator-build: ${{ env.ANDROID_EMULATOR_BUILD }}
+          emulator-options: >-
+            -no-window
+            -gpu swiftshader
+            -no-metrics
+            -no-boot-anim
+            -no-snapshot
+            -prop persist.sys.locale=${{ env.ANDROID_LOCALE }}
+            -skin ${{ env.ANDROID_RESOLUTION }}
+            -timezone ${{ env.ANDROID_TIMEZONE }}
+            -wipe-data
+            -noaudio
+          disable-animations: true
+          disable-linux-hw-accel: false
+          script: |
+            scripts/configure-android-vrt-device.sh
+            scripts/verify-vrt-environment.sh android
+            yarn vrt:android run
+            yarn vrt:android test
 
       - name: Upload Android visual regression results
         if: always()

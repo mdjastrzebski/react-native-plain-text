@@ -113,6 +113,9 @@ fi
 
 [[ "$installed_emulator_version" == "$ANDROID_EMULATOR_VERSION" ]] || fail \
   "Android Emulator $ANDROID_EMULATOR_VERSION is required, but sdkmanager provides ${installed_emulator_version:-none}. sdkmanager cannot select a historical revision; update the VRT profile and baselines intentionally."
+installed_emulator_build="$(installed_android_sdk_package_build "$ANDROID_SDK_ROOT" emulator)"
+[[ "$installed_emulator_build" == "$ANDROID_EMULATOR_BUILD" ]] || fail \
+  "Android Emulator build $ANDROID_EMULATOR_BUILD is required, but build ${installed_emulator_build:-none} is installed. Update the VRT profile and baselines intentionally."
 [[ -x "$emulator" ]] || fail "Android Emulator was not installed at $emulator."
 
 avdmanager_has_device_type() {
@@ -269,17 +272,7 @@ fi
 printf 'Waiting for %s to finish booting...\n' "$running_serial"
 for _ in {1..120}; do
   if [[ "$("$adb" -s "$running_serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; then
-    "$adb" -s "$running_serial" shell wm size "$ANDROID_RESOLUTION"
-    "$adb" -s "$running_serial" shell wm density "$ANDROID_DENSITY"
-    "$adb" -s "$running_serial" shell settings put system font_scale "$ANDROID_FONT_SCALE"
-    "$adb" -s "$running_serial" shell settings put system accelerometer_rotation 0
-    "$adb" -s "$running_serial" shell settings put system user_rotation 0
-    "$adb" -s "$running_serial" shell settings put global window_animation_scale 0
-    "$adb" -s "$running_serial" shell settings put global transition_animation_scale 0
-    "$adb" -s "$running_serial" shell settings put global animator_duration_scale 0
-    "$adb" -s "$running_serial" shell cmd uimode night no
-    "$adb" -s "$running_serial" shell settings put system system_locales "$ANDROID_LOCALE"
-    "$adb" -s "$running_serial" shell cmd alarm set-timezone "$ANDROID_TIMEZONE"
+    ANDROID_SERIAL="$running_serial" "$SCRIPT_DIR/configure-android-vrt-device.sh"
     printf 'Android VRT emulator is ready: %s (%s)\n' "$ANDROID_AVD_NAME" "$running_serial"
     printf 'Profile: %s, %s, %s at %s dpi, font scale %s, %s, %s\n' \
       "$ANDROID_VRT_PROFILE" \

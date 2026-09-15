@@ -57,7 +57,7 @@ run_setup() {
 run_app() {
   case "$platform" in
     android)
-      yarn android:release --device "$ANDROID_AVD_NAME"
+      yarn android:release --device "${ANDROID_SERIAL:-$ANDROID_AVD_NAME}"
       ;;
     ios)
       yarn ios:release --device "$IOS_SIMULATOR_NAME"
