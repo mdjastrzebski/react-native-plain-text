@@ -12,6 +12,11 @@ fail() {
   exit 1
 }
 
+case "$VRT_RESET_DEVICE" in
+  0 | 1) ;;
+  *) fail "VRT_RESET_DEVICE must be '0' or '1'." ;;
+esac
+
 command -v xcrun >/dev/null 2>&1 || fail "Xcode Command Line Tools are not installed."
 xcrun xcodebuild -version >/dev/null 2>&1 || fail "Select a full Xcode installation with xcode-select."
 
@@ -62,16 +67,21 @@ state="$(
     | sed -E 's/.*\(([^()]*)\)[[:space:]]*$/\1/'
 )"
 
-if [[ "$state" == "Booted" ]]; then
+if [[ "$state" == "Booted" && "$VRT_RESET_DEVICE" == "1" ]]; then
   printf 'Shutting down simulator %s...\n' "$IOS_SIMULATOR_NAME"
   xcrun simctl shutdown "$simulator_udid"
+  state="Shutdown"
 fi
 
-printf 'Erasing simulator %s...\n' "$IOS_SIMULATOR_NAME"
-xcrun simctl erase "$simulator_udid"
+if [[ "$VRT_RESET_DEVICE" == "1" ]]; then
+  printf 'Erasing simulator %s...\n' "$IOS_SIMULATOR_NAME"
+  xcrun simctl erase "$simulator_udid"
+fi
 
-printf 'Booting simulator %s...\n' "$IOS_SIMULATOR_NAME"
-xcrun simctl boot "$simulator_udid"
+if [[ "$state" != "Booted" ]]; then
+  printf 'Booting simulator %s...\n' "$IOS_SIMULATOR_NAME"
+  xcrun simctl boot "$simulator_udid"
+fi
 xcrun simctl bootstatus "$simulator_udid" -b
 xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLanguages \
   -array "$IOS_LANGUAGE"

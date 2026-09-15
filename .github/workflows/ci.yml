@@ -92,8 +92,10 @@ jobs:
     timeout-minutes: 60
     env:
       # Keep the shared VRT profile intact. Only suppress the emulator window
-      # because GitHub-hosted runners have no interactive desktop.
+      # because GitHub-hosted runners have no interactive desktop. CI also
+      # starts from erased device state; local setup preserves developer state.
       ANDROID_EMULATOR_HEADLESS: 1
+      VRT_RESET_DEVICE: 1
 
     steps:
       - name: Checkout
@@ -157,6 +159,7 @@ jobs:
       # Match the Xcode and iOS runtime used to produce the checked-in profile.
       DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
       OPEN_SIMULATOR: 0
+      VRT_RESET_DEVICE: 1
 
     steps:
       - name: Checkout

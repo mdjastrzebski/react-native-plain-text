@@ -19,6 +19,11 @@ case "$ANDROID_EMULATOR_HEADLESS" in
   *) fail "ANDROID_EMULATOR_HEADLESS must be '0' or '1'." ;;
 esac
 
+case "$VRT_RESET_DEVICE" in
+  0 | 1) ;;
+  *) fail "VRT_RESET_DEVICE must be '0' or '1'." ;;
+esac
+
 find_android_sdk() {
   if [[ -n "${ANDROID_HOME:-}" ]]; then
     printf '%s\n' "$ANDROID_HOME"
@@ -92,8 +97,12 @@ avdmanager="$(find_sdk_tool avdmanager)"
 emulator="$ANDROID_SDK_ROOT/emulator/emulator"
 adb="$ANDROID_SDK_ROOT/platform-tools/adb"
 
-[[ -x "$emulator" ]] || fail "Android Emulator not found at $emulator."
-[[ -x "$adb" ]] || fail "adb not found at $adb."
+if [[ -z "$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" platform-tools)" ]]; then
+  printf 'Installing Android SDK Platform-Tools...\n'
+  install_sdk_package "$sdkmanager" platform-tools
+fi
+
+[[ -x "$adb" ]] || fail "adb was not installed at $adb."
 
 installed_emulator_version="$(installed_android_sdk_package_version "$ANDROID_SDK_ROOT" emulator)"
 if [[ "$installed_emulator_version" != "$ANDROID_EMULATOR_VERSION" ]]; then
@@ -103,7 +112,8 @@ if [[ "$installed_emulator_version" != "$ANDROID_EMULATOR_VERSION" ]]; then
 fi
 
 [[ "$installed_emulator_version" == "$ANDROID_EMULATOR_VERSION" ]] || fail \
-  "Android Emulator $ANDROID_EMULATOR_VERSION is required, but sdkmanager provides ${installed_emulator_version:-none}. Update the VRT profile and baselines intentionally."
+  "Android Emulator $ANDROID_EMULATOR_VERSION is required, but sdkmanager provides ${installed_emulator_version:-none}. sdkmanager cannot select a historical revision; update the VRT profile and baselines intentionally."
+[[ -x "$emulator" ]] || fail "Android Emulator was not installed at $emulator."
 
 avdmanager_has_device_type() {
   local candidate="$1"
@@ -152,6 +162,9 @@ installed_system_image_revision="$(installed_android_sdk_package_version "$ANDRO
 [[ "$installed_system_image_revision" == "$ANDROID_SYSTEM_IMAGE_REVISION" ]] || fail \
   "Android system image revision $ANDROID_SYSTEM_IMAGE_REVISION is required, but revision ${installed_system_image_revision:-none} is installed. Update the VRT profile and baselines intentionally."
 
+android_avd_home="${ANDROID_AVD_HOME:-${ANDROID_USER_HOME:-$HOME/.android}/avd}"
+avd_config="$android_avd_home/$ANDROID_AVD_NAME.avd/config.ini"
+
 if ! "$avdmanager" list avd | grep -F "Name: $ANDROID_AVD_NAME" >/dev/null; then
   printf 'Creating AVD %s...\n' "$ANDROID_AVD_NAME"
   printf 'no\n' | "$avdmanager" create avd \
@@ -159,6 +172,17 @@ if ! "$avdmanager" list avd | grep -F "Name: $ANDROID_AVD_NAME" >/dev/null; then
     --name "$ANDROID_AVD_NAME" \
     --package "$ANDROID_SYSTEM_IMAGE" \
     --device "$ANDROID_DEVICE_TYPE"
+else
+  [[ -f "$avd_config" ]] || fail "Configuration for AVD '$ANDROID_AVD_NAME' was not found at $avd_config."
+
+  expected_image_sysdir="$(tr ';' '/' <<< "$ANDROID_SYSTEM_IMAGE")/"
+  actual_image_sysdir="$(awk -F '=' '$1 ~ /^[[:space:]]*image\.sysdir\.1[[:space:]]*$/ { value = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); print value; exit }' "$avd_config")"
+  actual_device_type="$(awk -F '=' '$1 ~ /^[[:space:]]*hw\.device\.name[[:space:]]*$/ { value = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); print value; exit }' "$avd_config")"
+
+  [[ "$actual_image_sysdir" == "$expected_image_sysdir" ]] || fail \
+    "AVD '$ANDROID_AVD_NAME' uses '${actual_image_sysdir:-an unknown system image}', not '$expected_image_sysdir'. Rename the AVD or recreate it intentionally."
+  [[ "$actual_device_type" == "$ANDROID_DEVICE_TYPE" ]] || fail \
+    "AVD '$ANDROID_AVD_NAME' uses device type '${actual_device_type:-unknown}', not '$ANDROID_DEVICE_TYPE'. Rename the AVD or recreate it intentionally."
 fi
 
 find_running_serial() {
@@ -176,17 +200,41 @@ find_running_serial() {
 
 running_serial="$(find_running_serial)"
 
+if [[ -n "$running_serial" && "$VRT_RESET_DEVICE" == "1" ]]; then
+  printf 'Stopping AVD %s before the CI reset...\n' "$ANDROID_AVD_NAME"
+  "$adb" -s "$running_serial" emu kill >/dev/null
+
+  for _ in {1..30}; do
+    running_serial="$(find_running_serial)"
+    [[ -z "$running_serial" ]] && break
+    sleep 1
+  done
+
+  [[ -z "$running_serial" ]] || fail "Android emulator $running_serial did not stop."
+fi
+
 if [[ -z "$running_serial" ]]; then
+  emulator_gpu="auto"
+  if [[ "$ANDROID_EMULATOR_HEADLESS" == "1" ]]; then
+    # Headless CI runners do not provide a reliable host graphics context.
+    # Use the emulator's software renderer instead of leaving auto-selection
+    # to choose a renderer that may require a window server.
+    emulator_gpu="swiftshader"
+  fi
+
   emulator_args=(
     -avd "$ANDROID_AVD_NAME"
-    -gpu auto
+    -gpu "$emulator_gpu"
     -no-boot-anim
     -no-snapshot
     -prop "persist.sys.locale=$ANDROID_LOCALE"
     -skin "$ANDROID_RESOLUTION"
     -timezone "$ANDROID_TIMEZONE"
-    -wipe-data
   )
+
+  if [[ "$VRT_RESET_DEVICE" == "1" ]]; then
+    emulator_args+=(-wipe-data)
+  fi
 
   if [[ "$ANDROID_EMULATOR_HEADLESS" == "1" ]]; then
     emulator_args+=(-no-window -noaudio)
@@ -195,15 +243,27 @@ if [[ -z "$running_serial" ]]; then
   printf 'Starting AVD %s...\n' "$ANDROID_AVD_NAME"
   "$emulator" "${emulator_args[@]}" \
     >/tmp/react-native-plain-text-vrt-emulator.log 2>&1 &
+  emulator_pid="$!"
 
   for _ in {1..60}; do
     running_serial="$(find_running_serial)"
     [[ -n "$running_serial" ]] && break
+
+    if ! kill -0 "$emulator_pid" 2>/dev/null; then
+      emulator_status=0
+      wait "$emulator_pid" || emulator_status="$?"
+      tail -100 /tmp/react-native-plain-text-vrt-emulator.log >&2 || true
+      fail "Android emulator exited with status $emulator_status before registering with adb."
+    fi
+
     sleep 2
   done
 fi
 
-[[ -n "$running_serial" ]] || fail "No running Android emulator was found."
+if [[ -z "$running_serial" ]]; then
+  tail -100 /tmp/react-native-plain-text-vrt-emulator.log >&2 || true
+  fail "No running Android emulator was found."
+fi
 
 printf 'Waiting for %s to finish booting...\n' "$running_serial"
 for _ in {1..120}; do

@@ -5,6 +5,9 @@
 
 export VRT_HOST_ARCHITECTURE="${VRT_HOST_ARCHITECTURE:-arm64}"
 export VRT_AGENT_DEVICE_VERSION="${VRT_AGENT_DEVICE_VERSION:-0.21.0}"
+# CI starts from an erased device. Local development preserves device state so
+# setup can be rerun without disrupting an emulator or simulator in use.
+export VRT_RESET_DEVICE="${VRT_RESET_DEVICE:-0}"
 
 export ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-36}"
 export ANDROID_AVD_NAME="${ANDROID_AVD_NAME:-plaintext_vrt_api${ANDROID_API_LEVEL}_pixel9_arm64_v8a}"

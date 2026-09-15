@@ -99,12 +99,20 @@ yarn vrt:ios
 ```
 
 The setup stage verifies and records the rendering environment in
-`build/vrt/environment/<platform>.txt`. Android uses the exact emulator and
-system-image revisions declared in `scripts/vrt-config.sh`, creates an uncached
-AVD, wipes its data, and disables snapshots. iOS uses the declared Xcode and
-runtime builds, then erases the named simulator before booting it. CI caches
+`build/vrt/environment/<platform>.txt`. Android uses the emulator and
+system-image revisions declared in `scripts/vrt-config.sh` and disables
+snapshots. iOS uses the declared Xcode and runtime builds. CI sets
+`VRT_RESET_DEVICE=1`, which stops and wipes the Android emulator and shuts down
+and erases the iOS simulator before boot. Local setup preserves device data and
+reuses a matching booted device so it does not disrupt development. CI caches
 the immutable Android system image and CocoaPods dependencies, but never
 caches mutable emulator or simulator state.
+
+Android SDK revisions are fail-closed constraints. `sdkmanager` can install
+only the revision currently published for an emulator or system-image package,
+not select an older revision. If that published revision differs from
+`scripts/vrt-config.sh`, setup stops instead of capturing against an unreviewed
+environment. Update the profile and baselines intentionally.
 
 Run one stage independently when debugging or retrying a failure:
 
