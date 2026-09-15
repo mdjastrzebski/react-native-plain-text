@@ -61,6 +61,25 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
+      # Ubuntu 24.04 ships Command-Line Tools 12, whose hardware profile
+      # catalog stops at Pixel 7 Pro. The emulator runner uses the existing
+      # installation when present, so promote its pinned version before it
+      # creates the Pixel 9 AVD.
+      - name: Install Android Command-Line Tools 20
+        shell: bash
+        run: |
+          old_tools="$ANDROID_HOME/cmdline-tools/latest"
+          new_tools="$ANDROID_HOME/cmdline-tools/20.0"
+
+          "$old_tools/bin/sdkmanager" --install "cmdline-tools;20.0"
+          test -x "$new_tools/bin/avdmanager"
+
+          mv "$old_tools" "$ANDROID_HOME/cmdline-tools/runner-12.0"
+          mv "$new_tools" "$ANDROID_HOME/cmdline-tools/latest"
+
+          "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" \
+            list device | grep -A2 '"pixel_9"'
+
       # GitHub's Linux runners expose /dev/kvm, but the emulator needs explicit
       # access before it can use hardware acceleration.
       - name: Enable KVM
