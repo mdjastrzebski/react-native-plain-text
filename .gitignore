@@ -40,6 +40,7 @@ project.xcworkspace
 .settings
 local.properties
 android.iml
+.android-sdk/
 
 # Cocoapods
 #

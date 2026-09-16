@@ -28,6 +28,11 @@ current_deep_link=""
 [[ -n "$actual_dir" ]] || fail "An output directory is required."
 [[ -f "$capture_manifest" ]] || fail "Capture manifest not found at $capture_manifest."
 
+if [[ "$platform" == "android" ]]; then
+  # shellcheck source=./load-android-vrt-config.sh
+  source "$SCRIPT_DIR/load-android-vrt-config.sh"
+fi
+
 case "$dev_mode" in
   0 | 1) ;;
   *) fail "VRT_MODE_DEV must be '0' or '1'." ;;

@@ -24,26 +24,6 @@ jobs:
   vrt-android:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    env:
-      # Local Apple Silicon runs retain the arm64 defaults from vrt-config.sh.
-      # CI uses the equivalent x86_64 image supported by hosted Linux runners
-      # and explicitly compares it with the reviewed cross-ABI baseline.
-      VRT_HOST_ARCHITECTURE: x86_64
-      ANDROID_API_LEVEL: 36
-      ANDROID_AVD_NAME: plaintext_vrt_api36_pixel9_x86_64
-      ANDROID_VRT_PROFILE: plaintext_vrt_api36_pixel9_x86_64
-      ANDROID_VRT_BASELINE_PROFILE: plaintext_vrt_api36_pixel9_arm64_v8a
-      ANDROID_DEVICE_TYPE: pixel_9
-      ANDROID_SYSTEM_IMAGE: system-images;android-36;google_apis_playstore;x86_64
-      ANDROID_RUNTIME: API 36 Google Play x86_64
-      ANDROID_EMULATOR_BUILD: 15917651
-      ANDROID_RESOLUTION: 1080x2400
-      ANDROID_DENSITY: 420
-      ANDROID_FONT_SCALE: 1
-      ANDROID_LOCALE: en-US
-      ANDROID_TIMEZONE: UTC
-      ANDROID_EMULATOR_HEADLESS: 1
-      VRT_RESET_DEVICE: 1
 
     steps:
       - name: Checkout
@@ -61,25 +41,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
-      # Ubuntu 24.04 ships Command-Line Tools 12, whose hardware profile
-      # catalog stops at Pixel 7 Pro. The emulator runner uses the existing
-      # installation when present, so promote its pinned version before it
-      # creates the Pixel 9 AVD.
-      - name: Install Android Command-Line Tools 20
-        shell: bash
-        run: |
-          old_tools="$ANDROID_HOME/cmdline-tools/latest"
-          new_tools="$ANDROID_HOME/cmdline-tools/20.0"
-
-          "$old_tools/bin/sdkmanager" --install "cmdline-tools;20.0"
-          test -x "$new_tools/bin/avdmanager"
-
-          mv "$old_tools" "$ANDROID_HOME/cmdline-tools/runner-12.0"
-          mv "$new_tools" "$ANDROID_HOME/cmdline-tools/latest"
-
-          "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" \
-            list device | grep -A2 '"pixel_9"'
-
       # GitHub's Linux runners expose /dev/kvm, but the emulator needs explicit
       # access before it can use hardware acceleration.
       - name: Enable KVM
@@ -89,59 +50,17 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Resolve Android VRT system image
-        id: android-vrt-system-image
-        shell: bash
-        run: |
-          source scripts/vrt-config.sh
-          IFS=';' read -r package_type api target architecture <<< "$ANDROID_SYSTEM_IMAGE"
-
-          if [[ "$package_type" != "system-images" || -z "$api" || -z "$target" || -z "$architecture" ]]; then
-            printf 'Invalid Android system image package: %s\n' "$ANDROID_SYSTEM_IMAGE" >&2
-            exit 1
-          fi
-
-          printf 'path=%s/system-images/%s/%s/%s\n' \
-            "$ANDROID_HOME" "$api" "$target" "$architecture" >> "$GITHUB_OUTPUT"
-          printf 'key=android-system-image-v1-%s-%s-%s-%s-%s\n' \
-            "$RUNNER_OS" "$RUNNER_ARCH" "$api" "$target" \
-            "$architecture-revision-$ANDROID_SYSTEM_IMAGE_REVISION" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Android VRT system image
+      - name: Cache Android VRT SDK and AVD
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          path: ${{ steps.android-vrt-system-image.outputs.path }}
-          key: ${{ steps.android-vrt-system-image.outputs.key }}
+          path: .android-sdk
+          key: android-vrt-sdk-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('emulator.config.json', 'vendor/vrt-android-utils-0.1.0.tgz', 'yarn.lock') }}
+
+      - name: Validate Android emulator configuration
+        run: yarn vrt-emulator validate
 
       - name: Run Android visual regression tests
-        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
-        with:
-          api-level: ${{ env.ANDROID_API_LEVEL }}
-          target: google_apis_playstore
-          arch: x86_64
-          profile: ${{ env.ANDROID_DEVICE_TYPE }}
-          cores: 4
-          avd-name: ${{ env.ANDROID_AVD_NAME }}
-          force-avd-creation: true
-          emulator-build: ${{ env.ANDROID_EMULATOR_BUILD }}
-          emulator-options: >-
-            -no-window
-            -gpu swiftshader
-            -no-metrics
-            -no-boot-anim
-            -no-snapshot
-            -prop persist.sys.locale=${{ env.ANDROID_LOCALE }}
-            -skin ${{ env.ANDROID_RESOLUTION }}
-            -timezone ${{ env.ANDROID_TIMEZONE }}
-            -wipe-data
-            -noaudio
-          disable-animations: true
-          disable-linux-hw-accel: false
-          script: |
-            scripts/configure-android-vrt-device.sh
-            scripts/verify-vrt-environment.sh android
-            yarn vrt:android run
-            yarn vrt:android test
+        run: yarn vrt:android:emulator
 
       - name: Upload Android visual regression results
         if: always()
@@ -150,7 +69,7 @@ jobs:
           name: vrt-android-${{ github.run_attempt }}
           path: |
             build/vrt
-            /tmp/react-native-plain-text-vrt-emulator.log
+            .android-sdk/avd/*.log
           if-no-files-found: ignore
           retention-days: 7
 

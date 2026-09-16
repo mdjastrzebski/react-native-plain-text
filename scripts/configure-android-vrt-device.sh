@@ -3,9 +3,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # shellcheck source=./vrt-config.sh
 source "$SCRIPT_DIR/vrt-config.sh"
+# shellcheck source=./load-android-vrt-config.sh
+source "$SCRIPT_DIR/load-android-vrt-config.sh"
 
 fail() {
   printf 'Error: %s\n' "$*" >&2

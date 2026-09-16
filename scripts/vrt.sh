@@ -32,32 +32,42 @@ case "$platform" in
   *) fail "Platform must be 'android' or 'ios'." ;;
 esac
 
+if [[ "$platform" == "android" ]]; then
+  # shellcheck source=./load-android-vrt-config.sh
+  source "$SCRIPT_DIR/load-android-vrt-config.sh"
+fi
+
 case "$stage" in
   all | setup | run | test) ;;
   *) fail "Stage must be 'all', 'setup', 'run', or 'test'." ;;
 esac
 
 run_setup() {
-  local setup_script setup_status
+  local setup_status
 
   case "$platform" in
-    android) setup_script="$SCRIPT_DIR/setup-android-emulator.sh" ;;
-    ios) setup_script="$SCRIPT_DIR/setup-ios-simulator.sh" ;;
+    android)
+      printf 'Use yarn vrt:android:emulator for the managed Android lifecycle.\n' >&2
+      return 1
+      ;;
+    ios)
+      if "$SCRIPT_DIR/setup-ios-simulator.sh"; then
+        "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"
+      else
+        setup_status=$?
+        "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform" || true
+        return "$setup_status"
+      fi
+      ;;
   esac
-
-  if "$setup_script"; then
-    "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"
-  else
-    setup_status=$?
-    "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform" || true
-    return "$setup_status"
-  fi
 }
 
 run_app() {
   case "$platform" in
     android)
-      yarn android:release --device "${ANDROID_SERIAL:-$ANDROID_AVD_NAME}"
+      # Expo resolves --device by AVD name, not by the adb serial supplied by
+      # vrt-emulator. Its selected device still carries emulator-5554 as pid.
+      yarn android:release --device "$ANDROID_AVD_NAME"
       ;;
     ios)
       yarn ios:release --device "$IOS_SIMULATOR_NAME"
@@ -175,6 +185,10 @@ run_test() {
 }
 
 cd "$PROJECT_ROOT"
+
+if [[ "$platform" == "android" && "$stage" == "all" ]]; then
+  exec yarn vrt:android:emulator
+fi
 
 case "$stage" in
   all)

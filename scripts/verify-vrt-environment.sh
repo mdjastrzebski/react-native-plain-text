@@ -19,6 +19,11 @@ platform="${1:-}"
 [[ "$platform" == "android" || "$platform" == "ios" ]] || \
   fail "Platform must be 'android' or 'ios'."
 
+if [[ "$platform" == "android" ]]; then
+  # shellcheck source=./load-android-vrt-config.sh
+  source "$SCRIPT_DIR/load-android-vrt-config.sh"
+fi
+
 metadata_dir="$PROJECT_ROOT/build/vrt/environment"
 metadata_file="$metadata_dir/$platform.txt"
 mkdir -p "$metadata_dir"
@@ -87,14 +92,20 @@ case "$platform" in
     expect system_image_revision "$ANDROID_SYSTEM_IMAGE_REVISION" \
       "$(installed_android_sdk_package_version "$android_sdk_root" "$ANDROID_SYSTEM_IMAGE")"
 
-    running_serial=""
-    while read -r serial; do
-      running_avd_name="$($adb -s "$serial" emu avd name 2>/dev/null | sed -n '1p' | tr -d '\r')"
-      if [[ "$running_avd_name" == "$ANDROID_AVD_NAME" ]]; then
-        running_serial="$serial"
-        break
-      fi
-    done < <("$adb" devices | awk '$1 ~ /^emulator-/ && $2 == "device" { print $1 }')
+    running_serial="${ANDROID_SERIAL:-}"
+    running_avd_name=""
+    if [[ -n "$running_serial" ]]; then
+      "$adb" -s "$running_serial" get-state >/dev/null
+      running_avd_name="$($adb -s "$running_serial" emu avd name 2>/dev/null | sed -n '1p' | tr -d '\r')"
+    else
+      while read -r serial; do
+        running_avd_name="$($adb -s "$serial" emu avd name 2>/dev/null | sed -n '1p' | tr -d '\r')"
+        if [[ "$running_avd_name" == "$ANDROID_AVD_NAME" ]]; then
+          running_serial="$serial"
+          break
+        fi
+      done < <("$adb" devices | awk '$1 ~ /^emulator-/ && $2 == "device" { print $1 }')
+    fi
 
     [[ -n "$running_serial" ]] || fail \
       "The configured Android emulator '$ANDROID_AVD_NAME' is not running."

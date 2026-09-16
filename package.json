@@ -50,6 +50,7 @@
     "test:android": "node_modules/@react-native/gradle-plugin/gradlew -p android testDebugUnitTest",
     "vrt": "./scripts/vrt.sh",
     "vrt:android": "yarn vrt android",
+    "vrt:android:emulator": "vrt-emulator run -- ./scripts/run-android-vrt-ci.sh",
     "vrt:ios": "yarn vrt ios",
     "validate": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn test:cpp && yarn prepare",
     "release": "release-it --only-version"
@@ -105,7 +106,8 @@
     "release-it": "^20.2.0",
     "test-renderer": "^1.2.0",
     "turbo": "^2.9.16",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vrt-android-utils": "file:./vendor/vrt-android-utils-0.1.0.tgz"
   },
   "peerDependencies": {
     "react": "*",

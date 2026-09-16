@@ -52,6 +52,39 @@ with the specimen test ID as a query parameter. `VRT_DEV_SERVER_PORT` and
 The manifest, metadata, reports, CI lifecycle, and threshold suites below are
 possible extensions rather than requirements for the current implementation.
 
+Android emulator setup is owned by `emulator.config.json`. The local
+`vrt-android-utils` CLI prepares the isolated `.android-sdk`, creates the AVD,
+boots it, supplies `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and `ANDROID_SERIAL` to
+the lifecycle wrapper, and stops the emulator even when that wrapper fails.
+Repository scripts also derive the Android verification and capture values
+from the resolved configuration instead of duplicating them in shell or CI.
+The package-derived logical AVD name is also the capture and baseline profile,
+so it remains stable across the host-specific arm64-v8a and x86_64 images.
+Run the complete local lifecycle with:
+
+```sh
+yarn vrt:android:emulator
+```
+
+The CLI dependency comes only from the committed
+`vendor/vrt-android-utils-0.1.0.tgz` archive. It is neither fetched from npm nor
+installed from Git. To rebuild it, run the following command from the
+`vrt-android-utils` repository, replace the archive, then run `yarn install` in
+this repository to refresh the dependency and `yarn.lock`:
+
+```sh
+npm pack --pack-destination /path/to/react-native-plain-text/vendor
+```
+
+Validate the configuration without downloading SDK artifacts:
+
+```sh
+yarn vrt-emulator validate
+yarn vrt-emulator doctor
+```
+
+The `.android-sdk` directory is an ignored cache and must not be committed.
+
 ## Recommendation
 
 Use one comparison path for the first implementation:
@@ -304,7 +337,10 @@ Both native example directories are generated and ignored. Every canonical job s
 
 ### Android job
 
-Use `ubuntu-24.04`, Java 17, and a SHA-pinned `ReactiveCircus/android-emulator-runner` action.
+Use `ubuntu-24.04`, Java 17, and the repository-local `vrt-emulator` CLI.
+Keep third-party workflow actions pinned by full commit SHA. Cache the complete
+`.android-sdk` directory using `emulator.config.json`, the vendored archive,
+and `yarn.lock` as cache inputs.
 
 Generate the project before starting the emulator:
 
@@ -314,20 +350,13 @@ yarn example expo prebuild --platform android --yarn
 
 The installed Expo version recreates the native project by default. Do not pass `--no-clean` in CI.
 
-Create the AVD with:
+`emulator.config.json` creates the API 36 Pixel 9 Google Play AVD with the
+host-appropriate ABI and the pinned emulator build. Start the managed
+lifecycle with:
 
-```yaml
-api-level: 35
-target: google_apis
-arch: x86_64
-profile: pixel_6
-emulator-options: >-
-  -no-window
-  -no-snapshot
-  -noaudio
-  -no-boot-anim
-  -gpu swiftshader
-disable-animations: true
+```sh
+yarn vrt-emulator validate
+yarn vrt:android:emulator
 ```
 
 After boot, configure and verify the locked device state. Then build, install, and launch the embedded-bundle Release app:
