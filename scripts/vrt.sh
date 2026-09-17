@@ -47,8 +47,8 @@ run_setup() {
 
   case "$platform" in
     android)
-      printf 'Use yarn vrt:android:emulator for the managed Android lifecycle.\n' >&2
-      return 1
+      "$SCRIPT_DIR/configure-android-vrt-device.sh"
+      "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"
       ;;
     ios)
       if "$SCRIPT_DIR/setup-ios-simulator.sh"; then
@@ -65,8 +65,7 @@ run_setup() {
 run_app() {
   case "$platform" in
     android)
-      # Expo resolves --device by AVD name, not by the adb serial supplied by
-      # vrt-emulator. Its selected device still carries emulator-5554 as pid.
+      # Expo resolves --device by AVD name, not by its adb serial.
       yarn android:release --device "$ANDROID_AVD_NAME"
       ;;
     ios)
@@ -83,6 +82,7 @@ sync_baselines() {
 
 run_test() {
   local actual_dir baseline_dir baseline_parent creating_baseline dev_capture_id
+  local canonical_baseline_dir
   local baseline_profile comparison_status dev_mode diff_dir json_file matching_threshold
   local profile report_file
 
@@ -128,14 +128,21 @@ run_test() {
     sync_baselines
 
     baseline_parent="baselines/$platform"
-    baseline_dir="$baseline_parent/$baseline_profile"
+    canonical_baseline_dir="$baseline_parent/$baseline_profile"
 
-    if [[ -d "$baseline_dir" ]]; then
+    if [[ -d "$canonical_baseline_dir" ]]; then
       creating_baseline=0
+      baseline_parent="build/vrt/baseline-reviewed/$platform"
+      baseline_dir="$baseline_parent/$baseline_profile"
+      yarn del-cli "$baseline_dir"
+      mkdir -p "$baseline_dir"
+      cp -a "$canonical_baseline_dir/." "$baseline_dir/"
       printf 'Capturing actual images for %s/%s against baseline profile %s.\n' \
         "$platform" "$profile" "$baseline_profile"
     else
       creating_baseline=1
+      baseline_parent="baselines/$platform"
+      baseline_dir="$canonical_baseline_dir"
       printf 'No baseline found for %s/%s. Creating it in %s.\n' \
         "$platform" "$profile" "$baseline_dir"
     fi
@@ -185,10 +192,6 @@ run_test() {
 }
 
 cd "$PROJECT_ROOT"
-
-if [[ "$platform" == "android" && "$stage" == "all" ]]; then
-  exec yarn vrt:android:emulator
-fi
 
 case "$stage" in
   all)

@@ -78,11 +78,12 @@ Add tests for your change where possible.
 
 ## Visual regression testing
 
-To run the complete visual regression workflow, including device setup, the
-Release build, and agent-device captures:
+To run the complete visual regression workflow against an already running,
+matching device, including device normalization, the Release build, and
+agent-device captures:
 
 ```sh
-yarn vrt:android:emulator
+yarn vrt:android
 yarn vrt ios
 ```
 
@@ -91,48 +92,42 @@ its configured URL, and checks out the latest `origin/main` commit before
 capturing images. Git stops the update instead of overwriting uncommitted work
 inside `baselines/`.
 
-Equivalent shortcuts are available:
-
-```sh
-yarn vrt:android
-yarn vrt:ios
-```
+`yarn vrt:ios` is an equivalent shortcut for `yarn vrt ios`.
 
 The setup stage verifies and records the rendering environment in
-`build/vrt/environment/<platform>.txt`. Android emulator installation, AVD
-creation, and launch settings come from the project-owned
-`emulator.config.json`. The lifecycle prepares the isolated `.android-sdk`,
-starts the emulator, runs the checked-in wrapper, and stops the emulator even
-when a build or visual test fails. The directory is ignored and must not be
-committed. iOS continues to use the Xcode and runtime builds declared in
-`scripts/vrt-config.sh`.
+`build/vrt/environment/<platform>.txt`. Android CI uses the pinned
+[`ReactiveCircus/android-emulator-runner`](https://github.com/ReactiveCircus/android-emulator-runner)
+action to install, create, start, and stop a clean Pixel 9 AVD. The action inputs
+come from the project-owned `emulator.config.json`; the workflow does not rely
+on the action's moving defaults. iOS continues to use the Xcode and runtime
+builds declared in `scripts/vrt-config.sh`.
 
 Android scripts resolve the API, image, AVD name, host architecture, emulator
 revision, resolution, density, font scale, locale, timezone, capture profile,
 and baseline profile from `emulator.config.json`. Do not duplicate those values
 in workflow environment variables or `scripts/vrt-config.sh`.
 
-The `vrt-emulator` CLI is installed from the committed
-`vendor/vrt-android-utils-0.1.0.tgz` archive. It is not downloaded from npm or
-Git. To rebuild the archive, run this from the `vrt-android-utils` repository:
+Inspect the exact action inputs that CI will use on the current host with:
 
 ```sh
-npm pack --pack-destination /path/to/react-native-plain-text/vendor
-```
-
-Replace the existing archive, then run `yarn install` in this repository to
-refresh the local dependency and `yarn.lock`. Validate the source-of-truth
-configuration before running the lifecycle:
-
-```sh
-yarn vrt-emulator validate
-yarn vrt-emulator doctor
+./scripts/resolve-android-vrt-action-config.sh
 ```
 
 Linux CI uses KVM and the API 36 Google Play x86_64 image. Apple Silicon uses
 the matching arm64-v8a image. Both hosts use the package-derived logical AVD
 name as the capture and baseline profile. The logical name intentionally omits
-the host ABI.
+the host ABI. Because the system-image architecture and host GPU stack differ,
+Apple Silicon output can be useful for iteration but is not expected to be
+pixel-identical to Linux CI.
+
+Every Android CI run prints and uploads the action inputs, raw AVD configuration,
+emulator command line and version, installed SDK packages, system-image metadata,
+host and KVM information, Android properties and settings, display and renderer
+state, and system-font checksums under `build/vrt/environment/android-details/`.
+The artifact also contains the reviewed baseline used by the comparison, the
+actual capture, diff, report, and a candidate baseline copied from the capture.
+Candidate baselines are never committed automatically; review one before
+promoting it to the baseline repository.
 
 Run the build or comparison stage independently against an already running,
 configured emulator when debugging or retrying a failure:

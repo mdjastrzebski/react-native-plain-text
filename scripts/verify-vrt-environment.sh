@@ -89,7 +89,8 @@ case "$platform" in
     expect emulator_build "$ANDROID_EMULATOR_BUILD" \
       "$(installed_android_sdk_package_build "$android_sdk_root" emulator)"
     record system_image "$ANDROID_SYSTEM_IMAGE"
-    expect system_image_revision "$ANDROID_SYSTEM_IMAGE_REVISION" \
+    record configured_system_image_revision "$ANDROID_SYSTEM_IMAGE_REVISION"
+    record system_image_revision \
       "$(installed_android_sdk_package_version "$android_sdk_root" "$ANDROID_SYSTEM_IMAGE")"
 
     running_serial="${ANDROID_SERIAL:-}"

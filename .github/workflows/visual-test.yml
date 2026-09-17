@@ -50,28 +50,51 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Cache Android VRT SDK and AVD
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
-        with:
-          path: .android-sdk
-          key: android-vrt-sdk-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('emulator.config.json', 'vendor/vrt-android-utils-0.1.0.tgz', 'yarn.lock') }}
-
-      - name: Validate Android emulator configuration
-        run: yarn vrt-emulator validate
+      - name: Resolve Android emulator configuration
+        id: android-vrt-config
+        run: ./scripts/resolve-android-vrt-action-config.sh | tee -a "$GITHUB_OUTPUT"
 
       - name: Run Android visual regression tests
-        run: yarn vrt:android:emulator
+        # android-emulator-runner v2.38.0. Keep this pinned: emulator setup is
+        # part of the rendering environment measured by this job.
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: ${{ steps.android-vrt-config.outputs.api_level }}
+          target: ${{ steps.android-vrt-config.outputs.target }}
+          arch: ${{ steps.android-vrt-config.outputs.arch }}
+          profile: ${{ steps.android-vrt-config.outputs.profile }}
+          cores: ${{ steps.android-vrt-config.outputs.cores }}
+          ram-size: ${{ steps.android-vrt-config.outputs.ram_size }}
+          heap-size: ${{ steps.android-vrt-config.outputs.heap_size }}
+          disk-size: ${{ steps.android-vrt-config.outputs.disk_size }}
+          avd-name: ${{ steps.android-vrt-config.outputs.avd_name }}
+          force-avd-creation: ${{ steps.android-vrt-config.outputs.force_avd_creation }}
+          emulator-boot-timeout: ${{ steps.android-vrt-config.outputs.boot_timeout }}
+          emulator-port: ${{ steps.android-vrt-config.outputs.emulator_port }}
+          emulator-options: ${{ steps.android-vrt-config.outputs.emulator_options }}
+          disable-animations: ${{ steps.android-vrt-config.outputs.disable_animations }}
+          disable-spellchecker: ${{ steps.android-vrt-config.outputs.disable_spellchecker }}
+          disable-linux-hw-accel: ${{ steps.android-vrt-config.outputs.disable_linux_hw_accel }}
+          enable-hw-keyboard: ${{ steps.android-vrt-config.outputs.enable_hw_keyboard }}
+          emulator-build: ${{ steps.android-vrt-config.outputs.emulator_build }}
+          channel: ${{ steps.android-vrt-config.outputs.channel }}
+          script: ./scripts/run-android-vrt-ci.sh
+
+      - name: Collect final Android emulator diagnostics
+        if: always()
+        run: |
+          ./scripts/collect-android-vrt-environment.sh || true
+          ./scripts/finalize-android-vrt-artifact.sh
 
       - name: Upload Android visual regression results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: vrt-android-${{ github.run_attempt }}
+          name: vrt-android-${{ github.sha }}-${{ github.run_attempt }}
           path: |
             build/vrt
-            .android-sdk/avd/*.log
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 30
 
   vrt-ios:
     runs-on: macos-26

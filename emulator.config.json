@@ -1,21 +1,11 @@
 {
-  "$schema": "./node_modules/vrt-android-utils/emulator.config.schema.json",
   "schemaVersion": 1,
   "sdk": {
-    "directory": ".android-sdk",
-    "commandLineToolsVersion": "15859902",
-    "channel": "stable",
-    "platform": "36",
-    "buildToolsVersion": "36.0.0"
+    "channel": "stable"
   },
   "emulator": {
     "version": "37.1.11",
-    "buildId": "15917651",
-    "archiveSha1ByHost": {
-      "darwin-arm64": "f22f44948a2b7f0a0103645b9a639290eef92426",
-      "darwin-x64": "7df8b0acbe915217dcbb576222bddfcc23e81230",
-      "linux-x64": "1b1f78891abf8ec268264356e1365c25519e8379"
-    }
+    "buildId": "15917651"
   },
   "systemImage": {
     "apiLevel": "36",
@@ -41,12 +31,13 @@
     "port": 5554,
     "bootTimeoutSeconds": 600,
     "headless": true,
-    "gpu": "swiftshader",
+    "gpu": "swiftshader_indirect",
     "noSnapshot": true,
     "noAudio": true,
     "noBootAnimation": true,
     "disableAnimations": true,
     "disableSpellChecker": true,
+    "disableLinuxHardwareAcceleration": false,
     "extraArgs": [
       "-no-metrics",
       "-prop",

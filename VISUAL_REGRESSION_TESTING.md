@@ -16,14 +16,16 @@ runner uses `screenshot` to write the fixed-size viewport directly to
 `build/vrt/actual/<platform>/<profile>/`. When the corresponding
 `baselines/<platform>/<profile>/` directory does not exist, the wrapper moves
 the complete PNG set there after agent-device succeeds. Once the baseline
-exists, `reg-cli` compares it with the actual images and writes diffs to
+exists, the wrapper stages a portable copy under `build/vrt/baseline-reviewed/`,
+then `reg-cli` compares it with the actual images and writes diffs to
 `build/vrt/diff/<platform>/<profile>/`.
 
 `baselines/` is a shallow Git submodule backed by
 [`react-native-plain-text-artifactory`](https://github.com/troZee/react-native-plain-text-artifactory).
 Before a production VRT test, the wrapper initializes it when needed, syncs its
-configured URL, and checks out the latest commit from `origin/main`. Actual
-captures, diffs, reports, and logs remain temporary CI artifacts outside both
+configured URL, and checks out the latest commit from `origin/main`. Reviewed
+baselines, candidate baselines, actual captures, diffs, portable reports, and
+environment logs are uploaded as temporary CI artifacts outside both
 repositories.
 
 Comparison keeps a zero pixel threshold, with `reg-cli`'s antialias detection
@@ -49,41 +51,35 @@ Android, and agent-device opens the generated `expo-development-client` URL
 with the specimen test ID as a query parameter. `VRT_DEV_SERVER_PORT` and
 `VRT_DEV_CLIENT_URL` can override those defaults.
 
-The manifest, metadata, reports, CI lifecycle, and threshold suites below are
-possible extensions rather than requirements for the current implementation.
+The manifest and threshold suites below remain possible extensions rather than
+requirements for the current implementation.
 
-Android emulator setup is owned by `emulator.config.json`. The local
-`vrt-android-utils` CLI prepares the isolated `.android-sdk`, creates the AVD,
-boots it, supplies `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and `ANDROID_SERIAL` to
-the lifecycle wrapper, and stops the emulator even when that wrapper fails.
-Repository scripts also derive the Android verification and capture values
-from the resolved configuration instead of duplicating them in shell or CI.
-The package-derived logical AVD name is also the capture and baseline profile,
-so it remains stable across the host-specific arm64-v8a and x86_64 images.
-Run the complete local lifecycle with:
-
-```sh
-yarn vrt:android:emulator
-```
-
-The CLI dependency comes only from the committed
-`vendor/vrt-android-utils-0.1.0.tgz` archive. It is neither fetched from npm nor
-installed from Git. To rebuild it, run the following command from the
-`vrt-android-utils` repository, replace the archive, then run `yarn install` in
-this repository to refresh the dependency and `yarn.lock`:
+Android emulator setup is owned by `emulator.config.json`. CI resolves that
+file into inputs for a commit-pinned
+[`ReactiveCircus/android-emulator-runner`](https://github.com/ReactiveCircus/android-emulator-runner)
+action, which creates a clean Pixel 9 AVD and owns its lifecycle. Repository
+scripts derive Android verification and capture values from the same file
+instead of duplicating them in shell or CI. The derived logical AVD name is also
+the capture and baseline profile, so it remains stable across the host-specific
+arm64-v8a and x86_64 images. Print the effective inputs for the current host
+with:
 
 ```sh
-npm pack --pack-destination /path/to/react-native-plain-text/vendor
+./scripts/resolve-android-vrt-action-config.sh
 ```
 
-Validate the configuration without downloading SDK artifacts:
+For local iteration, create and start an AVD with those values, then let the
+repository normalize and verify it before building and capturing:
 
 ```sh
-yarn vrt-emulator validate
-yarn vrt-emulator doctor
+yarn vrt:android
 ```
 
-The `.android-sdk` directory is an ignored cache and must not be committed.
+CI additionally uploads the action inputs, AVD files, emulator command and
+version, SDK packages, system-image metadata, device properties and settings,
+display and renderer state, host/KVM details, and system-font hashes. This is
+the canonical reproduction record; an Apple Silicon arm64-v8a image can still
+render differently from the Linux x86_64 CI image.
 
 ## Recommendation
 
@@ -335,10 +331,10 @@ Both native example directories are generated and ignored. Every canonical job s
 
 ### Android job
 
-Use `ubuntu-24.04`, Java 17, and the repository-local `vrt-emulator` CLI.
-Keep third-party workflow actions pinned by full commit SHA. Cache the complete
-`.android-sdk` directory using `emulator.config.json`, the vendored archive,
-and `yarn.lock` as cache inputs.
+Use `ubuntu-24.04`, Java 17, and the commit-pinned
+`ReactiveCircus/android-emulator-runner` action. Keep every third-party workflow
+action pinned by full commit SHA. Do not use AVD snapshots while calibrating the
+environment; create a clean, wiped AVD for each run.
 
 Generate the project before starting the emulator:
 
@@ -348,13 +344,12 @@ yarn example expo prebuild --platform android --yarn
 
 The installed Expo version recreates the native project by default. Do not pass `--no-clean` in CI.
 
-`emulator.config.json` creates the API 36 Pixel 9 Google Play AVD with the
-host-appropriate ABI and the pinned emulator build. Start the managed
-lifecycle with:
+`emulator.config.json` describes the API 36 Pixel 9 Google Play AVD with the
+host-appropriate ABI and pinned emulator build. CI resolves it and passes every
+supported setting to the emulator action:
 
 ```sh
-yarn vrt-emulator validate
-yarn vrt:android:emulator
+./scripts/resolve-android-vrt-action-config.sh
 ```
 
 After boot, configure and verify the locked device state. Then build, install, and launch the embedded-bundle Release app:

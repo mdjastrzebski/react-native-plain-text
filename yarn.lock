@@ -12580,7 +12580,6 @@ __metadata:
     test-renderer: "npm:^1.2.0"
     turbo: "npm:^2.9.16"
     typescript: "npm:^6.0.3"
-    vrt-android-utils: "file:./vendor/vrt-android-utils-0.1.0.tgz"
   peerDependencies:
     react: "*"
     react-native: "*"
@@ -14831,16 +14830,6 @@ __metadata:
   version: 1.0.1
   resolution: "vlq@npm:1.0.1"
   checksum: 10c0/a8ec5c95d747c840198f20b4973327fa317b98397f341e7a2f352bfcf385aeb73c0eea01cc6d406c20169298375397e259efc317aec53c8ffc001ec998204aed
-  languageName: node
-  linkType: hard
-
-"vrt-android-utils@file:./vendor/vrt-android-utils-0.1.0.tgz::locator=react-native-plain-text%40workspace%3A.":
-  version: 0.1.0
-  resolution: "vrt-android-utils@file:./vendor/vrt-android-utils-0.1.0.tgz#./vendor/vrt-android-utils-0.1.0.tgz::hash=09ef6b&locator=react-native-plain-text%40workspace%3A."
-  bin:
-    vrt-emulator: src/cli.mjs
-  checksum: 10c0/3d8a291660039eb9ee272e8bebf41f662bbfc39030440023e3eac257b4a026771a37af9aef107ab77f076f94fc15b1cfacf720bd673d71448f90a3c526e56509
-  conditions: (os=darwin | os=linux)
   languageName: node
   linkType: hard
 

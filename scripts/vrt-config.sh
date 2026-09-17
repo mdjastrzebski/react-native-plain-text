@@ -6,8 +6,8 @@
 export VRT_HOST_ARCHITECTURE="${VRT_HOST_ARCHITECTURE:-arm64}"
 export VRT_AGENT_DEVICE_VERSION="${VRT_AGENT_DEVICE_VERSION:-0.21.0}"
 # CI starts from an erased iOS simulator. Local iOS development preserves
-# simulator state so setup does not disrupt a device in use. Android lifecycle
-# isolation comes from emulator.config.json.
+# simulator state so setup does not disrupt a device in use. Android CI starts
+# from a freshly created AVD configured by emulator.config.json.
 export VRT_RESET_DEVICE="${VRT_RESET_DEVICE:-0}"
 
 export VRT_DEV_SERVER_PORT="${VRT_DEV_SERVER_PORT:-8081}"
