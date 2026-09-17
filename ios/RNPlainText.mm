@@ -136,6 +136,7 @@ using namespace plaintext;
         _label.font = font;
         _label.textColor = color;
         _label.textAlignment = alignment;
+        _label.lineBreakMode = lineBreakModeFromProp(props.ellipsizeMode);
         _label.text = text;
         _label.verticalTextShift = 0;
         _label.verticalAlignment = resolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
@@ -255,10 +256,6 @@ using namespace plaintext;
 
     if (_forceApplyProps || oldViewProps.numberOfLines != newViewProps.numberOfLines) {
         _label.numberOfLines = newViewProps.numberOfLines;
-    }
-
-    if (_forceApplyProps || oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode) {
-        _label.lineBreakMode = lineBreakModeFromProp(newViewProps.ellipsizeMode);
     }
 
     _forceApplyProps = NO;
