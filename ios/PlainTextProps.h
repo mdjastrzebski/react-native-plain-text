@@ -51,6 +51,8 @@ RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical t
 
 NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode);
 
+NSLineBreakStrategy lineBreakStrategyFromProp(RNPlainTextLineBreakStrategyIOS lineBreakStrategyIOS);
+
 /*
  * Mirrors RCTFont.mm's core weight map (RCTConvert RCTFontWeight): the named
  * aliases beyond "normal"/"bold" (e.g. "ultralight", "condensed") are dropped

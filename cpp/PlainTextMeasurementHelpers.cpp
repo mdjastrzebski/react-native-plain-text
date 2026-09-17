@@ -16,6 +16,7 @@ bool measurementInputsEqual(
       a.letterSpacing == b.letterSpacing &&
       a.textTransform == b.textTransform &&
       a.numberOfLines == b.numberOfLines &&
+      a.lineBreakStrategyIOS == b.lineBreakStrategyIOS &&
       a.allowFontScaling == b.allowFontScaling &&
       a.maxFontSizeMultiplier == b.maxFontSizeMultiplier &&
       a.includeFontPadding == b.includeFontPadding &&

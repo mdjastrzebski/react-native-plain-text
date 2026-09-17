@@ -42,6 +42,8 @@ most props only touch a few.
 - `textTransform`
 - `numberOfLines`
 - `ellipsizeMode`
+- `lineBreakStrategyIOS` (iOS-only — no Android setter body, no Android entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
 - `lineHeightClippingCompat` (`unstable_lineHeightClippingCompat` at the JS boundary — see
@@ -80,6 +82,7 @@ most props only touch a few.
 - `letterSpacing`
 - `textTransform`
 - `numberOfLines`
+- `lineBreakStrategyIOS` (iOS-only — see the exception below)
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
 - `includeFontPadding`
@@ -122,11 +125,23 @@ an already-scaled size, so `scaledFontSize`'s unrounded `fontSize * fontSizeMult
 [native-gotchas.md](native-gotchas.md) for why it must stay unrounded) lives in one place. `lineHeight` scales in the
 callers instead (also unrounded, matching RN), so it stays a sync point between `measureContent` and `RNPlainText.mm`.
 
+**Exception — `lineBreakStrategyIOS` only has three of the five places.** It changes where iOS wraps (`NSLineBreakStrategy`
+on the paragraph style), so it belongs in `measurementInputsEqual` and `ios/PlainTextShadowNode.mm` like any other entry
+here, and in `RNPlainText.mm`'s `applyContentFromProps` it mirrors. But Android's own line breaker has no equivalent
+knob, so it has no `PlainTextMeasurementsManager.cpp` entry and no `PlainTextViewManager.kt` `measure()` line — those two
+files' props are exactly what Android's off-screen `TextView` needs, not a mirror of the codegen struct. Its
+`PlainTextViewManager.kt` `@ReactProp` setter is required regardless (the generated interface has no per-platform
+prop list) but its body is empty, same as `lineHeightClippingCompat`'s — nothing in `PlainTextView.kt` reads it. Leaving
+it out of `measurementInputsEqual` would be the real bug, though: Android still runs that comparison to decide whether to
+re-measure at all, even though the prop can never change what it measures there.
+
 ---
 
 ## Set 3 — The three-way default contract
 
-**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list. Two flavors, both three-way:
+**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS`, which
+this set skips entirely — it is never serialized in `PlainTextMeasurementsManager.cpp`, so there is no Android default to
+agree on. Two flavors, both three-way:
 
 - Value-defaulted (a plain C++ default, not `std::optional`) — an omitted serialized key means "use this default":
   - `fontSize` (`14.0`)
@@ -160,8 +175,8 @@ callers instead (also unrounded, matching RN), so it stays a sync point between 
 
 ## Set 4 — The reused measuring view (Android)
 
-**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list — all of them must be (re-)applied on
-every `measure()` call, since the view is shared across nodes.
+**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS` (see that
+set's exception) — all of them must be (re-)applied on every `measure()` call, since the view is shared across nodes.
 
 `PlainTextViewManager.measure()` sizes one shared off-screen view rather than a fresh one per node (see
 [performance.md](performance.md)). Three invariants hold because of that, only one of them enforced:
@@ -347,7 +362,7 @@ Only the invalidation logic is genuinely shared, in `cpp/PlainTextMeasurementHel
 **Props:** every prop `applyContentFromProps` applies to `_label` — text (`text`, `textTransform`), font (`fontFamily`,
 `fontSize`, `fontWeight`, `fontStyle`, `fontVariant`, `fontVariationSettings`, `allowFontScaling`,
 `maxFontSizeMultiplier`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`),
-`letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`, plus the shadow props
+`letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`, `lineBreakStrategyIOS`, plus the shadow props
 (`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`, `textShadowRadius`) — i.e. Set 2's list plus
 every draw-only prop from [Set 1](#set-1--any-prop-the-four-layer-flow).
 

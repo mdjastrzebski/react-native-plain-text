@@ -89,8 +89,6 @@ using namespace plaintext;
 {
   if (self = [super initWithFrame:frame]) {
     _label = [[RNPlainTextLabel alloc] init];
-    // UILabel's default NSLineBreakStrategyStandard wraps earlier than measureContent's boundingRectWithSize:, so disable it to match measurement and RN <Text>.
-    _label.lineBreakStrategy = NSLineBreakStrategyNone;
 
     // _props must hold RNPlainTextProps from the start since -updateProps and -traitCollectionDidChange both static_pointer_cast it.
     static const auto defaultProps = std::make_shared<const RNPlainTextProps>();
@@ -174,8 +172,10 @@ using namespace plaintext;
 
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     paragraphStyle.alignment = alignment;
-    // A paragraph style overrides the label's own lineBreakMode, so carry ellipsizeMode into it too.
+    // A paragraph style overrides the label's own lineBreakMode/lineBreakStrategy, so carry
+    // ellipsizeMode/lineBreakStrategyIOS into it too.
     paragraphStyle.lineBreakMode = lineBreakModeFromProp(props.ellipsizeMode);
+    paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
 
     CGFloat verticalTextShift = 0;
     if (hasLineHeight) {
@@ -225,7 +225,8 @@ using namespace plaintext;
     const auto &oldViewProps = *std::static_pointer_cast<RNPlainTextProps const>(_props);
     const auto &newViewProps = *std::static_pointer_cast<RNPlainTextProps const>(props);
 
-    // These all feed applyContentFromProps since they may share an attributed string (ellipsizeMode via its paragraph style).
+    // These all feed applyContentFromProps since they may share an attributed string
+    // (ellipsizeMode/lineBreakStrategyIOS via its paragraph style).
     if (_forceApplyProps ||
         oldViewProps.text != newViewProps.text ||
         oldViewProps.fontSize != newViewProps.fontSize ||
@@ -247,6 +248,7 @@ using namespace plaintext;
         oldViewProps.textShadowRadius != newViewProps.textShadowRadius ||
         oldViewProps.textTransform != newViewProps.textTransform ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
+        oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||
         oldViewProps.maxFontSizeMultiplier != newViewProps.maxFontSizeMultiplier ||
         oldViewProps.lineHeightClippingCompat != newViewProps.lineHeightClippingCompat) {
@@ -259,6 +261,14 @@ using namespace plaintext;
 
     if (_forceApplyProps || oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode) {
         _label.lineBreakMode = lineBreakModeFromProp(newViewProps.ellipsizeMode);
+    }
+
+    // UILabel's own default (NSLineBreakStrategyStandard) wraps earlier than
+    // measureContent's boundingRectWithSize:, so this must always be set explicitly
+    // rather than left at UILabel's factory default, even for lineBreakStrategyIOS's
+    // own default value ("none").
+    if (_forceApplyProps || oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS) {
+        _label.lineBreakStrategy = lineBreakStrategyFromProp(newViewProps.lineBreakStrategyIOS);
     }
 
     _forceApplyProps = NO;

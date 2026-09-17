@@ -12,6 +12,7 @@ export type PlainTextProps = AccessibilityProps & {
   style?: StyleProp<PlainTextStyle>;
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
+  lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
   testID?: string;
@@ -31,6 +32,7 @@ export function mapPlainTextProps({
   style,
   numberOfLines,
   ellipsizeMode,
+  lineBreakStrategyIOS,
   allowFontScaling,
   maxFontSizeMultiplier,
   unstable_lineHeightClippingCompat,
@@ -81,6 +83,7 @@ export function mapPlainTextProps({
     letterSpacing,
     numberOfLines,
     ellipsizeMode,
+    lineBreakStrategyIOS,
     allowFontScaling,
     maxFontSizeMultiplier,
     includeFontPadding,

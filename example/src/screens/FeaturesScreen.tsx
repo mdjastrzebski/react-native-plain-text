@@ -434,6 +434,20 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      <Section title="Line Break Strategy (iOS-only)" footer={LINE_BREAK_STRATEGY_FOOTER}>
+        {LINE_BREAK_STRATEGIES.map((lineBreakStrategyIOS) => (
+          <TextItem
+            key={lineBreakStrategyIOS}
+            label={lineBreakStrategyIOS}
+            showText={showText}
+            lineBreakStrategyIOS={lineBreakStrategyIOS}
+            style={styles.body}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH}
+          </TextItem>
+        ))}
+      </Section>
       <Section title="Text Decoration Line">
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
           <TextItem
@@ -949,6 +963,8 @@ const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'] as const;
 
 const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 
+const LINE_BREAK_STRATEGIES = ['none', 'standard', 'hangul-word', 'push-out'] as const;
+
 const LINE_HEIGHTS = [18, 26, 36];
 
 // Same lineHeight/fontSize ratio (0.8) at each size, paired 1:1 with REALWORLD_FONTS.
@@ -1372,4 +1388,9 @@ const ANIMATING_TEXT_FOOTER =
 const FONT_PADDING_FOOTER = Platform.select({
   ios: 'Both rows should look identical here.',
   default: 'The second row should sit noticeably tighter against the padding edge than the first.',
+});
+
+const LINE_BREAK_STRATEGY_FOOTER = Platform.select({
+  ios: '"standard" avoids leaving a short last line by pulling a word up from the line above.',
+  default: 'No effect on Android: all four rows should look identical.',
 });

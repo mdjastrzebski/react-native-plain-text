@@ -98,6 +98,20 @@ NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
     }
 }
 
+NSLineBreakStrategy lineBreakStrategyFromProp(RNPlainTextLineBreakStrategyIOS lineBreakStrategyIOS)
+{
+    switch (lineBreakStrategyIOS) {
+        case RNPlainTextLineBreakStrategyIOS::None:
+            return NSLineBreakStrategyNone;
+        case RNPlainTextLineBreakStrategyIOS::Standard:
+            return NSLineBreakStrategyStandard;
+        case RNPlainTextLineBreakStrategyIOS::HangulWord:
+            return NSLineBreakStrategyHangulWordPriority;
+        case RNPlainTextLineBreakStrategyIOS::PushOut:
+            return NSLineBreakStrategyPushOut;
+    }
+}
+
 RCTFontWeight fontWeightFromProp(const std::string &fontWeight)
 {
     if (fontWeight == "normal" || fontWeight == "400") {

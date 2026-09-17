@@ -7,6 +7,7 @@
 | `allowFontScaling`      | ✅                     |                                                                                    |
 | `children`              | 🟡                     | `string` only                                                                      |
 | `ellipsizeMode`         | ✅                     |                                                                                    |
+| `lineBreakStrategyIOS`  | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
 | `maxFontSizeMultiplier` | ✅                     |                                                                                    |
 | `nativeID`              | ✅                     |                                                                                    |
 | `id`                    | ✅                     |                                                                                    |
@@ -68,14 +69,14 @@ Things Plain Text does that RN `<Text>` does not:
 
 ## Planned
 
-| Prop / style                                                                  | RN `<Text>` compatible |
-| ----------------------------------------------------------------------------- | ---------------------- |
-| `adjustsFontSizeToFit` / `minimumFontScale`                                   | To Do                  |
-| `selectable` / `selectionColor` / `suppressHighlighting` / `userSelect`       | To Do                  |
-| `textDecorationColor` / `textDecorationStyle`                                 | To Do                  |
-| `writingDirection`                                                            | To Do                  |
-| `dynamicTypeRamp`                                                             | To Do                  |
-| `android_hyphenationFrequency` / `textBreakStrategy` / `lineBreakStrategyIOS` | To Do                  |
+| Prop / style                                                            | RN `<Text>` compatible |
+| ----------------------------------------------------------------------- | ---------------------- |
+| `adjustsFontSizeToFit` / `minimumFontScale`                             | To Do                  |
+| `selectable` / `selectionColor` / `suppressHighlighting` / `userSelect` | To Do                  |
+| `textDecorationColor` / `textDecorationStyle`                           | To Do                  |
+| `writingDirection`                                                      | To Do                  |
+| `dynamicTypeRamp`                                                       | To Do                  |
+| `android_hyphenationFrequency` / `textBreakStrategy`                    | To Do                  |
 
 Open an issue for the one you need. Real-world usage sets the priority.
 

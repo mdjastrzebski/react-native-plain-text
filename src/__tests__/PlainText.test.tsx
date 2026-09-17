@@ -94,12 +94,14 @@ describe('mapPlainTextProps', () => {
       mapPlainTextProps({
         numberOfLines: 3,
         ellipsizeMode: 'middle',
+        lineBreakStrategyIOS: 'hangul-word',
         allowFontScaling: false,
         maxFontSizeMultiplier: 1.4,
       })
     ).toMatchObject({
       numberOfLines: 3,
       ellipsizeMode: 'middle',
+      lineBreakStrategyIOS: 'hangul-word',
       allowFontScaling: false,
       maxFontSizeMultiplier: 1.4,
     });

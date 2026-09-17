@@ -66,6 +66,13 @@ export interface NativeProps extends ViewProps {
 
   numberOfLines?: CodegenTypes.WithDefault<CodegenTypes.Int32, 0>;
   ellipsizeMode?: CodegenTypes.WithDefault<'head' | 'middle' | 'tail' | 'clip', 'tail'>;
+
+  // iOS only, no-op on Android. Matches RN <Text>'s values/default.
+  lineBreakStrategyIOS?: CodegenTypes.WithDefault<
+    'none' | 'standard' | 'hangul-word' | 'push-out',
+    'none'
+  >;
+
   allowFontScaling?: CodegenTypes.WithDefault<boolean, true>;
   maxFontSizeMultiplier?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
 

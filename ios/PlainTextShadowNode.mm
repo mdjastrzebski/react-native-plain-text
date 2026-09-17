@@ -48,14 +48,24 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
   // The per-line height used to cap numberOfLines: the pinned lineHeight when
   // set, otherwise the font's natural line height.
   Float perLineHeight = static_cast<Float>(font.lineHeight);
-  if (props.lineHeight > 0) {
-    // Scaled by the same multiplier as the font (mirrors RNPlainText.mm).
-    CGFloat lineHeight = props.lineHeight * fontSizeMultiplier;
+  bool hasLineHeight = props.lineHeight > 0;
+  bool hasLineBreakStrategy = props.lineBreakStrategyIOS != RNPlainTextLineBreakStrategyIOS::None;
+  if (hasLineHeight || hasLineBreakStrategy) {
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
-    paragraphStyle.minimumLineHeight = lineHeight;
-    paragraphStyle.maximumLineHeight = lineHeight;
+    if (hasLineHeight) {
+      // Scaled by the same multiplier as the font (mirrors RNPlainText.mm).
+      CGFloat lineHeight = props.lineHeight * fontSizeMultiplier;
+      paragraphStyle.minimumLineHeight = lineHeight;
+      paragraphStyle.maximumLineHeight = lineHeight;
+      perLineHeight = static_cast<Float>(lineHeight);
+    }
+    if (hasLineBreakStrategy) {
+      // lineBreakStrategyIOS changes where lines wrap (e.g. "standard" avoids a
+      // short last line), so it must be applied here too, not just when drawn
+      // (RNPlainText.mm), or the measured box and rendered text disagree.
+      paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
+    }
     attributes[NSParagraphStyleAttributeName] = paragraphStyle;
-    perLineHeight = static_cast<Float>(lineHeight);
   }
 
   // Measured with the same engine that renders the UILabel (CoreText via
