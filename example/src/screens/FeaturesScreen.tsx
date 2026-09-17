@@ -460,6 +460,20 @@ export default function FeaturesScreen({ navigation }: Props) {
           ))}
         </Section>
       )}
+      <Section title="Text Break Strategy (Android-only)" footer={TEXT_BREAK_STRATEGY_FOOTER}>
+        {TEXT_BREAK_STRATEGIES.map((textBreakStrategy) => (
+          <TextItem
+            key={textBreakStrategy}
+            label={textBreakStrategy}
+            showText={showText}
+            textBreakStrategy={textBreakStrategy}
+            style={styles.body}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH_LONG}
+          </TextItem>
+        ))}
+      </Section>
       <Section title="Text Decoration Line">
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
           <TextItem
@@ -979,6 +993,13 @@ const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 
 const ORPHAN_SPECIMEN = 'The last word of this text does not fit.';
 const KOREAN_WORD_WRAP_SPECIMEN = '한글개행 한글개행 한글개행 한글개행 한글개행';
+
+const TEXT_BREAK_STRATEGIES = ['simple', 'highQuality', 'balanced'] as const;
+
+const TEXT_BREAK_STRATEGY_FOOTER = Platform.select({
+  ios: 'Android-only in RN Text; no-op here too.',
+  default: 'Word-wrap points can shift between rows, most visible at the second line break.',
+});
 
 const LINE_HEIGHTS = [18, 26, 36];
 

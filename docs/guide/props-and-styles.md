@@ -15,6 +15,7 @@
 | `onLayout`              | ✅                     |                                                                                    |
 | `testID`                | ✅                     |                                                                                    |
 | `text`                  | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
+| `textBreakStrategy`     | ✅                     | Android-only, like RN `<Text>`                                                     |
 | Accessibility props     | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
 
 RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
@@ -76,7 +77,7 @@ Things Plain Text does that RN `<Text>` does not:
 | `textDecorationColor` / `textDecorationStyle`                           | To Do                  |
 | `writingDirection`                                                      | To Do                  |
 | `dynamicTypeRamp`                                                       | To Do                  |
-| `android_hyphenationFrequency` / `textBreakStrategy`                    | To Do                  |
+| `android_hyphenationFrequency`                                          | To Do                  |
 
 Open an issue for the one you need. Real-world usage sets the priority.
 

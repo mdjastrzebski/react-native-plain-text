@@ -197,6 +197,12 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   override fun setLineBreakStrategyIOS(view: PlainTextView?, lineBreakStrategyIOS: String?) {
   }
 
+  // Android-only, matching RN <Text>.
+  @ReactProp(name = "textBreakStrategy")
+  override fun setTextBreakStrategy(view: PlainTextView?, textBreakStrategy: String?) {
+    view?.setTextBreakStrategy(textBreakStrategy)
+  }
+
   @ReactProp(name = "allowFontScaling", defaultBoolean = true)
   override fun setAllowFontScaling(view: PlainTextView?, allowFontScaling: Boolean) {
     view?.setAllowFontScaling(allowFontScaling)
@@ -280,6 +286,8 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setEllipsizeMode(props?.getString("ellipsizeMode"))
     // Adds extra ascent/descent padding per line, so it affects the measured height.
     view.includeFontPadding = props.getBooleanOr("includeFontPadding", true)
+    // Changes where wrapped text breaks, so it affects the measured height too.
+    view.setTextBreakStrategy(props?.getString("textBreakStrategy"))
     view.setPlainText(props?.getString("text") ?: "")
     // Applies the state the setters above marked dirty, in dependency order, so their
     // call order here doesn't matter.

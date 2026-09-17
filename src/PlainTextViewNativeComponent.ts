@@ -80,6 +80,13 @@ export interface NativeProps extends ViewProps {
   experiment?: CodegenTypes.WithDefault<boolean, false>;
   lineHeightClippingCompat?: CodegenTypes.WithDefault<boolean, false>;
   includeFontPadding?: CodegenTypes.WithDefault<boolean, true>;
+
+  // Android only, like RN <Text>. Affects measured height: a different break
+  // algorithm changes where wrapped text breaks.
+  textBreakStrategy?: CodegenTypes.WithDefault<
+    'simple' | 'highQuality' | 'balanced',
+    'highQuality'
+  >;
 }
 
 export default codegenNativeComponent<NativeProps>('RNPlainText', {

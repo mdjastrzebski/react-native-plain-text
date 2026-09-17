@@ -13,6 +13,8 @@ export type PlainTextProps = AccessibilityProps & {
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
+  /// Android-only, like RN <Text>.
+  textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
   testID?: string;
@@ -33,6 +35,7 @@ export function mapPlainTextProps({
   numberOfLines,
   ellipsizeMode,
   lineBreakStrategyIOS,
+  textBreakStrategy,
   allowFontScaling,
   maxFontSizeMultiplier,
   unstable_lineHeightClippingCompat,
@@ -84,6 +87,7 @@ export function mapPlainTextProps({
     numberOfLines,
     ellipsizeMode,
     lineBreakStrategyIOS,
+    textBreakStrategy,
     allowFontScaling,
     maxFontSizeMultiplier,
     includeFontPadding,

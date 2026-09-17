@@ -20,6 +20,7 @@ bool measurementInputsEqual(
       a.allowFontScaling == b.allowFontScaling &&
       a.maxFontSizeMultiplier == b.maxFontSizeMultiplier &&
       a.includeFontPadding == b.includeFontPadding &&
+      a.textBreakStrategy == b.textBreakStrategy &&
       a.experiment == b.experiment;
 }
 

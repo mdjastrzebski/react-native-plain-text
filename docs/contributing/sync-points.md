@@ -49,6 +49,7 @@ most props only touch a few.
 - `lineHeightClippingCompat` (`unstable_lineHeightClippingCompat` at the JS boundary — see
   [Set 13](#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary))
 - `includeFontPadding`
+- `textBreakStrategy`
 - `experiment` (internal-only)
 
 **Files, every prop touches these at minimum:**
@@ -86,6 +87,7 @@ most props only touch a few.
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
 - `includeFontPadding`
+- `textBreakStrategy`
 - `experiment` (internal-only)
 
 Notably _excluded_ — all draw-only, none affect the box:
@@ -152,6 +154,7 @@ agree on. Two flavors, both three-way:
   - `allowFontScaling` (`true`)
   - `maxFontSizeMultiplier` (`0.0`)
   - `includeFontPadding` (`true`)
+  - `textBreakStrategy` (`HighQuality`)
   - `experiment` (`false`)
 - Optional (`std::optional`, via `generateOptionalProperties`) — an omitted serialized key means "unset," and the Kotlin
   fallback has to reproduce whatever "unset" resolves to:
