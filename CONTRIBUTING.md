@@ -129,10 +129,10 @@ yarn vrt-emulator validate
 yarn vrt-emulator doctor
 ```
 
-Linux CI uses KVM and the API 36 Google Play x86_64 image. Apple Silicon uses
-the matching arm64-v8a image. Both hosts use the package-derived logical AVD
-name as the capture and baseline profile. The logical name intentionally omits
-the host ABI.
+Android VRT CI runs on Apple Silicon and uses the API 36 Google Play arm64-v8a
+image, matching local Apple Silicon captures. Supported Intel hosts use the
+matching x86_64 image. All hosts use the package-derived logical AVD name as the
+capture and baseline profile. The logical name intentionally omits the host ABI.
 
 Run the build or comparison stage independently against an already running,
 configured emulator when debugging or retrying a failure:
