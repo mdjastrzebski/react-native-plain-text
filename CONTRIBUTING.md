@@ -87,7 +87,7 @@ yarn vrt ios
 ```
 
 The production test stage initializes the baseline submodule when needed, syncs
-its configured URL, and checks out the latest `origin/main` commit before
+its configured URL, and checks out the latest `origin/macos-runner` commit before
 capturing images. Git stops the update instead of overwriting uncommitted work
 inside `baselines/`.
 
@@ -133,6 +133,8 @@ Android VRT CI runs on Apple Silicon and uses the API 36 Google Play arm64-v8a
 image, matching local Apple Silicon captures. Supported Intel hosts use the
 matching x86_64 image. All hosts use the package-derived logical AVD name as the
 capture and baseline profile. The logical name intentionally omits the host ABI.
+The launch configuration disables emulator acceleration because GitHub's hosted
+macOS runners do not expose Hypervisor.framework to nested virtual machines.
 
 Run the build or comparison stage independently against an already running,
 configured emulator when debugging or retrying a failure:
@@ -157,7 +159,7 @@ profile, it moves those PNGs to
 `baselines/<platform>/<profile>/` for review and commit in the
 [`react-native-plain-text-artifactory`](https://github.com/troZee/react-native-plain-text-artifactory)
 repository. The `baselines/` directory is a shallow submodule. The VRT wrapper
-updates it to the latest reviewed artifact commit on `origin/main`. Later runs
+updates it to the latest reviewed artifact commit on `origin/macos-runner`. Later runs
 use `reg-cli` to compare actual images with that baseline and write comparison
 images to `build/vrt/diff/`. A visual difference makes the command fail. All
 generated VRT files remain ignored under `build/`. When comparison images

@@ -76,7 +76,7 @@ run_app() {
 }
 
 sync_baselines() {
-  printf 'Syncing the baseline submodule with origin/main branch\n'
+  printf 'Syncing the baseline submodule with origin/macos-runner branch\n'
   git submodule sync -- baselines
   git submodule update --init --remote --depth 1 --checkout baselines
 }

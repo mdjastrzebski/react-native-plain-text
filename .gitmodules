@@ -4,5 +4,5 @@
 [submodule "baselines"]
 	path = baselines
 	url = https://github.com/troZee/react-native-plain-text-artifactory.git
-	branch = main
+	branch = macos-runner
 	shallow = true
