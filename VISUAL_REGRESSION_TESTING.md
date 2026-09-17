@@ -82,10 +82,12 @@ the canonical reproduction record; an Apple Silicon arm64-v8a image can still
 render differently from the Linux x86_64 CI image.
 
 The Android job sets `ANDROID_HOME` and `ANDROID_SDK_ROOT` to a clean,
-repository-local `.android-sdk`. `android-emulator-runner` skips its bundled
-command-line-tools installation when the runner's preinstalled
-`$ANDROID_HOME/cmdline-tools` already exists; reusing that directory can expose
-an older `avdmanager` hardware-profile catalog without `pixel_9`.
+repository-local `.android-sdk`, then installs the checksummed
+command-line-tools archive declared in `emulator.config.json`. The workflow
+verifies that its `avdmanager` exposes `pixel_9` before invoking the
+release-built action. Reusing the runner's SDK can expose an older hardware
+profile catalog, while pinning an unreleased action commit can select JavaScript
+that has not had its runtime dependencies bundled.
 
 ## Recommendation
 

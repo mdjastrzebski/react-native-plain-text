@@ -100,10 +100,11 @@ The setup stage verifies and records the rendering environment in
 action to install, create, start, and stop a clean Pixel 9 AVD. The action inputs
 come from the project-owned `emulator.config.json`; the workflow does not rely
 on the action's moving defaults. CI gives the action a clean `.android-sdk`
-directory so it installs its pinned command-line tools and their Pixel 9
-hardware profile instead of reusing the runner image's profile catalog. iOS
-continues to use the Xcode and runtime builds declared in
-`scripts/vrt-config.sh`.
+directory and installs a checksummed command-line-tools archive containing the
+Pixel 9 hardware profile before invoking the release-built action. This avoids
+both the runner image's moving profile catalog and unreleased action commits
+whose JavaScript dependencies are not bundled. iOS continues to use the Xcode
+and runtime builds declared in `scripts/vrt-config.sh`.
 
 Android scripts resolve the API, image, AVD name, host architecture, emulator
 revision, resolution, density, font scale, locale, timezone, capture profile,

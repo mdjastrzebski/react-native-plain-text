@@ -72,6 +72,8 @@ section "Declared android-emulator-runner inputs"
   printf 'locale=%s\n' "$ANDROID_LOCALE"
   printf 'timezone=%s\n' "$ANDROID_TIMEZONE"
   printf 'channel=%s\n' "$ANDROID_SDK_CHANNEL"
+  printf 'command_line_tools_version=%s\n' "$ANDROID_COMMAND_LINE_TOOLS_VERSION"
+  printf 'command_line_tools_linux_sha256=%s\n' "$ANDROID_COMMAND_LINE_TOOLS_LINUX_SHA256"
 } | tee "$output_dir/action-inputs.txt"
 
 section "Host"

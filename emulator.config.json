@@ -1,7 +1,9 @@
 {
   "schemaVersion": 1,
   "sdk": {
-    "channel": "stable"
+    "channel": "stable",
+    "commandLineToolsVersion": "15859902",
+    "commandLineToolsLinuxSha256": "4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583"
   },
   "emulator": {
     "version": "37.1.11",

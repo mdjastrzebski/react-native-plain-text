@@ -52,6 +52,8 @@ case "$android_config_host" in
 esac
 
 export ANDROID_SDK_CHANNEL="$(android_config_value '.sdk.channel')"
+export ANDROID_COMMAND_LINE_TOOLS_VERSION="$(android_config_value '.sdk.commandLineToolsVersion')"
+export ANDROID_COMMAND_LINE_TOOLS_LINUX_SHA256="$(android_config_value '.sdk.commandLineToolsLinuxSha256')"
 export ANDROID_API_LEVEL="$(android_config_value '.systemImage.apiLevel')"
 export ANDROID_SYSTEM_IMAGE_TARGET="$(android_config_value '.systemImage.target')"
 export ANDROID_SYSTEM_IMAGE_ARCHITECTURE="$(android_config_value \
