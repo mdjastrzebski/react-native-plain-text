@@ -152,83 +152,18 @@ run_dev_replay() {
   [[ -f "$screenshot" ]] || fail "agent-device did not write $screenshot."
 }
 
-normalize_ios_crop() {
-  local screenshot="$1"
-  local attrs_output="$2"
-  local screenshot_output="$3"
-  local density actual_width actual_height expected_width expected_height
-
-  density="$(jq -r '.data.pixelDensity' <<< "$screenshot_output")"
-  actual_width="$(jq -r '.data.width' <<< "$screenshot_output")"
-  actual_height="$(jq -r '.data.height' <<< "$screenshot_output")"
-  expected_width="$(
-    jq -r --argjson density "$density" \
-      '.data.node.rect.width * $density | round' <<< "$attrs_output"
-  )"
-  expected_height="$(
-    jq -r --argjson density "$density" \
-      '.data.node.rect.height * $density | round' <<< "$attrs_output"
-  )"
-
-  ((actual_width >= expected_width && actual_height >= expected_height)) || \
-    fail "The crop for $screenshot is smaller than its element frame."
-
-  if ((actual_width != expected_width || actual_height != expected_height)); then
-    sips \
-      --cropToHeightWidth "$expected_height" "$expected_width" \
-      --cropOffset 0 0 \
-      "$screenshot" >/dev/null
-  fi
-}
-
-capture_crop() {
+capture_full_screen() {
   local capture_id="$1"
-  local selector="id=\"$capture_id-text\""
   local screenshot="$actual_dir/$capture_id.png"
-  local attrs_output output
-  local attempt
   local -a screenshot_args
 
-  screenshot_args=("$screenshot" --crop-on "$selector")
+  screenshot_args=("$screenshot")
   if [[ "$platform" == "ios" ]]; then
     screenshot_args+=(--pixel-density 3)
   fi
-  screenshot_args+=(--json)
 
-  for attempt in {1..5}; do
-    if ! attrs_output="$(agent_device get attrs "$selector" --json 2>&1)"; then
-      printf '%s\n' "$attrs_output" >&2
-      return 1
-    fi
-
-    if ! output="$(
-      agent_device screenshot "${screenshot_args[@]}" 2>&1
-    )"; then
-      if [[ "$session_open" -eq 1 && "$output" == *"SESSION_NOT_FOUND"* ]]; then
-        reattach_app
-        continue
-      fi
-      if [[ "$output" == *"CROP_EMPTY_INTERSECTION"* ]]; then
-        run_quiet scroll down 0.12 --duration-ms 500 --settle
-        continue
-      fi
-      printf '%s\n' "$output" >&2
-      return 1
-    fi
-
-    if [[ "$output" != *"CROP_PARTIAL_INTERSECTION"* ]]; then
-      [[ -f "$screenshot" ]] || \
-        fail "agent-device did not write $screenshot."
-      if [[ "$platform" == "ios" ]]; then
-        normalize_ios_crop "$screenshot" "$attrs_output" "$output"
-      fi
-      return
-    fi
-
-    run_quiet scroll down 0.12 --duration-ms 500 --settle
-  done
-
-  fail "The crop for $capture_id remained partly off screen."
+  run_quiet screenshot "${screenshot_args[@]}"
+  [[ -f "$screenshot" ]] || fail "agent-device did not write $screenshot."
 }
 
 capture_all() {
@@ -244,7 +179,7 @@ capture_all() {
     open_deep_link
     run_quiet wait "id=\"$capture_id-text\"" 15000
     run_quiet wait stable 200 5000
-    capture_crop "$capture_id"
+    capture_full_screen "$capture_id"
   done < "$capture_manifest"
 }
 

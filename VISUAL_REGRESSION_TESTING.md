@@ -5,14 +5,14 @@
 The repository currently uses the smallest useful subset of this proposal.
 The root renders `AppVrt` when its deep link contains a `testID` query parameter
 and renders the regular app otherwise. agent-device opens one specimen at a
-time through the app's URL scheme and captures a cropped PNG. `reg-cli`
+time through the app's URL scheme and captures the full device viewport. `reg-cli`
 performs strict image comparison afterward.
 
 The capture runner reads `.agent-device/vrt-captures.txt` and opens every
 platform-relevant specimen as
 `exp+react-native-plain-text-example://vrt?testID=<testID>`. `AppVrt` filters
 the shared Features and Use Cases specimen trees so only that test ID is mounted. The
-runner uses `screenshot --crop-on` to write directly to
+runner uses `screenshot` to write the fixed-size viewport directly to
 `build/vrt/actual/<platform>/<profile>/`. When the corresponding
 `baselines/<platform>/<profile>/` directory does not exist, the wrapper moves
 the complete PNG set there after agent-device succeeds. Once the baseline
@@ -40,7 +40,7 @@ baseline under `baselines/`.
 
 The development capture is a native `.ad` replay. Its URL and output path are
 late-bound through replay variables, while the platform files pin the expected
-screenshot density and selector crop.
+screenshot density.
 
 Dev mode does not clear app state. Doing so removes the Expo development
 client's remembered Metro server, and launching the package without a URL
@@ -89,7 +89,7 @@ The `.android-sdk` directory is an ignored cache and must not be committed.
 
 Use one comparison path for the first implementation:
 
-- agent-device 0.21.0 or newer for cross-platform navigation and selector-cropped screenshot capture
+- agent-device 0.21.0 or newer for cross-platform navigation and full-screen capture
 - `reg-cli` for comparison, missing-image detection, PNG diffs, HTML reports, and JUnit output
 - GitHub Actions with one pinned simulator or emulator environment per platform
 - Committed baselines produced only by the canonical GitHub Actions environments
@@ -166,8 +166,7 @@ agent-device open plaintext.example \
   --platform android \
   --foreground
 agent-device wait 'id="vrt-capture-features-font-size-48-text"' 15000
-agent-device screenshot strict/font-size-48.png \
-  --crop-on 'id="vrt-capture-features-font-size-48-text"'
+agent-device screenshot strict/font-size-48.png
 agent-device close
 ```
 
@@ -239,21 +238,20 @@ revision, device profile, display settings, font scale, agent-device version,
 ## Capture and artifact normalization
 
 agent-device writes each screenshot to the requested repository-relative path.
-The current runner targets the specimen's `-text` test ID so the crop matches
-the content previously stored in the baselines:
+The current runner waits for the specimen's `-text` test ID, then captures the
+full device viewport so every PNG has the same dimensions:
 
 ```sh
 agent-device screenshot \
-  build/vrt/actual/android/example/vrt-capture-font-sizes.png \
-  --crop-on 'id="vrt-capture-font-sizes-text"'
+  build/vrt/actual/android/example/vrt-capture-font-sizes.png
 ```
 
-iOS captures pass `--pixel-density 3` to retain the native pixel dimensions of
-the existing simulator baselines. Android captures use device pixels. Each
+iOS captures pass `--pixel-density 3` to retain the simulator's native pixel
+resolution. Android captures use device pixels. Each
 deep link mounts its target near the top of the VRT root, so no scrolling or
-viewport discovery is required. Missing, ambiguous, unreadable, or clipped
-crop targets are fatal. iOS crop dimensions are normalized to the rounded
-native element frame to remove fractional-boundary rows and columns.
+viewport discovery is required. A missing or unreadable readiness target is
+fatal. Fixed viewport dimensions keep native text measurement differences from
+changing the dimensions of the captured PNG itself.
 
 ## Comparison
 

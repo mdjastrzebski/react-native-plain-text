@@ -150,9 +150,10 @@ The capture stage requires `agent-device` 0.21.0 or newer. The app root renders
 `AppVrt` when the incoming deep link contains a `testID` query parameter and
 renders the regular app otherwise. For each manifest entry, agent-device opens
 `exp+react-native-plain-text-example://vrt?testID=<testID>` and uses
-`screenshot --crop-on` to write the one rendered specimen into
+`screenshot` to write the full device viewport containing the isolated specimen into
 `build/vrt/actual/<platform>/<profile>/`. This avoids tab navigation and
-scrolling through the specimen book. On the first successful `test` run for a
+scrolling through the specimen book while keeping every image at the fixed
+viewport dimensions. On the first successful `test` run for a
 profile, it moves those PNGs to
 `baselines/<platform>/<profile>/` for review and commit in the
 [`react-native-plain-text-artifactory`](https://github.com/troZee/react-native-plain-text-artifactory)

@@ -126,8 +126,8 @@ export function TextItem({
   accessibilityProps,
   children,
 }: {
-  // Stable scroll target for visual regression captures. The shrink-wrapped
-  // crop target derives its ID by appending `-text` below.
+  // Stable route target for visual regression captures. The runner derives the
+  // readiness selector by appending `-text` below before taking a full screenshot.
   testID: string;
   // The value this row varies, set in a caption above the specimen. Keeping it
   // out of the specimen is what lets the specimen be real text rather than a
