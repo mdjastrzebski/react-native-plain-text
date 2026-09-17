@@ -24,6 +24,12 @@ jobs:
   vrt-android:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      # android-emulator-runner only installs its pinned command-line tools
+      # when this directory is absent. Do not reuse the runner image's older
+      # avdmanager: its hardware-profile catalog may not contain Pixel 9.
+      ANDROID_HOME: ${{ github.workspace }}/.android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
 
     steps:
       - name: Checkout
@@ -55,9 +61,9 @@ jobs:
         run: ./scripts/resolve-android-vrt-action-config.sh | tee -a "$GITHUB_OUTPUT"
 
       - name: Run Android visual regression tests
-        # android-emulator-runner v2.38.0. Keep this pinned: emulator setup is
-        # part of the rendering environment measured by this job.
-        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        # Pinned upstream commit with Android SDK command-line tools 23.0.
+        # Emulator setup is part of the rendering environment measured here.
+        uses: ReactiveCircus/android-emulator-runner@ed009f5318f15b1cf93a191b856c4f1748a2d4c1
         with:
           api-level: ${{ steps.android-vrt-config.outputs.api_level }}
           target: ${{ steps.android-vrt-config.outputs.target }}

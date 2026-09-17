@@ -81,6 +81,12 @@ display and renderer state, host/KVM details, and system-font hashes. This is
 the canonical reproduction record; an Apple Silicon arm64-v8a image can still
 render differently from the Linux x86_64 CI image.
 
+The Android job sets `ANDROID_HOME` and `ANDROID_SDK_ROOT` to a clean,
+repository-local `.android-sdk`. `android-emulator-runner` skips its bundled
+command-line-tools installation when the runner's preinstalled
+`$ANDROID_HOME/cmdline-tools` already exists; reusing that directory can expose
+an older `avdmanager` hardware-profile catalog without `pixel_9`.
+
 ## Recommendation
 
 Use one comparison path for the first implementation:
