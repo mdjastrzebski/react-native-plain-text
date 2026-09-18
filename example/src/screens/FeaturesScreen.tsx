@@ -461,19 +461,19 @@ export default function FeaturesScreen({ navigation }: Props) {
         </Section>
       )}
       {Platform.OS === 'android' && (
-      <Section title="Text Break Strategy (Android-only)">
-        {TEXT_BREAK_STRATEGIES.map((textBreakStrategy) => (
-          <TextItem
-            key={textBreakStrategy}
-            label={textBreakStrategy}
-            showText={showText}
-            textBreakStrategy={textBreakStrategy}
-            style={[styles.body, { width: 300 }]}
-          >
-            {TEXT_BREAK_STRATEGY_SPECIMEN}
-          </TextItem>
-        ))}
-      </Section>
+        <Section title="Text Break Strategy (Android-only)">
+          {TEXT_BREAK_STRATEGIES.map((textBreakStrategy) => (
+            <TextItem
+              key={textBreakStrategy}
+              label={textBreakStrategy}
+              showText={showText}
+              textBreakStrategy={textBreakStrategy}
+              style={[styles.body, { width: 300 }]}
+            >
+              {TEXT_BREAK_STRATEGY_SPECIMEN}
+            </TextItem>
+          ))}
+        </Section>
       )}
       <Section title="Text Decoration Line">
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
