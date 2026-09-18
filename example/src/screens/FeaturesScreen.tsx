@@ -1003,9 +1003,7 @@ const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 // mid-syllable, "hangul-word" doesn't.
 const KOREAN_WORD_WRAP_SPECIMEN = '한글개행 한글개행 한글개행 한글개행 한글개행';
 
-// Four equal words at a width (280pt, 10pt type) that fits exactly three: a
-// textbook one-word-orphan case for "push-out"/"standard" to fix.
-const ORPHAN_SPECIMEN = 'The last word of this text does not fit';
+const ORPHAN_SPECIMEN = 'The last word of this text does not fit.';
 
 const LINE_HEIGHTS = [18, 26, 36];
 
