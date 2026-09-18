@@ -48,7 +48,8 @@ most props only touch a few.
 - `maxFontSizeMultiplier`
 - `lineHeightClippingCompat` (`unstable_lineHeightClippingCompat` at the JS boundary — see
   [Set 13](#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary))
-- `includeFontPadding`
+- `includeFontPadding` (Android-only — no `ios/PlainTextProps.mm` entry, no iOS entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `textBreakStrategy` (Android-only — no `ios/PlainTextProps.mm` entry, no iOS entry in
   [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `experiment` (internal-only)
@@ -74,6 +75,8 @@ most props only touch a few.
 
 **Props (exactly the list `measurementInputsEqual` compares):**
 
+Common: touch all five files below.
+
 - `text`
 - `fontSize`
 - `fontFamily`
@@ -85,12 +88,28 @@ most props only touch a few.
 - `letterSpacing`
 - `textTransform`
 - `numberOfLines`
-- `lineBreakStrategyIOS` (iOS-only — see the exception below)
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
+
+iOS-only: touches `measurementInputsEqual`, `ios/PlainTextShadowNode.mm`, `RNPlainText.mm`. No
+`PlainTextMeasurementsManager.cpp` or `PlainTextViewManager.kt` `measure()` entry.
+
+- `lineBreakStrategyIOS`
+
+Android-only: touches `measurementInputsEqual`, `PlainTextMeasurementsManager.cpp`, `PlainTextViewManager.kt`
+`measure()`. No `ios/PlainTextShadowNode.mm` or `RNPlainText.mm` entry.
+
 - `includeFontPadding`
-- `textBreakStrategy` (Android-only — see the exception below)
-- `experiment` (internal-only)
+- `textBreakStrategy`
+
+`experiment` (internal-only, both platforms): scoped to both platforms, unlike the two groups above. It's a generic
+on/off switch for whatever's currently being benchmarked (see
+[Set 4](#set-4--the-reused-measuring-view-android)). With no benchmark plugged in, it only touches
+`measurementInputsEqual` and `PlainTextMeasurementsManager.cpp` today. A benchmark can wire it into `measureContent`,
+`applyContentFromProps`, or `PlainTextViewManager.kt`'s `measure()`, on either platform or both. Whichever files it
+reads have to keep agreeing with `measurementInputsEqual`, same as any other prop here, for the run of that benchmark.
+
+- `experiment`
 
 Notably _excluded_ — all draw-only, none affect the box:
 
@@ -102,8 +121,9 @@ Notably _excluded_ — all draw-only, none affect the box:
 - `textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`, `textShadowRadius`
 - `lineHeightClippingCompat`
 
-Applying one of the props above has to happen identically in five places, or the box and the rendered text disagree — a
-stale or wrong size, not a crash.
+Applying one of the common props above has to happen identically in five places, or the box and the rendered text
+disagree. That's a stale or wrong size, not a crash. The groups above already say which of the five apply to
+`lineBreakStrategyIOS`, `includeFontPadding`, `textBreakStrategy`, and `experiment`.
 
 **Files:**
 
@@ -129,24 +149,19 @@ an already-scaled size, so `scaledFontSize`'s unrounded `fontSize * fontSizeMult
 [native-gotchas.md](native-gotchas.md) for why it must stay unrounded) lives in one place. `lineHeight` scales in the
 callers instead (also unrounded, matching RN), so it stays a sync point between `measureContent` and `RNPlainText.mm`.
 
-**Exception — `lineBreakStrategyIOS` only has three of the five places.** It changes where iOS wraps
-(`NSLineBreakStrategy` on the paragraph style), so it belongs in `measurementInputsEqual` and
-`ios/PlainTextShadowNode.mm` like any other entry here, and it is mirrored in `RNPlainText.mm`'s
-`applyContentFromProps`. Android's own line breaker has no equivalent knob, so it has no
-`PlainTextMeasurementsManager.cpp` entry and no `PlainTextViewManager.kt` `measure()` line. Those two files' props are
-exactly what Android's off-screen `TextView` needs, not a mirror of the codegen struct. Its `PlainTextViewManager.kt`
-`@ReactProp` setter is still required (the generated interface has no per-platform prop list), but its body is empty,
-same as `lineHeightClippingCompat`'s, since nothing in `PlainTextView.kt` reads it. Leaving it out of
-`measurementInputsEqual` would be the real bug though. Android still runs that comparison to decide whether to
-re-measure at all, even though the prop can never change what it measures there.
+`measurementInputsEqual` is shared C++, so every prop above runs through it on both platforms, even the ones a
+platform never reads. `lineBreakStrategyIOS` and `textBreakStrategy` stay in there permanently on the platform that
+can't measure them. `experiment` stays in there even while no benchmark has plugged it into either platform. Drop an
+entry and the platform that does read the prop compares stale without knowing it.
 
-**Exception — `textBreakStrategy` only has three of the five places, the mirror image of `lineBreakStrategyIOS`.** It
-changes where Android's `Layout` wraps (`TextView.setBreakStrategy`), so it belongs in `measurementInputsEqual`,
-`PlainTextMeasurementsManager.cpp`'s `serializeProps`, and `PlainTextViewManager.kt`'s `measure()` like any other entry
-here. iOS's line breaker has no equivalent knob, so it has no `ios/PlainTextShadowNode.mm` `measureContent` entry and no
-`RNPlainText.mm` `applyContentFromProps` entry — those two files apply exactly what `UILabel`'s paragraph style needs,
-not a mirror of the codegen struct. iOS still runs `measurementInputsEqual` (it's shared C++) to decide whether to
-re-measure at all, even though the prop can never change what it measures there.
+**`lineBreakStrategyIOS` and `experiment` currently have an empty Android `@ReactProp` setter.** Codegen's interface has
+no per-platform prop list, so `PlainTextViewManager.kt` has to implement every setter regardless.
+`lineBreakStrategyIOS`'s stays empty permanently, same as `lineHeightClippingCompat`'s. `experiment`'s stays empty only
+until a benchmark wires it into Android.
+
+**`includeFontPadding` has no `PlainTextView.kt` setter.** `PlainTextViewManager.kt`'s `@ReactProp` writes straight to
+`TextView`'s own `includeFontPadding` property instead. There's no shared work to defer (see
+[Set 5](#set-5--deferred-prop-application-android-dirty-flags)).
 
 ---
 
