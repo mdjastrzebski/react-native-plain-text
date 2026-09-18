@@ -67,6 +67,11 @@ folly::dynamic serializeProps(const RNPlainTextProps &props) {
   if (props.numberOfLines != 0) {
     serializedProps["numberOfLines"] = props.numberOfLines;
   }
+  // Affects measured height too, not just the ellipsis glyph's position: a non-"clip"
+  // mode caps the Layout's line count, which PlainTextViewManager.measure() relies on.
+  if (props.ellipsizeMode != RNPlainTextEllipsizeMode::Tail) {
+    serializedProps["ellipsizeMode"] = toString(props.ellipsizeMode);
+  }
   if (!props.allowFontScaling) {
     serializedProps["allowFontScaling"] = false;
   }
@@ -78,6 +83,9 @@ folly::dynamic serializeProps(const RNPlainTextProps &props) {
   }
   if (!props.includeFontPadding) {
     serializedProps["includeFontPadding"] = false;
+  }
+  if (props.textBreakStrategy != RNPlainTextTextBreakStrategy::HighQuality) {
+    serializedProps["textBreakStrategy"] = toString(props.textBreakStrategy);
   }
   return serializedProps;
 }

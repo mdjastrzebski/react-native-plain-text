@@ -32,7 +32,7 @@ using namespace plaintext;
 
 @implementation RNPlainTextLabel
 // UILabel only redraws when a property it recognizes as content (attributedText,
-// text, font, ...) actually changes; toggling lineHeightClippingIos with every
+// text, font, ...) actually changes; toggling lineHeightClippingCompat with every
 // other prop unchanged reapplies an attributedText that is `isEqual:` to the one
 // already set (verticalTextShift isn't part of it), so UILabel skips the redraw
 // and drawTextInRect: never reruns. Setting this property directly must ask for
@@ -89,8 +89,6 @@ using namespace plaintext;
 {
   if (self = [super initWithFrame:frame]) {
     _label = [[RNPlainTextLabel alloc] init];
-    // UILabel's default NSLineBreakStrategyStandard wraps earlier than measureContent's boundingRectWithSize:, so disable it to match measurement and RN <Text>.
-    _label.lineBreakStrategy = NSLineBreakStrategyNone;
 
     // _props must hold RNPlainTextProps from the start since -updateProps and -traitCollectionDidChange both static_pointer_cast it.
     static const auto defaultProps = std::make_shared<const RNPlainTextProps>();
@@ -174,8 +172,9 @@ using namespace plaintext;
 
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     paragraphStyle.alignment = alignment;
-    // A paragraph style overrides the label's own lineBreakMode, so carry ellipsizeMode into it too.
+    // The paragraph style overrides the label's own lineBreakMode/lineBreakStrategy.
     paragraphStyle.lineBreakMode = lineBreakModeFromProp(props.ellipsizeMode);
+    paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
 
     CGFloat verticalTextShift = 0;
     if (hasLineHeight) {
@@ -184,13 +183,13 @@ using namespace plaintext;
         paragraphStyle.maximumLineHeight = lineHeight;
         // Below font.lineHeight, TextKit clips ascent only (RN#29507); shift by
         // half the deficit against the glyphs' real extent to clip evenly
-        // instead (RN#46884's algorithm). lineHeightClippingIos reverts to
+        // instead (RN#46884's algorithm). lineHeightClippingCompat reverts to
         // RN's current (unfixed) behavior: no shift, so TextKit's own
         // ascent-only clip stands, for apps migrating from <Text> that rely
         // on that exact rendering (see unstable_configureTextCompat).
         if (lineHeight >= font.lineHeight) {
             verticalTextShift = (lineHeight - font.lineHeight) / 2.0;
-        } else if (!props.lineHeightClippingIos) {
+        } else if (!props.lineHeightClippingCompat) {
             CGFloat textHeight = font.ascender + fabs(font.descender);
             verticalTextShift = (lineHeight - textHeight) / 2.0;
         }
@@ -225,7 +224,8 @@ using namespace plaintext;
     const auto &oldViewProps = *std::static_pointer_cast<RNPlainTextProps const>(_props);
     const auto &newViewProps = *std::static_pointer_cast<RNPlainTextProps const>(props);
 
-    // These all feed applyContentFromProps since they may share an attributed string (ellipsizeMode via its paragraph style).
+    // These all feed applyContentFromProps since they may share an attributed string
+    // (ellipsizeMode/lineBreakStrategyIOS via its paragraph style).
     if (_forceApplyProps ||
         oldViewProps.text != newViewProps.text ||
         oldViewProps.fontSize != newViewProps.fontSize ||
@@ -247,9 +247,10 @@ using namespace plaintext;
         oldViewProps.textShadowRadius != newViewProps.textShadowRadius ||
         oldViewProps.textTransform != newViewProps.textTransform ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
+        oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||
         oldViewProps.maxFontSizeMultiplier != newViewProps.maxFontSizeMultiplier ||
-        oldViewProps.lineHeightClippingIos != newViewProps.lineHeightClippingIos) {
+        oldViewProps.lineHeightClippingCompat != newViewProps.lineHeightClippingCompat) {
         [self applyContentFromProps:newViewProps];
     }
 
@@ -259,6 +260,11 @@ using namespace plaintext;
 
     if (_forceApplyProps || oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode) {
         _label.lineBreakMode = lineBreakModeFromProp(newViewProps.ellipsizeMode);
+    }
+
+    // Always set explicitly: UILabel's own default wraps earlier than measureContent's.
+    if (_forceApplyProps || oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS) {
+        _label.lineBreakStrategy = lineBreakStrategyFromProp(newViewProps.lineBreakStrategyIOS);
     }
 
     _forceApplyProps = NO;

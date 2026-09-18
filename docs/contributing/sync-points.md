@@ -42,14 +42,20 @@ most props only touch a few.
 - `textTransform`
 - `numberOfLines`
 - `ellipsizeMode`
+- `lineBreakStrategyIOS` (iOS-only — no Android setter body, no Android entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
-- `lineHeightClippingIos` (`unstable_lineHeightClippingIos` at the JS boundary — see
-  [Set 13](#set-13--lineheightclippingios-one-prop-renamed-at-the-js-boundary))
-- `includeFontPadding`
+- `lineHeightClippingCompat` (`unstable_lineHeightClippingCompat` at the JS boundary — see
+  [Set 13](#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary))
+- `includeFontPadding` (Android-only — no `ios/PlainTextProps.mm` entry, no iOS entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
+- `textBreakStrategy` (Android-only — no `ios/PlainTextProps.mm` entry, no iOS entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `experiment` (internal-only)
 
-**Files, every prop touches these at minimum:**
+**Files, every prop touches these at minimum, except the iOS-only and Android-only props noted above, which skip
+`ios/PlainTextProps.mm` or the Android setter respectively:**
 
 - `src/PlainTextViewNativeComponent.ts` — codegen spec, source of truth for the prop's name, type and JS-facing default
 - `Props.h` (generated from the spec, not checked in) — native prop struct and its default
@@ -69,6 +75,8 @@ most props only touch a few.
 
 **Props (exactly the list `measurementInputsEqual` compares):**
 
+Common: touch all five files below.
+
 - `text`
 - `fontSize`
 - `fontFamily`
@@ -82,8 +90,26 @@ most props only touch a few.
 - `numberOfLines`
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
+
+iOS-only: touches `measurementInputsEqual`, `ios/PlainTextShadowNode.mm`, `RNPlainText.mm`. No
+`PlainTextMeasurementsManager.cpp` or `PlainTextViewManager.kt` `measure()` entry.
+
+- `lineBreakStrategyIOS`
+
+Android-only: touches `measurementInputsEqual`, `PlainTextMeasurementsManager.cpp`, `PlainTextViewManager.kt`
+`measure()`. No `ios/PlainTextShadowNode.mm` or `RNPlainText.mm` entry.
+
 - `includeFontPadding`
-- `experiment` (internal-only)
+- `textBreakStrategy`
+
+`experiment` (internal-only, both platforms): scoped to both platforms, unlike the two groups above. It's a generic
+on/off switch for whatever's currently being benchmarked (see
+[Set 4](#set-4--the-reused-measuring-view-android)). With no benchmark plugged in, it only touches
+`measurementInputsEqual` and `PlainTextMeasurementsManager.cpp` today. A benchmark can wire it into `measureContent`,
+`applyContentFromProps`, or `PlainTextViewManager.kt`'s `measure()`, on either platform or both. Whichever files it
+reads have to keep agreeing with `measurementInputsEqual`, same as any other prop here, for the run of that benchmark.
+
+- `experiment`
 
 Notably _excluded_ — all draw-only, none affect the box:
 
@@ -93,10 +119,11 @@ Notably _excluded_ — all draw-only, none affect the box:
 - `verticalAlign`
 - `textDecorationLine`
 - `textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`, `textShadowRadius`
-- `lineHeightClippingIos`
+- `lineHeightClippingCompat`
 
-Applying one of the props above has to happen identically in five places, or the box and the rendered text disagree — a
-stale or wrong size, not a crash.
+Applying one of the common props above has to happen identically in five places, or the box and the rendered text
+disagree. That's a stale or wrong size, not a crash. The groups above already say which of the five apply to
+`lineBreakStrategyIOS`, `includeFontPadding`, `textBreakStrategy`, and `experiment`.
 
 **Files:**
 
@@ -122,11 +149,27 @@ an already-scaled size, so `scaledFontSize`'s unrounded `fontSize * fontSizeMult
 [native-gotchas.md](native-gotchas.md) for why it must stay unrounded) lives in one place. `lineHeight` scales in the
 callers instead (also unrounded, matching RN), so it stays a sync point between `measureContent` and `RNPlainText.mm`.
 
+`measurementInputsEqual` is shared C++, so every prop above runs through it on both platforms, even the ones a
+platform never reads. `lineBreakStrategyIOS` and `textBreakStrategy` stay in there permanently on the platform that
+can't measure them. `experiment` stays in there even while no benchmark has plugged it into either platform. Drop an
+entry and the platform that does read the prop compares stale without knowing it.
+
+**`lineBreakStrategyIOS` and `experiment` currently have an empty Android `@ReactProp` setter.** Codegen's interface has
+no per-platform prop list, so `PlainTextViewManager.kt` has to implement every setter regardless.
+`lineBreakStrategyIOS`'s stays empty permanently, same as `lineHeightClippingCompat`'s. `experiment`'s stays empty only
+until a benchmark wires it into Android.
+
+**`includeFontPadding` has no `PlainTextView.kt` setter.** `PlainTextViewManager.kt`'s `@ReactProp` writes straight to
+`TextView`'s own `includeFontPadding` property instead. There's no shared work to defer (see
+[Set 5](#set-5--deferred-prop-application-android-dirty-flags)).
+
 ---
 
 ## Set 3 — The three-way default contract
 
-**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list. Two flavors, both three-way:
+**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS`, which
+this set skips entirely — it is never serialized in `PlainTextMeasurementsManager.cpp`, so there is no Android default to
+agree on. Two flavors, both three-way:
 
 - Value-defaulted (a plain C++ default, not `std::optional`) — an omitted serialized key means "use this default":
   - `fontSize` (`14.0`)
@@ -136,6 +179,7 @@ callers instead (also unrounded, matching RN), so it stays a sync point between 
   - `allowFontScaling` (`true`)
   - `maxFontSizeMultiplier` (`0.0`)
   - `includeFontPadding` (`true`)
+  - `textBreakStrategy` (`HighQuality`)
   - `experiment` (`false`)
 - Optional (`std::optional`, via `generateOptionalProperties`) — an omitted serialized key means "unset," and the Kotlin
   fallback has to reproduce whatever "unset" resolves to:
@@ -160,8 +204,8 @@ callers instead (also unrounded, matching RN), so it stays a sync point between 
 
 ## Set 4 — The reused measuring view (Android)
 
-**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list — all of them must be (re-)applied on
-every `measure()` call, since the view is shared across nodes.
+**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS` (see that
+set's exception) — all of them must be (re-)applied on every `measure()` call, since the view is shared across nodes.
 
 `PlainTextViewManager.measure()` sizes one shared off-screen view rather than a fresh one per node (see
 [performance.md](performance.md)). Three invariants hold because of that, only one of them enforced:
@@ -347,7 +391,7 @@ Only the invalidation logic is genuinely shared, in `cpp/PlainTextMeasurementHel
 **Props:** every prop `applyContentFromProps` applies to `_label` — text (`text`, `textTransform`), font (`fontFamily`,
 `fontSize`, `fontWeight`, `fontStyle`, `fontVariant`, `fontVariationSettings`, `allowFontScaling`,
 `maxFontSizeMultiplier`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`),
-`letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`, plus the shadow props
+`letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`, `lineBreakStrategyIOS`, plus the shadow props
 (`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`, `textShadowRadius`) — i.e. Set 2's list plus
 every draw-only prop from [Set 1](#set-1--any-prop-the-four-layer-flow).
 
@@ -464,20 +508,20 @@ position on iOS than on Android — visually wrong, nothing throws.
 
 ---
 
-## Set 13 — `lineHeightClippingIos`: one prop, renamed at the JS boundary
+## Set 13 — `lineHeightClippingCompat`: one prop, renamed at the JS boundary
 
 **Props:** one `PlainText` public prop, named differently per layer:
 
-- `PlainText.tsx` — `unstable_lineHeightClippingIos` (the `unstable_` marks that shape/default may change without a
+- `PlainText.tsx` — `unstable_lineHeightClippingCompat` (the `unstable_` marks that shape/default may change without a
   major bump)
-- `src/PlainTextViewNativeComponent.ts`, `Props.h`, both native implementations — bare `lineHeightClippingIos`; codegen
+- `src/PlainTextViewNativeComponent.ts`, `Props.h`, both native implementations — bare `lineHeightClippingCompat`; codegen
   output and native code aren't the unstable surface, the JS entry point is
 
-**Contract:** `mapPlainTextProps` forwards `props.unstable_lineHeightClippingIos` straight through as
-`lineHeightClippingIos`; unset stays `undefined` and the codegen `WithDefault<boolean, false>` supplies the default. It
+**Contract:** `mapPlainTextProps` forwards `props.unstable_lineHeightClippingCompat` straight through as
+`lineHeightClippingCompat`; unset stays `undefined` and the codegen `WithDefault<boolean, false>` supplies the default. It
 does **not** affect `measureContent`/`measure()` (the shift it gates is draw-only, the line-height box size is identical
 either way), so it's excluded from [Set 2](#set-2--a-prop-that-affects-measured-size) and
-[Set 3](#set-3--the-three-way-default-contract). Android no-ops it (`PlainTextViewManager.setLineHeightClippingIos`):
+[Set 3](#set-3--the-three-way-default-contract). Android no-ops it (`PlainTextViewManager.setLineHeightClippingCompat`):
 the TextKit bug it reverts (RN#29507) has no Android counterpart.
 
 ---

@@ -66,13 +66,26 @@ export interface NativeProps extends ViewProps {
 
   numberOfLines?: CodegenTypes.WithDefault<CodegenTypes.Int32, 0>;
   ellipsizeMode?: CodegenTypes.WithDefault<'head' | 'middle' | 'tail' | 'clip', 'tail'>;
+
+  // iOS only, no-op on Android. Matches RN <Text>'s values/default.
+  lineBreakStrategyIOS?: CodegenTypes.WithDefault<
+    'none' | 'standard' | 'hangul-word' | 'push-out',
+    'none'
+  >;
+
   allowFontScaling?: CodegenTypes.WithDefault<boolean, true>;
   maxFontSizeMultiplier?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
 
   // Internal prop used for experiments. No-op in public releases.
   experiment?: CodegenTypes.WithDefault<boolean, false>;
-  lineHeightClippingIos?: CodegenTypes.WithDefault<boolean, false>;
+  lineHeightClippingCompat?: CodegenTypes.WithDefault<boolean, false>;
   includeFontPadding?: CodegenTypes.WithDefault<boolean, true>;
+
+  // Android only, no-op on iOS. Matches RN <Text>'s values/default.
+  textBreakStrategy?: CodegenTypes.WithDefault<
+    'simple' | 'highQuality' | 'balanced',
+    'highQuality'
+  >;
 }
 
 export default codegenNativeComponent<NativeProps>('RNPlainText', {

@@ -94,12 +94,14 @@ describe('mapPlainTextProps', () => {
       mapPlainTextProps({
         numberOfLines: 3,
         ellipsizeMode: 'middle',
+        lineBreakStrategyIOS: 'hangul-word',
         allowFontScaling: false,
         maxFontSizeMultiplier: 1.4,
       })
     ).toMatchObject({
       numberOfLines: 3,
       ellipsizeMode: 'middle',
+      lineBreakStrategyIOS: 'hangul-word',
       allowFontScaling: false,
       maxFontSizeMultiplier: 1.4,
     });
@@ -263,18 +265,18 @@ describe('mapPlainTextProps', () => {
     });
   });
 
-  describe('lineHeightClippingIos', () => {
-    it('forwards unstable_lineHeightClippingIos under the native name', () => {
+  describe('lineHeightClippingCompat', () => {
+    it('forwards unstable_lineHeightClippingCompat under the native name', () => {
       expect(
-        mapPlainTextProps({ unstable_lineHeightClippingIos: true }).lineHeightClippingIos
+        mapPlainTextProps({ unstable_lineHeightClippingCompat: true }).lineHeightClippingCompat
       ).toBe(true);
       expect(
-        mapPlainTextProps({ unstable_lineHeightClippingIos: false }).lineHeightClippingIos
+        mapPlainTextProps({ unstable_lineHeightClippingCompat: false }).lineHeightClippingCompat
       ).toBe(false);
     });
 
     it('is undefined when unset (native WithDefault applies)', () => {
-      expect(mapPlainTextProps({}).lineHeightClippingIos).toBeUndefined();
+      expect(mapPlainTextProps({}).lineHeightClippingCompat).toBeUndefined();
     });
   });
 
@@ -342,12 +344,12 @@ describe('mapPlainTextProps', () => {
     it('does not leak consumed props into the output', () => {
       const nativeProps = mapPlainTextProps({
         children: 'x',
-        unstable_lineHeightClippingIos: true,
+        unstable_lineHeightClippingCompat: true,
         style: { fontSize: 10 },
       });
 
       expect(nativeProps).not.toHaveProperty('children');
-      expect(nativeProps).not.toHaveProperty('unstable_lineHeightClippingIos');
+      expect(nativeProps).not.toHaveProperty('unstable_lineHeightClippingCompat');
       expect(nativeProps.style).toEqual({});
     });
   });

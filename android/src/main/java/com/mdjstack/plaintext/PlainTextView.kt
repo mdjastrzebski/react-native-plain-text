@@ -579,6 +579,15 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
+  // Mirrors <Text> (TextAttributeProps#getTextBreakStrategy).
+  fun setTextBreakStrategy(textBreakStrategy: String?) {
+    breakStrategy = when (textBreakStrategy) {
+      "simple" -> Layout.BREAK_STRATEGY_SIMPLE
+      "balanced" -> Layout.BREAK_STRATEGY_BALANCED
+      else -> Layout.BREAK_STRATEGY_HIGH_QUALITY
+    }
+  }
+
   // A text-size change touches no prop, so Fabric's diff never fires and
   // textSize/letterSpacing/lineHeight stay stale in pixels. Re-derive them here since
   // Android calls this on every attached view regardless of Fabric.

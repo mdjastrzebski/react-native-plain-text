@@ -12,6 +12,9 @@ export type PlainTextProps = AccessibilityProps & {
   style?: StyleProp<PlainTextStyle>;
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
+  lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
+  /// Android-only, like RN <Text>.
+  textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
   testID?: string;
@@ -20,9 +23,9 @@ export type PlainTextProps = AccessibilityProps & {
 
   /// When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
   /// ascent-clipping behavior (RN#29507) for this instance.
-  // SYNC: renamed to the bare lineHeightClippingIos past this file — see
-  // docs/contributing/sync-points.md#set-13--lineheightclippingios-one-prop-renamed-at-the-js-boundary.
-  unstable_lineHeightClippingIos?: boolean;
+  // SYNC: renamed to the bare lineHeightClippingCompat past this file — see
+  // docs/contributing/sync-points.md#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary.
+  unstable_lineHeightClippingCompat?: boolean;
 };
 
 export function mapPlainTextProps({
@@ -31,9 +34,11 @@ export function mapPlainTextProps({
   style,
   numberOfLines,
   ellipsizeMode,
+  lineBreakStrategyIOS,
+  textBreakStrategy,
   allowFontScaling,
   maxFontSizeMultiplier,
-  unstable_lineHeightClippingIos,
+  unstable_lineHeightClippingCompat,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
   const {
@@ -81,10 +86,12 @@ export function mapPlainTextProps({
     letterSpacing,
     numberOfLines,
     ellipsizeMode,
+    lineBreakStrategyIOS,
+    textBreakStrategy,
     allowFontScaling,
     maxFontSizeMultiplier,
     includeFontPadding,
-    lineHeightClippingIos: unstable_lineHeightClippingIos,
+    lineHeightClippingCompat: unstable_lineHeightClippingCompat,
     style: viewStyle,
   };
 }

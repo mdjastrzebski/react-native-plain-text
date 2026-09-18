@@ -7,6 +7,7 @@
 | `allowFontScaling`      | ✅                     |                                                                                    |
 | `children`              | 🟡                     | `string` only                                                                      |
 | `ellipsizeMode`         | ✅                     |                                                                                    |
+| `lineBreakStrategyIOS`  | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
 | `maxFontSizeMultiplier` | ✅                     |                                                                                    |
 | `nativeID`              | ✅                     |                                                                                    |
 | `id`                    | ✅                     |                                                                                    |
@@ -14,6 +15,7 @@
 | `onLayout`              | ✅                     |                                                                                    |
 | `testID`                | ✅                     |                                                                                    |
 | `text`                  | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
+| `textBreakStrategy`     | ✅                     | Android-only, like RN `<Text>`                                                     |
 | Accessibility props     | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
 
 RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
@@ -44,6 +46,13 @@ RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · 
 
 RN `<Text>` compatibility: ✅ fully compatible · ⬆️ added in Plain Text
 
+## Notes
+
+- **`textDecorationLine: 'underline'` position on iOS**: PlainText's
+  `UILabel` draws the underline at the font's `underlinePosition`.
+  RN `<Text>` draws it a bit too high, shifted up about one
+  `underlineThickness` above its natural position.
+
 ## Improvements over RN Text
 
 Things Plain Text does that RN `<Text>` does not:
@@ -61,14 +70,14 @@ Things Plain Text does that RN `<Text>` does not:
 
 ## Planned
 
-| Prop / style                                                                  | RN `<Text>` compatible |
-| ----------------------------------------------------------------------------- | ---------------------- |
-| `adjustsFontSizeToFit` / `minimumFontScale`                                   | To Do                  |
-| `selectable` / `selectionColor` / `suppressHighlighting` / `userSelect`       | To Do                  |
-| `textDecorationColor` / `textDecorationStyle`                                 | To Do                  |
-| `writingDirection`                                                            | To Do                  |
-| `dynamicTypeRamp`                                                             | To Do                  |
-| `android_hyphenationFrequency` / `textBreakStrategy` / `lineBreakStrategyIOS` | To Do                  |
+| Prop / style                                                            | RN `<Text>` compatible |
+| ----------------------------------------------------------------------- | ---------------------- |
+| `adjustsFontSizeToFit` / `minimumFontScale`                             | To Do                  |
+| `selectable` / `selectionColor` / `suppressHighlighting` / `userSelect` | To Do                  |
+| `textDecorationColor` / `textDecorationStyle`                           | To Do                  |
+| `writingDirection`                                                      | To Do                  |
+| `dynamicTypeRamp`                                                       | To Do                  |
+| `android_hyphenationFrequency`                                          | To Do                  |
 
 Open an issue for the one you need. Real-world usage sets the priority.
 
