@@ -459,7 +459,7 @@ export default function FeaturesScreen({ navigation }: Props) {
           through this prop doesn't visibly restore what construction turned
           off. So on iOS today, only hangul-word is worth reaching for
           through this prop. */}
-      <Section title="Line Break Strategy (iOS-only)" footer={LINE_BREAK_STRATEGY_FOOTER}>
+      <Section title="Line Break Strategy (iOS-only)">
           {(['none', 'push-out', 'standard'] as const).map((s) => (
           <TextItem
             key={s}
@@ -477,12 +477,11 @@ export default function FeaturesScreen({ navigation }: Props) {
             label={s}
             showText={showText}
             lineBreakStrategyIOS={s}
-            style={[styles.body, { width: 215 }]}
+            style={[styles.body, { width: 220 }]}
           >
             {KOREAN_WORD_WRAP_SPECIMEN}
           </TextItem>
         ))}
-
       </Section>
       <Section title="Text Decoration Line">
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
@@ -999,11 +998,10 @@ const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'] as const;
 
 const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 
-// Narrow enough (150pt) that a word has to break somewhere: "none" splits it
-// mid-syllable, "hangul-word" doesn't.
+const ORPHAN_SPECIMEN = 'The last word of this text does not fit.';
 const KOREAN_WORD_WRAP_SPECIMEN = '한글개행 한글개행 한글개행 한글개행 한글개행';
 
-const ORPHAN_SPECIMEN = 'The last word of this text does not fit.';
+
 
 const LINE_HEIGHTS = [18, 26, 36];
 
@@ -1428,9 +1426,4 @@ const ANIMATING_TEXT_FOOTER =
 const FONT_PADDING_FOOTER = Platform.select({
   ios: 'Both rows should look identical here.',
   default: 'The second row should sit noticeably tighter against the padding edge than the first.',
-});
-
-const LINE_BREAK_STRATEGY_FOOTER = Platform.select({
-  ios: '"hangul-word" keeps the Korean word whole (its exact wrap point vs RN\'s <Text> can still differ by a word — see the comment above). "push-out"/"standard" should pull a word up to fix the orphan below but render identically to "none".',
-  default: 'No effect on Android: all rows should look identical.',
 });
