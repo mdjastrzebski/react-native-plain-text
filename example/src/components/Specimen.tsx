@@ -1,7 +1,10 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import {
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
   type AccessibilityProps,
   type StyleProp,
@@ -12,19 +15,6 @@ import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { useCompatOn } from './CompareText';
 import { COLOR } from '../theme';
 
-// The specimen-book furniture both screens are set in: the title page, the
-// section headings and the row that puts one PlainText against the RN <Text>
-// overlay. Nothing here decides what to demonstrate: the screens do that.
-
-// Sets the register before the first section: optionally the largest glyphs on
-// the screen and the page's name, then one line on what the page holds.
-//
-// `lockup` is a pair rather than two props because the two halves are one mark
-// (see the styles at the bottom), and it is optional because it is worth its
-// space only on a page it says something about: the glyph is a specimen of the
-// type itself, which is the Features screen's subject rather than any other's,
-// and the title is the library's name set as a wordmark, so it belongs on that
-// same page and nowhere the nav bar already names.
 export function Cover({
   lockup,
   blurb,
@@ -34,9 +24,6 @@ export function Cover({
 }) {
   return (
     <View style={styles.cover}>
-      {/* The two of them set side by side: a specimen book's "Aa" and the name of
-          the type it is showing belong together, and stacked they read as a
-          heading with a caption under it instead. */}
       {lockup != null && (
         <View style={styles.lockup}>
           <PlainText style={styles.coverGlyph}>{lockup.glyph}</PlainText>
@@ -48,16 +35,43 @@ export function Cover({
   );
 }
 
-// Empty string means "no search active": every screen but Features renders
-// Section outside a SectionSearchProvider, and unfiltered is what those
-// screens need.
 const SectionSearchContext = createContext('');
 
-// Wraps a screen's sections so the header search bar (installed by that
-// screen alone) can hide the ones whose title doesn't match, without every
-// <Section> call site threading the query through by hand.
 export function SectionSearchProvider({ query, children }: { query: string; children: ReactNode }) {
   return <SectionSearchContext.Provider value={query}>{children}</SectionSearchContext.Provider>;
+}
+
+export function SearchField({
+  value,
+  onChangeText,
+  placeholder,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <View style={styles.searchBarRow}>
+      <View style={styles.searchField}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={COLOR.faint}
+          style={styles.searchInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+        {Platform.OS === 'android' && value !== '' && (
+          <Pressable onPress={() => onChangeText('')} hitSlop={8}>
+            <Text style={styles.searchClear}>×</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
 }
 
 export function Section({
@@ -240,7 +254,7 @@ export const screenStyles = StyleSheet.create({
   },
   container: {
     flexGrow: 1,
-    paddingTop: 28,
+    paddingTop: 0,
     paddingBottom: 48,
     paddingHorizontal: 18,
     // Sections need to read as separate sheets of a specimen book, so the gap
@@ -313,6 +327,42 @@ const styles = StyleSheet.create({
     // and has to bring it. Without this the first heading rides 16 closer to the
     // blurb than every other heading does to what precedes it.
     paddingBottom: 4 + RUN_OFF,
+  },
+  // Opaque and the full width of the scroll content: once this row sticks,
+  // whatever the list has scrolled to sits directly behind it and has to be
+  // fully hidden, not just behind the field itself.
+  // The horizontal inset comes from `screenStyles.container`'s own
+  // `paddingHorizontal`, same as every section: the field lines up with the
+  // rows it filters instead of running to the edge on its own.
+  //
+  // The hairline only reads once this row is stuck to the top of the
+  // viewport: at rest it sits flush against the Cover's own top margin, and
+  // it's the boundary against scrolled-under content, not the Cover, that
+  // needs marking.
+  searchBarRow: {
+    backgroundColor: COLOR.paper,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLOR.line,
+  },
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLOR.wash,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 16,
+    color: COLOR.ink,
+  },
+  searchClear: {
+    fontSize: 18,
+    color: COLOR.faint,
+    paddingHorizontal: 4,
   },
   lockup: {
     flexDirection: 'row',

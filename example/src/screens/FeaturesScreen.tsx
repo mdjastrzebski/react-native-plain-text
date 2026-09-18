@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentRef } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   Animated as RNAnimated,
   Platform,
@@ -16,6 +16,7 @@ import { useCompareText } from '../components/CompareText';
 import {
   CompareBox,
   Cover,
+  SearchField,
   Section,
   SectionSearchProvider,
   TextItem,
@@ -48,28 +49,7 @@ type Props = NativeStackScreenProps<ParamListBase>;
 export default function FeaturesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
-  // Native search bar in the stack header, installed once and left in place:
-  // only its callbacks close over fresh state, and those are stable refs into
-  // `setSearch`, so this doesn't need to re-run per keystroke like
-  // `useCompareText`'s header buttons do.
   const [search, setSearch] = useState('');
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerSearchBarOptions: {
-        placeholder: 'Search sections',
-        onChangeText: (event) => setSearch(event.nativeEvent.text),
-        onCancelButtonPress: () => setSearch(''),
-        // iOS-only: a docked field under the nav bar rather than a
-        // magnifying-glass icon that expands into one on tap (`automatic` /
-        // `integrated`). `stacked` also sidesteps iOS 26's toolbar-pull and
-        // icon-only Cancel button, both particular to `integrated`.
-        placement: Platform.OS === 'ios' ? 'stacked' : undefined,
-        // Keep the field on screen while scrolling the sections below it,
-        // instead of iOS's default of hiding it as soon as you scroll down.
-        hideWhenScrolling: Platform.OS === 'ios' ? false : undefined,
-      },
-    });
-  }, [navigation]);
 
   // `.interpolate()` can't produce an arbitrary string, so the RN Animated side
   // bridges the value to `text` by hand: a listener + `setNativeProps`. The
@@ -78,6 +58,7 @@ export default function FeaturesScreen({ navigation }: Props) {
   // frame. Reanimated's `useAnimatedProps` (below) needs none of this.
   const rnValue = useRef(new RNAnimated.Value(0)).current;
   const rnAnimatedRef = useRef<ComponentRef<typeof RNAnimatedPlainText>>(null);
+
   useEffect(() => {
     let frame: number | null = null;
     let pending = '';
@@ -121,14 +102,17 @@ export default function FeaturesScreen({ navigation }: Props) {
       ref={scrollRef}
       style={screenStyles.scroll}
       contentContainerStyle={screenStyles.container}
-      // Required by native-stack's header search bar on iOS: without it, the
-      // search field overlaps the first section instead of pushing it down.
-      contentInsetAdjustmentBehavior="automatic"
+      stickyHeaderIndices={[0]}
     >
-      <Cover
-        lockup={{ glyph: 'Aa', title: 'PlainText' }}
-        blurb="A faster, lower-memory React Native <Text> alternative for simple, single-style text."
-      />
+      <SearchField value={search} onChangeText={setSearch} placeholder="Search sections" />
+      {/* Hidden rather than filtered like a Section: it's the page's title
+          page, not a result, and a search leaves no room to justify it. */}
+      {search === '' && (
+        <Cover
+          lockup={{ glyph: 'Pt', title: 'PlainText' }}
+          blurb="A faster, lower-memory React Native <Text> alternative for simple, single-style text."
+        />
+      )}
       <SectionSearchProvider query={search}>
         <Section title="Font Size">
           {FONT_SIZES.map((fontSize) => (
