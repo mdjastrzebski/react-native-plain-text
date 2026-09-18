@@ -1,6 +1,6 @@
 import { Section } from '../components/Specimen';
 import { COLOR, MONO } from '../theme';
-import { UseCaseItemRow, type Combination } from './useCaseShared';
+import { ExampleItemRow, type Combination } from './exampleShared';
 
 // Monospace, which measures unlike every other row here: no proportional widths
 // to collapse, hard line breaks the code block has to keep, and a path with no
@@ -46,7 +46,7 @@ export function CodeSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Code">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

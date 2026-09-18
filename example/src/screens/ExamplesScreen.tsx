@@ -20,10 +20,10 @@ type Props = NativeStackScreenProps<ParamListBase>;
 // padding against a border against a clamped line count, letterSpacing against
 // wrap detection, lineHeight against verticalAlign.
 //
-// One section per kind of shape rather than one long "Example Use Cases" run:
-// grouped, a row can be read against the three or four rows it would really
-// sit next to in an app, and a whole group going wrong at once points at what
-// they share (all the clamped rows, all the shrink-wrapped ones) instead of at
+// One section per kind of shape rather than one long "Examples" run: grouped,
+// a row can be read against the three or four rows it would really sit next
+// to in an app, and a whole group going wrong at once points at what they
+// share (all the clamped rows, all the shrink-wrapped ones) instead of at
 // thirty unrelated specimens. Each group is its own component in ../sections/,
 // ordered by how often the shape is reached for: headings and body text
 // first, then the controls, then the narrower cases. So a reader who stops
@@ -32,14 +32,14 @@ type Props = NativeStackScreenProps<ParamListBase>;
 // first thing on the screen rather than the last. RandomCombinationsSection
 // is rendered last, for the same reason: it is the one group whose rows no
 // app would deliberately write.
-export default function UseCasesScreen({ navigation }: Props) {
+export default function ExamplesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
   return (
     <ScrollView style={screenStyles.scroll} contentContainerStyle={screenStyles.container}>
       {/* No lockup: "Aa" is a specimen of the type itself, which is the Features
           screen's subject rather than this one's, and the header already says
-          "Use Cases". What is left is the line that says what the page holds. */}
+          "Examples". What is left is the line that says what the page holds. */}
       <Cover blurb="Whole UI shapes rather than one prop: several styles stacked per row, the way an app would actually set them." />
       <HeadingsSection showText={showText} />
       <BodyCopySection showText={showText} />

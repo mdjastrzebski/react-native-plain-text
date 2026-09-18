@@ -1,6 +1,6 @@
 import { Section } from '../components/Specimen';
 import { COLOR } from '../theme';
-import { UseCaseItemRow, type Combination } from './useCaseShared';
+import { ExampleItemRow, type Combination } from './exampleShared';
 
 // What the app says when something went wrong, went right, or is empty.
 const ITEMS: Combination[] = [
@@ -55,7 +55,7 @@ export function StatusAndFeedbackSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Status and Feedback">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

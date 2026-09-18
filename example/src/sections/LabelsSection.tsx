@@ -1,6 +1,6 @@
 import { Section } from '../components/Specimen';
 import { COLOR, MONO } from '../theme';
-import { UseCaseItemRow, type Combination } from './useCaseShared';
+import { ExampleItemRow, type Combination } from './exampleShared';
 
 // Set small and quiet next to something else that carries the meaning: the line
 // under a list row's title, the caption, the timestamp. Small type is where a wrong
@@ -35,7 +35,7 @@ export function LabelsSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Labels">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

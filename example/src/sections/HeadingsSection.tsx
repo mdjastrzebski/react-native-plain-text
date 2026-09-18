@@ -1,6 +1,6 @@
 import { Section } from '../components/Specimen';
 import { COLOR } from '../theme';
-import { UseCaseItemRow, type Combination } from './useCaseShared';
+import { ExampleItemRow, type Combination } from './exampleShared';
 
 // Display type: the biggest thing on a screen, the title inside a card, and the
 // tracked cap-height label that separates two groups of rows.
@@ -32,7 +32,7 @@ export function HeadingsSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Headings">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

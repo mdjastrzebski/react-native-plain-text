@@ -1,10 +1,10 @@
 import { Section } from '../components/Specimen';
 import { COLOR } from '../theme';
-import { UseCaseItemRow, type UseCaseItem } from './useCaseShared';
+import { ExampleItemRow, type ExampleItem } from './exampleShared';
 
 // Short strings inside a shape: the padding and the radius are doing as much work
 // as the type, and each one shrink-wraps to its own text.
-const ITEMS: UseCaseItem[] = [
+const ITEMS: ExampleItem[] = [
   {
     label: 'badge-new',
     text: 'NEW',
@@ -80,7 +80,7 @@ export function BadgesSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Badges">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

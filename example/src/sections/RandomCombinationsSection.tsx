@@ -1,6 +1,6 @@
 import { Section } from '../components/Specimen';
 import { COLOR, MONO, SERIF } from '../theme';
-import { UseCaseItemRow, type Combination } from './useCaseShared';
+import { ExampleItemRow, type Combination } from './exampleShared';
 
 // Fixed, hand-written lists (never generated, never shuffled) so two runs of
 // the app render byte-identical rows and screenshots diff cleanly.
@@ -476,7 +476,7 @@ export function RandomCombinationsSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Random Combinations">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

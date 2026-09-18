@@ -20,7 +20,7 @@ import { COLOR } from '../theme';
 // PlainText now has to match. It carries no ruler of its own: the ruler is a
 // fixed reference for the eye, not part of the PlainText/RN comparison.
 // Realistic shapes built on top of this (a price beside its VAT note, a
-// heading beside its badge) live on the Use Cases screen.
+// heading beside its badge) live on the Examples screen.
 const BASELINE_ALIGNMENT_GLYPHS: { text: string; fontSize: number }[] = [
   { text: 'H', fontSize: 56 },
   { text: 'g', fontSize: 32 },

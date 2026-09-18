@@ -1,9 +1,9 @@
 import { Section } from '../components/Specimen';
 import { COLOR } from '../theme';
-import { UseCaseItemRow, type UseCaseItem } from './useCaseShared';
+import { ExampleItemRow, type ExampleItem } from './exampleShared';
 
 // Figures at display sizes, where negative tracking and the digit widths matter.
-const ITEMS: UseCaseItem[] = [
+const ITEMS: ExampleItem[] = [
   {
     label: 'price-large',
     text: '$1,249.00',
@@ -72,7 +72,7 @@ export function NumeralsSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Numerals">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

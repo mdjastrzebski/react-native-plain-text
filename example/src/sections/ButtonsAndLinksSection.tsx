@@ -1,6 +1,6 @@
 import { Section } from '../components/Specimen';
 import { COLOR } from '../theme';
-import { UseCaseItemRow, type Combination } from './useCaseShared';
+import { ExampleItemRow, type Combination } from './exampleShared';
 
 // Tappable labels. These are the rows most likely to be centered inside a fixed
 // box, so a measurement that comes back a point wide is visible immediately.
@@ -59,7 +59,7 @@ export function ButtonsAndLinksSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Buttons and Links">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

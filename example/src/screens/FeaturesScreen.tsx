@@ -38,7 +38,7 @@ import { WritingDirectionSection } from '../sections/WritingDirectionSection';
 type Props = NativeStackScreenProps<ParamListBase>;
 
 // One prop per section, one value per row. Rows that stack several props at once
-// live on the Use Cases screen. Each section is its own component in
+// live on the Examples screen. Each section is its own component in
 // ../sections/, named after the prop it demonstrates.
 export default function FeaturesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);

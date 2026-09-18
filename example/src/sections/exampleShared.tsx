@@ -3,7 +3,7 @@ import { PlainText } from 'react-native-plain-text';
 import { CompareBox, screenStyles, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 
-// A row that varies several props stacked in one style, the way UseCaseRow
+// A row that varies several props stacked in one style, the way ExampleRow
 // renders it: one PlainText, one string.
 export type Combination = {
   kind?: undefined;
@@ -26,23 +26,23 @@ export type BaselineCombination = {
   parts: { text: string; style: TextStyle }[];
 };
 
-export type UseCaseItem = Combination | BaselineCombination;
+export type ExampleItem = Combination | BaselineCombination;
 
 // Renders one group item, whichever shape it is: a plain Combination through
-// UseCaseRow, or a BaselineCombination through UseCaseBaselineRow. Every
+// ExampleRow, or a BaselineCombination through ExampleBaselineRow. Every
 // section component maps its items through this, so a group can mix the two
 // shapes without repeating the branch itself.
-export function UseCaseItemRow({ item, showText }: { item: UseCaseItem; showText: boolean }) {
+export function ExampleItemRow({ item, showText }: { item: ExampleItem; showText: boolean }) {
   return item.kind === 'baseline' ? (
-    <UseCaseBaselineRow showText={showText} {...item} />
+    <ExampleBaselineRow showText={showText} {...item} />
   ) : (
-    <UseCaseRow showText={showText} {...item} />
+    <ExampleRow showText={showText} {...item} />
   );
 }
 
-// The rows carry no label caption (a use case is a whole shape rather than one
+// The rows carry no label caption (an example is a whole shape rather than one
 // value), so `label` is only the key and the name to talk about it by.
-function UseCaseRow({
+function ExampleRow({
   showText,
   label: _label,
   text,
@@ -56,7 +56,7 @@ function UseCaseRow({
       // on the page. Every row starts from the palette's ink instead, so the rows
       // that set no color of their own still belong to the same ramp as the
       // headings and the labels around them.
-      style={[useCaseStyles.base, style]}
+      style={[exampleStyles.base, style]}
       // A row that takes the full measure needs the grey box to stretch with it
       // instead of shrink-wrapping. Read off the style rather than flagged per
       // row: it was a hand-maintained `wide: true` on all 52 of them, which is 52
@@ -76,7 +76,7 @@ function UseCaseRow({
 // overlaid in scarlet, since RN's `<Text>` has always gotten baseline
 // alignment right and is exactly what PlainText's own baseline function
 // (`BaselineYogaNode`, both shadow nodes) now has to match.
-function UseCaseBaselineRow({
+function ExampleBaselineRow({
   showText,
   label,
   parts,
@@ -85,11 +85,11 @@ function UseCaseBaselineRow({
     <CompareBox
       label={label}
       showText={showText}
-      containerStyle={[useCaseStyles.baselineRow, screenStyles.wideRow]}
+      containerStyle={[exampleStyles.baselineRow, screenStyles.wideRow]}
       overlay={
-        <View style={useCaseStyles.baselineRow}>
+        <View style={exampleStyles.baselineRow}>
           {parts.map((part, index) => (
-            <Text key={index} style={[part.style, useCaseStyles.baselineOverlayText]}>
+            <Text key={index} style={[part.style, exampleStyles.baselineOverlayText]}>
               {part.text}
             </Text>
           ))}
@@ -97,7 +97,7 @@ function UseCaseBaselineRow({
       }
     >
       {parts.map((part, index) => (
-        <PlainText key={index} style={[part.style, showText && useCaseStyles.baselineCompareText]}>
+        <PlainText key={index} style={[part.style, showText && exampleStyles.baselineCompareText]}>
           {part.text}
         </PlainText>
       ))}
@@ -105,7 +105,7 @@ function UseCaseBaselineRow({
   );
 }
 
-const useCaseStyles = StyleSheet.create({
+const exampleStyles = StyleSheet.create({
   base: {
     color: COLOR.ink,
   },

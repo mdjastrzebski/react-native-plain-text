@@ -1,6 +1,6 @@
 import { Section } from '../components/Specimen';
 import { COLOR, SERIF } from '../theme';
-import { UseCaseItemRow, type Combination } from './useCaseShared';
+import { ExampleItemRow, type Combination } from './exampleShared';
 
 // Running text, where the wrap points and the leading are the whole point:
 // whether it runs to its natural end or gets clamped after a line or two, which
@@ -68,7 +68,7 @@ export function BodyCopySection({ showText }: { showText: boolean }) {
   return (
     <Section title="Body Copy">
       {ITEMS.map((item) => (
-        <UseCaseItemRow key={item.label} item={item} showText={showText} />
+        <ExampleItemRow key={item.label} item={item} showText={showText} />
       ))}
     </Section>
   );

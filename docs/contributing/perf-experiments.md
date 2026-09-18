@@ -166,7 +166,7 @@ hypothesis: every sample where `isBoring()` qualified produced the exact same
 `rawDesiredWidth` as the plain-`getDesiredWidth` run had for that same text,
 and toggling the perf screen's `Boring: On`/`Off` header buttons (added for
 this test, in `example/src/components/CompareText.tsx`, and since removed)
-showed no visible difference on either the Features or Use Cases screen.
+showed no visible difference on either the Features or Examples screen.
 `BoringLayout.isBoring()` and `getDesiredWidth` simply agree in this app's
 content, so trying `isBoring()` first changed zero measured widths and cost
 an extra call per non-`EXACTLY` measure for no benefit. Reverted: `measure()`
