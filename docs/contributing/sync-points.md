@@ -125,14 +125,15 @@ an already-scaled size, so `scaledFontSize`'s unrounded `fontSize * fontSizeMult
 [native-gotchas.md](native-gotchas.md) for why it must stay unrounded) lives in one place. `lineHeight` scales in the
 callers instead (also unrounded, matching RN), so it stays a sync point between `measureContent` and `RNPlainText.mm`.
 
-**Exception — `lineBreakStrategyIOS` only has three of the five places.** It changes where iOS wraps (`NSLineBreakStrategy`
-on the paragraph style), so it belongs in `measurementInputsEqual` and `ios/PlainTextShadowNode.mm` like any other entry
-here, and in `RNPlainText.mm`'s `applyContentFromProps` it mirrors. But Android's own line breaker has no equivalent
-knob, so it has no `PlainTextMeasurementsManager.cpp` entry and no `PlainTextViewManager.kt` `measure()` line — those two
-files' props are exactly what Android's off-screen `TextView` needs, not a mirror of the codegen struct. Its
-`PlainTextViewManager.kt` `@ReactProp` setter is required regardless (the generated interface has no per-platform
-prop list) but its body is empty, same as `lineHeightClippingCompat`'s — nothing in `PlainTextView.kt` reads it. Leaving
-it out of `measurementInputsEqual` would be the real bug, though: Android still runs that comparison to decide whether to
+**Exception — `lineBreakStrategyIOS` only has three of the five places.** It changes where iOS wraps
+(`NSLineBreakStrategy` on the paragraph style), so it belongs in `measurementInputsEqual` and
+`ios/PlainTextShadowNode.mm` like any other entry here, and it is mirrored in `RNPlainText.mm`'s
+`applyContentFromProps`. Android's own line breaker has no equivalent knob, so it has no
+`PlainTextMeasurementsManager.cpp` entry and no `PlainTextViewManager.kt` `measure()` line. Those two files' props are
+exactly what Android's off-screen `TextView` needs, not a mirror of the codegen struct. Its `PlainTextViewManager.kt`
+`@ReactProp` setter is still required (the generated interface has no per-platform prop list), but its body is empty,
+same as `lineHeightClippingCompat`'s, since nothing in `PlainTextView.kt` reads it. Leaving it out of
+`measurementInputsEqual` would be the real bug though. Android still runs that comparison to decide whether to
 re-measure at all, even though the prop can never change what it measures there.
 
 ---

@@ -434,31 +434,6 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
-      {/* Of the four strategies, only hangul-word visibly changes anything for
-          PlainText. At a width tight enough to split a word, "none" breaks
-          mid-syllable and "hangul-word" keeps the word whole — exactly the
-          Korean word-wrap fix react-native#31272 introduced this prop for
-          (see also RNTester's own "Line Break Strategy" example, which pairs
-          each strategy with en/ko/ja/cn text for the same reason). Compared
-          against RN's own <Text> (Vs <Text>), hangul-word's exact wrap point
-          can still differ by a word: PlainText renders through a real
-          UILabel while RN <Text> renders through its own NSLayoutManager/
-          TextKit, and UILabel needs slightly more horizontal room per
-          character (see "Accepted limitation" in
-          docs/contributing/native-gotchas.md) — both are honoring the
-          strategy correctly in their own engine, they just don't agree
-          pixel-for-pixel with each other.
-
-          "push-out" and "standard" are documented (NSParagraphStyle.h) to
-          pull a word up onto an orphaned last line, and this row is a
-          textbook case for that: three words, then one word alone. But they
-          render pixel-identical to "none" here. That tracks with the same
-          doc's note that UILabel's own default is
-          NSLineBreakStrategyStandard and RNPlainText.mm deliberately forces
-          it to None at construction — reapplying "standard"/"push-out"
-          through this prop doesn't visibly restore what construction turned
-          off. So on iOS today, only hangul-word is worth reaching for
-          through this prop. */}
       {Platform.OS === 'ios' && (
         <Section title="Line Break Strategy (iOS-only)">
           {(['none', 'push-out', 'standard'] as const).map((s) => (

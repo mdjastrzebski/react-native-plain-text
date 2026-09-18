@@ -172,8 +172,7 @@ using namespace plaintext;
 
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     paragraphStyle.alignment = alignment;
-    // A paragraph style overrides the label's own lineBreakMode/lineBreakStrategy, so carry
-    // ellipsizeMode/lineBreakStrategyIOS into it too.
+    // The paragraph style overrides the label's own lineBreakMode/lineBreakStrategy.
     paragraphStyle.lineBreakMode = lineBreakModeFromProp(props.ellipsizeMode);
     paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
 
@@ -263,10 +262,7 @@ using namespace plaintext;
         _label.lineBreakMode = lineBreakModeFromProp(newViewProps.ellipsizeMode);
     }
 
-    // UILabel's own default (NSLineBreakStrategyStandard) wraps earlier than
-    // measureContent's boundingRectWithSize:, so this must always be set explicitly
-    // rather than left at UILabel's factory default, even for lineBreakStrategyIOS's
-    // own default value ("none").
+    // Always set explicitly: UILabel's own default wraps earlier than measureContent's.
     if (_forceApplyProps || oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS) {
         _label.lineBreakStrategy = lineBreakStrategyFromProp(newViewProps.lineBreakStrategyIOS);
     }

@@ -192,8 +192,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setEllipsizeMode(ellipsizeMode)
   }
 
-  // iOS-only (see PlainTextViewNativeComponent.ts). Android's line breaker has no
-  // equivalent strategy knob.
+  // iOS-only; Android's line breaker has no equivalent knob.
   @ReactProp(name = "lineBreakStrategyIOS")
   override fun setLineBreakStrategyIOS(view: PlainTextView?, lineBreakStrategyIOS: String?) {
   }

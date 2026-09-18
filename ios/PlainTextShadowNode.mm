@@ -60,9 +60,7 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
       perLineHeight = static_cast<Float>(lineHeight);
     }
     if (hasLineBreakStrategy) {
-      // lineBreakStrategyIOS changes where lines wrap (e.g. "standard" avoids a
-      // short last line), so it must be applied here too, not just when drawn
-      // (RNPlainText.mm), or the measured box and rendered text disagree.
+      // Affects wrapping, so must match RNPlainText.mm's rendered value.
       paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
     }
     attributes[NSParagraphStyleAttributeName] = paragraphStyle;
