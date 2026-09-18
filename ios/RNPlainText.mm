@@ -172,6 +172,15 @@ using namespace plaintext;
     }
 
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
+    // UILabel resolves NSTextAlignmentNatural from the app's own layout direction, not
+    // this paragraph's baseWritingDirection below, so an explicit writingDirection would
+    // otherwise get the wrong side for auto/unset textAlign. Most visible on a wrapped
+    // RTL paragraph's last, short line, which would hang opposite to where it should.
+    // Resolve it ourselves rather than leaving it to UILabel.
+    if (alignment == NSTextAlignmentNatural && hasWritingDirection) {
+        alignment = props.writingDirection == RNPlainTextWritingDirection::Rtl ? NSTextAlignmentRight
+                                                                                : NSTextAlignmentLeft;
+    }
     paragraphStyle.alignment = alignment;
     // The paragraph style overrides the label's own lineBreakMode/lineBreakStrategy.
     paragraphStyle.lineBreakMode = lineBreakModeFromProp(props.ellipsizeMode);
