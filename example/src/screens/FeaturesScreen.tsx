@@ -434,19 +434,55 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      {/* Of the four strategies, only hangul-word visibly changes anything for
+          PlainText. At a width tight enough to split a word, "none" breaks
+          mid-syllable and "hangul-word" keeps the word whole — exactly the
+          Korean word-wrap fix react-native#31272 introduced this prop for
+          (see also RNTester's own "Line Break Strategy" example, which pairs
+          each strategy with en/ko/ja/cn text for the same reason). Compared
+          against RN's own <Text> (Vs <Text>), hangul-word's exact wrap point
+          can still differ by a word: PlainText renders through a real
+          UILabel while RN <Text> renders through its own NSLayoutManager/
+          TextKit, and UILabel needs slightly more horizontal room per
+          character (see "Accepted limitation" in
+          docs/contributing/native-gotchas.md) — both are honoring the
+          strategy correctly in their own engine, they just don't agree
+          pixel-for-pixel with each other.
+
+          "push-out" and "standard" are documented (NSParagraphStyle.h) to
+          pull a word up onto an orphaned last line, and this row is a
+          textbook case for that: three words, then one word alone. But they
+          render pixel-identical to "none" here. That tracks with the same
+          doc's note that UILabel's own default is
+          NSLineBreakStrategyStandard and RNPlainText.mm deliberately forces
+          it to None at construction — reapplying "standard"/"push-out"
+          through this prop doesn't visibly restore what construction turned
+          off. So on iOS today, only hangul-word is worth reaching for
+          through this prop. */}
       <Section title="Line Break Strategy (iOS-only)" footer={LINE_BREAK_STRATEGY_FOOTER}>
-        {LINE_BREAK_STRATEGIES.map((lineBreakStrategyIOS) => (
+          {(['none', 'push-out', 'standard'] as const).map((s) => (
           <TextItem
-            key={lineBreakStrategyIOS}
-            label={lineBreakStrategyIOS}
+            key={s}
+            label={s}
             showText={showText}
-            lineBreakStrategyIOS={lineBreakStrategyIOS}
-            style={styles.body}
-            containerStyle={screenStyles.wideRow}
+            lineBreakStrategyIOS={s}
+            style={[styles.body, { width: 300 }]}
           >
-            {PARAGRAPH}
+            {ORPHAN_SPECIMEN}
           </TextItem>
         ))}
+        {(['none', 'hangul-word'] as const).map((s) => (
+          <TextItem
+            key={s}
+            label={s}
+            showText={showText}
+            lineBreakStrategyIOS={s}
+            style={[styles.body, { width: 215 }]}
+          >
+            {KOREAN_WORD_WRAP_SPECIMEN}
+          </TextItem>
+        ))}
+
       </Section>
       <Section title="Text Decoration Line">
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
@@ -963,7 +999,13 @@ const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'] as const;
 
 const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 
-const LINE_BREAK_STRATEGIES = ['none', 'standard', 'hangul-word', 'push-out'] as const;
+// Narrow enough (150pt) that a word has to break somewhere: "none" splits it
+// mid-syllable, "hangul-word" doesn't.
+const KOREAN_WORD_WRAP_SPECIMEN = '한글개행 한글개행 한글개행 한글개행 한글개행';
+
+// Four equal words at a width (280pt, 10pt type) that fits exactly three: a
+// textbook one-word-orphan case for "push-out"/"standard" to fix.
+const ORPHAN_SPECIMEN = 'The last word of this text does not fit';
 
 const LINE_HEIGHTS = [18, 26, 36];
 
@@ -1391,6 +1433,6 @@ const FONT_PADDING_FOOTER = Platform.select({
 });
 
 const LINE_BREAK_STRATEGY_FOOTER = Platform.select({
-  ios: '"standard" avoids leaving a short last line by pulling a word up from the line above.',
-  default: 'No effect on Android: all four rows should look identical.',
+  ios: '"hangul-word" keeps the Korean word whole (its exact wrap point vs RN\'s <Text> can still differ by a word — see the comment above). "push-out"/"standard" should pull a word up to fix the orphan below but render identically to "none".',
+  default: 'No effect on Android: all rows should look identical.',
 });
