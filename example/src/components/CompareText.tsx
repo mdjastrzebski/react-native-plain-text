@@ -14,7 +14,7 @@ import { PlainText } from 'react-native-plain-text';
 import { COLOR } from '../theme';
 
 // "Compare Text" overlays RN's own <Text> in scarlet on top of every specimen. Both
-// the Features and the Use Cases screen offer the toggle, and it is one setting:
+// the Features and the Examples screen offer the toggle, and it is one setting:
 // turning it on in one tab and switching to the other should not put you in front
 // of a screen that has quietly forgotten what you asked for. So the flag lives
 // above the tab navigator rather than in either screen.

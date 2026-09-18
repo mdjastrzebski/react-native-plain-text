@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   // The glyph as a mark: reversed out of the ink surface in a rounded square,
-  // sized by width/height/lineHeight the way the avatar row on the Use Cases page
+  // sized by width/height/lineHeight the way the avatar row on the Examples page
   // is.
   coverGlyph: {
     width: LOCKUP_MARK,
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     // past the row's, grey against the white page rather than a color.
     backgroundColor: COLOR.wash,
     color: COLOR.scarlet,
-    // Overrides whatever borderColor a Border/Use Cases row demoed, same as
+    // Overrides whatever borderColor a Border/Examples row demoed, same as
     // `color` does, so a row's own border becomes part of the comparison too:
     // scarlet here, cobalt in `compareText`, multiplying to the same dark
     // neutral edge as the glyphs wherever the two boxes' borders coincide.

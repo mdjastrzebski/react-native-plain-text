@@ -75,12 +75,11 @@ toggle is the same setting on every screen that offers it.
 
 - **Features** (`src/screens/FeaturesScreen.tsx`): per-prop coverage, one prop
   per section and one value per row. Every new feature must add a section here.
-- **Use Cases** (`src/screens/UseCasesScreen.tsx`): rows that stack three to six
-  props at once. Realistic UI shapes first, one section per kind
-  (`USE_CASE_GROUPS`, commonest shape first: headings, body copy, labels, buttons
-  and links, code, numerals, badges, status and feedback), then
-  `RANDOM_USE_CASES`: arbitrary combinations that catch interactions the
-  realistic rows avoid.
+- **Examples** (`src/screens/ExamplesScreen.tsx`): rows that stack three to six
+  props at once. Realistic UI shapes first, one section per kind (commonest
+  shape first: headings, body copy, labels, buttons and links, code, numerals,
+  badges, status and feedback), then a random-combinations section: arbitrary
+  combinations that catch interactions the realistic rows avoid.
 - **Performance** (`src/screens/PerformanceScreen.tsx`): the benchmark harness.
   See [measuring.md](measuring.md).
 

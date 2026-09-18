@@ -474,7 +474,7 @@ export default function PerformanceScreen({ navigation }: Props) {
 
               Debug numbers are not comparable to anything, so say so before the
               first press rather than in a doc nobody reads mid-run. Set as the
-              banner shape the Use Cases page uses for the same job (a tinted
+              banner shape the Examples page uses for the same job (a tinted
               wash with the pigment as a left rule) rather than as a pill,
               because this is a note about the whole page.
 
@@ -1637,7 +1637,7 @@ const styles = StyleSheet.create({
   buttonLabelDisabled: {
     color: COLOR.disabled,
   },
-  // The error-banner shape from the Use Cases page: wash, the pigment as a left
+  // The error-banner shape from the Examples page: wash, the pigment as a left
   // rule, and text in the same pigment rather than in ink.
   // Now the box only, with the type in the two children: the tag and the note are
   // separate nodes, so size, weight and colour move down to them.

@@ -20,7 +20,7 @@ import { useSessionState } from './useSessionState';
 import { COLOR } from './theme';
 import FeaturesScreen from './screens/FeaturesScreen';
 import PerformanceScreen from './screens/PerformanceScreen';
-import UseCasesScreen from './screens/UseCasesScreen';
+import ExamplesScreen from './screens/ExamplesScreen';
 
 const Tab = createBottomTabNavigator();
 // One pair of components, used by all three stacks: `Navigator` and `Screen` are
@@ -74,7 +74,7 @@ function titleOptions(title: string): NativeStackNavigationOptions {
 }
 
 // Every screen is wrapped in a single-screen native stack, which is what gives it
-// a real native header: Features and Use Cases install their "compare with Text"
+// a real native header: Features and Examples install their "compare with Text"
 // toggle there, and Performance its props button, and all three then scroll under
 // a real navigation bar rather than a JS imitation of one.
 //
@@ -92,7 +92,7 @@ function titleOptions(title: string): NativeStackNavigationOptions {
 // persisted selection stops resolving; see `onStateChange` in App below.
 const TABS = [
   { title: 'Features', route: 'PlainText', icon: 'text', screen: FeaturesScreen },
-  { title: 'Use Cases', route: 'UseCases', icon: 'albums', screen: UseCasesScreen },
+  { title: 'Examples', route: 'Examples', icon: 'albums', screen: ExamplesScreen },
   { title: 'Performance', route: 'Benchmarks', icon: 'speedometer', screen: PerformanceScreen },
 ] as const;
 
@@ -150,7 +150,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      {/* Above the navigator: the Features and Use Cases screens share one
+      {/* Above the navigator: the Features and Examples screens share one
           "Compare Text" setting, so switching tabs keeps the overlay on. */}
       <CompareTextProvider>
         <NavigationContainer onStateChange={onStateChange}>
