@@ -1,4 +1,4 @@
-import { ScrollView } from 'react-native';
+import { FlatList } from 'react-native';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCompareText } from '../components/CompareText';
@@ -32,24 +32,40 @@ type Props = NativeStackScreenProps<ParamListBase>;
 // first thing on the screen rather than the last. RandomCombinationsSection
 // is rendered last, for the same reason: it is the one group whose rows no
 // app would deliberately write.
+//
+// A FlatList of pre-built elements rather than a ScrollView of JSX children:
+// each entry in `sections` is already the element to render, so `renderItem`
+// only has to hand it back, and the list still gets FlatList's virtualization
+// for free.
 export default function ExamplesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
+  const sections = [
+    // No lockup: "Aa" is a specimen of the type itself, which is the Features
+    // screen's subject rather than this one's, and the header already says
+    // "Examples". What is left is the line that says what the page holds.
+    <Cover
+      key="cover"
+      blurb="Whole UI shapes rather than one prop: several styles stacked per row, the way an app would actually set them."
+    />,
+    <HeadingsSection key="headings" showText={showText} />,
+    <BodyCopySection key="body-copy" showText={showText} />,
+    <LabelsSection key="labels" showText={showText} />,
+    <ButtonsAndLinksSection key="buttons-and-links" showText={showText} />,
+    <CodeSection key="code" showText={showText} />,
+    <NumeralsSection key="numerals" showText={showText} />,
+    <BadgesSection key="badges" showText={showText} />,
+    <StatusAndFeedbackSection key="status-and-feedback" showText={showText} />,
+    <RandomCombinationsSection key="random-combinations" showText={showText} />,
+  ];
+
   return (
-    <ScrollView style={screenStyles.scroll} contentContainerStyle={screenStyles.container}>
-      {/* No lockup: "Aa" is a specimen of the type itself, which is the Features
-          screen's subject rather than this one's, and the header already says
-          "Examples". What is left is the line that says what the page holds. */}
-      <Cover blurb="Whole UI shapes rather than one prop: several styles stacked per row, the way an app would actually set them." />
-      <HeadingsSection showText={showText} />
-      <BodyCopySection showText={showText} />
-      <LabelsSection showText={showText} />
-      <ButtonsAndLinksSection showText={showText} />
-      <CodeSection showText={showText} />
-      <NumeralsSection showText={showText} />
-      <BadgesSection showText={showText} />
-      <StatusAndFeedbackSection showText={showText} />
-      <RandomCombinationsSection showText={showText} />
-    </ScrollView>
+    <FlatList
+      style={screenStyles.scroll}
+      contentContainerStyle={screenStyles.container}
+      data={sections}
+      renderItem={({ item }) => item}
+      keyExtractor={(item, index) => item.key ?? String(index)}
+    />
   );
 }

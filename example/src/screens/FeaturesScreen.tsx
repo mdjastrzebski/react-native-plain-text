@@ -1,5 +1,5 @@
-import { useRef, useState, type ComponentRef } from 'react';
-import { ScrollView } from 'react-native';
+import { useRef, useState, type ReactElement } from 'react';
+import { FlatList } from 'react-native';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCompareText } from '../components/CompareText';
@@ -40,6 +40,14 @@ type Props = NativeStackScreenProps<ParamListBase>;
 // One prop per section, one value per row. Rows that stack several props at once
 // live on the Examples screen. Each section is its own component in
 // ../sections/, named after the prop it demonstrates.
+//
+// A FlatList of pre-built elements rather than a ScrollView of JSX children:
+// each entry in `sections` is already the element to render, so `renderItem`
+// only has to hand it back, and the list still gets FlatList's virtualization
+// for free. The search field stays a `ListHeaderComponent` (kept sticky via
+// `stickyHeaderIndices`, same as it was the ScrollView's first child before),
+// and the cover moves into `sections` itself so it scrolls away like any
+// other row instead of pinning alongside the search field.
 export default function FeaturesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
@@ -47,58 +55,68 @@ export default function FeaturesScreen({ navigation }: Props) {
 
   // Scroll-lock during the animating-text drag is an imperative native-prop
   // toggle, not state: a re-render here would be pointless.
-  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const scrollRef = useRef<FlatList<ReactElement>>(null);
   const onDragStateChange = (dragging: boolean) => {
     scrollRef.current?.setNativeProps({ scrollEnabled: !dragging });
   };
 
+  const sections: ReactElement[] = [
+    // Hidden rather than filtered: it's the title page, not a result.
+    ...(search === ''
+      ? [
+          <Cover
+            key="cover"
+            lockup={{ glyph: 'Pt', title: 'PlainText' }}
+            blurb="A faster, lower-memory React Native <Text> alternative for simple, single-style text."
+          />,
+        ]
+      : []),
+    <FontSizeSection key="font-size" showText={showText} />,
+    <EmojiSection key="emoji" showText={showText} />,
+    <FontFamilySection key="font-family" showText={showText} />,
+    <ColorSection key="color" showText={showText} />,
+    <FontWeightSection key="font-weight" showText={showText} />,
+    <FontStyleSection key="font-style" showText={showText} />,
+    <TextAlignSection key="text-align" showText={showText} />,
+    <WritingDirectionSection key="writing-direction" showText={showText} />,
+    <BaselineAlignmentSection key="baseline-alignment" showText={showText} />,
+    <MultilineSection key="multiline" showText={showText} />,
+    <NumberOfLinesSection key="number-of-lines" showText={showText} />,
+    <PaddingSection key="padding" showText={showText} />,
+    <BordersSection key="borders" showText={showText} />,
+    <LineHeightSection key="line-height" showText={showText} />,
+    <LineHeightClippingSection key="line-height-clipping" showText={showText} />,
+    <LetterSpacingSection key="letter-spacing" showText={showText} />,
+    <EllipsizeModeSection key="ellipsize-mode" showText={showText} />,
+    <LineBreakStrategySection key="line-break-strategy" showText={showText} />,
+    <TextBreakStrategySection key="text-break-strategy" showText={showText} />,
+    <TextDecorationLineSection key="text-decoration-line" showText={showText} />,
+    <TextShadowSection key="text-shadow" showText={showText} />,
+    <TextTransformSection key="text-transform" showText={showText} />,
+    <FontScalingSection key="font-scaling" showText={showText} />,
+    <FontVariantSection key="font-variant" showText={showText} />,
+    <FontVariationSettingsSection key="font-variation-settings" showText={showText} />,
+    <VerticalAlignSection key="vertical-align" showText={showText} />,
+    <WrapDetectionSection key="wrap-detection" showText={showText} />,
+    <AccessibilitySection key="accessibility" showText={showText} />,
+    <FontPaddingSection key="font-padding" showText={showText} />,
+    <AnimatingTextSection key="animating-text" onDragStateChange={onDragStateChange} />,
+  ];
+
   return (
-    <ScrollView
-      ref={scrollRef}
-      style={screenStyles.scroll}
-      contentContainerStyle={screenStyles.container}
-      stickyHeaderIndices={[0]}
-    >
-      <SearchField value={search} onChangeText={setSearch} placeholder="Search sections" />
-      {/* Hidden rather than filtered: it's the title page, not a result. */}
-      {search === '' && (
-        <Cover
-          lockup={{ glyph: 'Pt', title: 'PlainText' }}
-          blurb="A faster, lower-memory React Native <Text> alternative for simple, single-style text."
-        />
-      )}
-      <SectionSearchProvider query={search}>
-        <FontSizeSection showText={showText} />
-        <EmojiSection showText={showText} />
-        <FontFamilySection showText={showText} />
-        <ColorSection showText={showText} />
-        <FontWeightSection showText={showText} />
-        <FontStyleSection showText={showText} />
-        <TextAlignSection showText={showText} />
-        <WritingDirectionSection showText={showText} />
-        <BaselineAlignmentSection showText={showText} />
-        <MultilineSection showText={showText} />
-        <NumberOfLinesSection showText={showText} />
-        <PaddingSection showText={showText} />
-        <BordersSection showText={showText} />
-        <LineHeightSection showText={showText} />
-        <LineHeightClippingSection showText={showText} />
-        <LetterSpacingSection showText={showText} />
-        <EllipsizeModeSection showText={showText} />
-        <LineBreakStrategySection showText={showText} />
-        <TextBreakStrategySection showText={showText} />
-        <TextDecorationLineSection showText={showText} />
-        <TextShadowSection showText={showText} />
-        <TextTransformSection showText={showText} />
-        <FontScalingSection showText={showText} />
-        <FontVariantSection showText={showText} />
-        <FontVariationSettingsSection showText={showText} />
-        <VerticalAlignSection showText={showText} />
-        <WrapDetectionSection showText={showText} />
-        <AccessibilitySection showText={showText} />
-        <FontPaddingSection showText={showText} />
-        <AnimatingTextSection onDragStateChange={onDragStateChange} />
-      </SectionSearchProvider>
-    </ScrollView>
+    <SectionSearchProvider query={search}>
+      <FlatList<ReactElement>
+        ref={scrollRef}
+        style={screenStyles.scroll}
+        contentContainerStyle={screenStyles.container}
+        stickyHeaderIndices={[0]}
+        ListHeaderComponent={
+          <SearchField value={search} onChangeText={setSearch} placeholder="Search sections" />
+        }
+        data={sections}
+        renderItem={({ item }) => item}
+        keyExtractor={(item, index) => item.key ?? String(index)}
+      />
+    </SectionSearchProvider>
   );
 }
