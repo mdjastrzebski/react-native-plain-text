@@ -90,7 +90,13 @@ run_test() {
     android)
       profile="$ANDROID_VRT_PROFILE"
       baseline_profile="$ANDROID_VRT_BASELINE_PROFILE"
-      matching_threshold=0.004
+      # Absorb small emulator rasterization differences that pixelmatch's
+      # anti-alias detector does not classify as edge pixels. Keep the pixel
+      # count threshold at zero so every difference beyond this tolerance fails.
+      # - 0 requires exact color equality.
+      # - 0.02 tolerates very small color/intensity differences.
+      # - 1 is maximum tolerance.
+      matching_threshold=0.02
       ;;
     ios)
       profile="$IOS_VRT_PROFILE"
