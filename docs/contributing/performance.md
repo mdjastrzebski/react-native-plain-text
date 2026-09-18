@@ -68,6 +68,7 @@ of why it is still in [todo.md](todo.md).
 | `textDecorationLine`     | medium | Forces the iOS attributed-string path. The Android side is two paint flags.                                                                                                   |
 | `textShadow*`            | medium | Forces the iOS attributed-string path. The Android side is one `Paint.setShadowLayer` call.                                                                                   |
 | `textTransform`          | medium | Allocates a transformed copy of the string per apply on both platforms; `capitalize` additionally walks word boundaries.                                                      |
+| `dynamicTypeRamp`        | medium | iOS only. Replaces the plain multiplier lookup with a `UIFontMetrics` curve evaluation (`metricsForTextStyle:` + `scaledValueForValue:`) on every apply.                      |
 | everything else          | light  | One write, or one entry in the font cache key.                                                                                                                                |
 
 Four of those are medium for the same single reason: `applyContentFromProps`

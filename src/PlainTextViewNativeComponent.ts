@@ -76,6 +76,26 @@ export interface NativeProps extends ViewProps {
   allowFontScaling?: CodegenTypes.WithDefault<boolean, true>;
   maxFontSizeMultiplier?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
 
+  // iOS only, no-op on Android. 'none' is the off state (linear OS font-scale
+  // multiplier, like every other prop here), never sent by PlainText.tsx itself.
+  // Cost: medium. Replaces the cheap multiplier lookup with a UIFontMetrics
+  // curve evaluation on every apply.
+  dynamicTypeRamp?: CodegenTypes.WithDefault<
+    | 'none'
+    | 'caption2'
+    | 'caption1'
+    | 'footnote'
+    | 'subheadline'
+    | 'callout'
+    | 'body'
+    | 'headline'
+    | 'title3'
+    | 'title2'
+    | 'title1'
+    | 'largeTitle',
+    'none'
+  >;
+
   // Internal prop used for experiments. No-op in public releases.
   experiment?: CodegenTypes.WithDefault<boolean, false>;
   lineHeightClippingCompat?: CodegenTypes.WithDefault<boolean, false>;

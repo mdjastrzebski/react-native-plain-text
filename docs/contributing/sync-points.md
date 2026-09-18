@@ -46,6 +46,8 @@ most props only touch a few.
   [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
+- `dynamicTypeRamp` (iOS-only — no Android setter body, no Android entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `lineHeightClippingCompat` (`unstable_lineHeightClippingCompat` at the JS boundary — see
   [Set 13](#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary))
 - `includeFontPadding` (Android-only — no `ios/PlainTextProps.mm` entry, no iOS entry in
@@ -95,6 +97,15 @@ iOS-only: touches `measurementInputsEqual`, `ios/PlainTextShadowNode.mm`, `RNPla
 `PlainTextMeasurementsManager.cpp` or `PlainTextViewManager.kt` `measure()` entry.
 
 - `lineBreakStrategyIOS`
+
+iOS-only, but touches only `measurementInputsEqual`, not `ios/PlainTextShadowNode.mm` or
+`RNPlainText.mm` directly: both already call `plaintext::resolveFontSizeMultiplier`
+(`PlainTextFont.mm`) for `allowFontScaling`/`maxFontSizeMultiplier`, and this prop's
+UIFontMetrics logic lives inside that same function, so it reaches measurement and
+drawing through the one call site both already share. No `PlainTextMeasurementsManager.cpp`
+or `PlainTextViewManager.kt` `measure()` entry either.
+
+- `dynamicTypeRamp`
 
 Android-only: touches `measurementInputsEqual`, `PlainTextMeasurementsManager.cpp`, `PlainTextViewManager.kt`
 `measure()`. No `ios/PlainTextShadowNode.mm` or `RNPlainText.mm` entry.
@@ -167,9 +178,9 @@ until a benchmark wires it into Android.
 
 ## Set 3 — The three-way default contract
 
-**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS`, which
-this set skips entirely — it is never serialized in `PlainTextMeasurementsManager.cpp`, so there is no Android default to
-agree on. Two flavors, both three-way:
+**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS` and
+`dynamicTypeRamp`, which this set skips entirely — neither is ever serialized in `PlainTextMeasurementsManager.cpp`, so
+there is no Android default to agree on. Two flavors, both three-way:
 
 - Value-defaulted (a plain C++ default, not `std::optional`) — an omitted serialized key means "use this default":
   - `fontSize` (`14.0`)
@@ -204,8 +215,9 @@ agree on. Two flavors, both three-way:
 
 ## Set 4 — The reused measuring view (Android)
 
-**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS` (see that
-set's exception) — all of them must be (re-)applied on every `measure()` call, since the view is shared across nodes.
+**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS` and
+`dynamicTypeRamp` (see that set's exceptions) — all of them must be (re-)applied on every `measure()` call, since the
+view is shared across nodes.
 
 `PlainTextViewManager.measure()` sizes one shared off-screen view rather than a fresh one per node (see
 [performance.md](performance.md)). Three invariants hold because of that, only one of them enforced:
@@ -390,7 +402,7 @@ Only the invalidation logic is genuinely shared, in `cpp/PlainTextMeasurementHel
 
 **Props:** every prop `applyContentFromProps` applies to `_label` — text (`text`, `textTransform`), font (`fontFamily`,
 `fontSize`, `fontWeight`, `fontStyle`, `fontVariant`, `fontVariationSettings`, `allowFontScaling`,
-`maxFontSizeMultiplier`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`),
+`maxFontSizeMultiplier`, `dynamicTypeRamp`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`),
 `letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`, `lineBreakStrategyIOS`, plus the shadow props
 (`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`, `textShadowRadius`) — i.e. Set 2's list plus
 every draw-only prop from [Set 1](#set-1--any-prop-the-four-layer-flow).

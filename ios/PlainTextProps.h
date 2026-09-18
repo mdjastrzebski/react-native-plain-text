@@ -54,6 +54,13 @@ NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode);
 NSLineBreakStrategy lineBreakStrategyFromProp(RNPlainTextLineBreakStrategyIOS lineBreakStrategyIOS);
 
 /*
+ * The UIFontTextStyle a dynamicTypeRamp value scales against. Callers must not
+ * pass RNPlainTextDynamicTypeRamp::None (the "not using this" state); it maps
+ * here to body only so the switch stays exhaustive.
+ */
+UIFontTextStyle textStyleFromDynamicTypeRampProp(RNPlainTextDynamicTypeRamp dynamicTypeRamp);
+
+/*
  * Mirrors RCTFont.mm's core weight map (RCTConvert RCTFontWeight): the named
  * aliases beyond "normal"/"bold" (e.g. "ultralight", "condensed") are dropped
  * since codegen can't type fontWeight as an enum. Unrecognized or empty input

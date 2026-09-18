@@ -250,6 +250,7 @@ using namespace plaintext;
         oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||
         oldViewProps.maxFontSizeMultiplier != newViewProps.maxFontSizeMultiplier ||
+        oldViewProps.dynamicTypeRamp != newViewProps.dynamicTypeRamp ||
         oldViewProps.lineHeightClippingCompat != newViewProps.lineHeightClippingCompat) {
         [self applyContentFromProps:newViewProps];
     }

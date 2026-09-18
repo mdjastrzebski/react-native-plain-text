@@ -550,6 +550,25 @@ export default function FeaturesScreen({ navigation }: Props) {
           {SPECIMEN}
         </TextItem>
       </Section>
+      {/* Each ramp follows its own UIFontMetrics curve rather than the OS's
+          linear multiplier, so the rows diverge from each other (and from Font
+          Scaling's plain rows above) as the Larger Text setting moves further
+          from its default. */}
+      {Platform.OS === 'ios' && (
+        <Section title="Dynamic Type Ramp (iOS-only)" footer={FONT_SCALING_FOOTER}>
+          {DYNAMIC_TYPE_RAMPS.map((dynamicTypeRamp) => (
+            <TextItem
+              key={dynamicTypeRamp}
+              label={dynamicTypeRamp}
+              showText={showText}
+              style={{ fontSize: SHORT_ROW_SIZE }}
+              dynamicTypeRamp={dynamicTypeRamp}
+            >
+              {SPECIMEN}
+            </TextItem>
+          ))}
+        </Section>
+      )}
       {/* fontVariant turns OpenType features on, so a row only changes if the
           font actually carries the feature, which is why iOS runs these rows in
           a serif rather than SF, from the second baseline row down. See
@@ -1031,6 +1050,22 @@ const FONT_SCALING_FOOTER = Platform.select({
   ios: 'Settings ▸ Accessibility ▸ Display & Text Size ▸ Larger Text. Only the first row follows it.',
   default: 'Settings ▸ Display ▸ Display size and text ▸ Font size. Only the first row follows it.',
 });
+
+// RN <Text>'s own dynamicTypeRamp values, caption2 (smallest) to largeTitle
+// (biggest), the order Apple lists them in the Human Interface Guidelines.
+const DYNAMIC_TYPE_RAMPS = [
+  'caption2',
+  'caption1',
+  'footnote',
+  'subheadline',
+  'callout',
+  'body',
+  'headline',
+  'title3',
+  'title2',
+  'title1',
+  'largeTitle',
+] as const;
 
 const VERTICAL_ALIGNS = ['top', 'middle', 'bottom'] as const;
 

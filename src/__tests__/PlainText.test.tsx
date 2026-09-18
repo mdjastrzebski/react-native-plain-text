@@ -97,6 +97,7 @@ describe('mapPlainTextProps', () => {
         lineBreakStrategyIOS: 'hangul-word',
         allowFontScaling: false,
         maxFontSizeMultiplier: 1.4,
+        dynamicTypeRamp: 'headline',
       })
     ).toMatchObject({
       numberOfLines: 3,
@@ -104,6 +105,7 @@ describe('mapPlainTextProps', () => {
       lineBreakStrategyIOS: 'hangul-word',
       allowFontScaling: false,
       maxFontSizeMultiplier: 1.4,
+      dynamicTypeRamp: 'headline',
     });
   });
 

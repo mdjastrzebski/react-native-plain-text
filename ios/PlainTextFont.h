@@ -36,6 +36,11 @@ UIFont *resolveFont(const RNPlainTextProps &props, CGFloat fontSizeMultiplier);
  * allowFontScaling is on, clamped by maxFontSizeMultiplier when that is >= 1,
  * and 1 otherwise. Shared so the view and shadow node apply identical
  * clamping despite reading their base multiplier from different places.
+ *
+ * When `dynamicTypeRamp` is set, it replaces `baseMultiplier` outright with a
+ * ratio derived from that text style's own `UIFontMetrics` curve (mirrors RN
+ * <Text>'s `RCTEffectiveFontSizeMultiplierFromTextAttributes`), still subject
+ * to the same allowFontScaling/maxFontSizeMultiplier clamping.
  */
 CGFloat resolveFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier);
 

@@ -6,6 +6,7 @@
 | ----------------------- | ---------------------- | ---------------------------------------------------------------------------------- |
 | `allowFontScaling`      | ✅                     |                                                                                    |
 | `children`              | 🟡                     | `string` only                                                                      |
+| `dynamicTypeRamp`       | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
 | `ellipsizeMode`         | ✅                     |                                                                                    |
 | `lineBreakStrategyIOS`  | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
 | `maxFontSizeMultiplier` | ✅                     |                                                                                    |
@@ -76,7 +77,6 @@ Things Plain Text does that RN `<Text>` does not:
 | `selectable` / `selectionColor` / `suppressHighlighting` / `userSelect` | To Do                  |
 | `textDecorationColor` / `textDecorationStyle`                           | To Do                  |
 | `writingDirection`                                                      | To Do                  |
-| `dynamicTypeRamp`                                                       | To Do                  |
 | `android_hyphenationFrequency`                                          | To Do                  |
 
 Open an issue for the one you need. Real-world usage sets the priority.

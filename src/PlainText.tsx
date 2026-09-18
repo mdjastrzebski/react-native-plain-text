@@ -17,6 +17,20 @@ export type PlainTextProps = AccessibilityProps & {
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  /// iOS-only. Scales by the named Dynamic Type text style's own curve instead
+  /// of the OS's linear font-scale multiplier. No-op on Android.
+  dynamicTypeRamp?:
+    | 'caption2'
+    | 'caption1'
+    | 'footnote'
+    | 'subheadline'
+    | 'callout'
+    | 'body'
+    | 'headline'
+    | 'title3'
+    | 'title2'
+    | 'title1'
+    | 'largeTitle';
   testID?: string;
   nativeID?: string;
   id?: string;
@@ -38,6 +52,7 @@ export function mapPlainTextProps({
   textBreakStrategy,
   allowFontScaling,
   maxFontSizeMultiplier,
+  dynamicTypeRamp,
   unstable_lineHeightClippingCompat,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
@@ -90,6 +105,7 @@ export function mapPlainTextProps({
     textBreakStrategy,
     allowFontScaling,
     maxFontSizeMultiplier,
+    dynamicTypeRamp,
     includeFontPadding,
     lineHeightClippingCompat: unstable_lineHeightClippingCompat,
     style: viewStyle,

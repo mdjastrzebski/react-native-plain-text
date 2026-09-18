@@ -216,6 +216,14 @@ static NSString *resolvedFaceName(
 
 CGFloat resolveFontSizeMultiplier(const RNPlainTextProps &props, CGFloat baseMultiplier)
 {
+  if (props.allowFontScaling && props.dynamicTypeRamp != RNPlainTextDynamicTypeRamp::None) {
+    // Requests the ramp's curve at the size PlainText would otherwise draw
+    // (props.fontSize is never unset, unlike RN <Text>'s own fontSize, so
+    // there's no separate "reference size for this ramp" fallback to pick).
+    UIFontMetrics *fontMetrics =
+        [UIFontMetrics metricsForTextStyle:textStyleFromDynamicTypeRampProp(props.dynamicTypeRamp)];
+    baseMultiplier = [fontMetrics scaledValueForValue:props.fontSize] / props.fontSize;
+  }
   return clampFontSizeMultiplier(props.allowFontScaling, props.maxFontSizeMultiplier, baseMultiplier);
 }
 

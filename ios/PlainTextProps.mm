@@ -112,6 +112,39 @@ NSLineBreakStrategy lineBreakStrategyFromProp(RNPlainTextLineBreakStrategyIOS li
     }
 }
 
+UIFontTextStyle textStyleFromDynamicTypeRampProp(RNPlainTextDynamicTypeRamp dynamicTypeRamp)
+{
+    switch (dynamicTypeRamp) {
+        case RNPlainTextDynamicTypeRamp::None:
+        case RNPlainTextDynamicTypeRamp::Body:
+            return UIFontTextStyleBody;
+        case RNPlainTextDynamicTypeRamp::Caption2:
+            return UIFontTextStyleCaption2;
+        case RNPlainTextDynamicTypeRamp::Caption1:
+            return UIFontTextStyleCaption1;
+        case RNPlainTextDynamicTypeRamp::Footnote:
+            return UIFontTextStyleFootnote;
+        case RNPlainTextDynamicTypeRamp::Subheadline:
+            return UIFontTextStyleSubheadline;
+        case RNPlainTextDynamicTypeRamp::Callout:
+            return UIFontTextStyleCallout;
+        case RNPlainTextDynamicTypeRamp::Headline:
+            return UIFontTextStyleHeadline;
+        case RNPlainTextDynamicTypeRamp::Title3:
+            return UIFontTextStyleTitle3;
+        case RNPlainTextDynamicTypeRamp::Title2:
+            return UIFontTextStyleTitle2;
+        case RNPlainTextDynamicTypeRamp::Title1:
+            return UIFontTextStyleTitle1;
+        case RNPlainTextDynamicTypeRamp::LargeTitle:
+#if !TARGET_OS_TV
+            return UIFontTextStyleLargeTitle;
+#else
+            return UIFontTextStyleTitle1;
+#endif
+    }
+}
+
 RCTFontWeight fontWeightFromProp(const std::string &fontWeight)
 {
     if (fontWeight == "normal" || fontWeight == "400") {

@@ -197,6 +197,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   override fun setLineBreakStrategyIOS(view: PlainTextView?, lineBreakStrategyIOS: String?) {
   }
 
+  // iOS-only; Android has no UIFontMetrics-style per-text-style scaling curve.
+  @ReactProp(name = "dynamicTypeRamp")
+  override fun setDynamicTypeRamp(view: PlainTextView?, dynamicTypeRamp: String?) {
+  }
+
   @ReactProp(name = "textBreakStrategy")
   override fun setTextBreakStrategy(view: PlainTextView?, textBreakStrategy: String?) {
     view?.setTextBreakStrategy(textBreakStrategy)
