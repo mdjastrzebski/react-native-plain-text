@@ -130,8 +130,8 @@ all vrt-capture-features-accessibility-role
 all vrt-capture-features-accessibility-role-hint
 all vrt-capture-features-accessibility-state
 all vrt-capture-features-accessibility-hidden
-all vrt-capture-features-font-padding-default-padding-4
-all vrt-capture-features-font-padding-disabled-padding-4
+android vrt-capture-features-font-padding-default-padding-4
+android vrt-capture-features-font-padding-disabled-padding-4
 # use-cases
 all vrt-capture-use-cases-hero-heading
 all vrt-capture-use-cases-card-title

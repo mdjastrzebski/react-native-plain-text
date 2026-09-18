@@ -145,7 +145,7 @@ open_deep_link() {
 }
 
 prepare_ios_runner() {
-  [[ "$platform" == "ios" ]] || return
+  [[ "$platform" == "ios" ]] || return 0
 
   printf 'Preparing the agent-device iOS runner.\n'
   agent_device prepare ios-runner
