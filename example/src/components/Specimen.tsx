@@ -328,17 +328,7 @@ const styles = StyleSheet.create({
     // blurb than every other heading does to what precedes it.
     paddingBottom: 4 + RUN_OFF,
   },
-  // Opaque and the full width of the scroll content: once this row sticks,
-  // whatever the list has scrolled to sits directly behind it and has to be
-  // fully hidden, not just behind the field itself.
-  // The horizontal inset comes from `screenStyles.container`'s own
-  // `paddingHorizontal`, same as every section: the field lines up with the
-  // rows it filters instead of running to the edge on its own.
-  //
-  // The hairline only reads once this row is stuck to the top of the
-  // viewport: at rest it sits flush against the Cover's own top margin, and
-  // it's the boundary against scrolled-under content, not the Cover, that
-  // needs marking.
+  // Opaque: once this row sticks, it must fully hide scrolled-under content.
   searchBarRow: {
     backgroundColor: COLOR.paper,
     paddingTop: 12,

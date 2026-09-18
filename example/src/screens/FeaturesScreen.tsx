@@ -105,8 +105,7 @@ export default function FeaturesScreen({ navigation }: Props) {
       stickyHeaderIndices={[0]}
     >
       <SearchField value={search} onChangeText={setSearch} placeholder="Search sections" />
-      {/* Hidden rather than filtered like a Section: it's the page's title
-          page, not a result, and a search leaves no room to justify it. */}
+      {/* Hidden rather than filtered: it's the title page, not a result. */}
       {search === '' && (
         <Cover
           lockup={{ glyph: 'Pt', title: 'PlainText' }}
