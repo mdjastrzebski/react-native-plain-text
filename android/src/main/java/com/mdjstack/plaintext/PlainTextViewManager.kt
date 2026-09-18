@@ -125,6 +125,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setVerticalAlign(verticalAlign)
   }
 
+  // iOS-only; RN <Text> doesn't honor writingDirection on Android either.
+  @ReactProp(name = "writingDirection")
+  override fun setWritingDirection(view: PlainTextView?, writingDirection: String?) {
+  }
+
   @ReactProp(name = "textDecorationLine")
   override fun setTextDecorationLine(view: PlainTextView?, textDecorationLine: String?) {
     view?.setTextDecorationLine(textDecorationLine)

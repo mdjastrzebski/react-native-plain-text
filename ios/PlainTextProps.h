@@ -32,6 +32,8 @@ NSString *applyTextTransform(NSString *text, RNPlainTextTextTransform textTransf
 
 NSTextAlignment textAlignmentFromProp(RNPlainTextTextAlign textAlign);
 
+NSWritingDirection writingDirectionFromProp(RNPlainTextWritingDirection writingDirection);
+
 /*
  * textDecorationLine is a space-joined set of "underline"/"line-through";
  * substring presence toggles each independently, mirroring RN <Text>.

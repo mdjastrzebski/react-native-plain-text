@@ -194,6 +194,24 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      {Platform.OS === 'ios' && (
+        // 'auto' textAlign resolves to the writing direction's own start edge (see
+        // the TEXT_ALIGNS comment above), so pinning writingDirection is the
+        // cleanest way to see it move without needing bidirectional text.
+        <Section title="Writing Direction (iOS-only)">
+          {(['ltr', 'rtl'] as const).map((writingDirection) => (
+            <TextItem
+              key={writingDirection}
+              label={writingDirection}
+              showText={showText}
+              style={[styles.body, { textAlign: 'auto', writingDirection }]}
+              containerStyle={screenStyles.wideRow}
+            >
+              {PARAGRAPH}
+            </TextItem>
+          ))}
+        </Section>
+      )}
       {/* Three sizes, nothing else: no color, background or padding to explain
           away a misalignment as some other prop's doing. `alignItems: "baseline"`
           on the row asks each sibling where its own text baseline sits instead

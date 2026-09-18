@@ -127,8 +127,9 @@ using namespace plaintext;
     }
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
+    BOOL hasWritingDirection = props.writingDirection != RNPlainTextWritingDirection::Auto;
 
-    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow) {
+    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasWritingDirection) {
         // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
         _label.attributedText = nil;
         _label.font = font;
@@ -175,6 +176,7 @@ using namespace plaintext;
     // The paragraph style overrides the label's own lineBreakMode/lineBreakStrategy.
     paragraphStyle.lineBreakMode = lineBreakModeFromProp(props.ellipsizeMode);
     paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
+    paragraphStyle.baseWritingDirection = writingDirectionFromProp(props.writingDirection);
 
     CGFloat verticalTextShift = 0;
     if (hasLineHeight) {
@@ -237,6 +239,7 @@ using namespace plaintext;
         oldViewProps.textAlign != newViewProps.textAlign ||
         oldViewProps.textAlignVertical != newViewProps.textAlignVertical ||
         oldViewProps.verticalAlign != newViewProps.verticalAlign ||
+        oldViewProps.writingDirection != newViewProps.writingDirection ||
         oldViewProps.color != newViewProps.color ||
         oldViewProps.lineHeight != newViewProps.lineHeight ||
         oldViewProps.letterSpacing != newViewProps.letterSpacing ||
