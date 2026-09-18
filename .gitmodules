@@ -3,6 +3,6 @@
 	url = https://github.com/facebook/react-native.git
 [submodule "baselines"]
 	path = baselines
-	url = git@github.com:troZee/react-native-plain-text-artifactory.git
+	url = https://github.com/troZee/react-native-plain-text-artifactory.git
 	branch = main
 	shallow = true
