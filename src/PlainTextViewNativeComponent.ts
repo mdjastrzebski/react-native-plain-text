@@ -76,6 +76,20 @@ export interface NativeProps extends ViewProps {
   allowFontScaling?: CodegenTypes.WithDefault<boolean, true>;
   maxFontSizeMultiplier?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
 
+  // Only takes effect with numberOfLines={1} and a definite width: shrinks the font to
+  // fit instead of wrapping/truncating. See docs/contributing/adjusts-font-size-to-fit.md
+  // for why multiline and an indefinite width aren't supported.
+  // Cost: medium. iOS: native UILabel machinery, paid only when numberOfLines is 1.
+  // Android: a scratch TextPaint copy plus one Paint.measureText call, both paid only
+  // when set with numberOfLines={1} and a definite width; more measureText calls only
+  // while the text still overflows the box.
+  adjustsFontSizeToFit?: CodegenTypes.WithDefault<boolean, false>;
+
+  // A fraction of fontSize (0 means unset), floored at 4pt/4dp either way. No-op unless
+  // adjustsFontSizeToFit is also set. RN <Text> ignores this prop under Fabric; see
+  // docs/contributing/adjusts-font-size-to-fit.md.
+  minimumFontScale?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
+
   // Internal prop used for experiments. No-op in public releases.
   experiment?: CodegenTypes.WithDefault<boolean, false>;
   lineHeightClippingCompat?: CodegenTypes.WithDefault<boolean, false>;

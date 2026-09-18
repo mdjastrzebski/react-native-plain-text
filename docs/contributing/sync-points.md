@@ -46,6 +46,9 @@ most props only touch a few.
   [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
+- `adjustsFontSizeToFit`, `minimumFontScale` (mounted view only — no entry anywhere in
+  [Set 2](#set-2--a-prop-that-affects-measured-size), on either platform; see
+  [adjusts-font-size-to-fit.md](adjusts-font-size-to-fit.md))
 - `lineHeightClippingCompat` (`unstable_lineHeightClippingCompat` at the JS boundary — see
   [Set 13](#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary))
 - `includeFontPadding` (Android-only — no `ios/PlainTextProps.mm` entry, no iOS entry in
@@ -120,6 +123,9 @@ Notably _excluded_ — all draw-only, none affect the box:
 - `textDecorationLine`
 - `textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`, `textShadowRadius`
 - `lineHeightClippingCompat`
+- `adjustsFontSizeToFit`, `minimumFontScale` (not draw-only like the rest of this list, but still excluded on
+  purpose: deliberately constrained to never need a box the measurer doesn't already have — see
+  [adjusts-font-size-to-fit.md](adjusts-font-size-to-fit.md))
 
 Applying one of the common props above has to happen identically in five places, or the box and the rendered text
 disagree. That's a stale or wrong size, not a crash. The groups above already say which of the five apply to
@@ -356,6 +362,13 @@ Fabric's props diff never fires, and every derived value is stale until somethin
 reachable from both callbacks or it holds its old size on one platform only. On Android that means
 `markScaledSizesDirty()` must mark its dirty flag. On iOS, `applyContentFromProps` already covers everything it builds,
 so nothing extra is needed there.
+
+`adjustsFontSizeToFit`'s `minimumScaleFactor` is the exception that proves this: it scales with the resolved font
+size too (see docs/contributing/adjusts-font-size-to-fit.md), but is computed in its own
+`applyFontSizeToFitFromProps`, not inside `applyContentFromProps`. `traitCollectionDidChange` calls both explicitly
+for that reason — dropping the second call would leave `minimumScaleFactor` floored against a stale font size after
+a Dynamic Type change. Android needs no equivalent addition: `markScaledSizesDirty`'s existing flags reach
+`flushPendingUpdates`, which calls `maybeShrinkToFit()` unconditionally as its last step.
 
 Re-measurement is **not** part of this contract: RN dirties every `MeasurableYogaNode` when the surface's
 `fontSizeMultiplier` changes, so the shadow node re-measures on its own. Only the mounted view needs the callback.

@@ -20,4 +20,14 @@ double clampFontSizeMultiplier(bool allowFontScaling, double maxFontSizeMultipli
   return baseMultiplier;
 }
 
+double minimumScaleFactor(double minimumFontScale, double fontPointSize)
+{
+  if (fontPointSize <= 0.0) {
+    return 1.0;
+  }
+  double floorPointSize = std::fmax(minimumFontScale * fontPointSize, 4.0);
+  double scale = floorPointSize / fontPointSize;
+  return std::fmin(scale, 1.0);
+}
+
 } // namespace facebook::react

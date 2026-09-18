@@ -7,6 +7,7 @@
 
 #import "PlainTextComponentDescriptor.h"
 #import "PlainTextFont.h"
+#import "PlainTextFontSizing.h"
 #import "PlainTextProps.h"
 #import "RCTFabricComponentsPlugins.h"
 
@@ -201,6 +202,23 @@ using namespace plaintext;
     _label.attributedText = [[NSAttributedString alloc] initWithString:text attributes:attributes];
 }
 
+// UIKit only auto-shrinks a single line (its own documented restriction on
+// adjustsFontSizeToFitWidth), so this is a no-op outside numberOfLines={1}: the box
+// always ends up sized for the unshrunk text in that case (see
+// docs/contributing/adjusts-font-size-to-fit.md), never a wrong size.
+// minimumScaleFactor needs the resolved, already-scaled font point size, which
+// resolveFont caches, so this costs a cache lookup rather than a fresh resolution.
+- (void)applyFontSizeToFitFromProps:(const RNPlainTextProps &)props
+{
+    _label.adjustsFontSizeToFitWidth = props.adjustsFontSizeToFit && props.numberOfLines == 1;
+    if (!props.adjustsFontSizeToFit) {
+        return;
+    }
+    CGFloat fontSizeMultiplier = resolveFontSizeMultiplier(props, RCTFontSizeMultiplier());
+    UIFont *font = resolveFont(props, fontSizeMultiplier);
+    _label.minimumScaleFactor = facebook::react::minimumScaleFactor(props.minimumFontScale, font.pointSize);
+}
+
 // A Dynamic Type change alone touches no prop, so updateProps's diff never fires; re-derive content here since UIKit calls this independent of Fabric.
 // SYNC: PlainTextView.onConfigurationChanged is the Android counterpart and must cover the same set of scaled values.
 // See docs/contributing/sync-points.md#set-8--anything-derived-from-the-os-text-size-setting.
@@ -216,6 +234,7 @@ using namespace plaintext;
     const auto &props = *std::static_pointer_cast<RNPlainTextProps const>(_props);
     if (props.allowFontScaling) {
         [self applyContentFromProps:props];
+        [self applyFontSizeToFitFromProps:props];
     }
 }
 
@@ -256,6 +275,23 @@ using namespace plaintext;
 
     if (_forceApplyProps || oldViewProps.numberOfLines != newViewProps.numberOfLines) {
         _label.numberOfLines = newViewProps.numberOfLines;
+    }
+
+    // Same dependency set as resolveFont/resolveFontSizeMultiplier, plus numberOfLines
+    // (adjustsFontSizeToFitWidth's own gate).
+    if (_forceApplyProps ||
+        oldViewProps.adjustsFontSizeToFit != newViewProps.adjustsFontSizeToFit ||
+        oldViewProps.minimumFontScale != newViewProps.minimumFontScale ||
+        oldViewProps.numberOfLines != newViewProps.numberOfLines ||
+        oldViewProps.fontSize != newViewProps.fontSize ||
+        oldViewProps.fontFamily != newViewProps.fontFamily ||
+        oldViewProps.fontWeight != newViewProps.fontWeight ||
+        oldViewProps.fontStyle != newViewProps.fontStyle ||
+        oldViewProps.fontVariant != newViewProps.fontVariant ||
+        oldViewProps.fontVariationSettings != newViewProps.fontVariationSettings ||
+        oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||
+        oldViewProps.maxFontSizeMultiplier != newViewProps.maxFontSizeMultiplier) {
+        [self applyFontSizeToFitFromProps:newViewProps];
     }
 
     if (_forceApplyProps || oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode) {

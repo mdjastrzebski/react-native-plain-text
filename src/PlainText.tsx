@@ -17,6 +17,12 @@ export type PlainTextProps = AccessibilityProps & {
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  /// Shrinks the font to fit instead of wrapping/truncating. Only takes effect with
+  /// numberOfLines={1} and a definite width; see the guide's props-and-styles page.
+  adjustsFontSizeToFit?: boolean;
+  /// Fraction of fontSize below which adjustsFontSizeToFit won't shrink further,
+  /// floored at 4pt/4dp either way. No-op without adjustsFontSizeToFit.
+  minimumFontScale?: number;
   testID?: string;
   nativeID?: string;
   id?: string;
@@ -38,6 +44,8 @@ export function mapPlainTextProps({
   textBreakStrategy,
   allowFontScaling,
   maxFontSizeMultiplier,
+  adjustsFontSizeToFit,
+  minimumFontScale,
   unstable_lineHeightClippingCompat,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
@@ -90,6 +98,8 @@ export function mapPlainTextProps({
     textBreakStrategy,
     allowFontScaling,
     maxFontSizeMultiplier,
+    adjustsFontSizeToFit,
+    minimumFontScale,
     includeFontPadding,
     lineHeightClippingCompat: unstable_lineHeightClippingCompat,
     style: viewStyle,

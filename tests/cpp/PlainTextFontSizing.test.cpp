@@ -14,6 +14,7 @@
 #include <string>
 
 using facebook::react::clampFontSizeMultiplier;
+using facebook::react::minimumScaleFactor;
 using facebook::react::scaledFontSize;
 
 namespace {
@@ -46,12 +47,22 @@ void testClampFontSizeMultiplier()
   expectEqual("a max exactly at 1 is a real clamp, not \"no max\"", 1.0, clampFontSizeMultiplier(true, 1.0, 2.0));
 }
 
+void testMinimumScaleFactor()
+{
+  expectEqual("unset minimumFontScale (0) still floors at 4pt", 4.0 / 20.0, minimumScaleFactor(0, 20));
+  expectEqual("a minimumFontScale above the 4pt floor wins", 0.5, minimumScaleFactor(0.5, 20));
+  expectEqual("a minimumFontScale below the 4pt floor is overridden by it", 4.0 / 20.0, minimumScaleFactor(0.1, 20));
+  expectEqual("a fontPointSize at or under the floor never shrinks below 1.0", 1.0, minimumScaleFactor(0, 3));
+  expectEqual("a non-positive fontPointSize is a no-op, not a divide-by-zero", 1.0, minimumScaleFactor(0.5, 0));
+}
+
 } // namespace
 
 int main()
 {
   testScaledFontSize();
   testClampFontSizeMultiplier();
+  testMinimumScaleFactor();
 
   if (failures > 0) {
     std::printf("\nPlainTextFontSizing: %d failure(s)\n", failures);

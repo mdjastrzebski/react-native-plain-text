@@ -2,21 +2,23 @@
 
 ## Supported props
 
-| Prop                    | RN `<Text>` compatible | Notes                                                                              |
-| ----------------------- | ---------------------- | ---------------------------------------------------------------------------------- |
-| `allowFontScaling`      | ✅                     |                                                                                    |
-| `children`              | 🟡                     | `string` only                                                                      |
-| `ellipsizeMode`         | ✅                     |                                                                                    |
-| `lineBreakStrategyIOS`  | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
-| `maxFontSizeMultiplier` | ✅                     |                                                                                    |
-| `nativeID`              | ✅                     |                                                                                    |
-| `id`                    | ✅                     |                                                                                    |
-| `numberOfLines`         | ✅                     |                                                                                    |
-| `onLayout`              | ✅                     |                                                                                    |
-| `testID`                | ✅                     |                                                                                    |
-| `text`                  | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
-| `textBreakStrategy`     | ✅                     | Android-only, like RN `<Text>`                                                     |
-| Accessibility props     | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
+| Prop                    | RN `<Text>` compatible | Notes                                                                                                              |
+| ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `adjustsFontSizeToFit`  | 🟡                     | Only takes effect with `numberOfLines={1}` and a definite width. See below.                                        |
+| `allowFontScaling`      | ✅                     |                                                                                                                    |
+| `children`              | 🟡                     | `string` only                                                                                                      |
+| `ellipsizeMode`         | ✅                     |                                                                                                                    |
+| `lineBreakStrategyIOS`  | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                                                      |
+| `maxFontSizeMultiplier` | ✅                     |                                                                                                                    |
+| `minimumFontScale`      | ⬆️                     | No-op without `adjustsFontSizeToFit`. RN `<Text>` ignores this prop under Fabric; Plain Text honors it. See below. |
+| `nativeID`              | ✅                     |                                                                                                                    |
+| `id`                    | ✅                     |                                                                                                                    |
+| `numberOfLines`         | ✅                     |                                                                                                                    |
+| `onLayout`              | ✅                     |                                                                                                                    |
+| `testID`                | ✅                     |                                                                                                                    |
+| `text`                  | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).                                   |
+| `textBreakStrategy`     | ✅                     | Android-only, like RN `<Text>`                                                                                     |
+| Accessibility props     | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc                                 |
 
 RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
 
@@ -52,6 +54,11 @@ RN `<Text>` compatibility: ✅ fully compatible · ⬆️ added in Plain Text
   `UILabel` draws the underline at the font's `underlinePosition`.
   RN `<Text>` draws it a bit too high, shifted up about one
   `underlineThickness` above its natural position.
+- **`adjustsFontSizeToFit` requires `numberOfLines={1}` and a definite width.**
+  Outside that shape it's a no-op: the text renders at its normal size instead
+  of a wrong or half-shrunk one. This is deliberately narrower than RN
+  `<Text>`, which also shrinks multiline text against an indefinite width. The
+  two platforms also don't always agree on the exact size they land on.
 
 ## Improvements over RN Text
 
@@ -67,12 +74,14 @@ Things Plain Text does that RN `<Text>` does not:
   ([RN#29507](https://github.com/facebook/react-native/issues/29507)). Plain
   Text corrects the vertical offset at draw time so the text stays centered in
   its line box.
+- **`minimumFontScale` actually does something.** RN `<Text>` accepts the prop
+  but silently drops it under Fabric (it's only wired up in the legacy,
+  non-Fabric renderer). Plain Text honors it, floored at 4pt/4dp either way.
 
 ## Planned
 
 | Prop / style                                                            | RN `<Text>` compatible |
 | ----------------------------------------------------------------------- | ---------------------- |
-| `adjustsFontSizeToFit` / `minimumFontScale`                             | To Do                  |
 | `selectable` / `selectionColor` / `suppressHighlighting` / `userSelect` | To Do                  |
 | `textDecorationColor` / `textDecorationStyle`                           | To Do                  |
 | `writingDirection`                                                      | To Do                  |

@@ -1,8 +1,10 @@
 # `adjustsFontSizeToFit` / `minimumFontScale`
 
-Why the README calls this the most expensive planned item, what RN actually does,
-and the two ways it could be built here. Written before any implementation
-attempt. Nothing described below is built.
+Why the README used to call this the most expensive planned item, what RN
+actually does, the two ways it could be built here, and (at the bottom) which
+one was. Everything above [What was built](#what-was-built) was written before
+any implementation attempt, and is kept as-is: it is still why the shape below
+was chosen over the alternative.
 
 Line numbers cite the installed **RN 0.83.10** (`node_modules/react-native`).
 `references/react-native` is `main` and has moved. Where the two differ in
@@ -212,6 +214,64 @@ shrink search shared in `cpp/`, and two platform fit-predicates (which on iOS
 means introducing `NSLayoutManager` measurement, per point 3). Everything in
 [Why we cannot copy that answer](#why-we-cannot-copy-that-answer) has to be paid.
 
-Nothing has been prototyped, and no numbers here are measured: the cost figures
-are iteration counts read off RN's loops, not timings. If this gets picked up,
-[measuring.md](measuring.md) applies before any claim about it goes in the README.
+No numbers below are measured: the cost figures elsewhere in this file are
+iteration counts read off RN's loops, not timings. [measuring.md](measuring.md)
+applies before a quoted number goes in the README.
+
+## What was built
+
+The constrained-only shape, both props, `minimumFontScale` included: the
+formula in [`minimumFontScale` is dead under Fabric](#minimumfontscale-is-dead-under-fabric)
+is cheap enough (a `max` and a divide) that skipping it would have saved
+nothing. Neither prop touches measurement: `RNPlainTextProps`/`PlainTextView`
+gain the two fields, but `measureContent`, `PlainTextShadowNode.mm`,
+`PlainTextMeasurementsManager.cpp` and `PlainTextViewManager.kt`'s `measure()`
+are untouched, and the shared off-screen measuring view never sees either
+prop. That is deliberate, not an oversight to fix later: with an indefinite
+size Yoga sizes the box to the unshrunk text, so autoshrink never has
+anything to do, the same graceful "box wins" degradation as every other prop.
+
+**iOS** hands both props straight to `UILabel`: `adjustsFontSizeToFitWidth` and
+`minimumScaleFactor` (`RNPlainText.mm`'s `applyFontSizeToFitFromProps`,
+gated in `updateProps` on the same prop set `resolveFont`/
+`resolveFontSizeMultiplier` already depend on, plus `numberOfLines`).
+`adjustsFontSizeToFitWidth` is only ever set when `numberOfLines == 1`,
+UIKit's own restriction on the property, so the "UIKit's multiline
+height-fitting is weak" risk above never comes up: there is no multiline
+case to hit it in. `minimumScaleFactor` is computed by
+`ios/PlainTextFontSizing.cpp`'s `minimumScaleFactor(minimumFontScale,
+fontPointSize)`, the legacy formula expressed as a fraction of the resolved
+font size, tested in `tests/cpp/PlainTextFontSizing.test.cpp`. This is
+UIKit's own machinery, not a loop this codebase owns, so it is as cheap as
+any other native-setter prop when off, and its actual shrink cost is
+whatever UIKit's internal search costs, paid only by a caller who turns it
+on.
+
+**Android** has no equivalent to hand off to (see
+[Why Android's native autosize is unusable](#why-androids-native-autosize-is-unusable)),
+so `PlainTextView.kt` runs its own pass, `maybeShrinkToFit()`, from
+`flushPendingUpdates()` and from an `onSizeChanged` override (a size change
+alone touches no prop, the same reason `onConfigurationChanged` exists).
+It is narrower than RN's loop in one more way than iOS: **single line only**
+(`maxLines == 1`), matching UIKit's own restriction rather than trying to
+beat it, so a general bisection search rebuilding a `StaticLayout` per
+attempt (RN's actual cost, `~6-8` iterations) never has to be paid. Instead,
+since glyph advances scale close to linearly with point size, it takes one
+ratio-based jump from the natural (unshrunk) size using `Paint.measureText`,
+then up to `MAX_SHRINK_ITERATIONS` (4) corrective passes to clean up
+hinting/rounding slack, each a `measureText` call on a scratch `TextPaint`
+copy, not a `StaticLayout` build. That copy is allocated once a view is
+actually eligible (opted in, single line, a definite width), not on every
+apply regardless of eligibility; the common case past that point, text that
+already fits, costs exactly one `measureText` call on it. This is an
+approximation, not a
+guaranteed-monotone search: pathological fonts where width doesn't scale
+near-linearly with size could still overflow slightly at the end. That risk
+was accepted in exchange for a few `measureText` calls instead of a bisection
+of `StaticLayout` builds.
+
+**Not done, on purpose:** multiline shrinking on either platform, and any
+attempt to make the two platforms pick identical sizes (the doc above already
+says why: different search, different rounding). Verifying either against a
+device is still outstanding, per the "verify on device" line above: nothing
+in this codebase's CI touches a simulator or a device.

@@ -9,6 +9,7 @@ import android.os.Build
 import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.TextPaint
 import android.text.TextUtils
 import android.text.style.LineHeightSpan
 import android.util.AttributeSet
@@ -49,6 +50,20 @@ class PlainTextView : AppCompatTextView {
   // unless allowFontScaling is off, clamped by maxFontSizeMultiplier (0 = no cap).
   private var allowFontScaling: Boolean = true
   private var maxFontSizeMultiplier: Float = 0f
+
+  // Only takes effect with maxLines == 1 and a definite width: TextView (unlike
+  // UILabel) has no autoshrink of its own, and a general multiline version means a
+  // bisection search rebuilding a Layout per attempt (docs/contributing/adjusts-font-size-to-fit.md),
+  // which this single-line estimate-and-verify pass avoids paying.
+  private var adjustsFontSizeToFit: Boolean = false
+  // Fraction of fontSize (0 means unset). No-op without adjustsFontSizeToFit.
+  private var minimumFontScale: Float = 0f
+  // The pixel size flushPendingUpdates last derived from fontSize/allowFontScaling/
+  // maxFontSizeMultiplier, before any adjustsFontSizeToFit shrink. maybeShrinkToFit
+  // always starts from this, never from the view's current (possibly already shrunk)
+  // textSize, or repeated passes would compound the shrink, the same failure the
+  // reused-measuring-view rule in docs/contributing/sync-points.md forbids.
+  private var naturalTextSizePx: Float = 0f
   // NaN means unset, as in RN's TextAttributes.
   private var letterSpacingDip: Float = Float.NaN
 
@@ -166,10 +181,8 @@ class PlainTextView : AppCompatTextView {
       dirtyFontSize = false
       // Ceil to a whole pixel as RN's TextAttributeProps.setFontSize does: a
       // fractional textSize shifts the paint's metrics and drifts per line.
-      setTextSize(
-        TypedValue.COMPLEX_UNIT_PX,
-        ceil(toEffectivePixel(fontSizeSp, allowFontScaling, maxFontSizeMultiplier))
-      )
+      naturalTextSizePx = ceil(toEffectivePixel(fontSizeSp, allowFontScaling, maxFontSizeMultiplier))
+      setTextSize(TypedValue.COMPLEX_UNIT_PX, naturalTextSizePx)
       dirtyLetterSpacing = true // letterSpacing is relative to font size.
     }
     if (dirtyLetterSpacing) {
@@ -190,6 +203,9 @@ class PlainTextView : AppCompatTextView {
       dirtyText = false
       applyText()
     }
+    // Must run last: it reads the text/typeface/letterSpacing the block above applies,
+    // and its own textSize write must be the one that sticks.
+    maybeShrinkToFit()
   }
 
   init {
@@ -205,11 +221,11 @@ class PlainTextView : AppCompatTextView {
     )
     setTextColor(Color.BLACK) // Matches iOS's UILabel; the theme's TextView gray would differ.
     // Fabric skips setters for props at default, so seed textSize/letterSpacing here or
-    // the view keeps the theme's values, mismatching what the shadow node measured.
-    setTextSize(
-      TypedValue.COMPLEX_UNIT_PX,
-      ceil(toEffectivePixel(fontSizeSp, allowFontScaling, maxFontSizeMultiplier))
-    )
+    // the view keeps the theme's values, mismatching what the shadow node measured. Also
+    // seeds naturalTextSizePx, or a node that never sets fontSize (the common case) would
+    // never leave maybeShrinkToFit's "no natural size known yet" guard.
+    naturalTextSizePx = ceil(toEffectivePixel(fontSizeSp, allowFontScaling, maxFontSizeMultiplier))
+    setTextSize(TypedValue.COMPLEX_UNIT_PX, naturalTextSizePx)
     letterSpacing = // After setTextSize: the em conversion divides by textSize.
       calculateLetterSpacing(letterSpacingDip, textSize, allowFontScaling, maxFontSizeMultiplier)
     // <Text> sets these explicitly rather than trusting the theme, so text wraps the same.
@@ -238,6 +254,14 @@ class PlainTextView : AppCompatTextView {
     if (maxFontSizeMultiplier == value) return
     maxFontSizeMultiplier = value
     markScaledSizesDirty()
+  }
+
+  fun setAdjustsFontSizeToFit(value: Boolean) {
+    adjustsFontSizeToFit = value
+  }
+
+  fun setMinimumFontScale(value: Float) {
+    minimumFontScale = value
   }
 
   // SYNC: everything derived from the OS text-size setting must be reachable from
@@ -614,11 +638,80 @@ class PlainTextView : AppCompatTextView {
     relayoutPosted = true
     post(measureAndLayout)
   }
+
+  // Fabric assigns the frame via layout() directly (see measureAndLayout above), which
+  // still runs through View's normal onSizeChanged. A width change alone touches no
+  // prop, so flushPendingUpdates (called from onAfterUpdateTransaction) never reruns on
+  // its own; catch it here the same way onConfigurationChanged catches a text-size
+  // change that touches no prop either.
+  override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+    super.onSizeChanged(w, h, oldw, oldh)
+    if (isMeasureOnly) return // No frame to fit against; measure() never shrinks.
+    if (w == oldw) return
+    maybeShrinkToFit()
+  }
+
+  // Single-line only (maxLines == 1): matches UILabel's own adjustsFontSizeToFitWidth
+  // restriction on iOS, and avoids a general bisection search rebuilding a Layout per
+  // attempt, the "full parity" cost docs/contributing/adjusts-font-size-to-fit.md
+  // rejected. Outside that restriction (multiline, or no definite width yet) this
+  // degrades to leaving the text at its natural size, the same as if the prop had
+  // never been set, never a wrong or stuck-shrunk size.
+  //
+  // Always resets to naturalTextSizePx first: measureText scales close to linearly
+  // with point size, so one ratio jump from the natural size lands near the fit and a
+  // couple of corrective passes clean up hinting/rounding slack, far cheaper than the
+  // ~6-8 step bisection a general solution needs. The scratch TextPaint copy below is
+  // allocated once this view is actually eligible (opted in, single line, a definite
+  // width) rather than once per apply on every view, eligible or not; whether that
+  // text then turns out to already fit only changes the iteration count, not whether
+  // the allocation happens.
+  private fun maybeShrinkToFit() {
+    if (naturalTextSizePx <= 0f) return
+    val availableWidth = (width - paddingLeft - paddingRight).toFloat()
+    if (!adjustsFontSizeToFit || maxLines != 1 || availableWidth <= 0f) {
+      if (textSize != naturalTextSizePx) setTextSize(TypedValue.COMPLEX_UNIT_PX, naturalTextSizePx)
+      return
+    }
+
+    val floorPx = maxOf(
+      if (minimumFontScale > 0f) minimumFontScale * naturalTextSizePx else 0f,
+      PixelUtil.toPixelFromDIP(MINIMUM_FONT_SIZE_DIP)
+    )
+
+    val measureText = text ?: ""
+    val measurePaint = TextPaint(paint)
+    measurePaint.textSize = naturalTextSizePx
+    var candidatePx = naturalTextSizePx
+    var measuredWidth = measurePaint.measureText(measureText, 0, measureText.length)
+
+    var iterations = 0
+    while (measuredWidth > availableWidth && candidatePx > floorPx && iterations < MAX_SHRINK_ITERATIONS) {
+      candidatePx = (candidatePx * (availableWidth / measuredWidth)).coerceAtLeast(floorPx)
+      measurePaint.textSize = candidatePx
+      measuredWidth = measurePaint.measureText(measureText, 0, measureText.length)
+      iterations++
+    }
+
+    val finalPx = ceil(candidatePx.toDouble()).toFloat()
+    if (finalPx != textSize) setTextSize(TypedValue.COMPLEX_UNIT_PX, finalPx)
+  }
 }
 
 // Mirrors <Text> (TextAttributeProps.DEFAULT_TEXT_SHADOW_COLOR): translucent black,
 // used when textShadowColor is unset but the shadow is otherwise enabled.
 private const val DEFAULT_TEXT_SHADOW_COLOR = 0x55000000
+
+// Mirrors RN's legacy (non-Fabric) minimumFontScale floor (ReactBaseTextShadowNode.kt,
+// `4.dpToPx()`), a fixed physical size rather than an sp one. Keep in sync with
+// ios/PlainTextFontSizing.cpp's minimumScaleFactor, which floors at 4pt for the same
+// reason. See docs/contributing/adjusts-font-size-to-fit.md.
+private const val MINIMUM_FONT_SIZE_DIP = 4f
+
+// Bounded well under RN's ~6-8 step bisection (TextLayoutManager.adjustSpannableFontToFit):
+// maybeShrinkToFit's ratio jump already lands close, so this only cleans up
+// hinting/rounding slack.
+private const val MAX_SHRINK_ITERATIONS = 4
 
 // Mirrors <Text> (TextAttributes#getEffective*): sp -> px through the OS setting,
 // clamped by maxFontSizeMultiplier; raw DIP when scaling is off. Pure and top-level

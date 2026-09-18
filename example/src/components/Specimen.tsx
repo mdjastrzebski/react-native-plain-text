@@ -91,6 +91,8 @@ export function TextItem({
   textBreakStrategy,
   allowFontScaling,
   maxFontSizeMultiplier,
+  adjustsFontSizeToFit,
+  minimumFontScale,
   accessibilityProps,
   children,
 }: {
@@ -115,6 +117,8 @@ export function TextItem({
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  adjustsFontSizeToFit?: boolean;
+  minimumFontScale?: number;
   // Forwarded to both PlainText and the comparison Text so the two expose the
   // same accessibility surface (testID, role, label, ...) to the native tree.
   accessibilityProps?: AccessibilityProps & { testID?: string };
@@ -146,6 +150,8 @@ export function TextItem({
             textBreakStrategy={textBreakStrategy}
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
+            adjustsFontSizeToFit={adjustsFontSizeToFit}
+            minimumFontScale={minimumFontScale}
             unstable_lineHeightClippingCompat={compatOn}
             {...accessibilityProps}
           >
@@ -166,6 +172,8 @@ export function TextItem({
               textBreakStrategy={textBreakStrategy}
               allowFontScaling={allowFontScaling}
               maxFontSizeMultiplier={maxFontSizeMultiplier}
+              adjustsFontSizeToFit={adjustsFontSizeToFit}
+              minimumFontScale={minimumFontScale}
               {...accessibilityProps}
             >
               {children}

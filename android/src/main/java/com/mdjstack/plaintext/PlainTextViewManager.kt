@@ -212,6 +212,18 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setMaxFontSizeMultiplier(maxFontSizeMultiplier)
   }
 
+  // Mounted view only: unlike every size-affecting prop above, this never reaches
+  // measure() below. See docs/contributing/adjusts-font-size-to-fit.md.
+  @ReactProp(name = "adjustsFontSizeToFit", defaultBoolean = false)
+  override fun setAdjustsFontSizeToFit(view: PlainTextView?, adjustsFontSizeToFit: Boolean) {
+    view?.setAdjustsFontSizeToFit(adjustsFontSizeToFit)
+  }
+
+  @ReactProp(name = "minimumFontScale")
+  override fun setMinimumFontScale(view: PlainTextView?, minimumFontScale: Float) {
+    view?.setMinimumFontScale(minimumFontScale)
+  }
+
   // Android-only, matching RN <Text>.
   @ReactProp(name = "includeFontPadding", defaultBoolean = true)
   override fun setIncludeFontPadding(view: PlainTextView?, includeFontPadding: Boolean) {

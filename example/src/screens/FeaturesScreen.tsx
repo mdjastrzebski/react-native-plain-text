@@ -278,6 +278,38 @@ export default function FeaturesScreen({ navigation }: Props) {
           </TextItem>
         ))}
       </Section>
+      <Section
+        title="Adjusts Font Size To Fit"
+        footer="Only takes effect with numberOfLines={1} and a definite width, since that is the one shape where the box never depends on the shrunk text. See the props guide for the full restriction."
+      >
+        {ADJUSTS_FONT_SIZE_TO_FIT_WIDTHS.map((width) => (
+          <TextItem
+            key={width}
+            label={`${width}pt wide`}
+            showText={showText}
+            style={{ fontSize: ADJUSTS_FONT_SIZE_TO_FIT_SIZE, width }}
+            numberOfLines={1}
+            ellipsizeMode="clip"
+            adjustsFontSizeToFit
+          >
+            {SPECIMEN}
+          </TextItem>
+        ))}
+        {/* Narrower than any box above shrinks to unaided: minimumFontScale stops the
+            shrink at half the original size, so the box clips the overflow instead of
+            the text going smaller still. */}
+        <TextItem
+          label="minimumFontScale 0.5"
+          showText={showText}
+          style={{ fontSize: ADJUSTS_FONT_SIZE_TO_FIT_SIZE, width: 60 }}
+          numberOfLines={1}
+          ellipsizeMode="clip"
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+        >
+          {SPECIMEN}
+        </TextItem>
+      </Section>
       {/* padding isn't a text-style prop: it stays in the style handed to the
           native view, so Yoga lays it out around the self-measured text. What to
           look at is the grey box growing while the glyphs move down with it: a
@@ -985,6 +1017,11 @@ const FONT_VARIANT_SPECIMEN = 'Waffle office 0123456789';
 const EMOJI_SPECIMEN = 'Quick brown 🦊 jumps over the lazy 🐶';
 
 const FONT_SIZES = [48, 40, 32, 26, 20, 16, 13, 10];
+
+// Narrow enough that SPECIMEN at ADJUSTS_FONT_SIZE_TO_FIT_SIZE overflows each box by a
+// bit more, so the shrink is visible without ever hitting the (default) 4pt/4dp floor.
+const ADJUSTS_FONT_SIZE_TO_FIT_WIDTHS = [220, 150, 100];
+const ADJUSTS_FONT_SIZE_TO_FIT_SIZE = 28;
 
 // 'auto' is left out: it resolves to the writing direction's own start edge, so on
 // an LTR device it renders identically to the 'left' row above it.
