@@ -49,10 +49,12 @@ most props only touch a few.
 - `lineHeightClippingCompat` (`unstable_lineHeightClippingCompat` at the JS boundary — see
   [Set 13](#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary))
 - `includeFontPadding`
-- `textBreakStrategy`
+- `textBreakStrategy` (Android-only — no `ios/PlainTextProps.mm` entry, no iOS entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `experiment` (internal-only)
 
-**Files, every prop touches these at minimum:**
+**Files, every prop touches these at minimum, except the iOS-only and Android-only props noted above, which skip
+`ios/PlainTextProps.mm` or the Android setter respectively:**
 
 - `src/PlainTextViewNativeComponent.ts` — codegen spec, source of truth for the prop's name, type and JS-facing default
 - `Props.h` (generated from the spec, not checked in) — native prop struct and its default
@@ -87,7 +89,7 @@ most props only touch a few.
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
 - `includeFontPadding`
-- `textBreakStrategy`
+- `textBreakStrategy` (Android-only — see the exception below)
 - `experiment` (internal-only)
 
 Notably _excluded_ — all draw-only, none affect the box:
@@ -136,6 +138,14 @@ exactly what Android's off-screen `TextView` needs, not a mirror of the codegen 
 `@ReactProp` setter is still required (the generated interface has no per-platform prop list), but its body is empty,
 same as `lineHeightClippingCompat`'s, since nothing in `PlainTextView.kt` reads it. Leaving it out of
 `measurementInputsEqual` would be the real bug though. Android still runs that comparison to decide whether to
+re-measure at all, even though the prop can never change what it measures there.
+
+**Exception — `textBreakStrategy` only has three of the five places, the mirror image of `lineBreakStrategyIOS`.** It
+changes where Android's `Layout` wraps (`TextView.setBreakStrategy`), so it belongs in `measurementInputsEqual`,
+`PlainTextMeasurementsManager.cpp`'s `serializeProps`, and `PlainTextViewManager.kt`'s `measure()` like any other entry
+here. iOS's line breaker has no equivalent knob, so it has no `ios/PlainTextShadowNode.mm` `measureContent` entry and no
+`RNPlainText.mm` `applyContentFromProps` entry — those two files apply exactly what `UILabel`'s paragraph style needs,
+not a mirror of the codegen struct. iOS still runs `measurementInputsEqual` (it's shared C++) to decide whether to
 re-measure at all, even though the prop can never change what it measures there.
 
 ---

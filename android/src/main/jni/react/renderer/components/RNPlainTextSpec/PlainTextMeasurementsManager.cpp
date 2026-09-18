@@ -84,8 +84,6 @@ folly::dynamic serializeProps(const RNPlainTextProps &props) {
   if (!props.includeFontPadding) {
     serializedProps["includeFontPadding"] = false;
   }
-  // Affects measured height, not just the mounted view: a different break
-  // algorithm changes where wrapped text breaks.
   if (props.textBreakStrategy != RNPlainTextTextBreakStrategy::HighQuality) {
     serializedProps["textBreakStrategy"] = toString(props.textBreakStrategy);
   }

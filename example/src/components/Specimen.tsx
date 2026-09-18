@@ -112,7 +112,6 @@ export function TextItem({
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
-  // Android-only, like RN <Text>.
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;

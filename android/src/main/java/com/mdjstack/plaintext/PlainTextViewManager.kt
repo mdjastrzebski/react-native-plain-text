@@ -197,7 +197,6 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
   override fun setLineBreakStrategyIOS(view: PlainTextView?, lineBreakStrategyIOS: String?) {
   }
 
-  // Android-only, matching RN <Text>.
   @ReactProp(name = "textBreakStrategy")
   override fun setTextBreakStrategy(view: PlainTextView?, textBreakStrategy: String?) {
     view?.setTextBreakStrategy(textBreakStrategy)

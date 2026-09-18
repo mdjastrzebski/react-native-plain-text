@@ -579,7 +579,7 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
-  // Mirrors <Text> (TextAttributeProps#getTextBreakStrategy). Android-only, like RN.
+  // Mirrors <Text> (TextAttributeProps#getTextBreakStrategy).
   fun setTextBreakStrategy(textBreakStrategy: String?) {
     breakStrategy = when (textBreakStrategy) {
       "simple" -> Layout.BREAK_STRATEGY_SIMPLE
