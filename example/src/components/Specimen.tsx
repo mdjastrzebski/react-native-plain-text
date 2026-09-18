@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import {
   StyleSheet,
   Text,
@@ -48,6 +48,18 @@ export function Cover({
   );
 }
 
+// Empty string means "no search active": every screen but Features renders
+// Section outside a SectionSearchProvider, and unfiltered is what those
+// screens need.
+const SectionSearchContext = createContext('');
+
+// Wraps a screen's sections so the header search bar (installed by that
+// screen alone) can hide the ones whose title doesn't match, without every
+// <Section> call site threading the query through by hand.
+export function SectionSearchProvider({ query, children }: { query: string; children: ReactNode }) {
+  return <SectionSearchContext.Provider value={query}>{children}</SectionSearchContext.Provider>;
+}
+
 export function Section({
   title,
   footer,
@@ -64,6 +76,11 @@ export function Section({
   spacedRows?: boolean;
   children: ReactNode;
 }) {
+  const searchQuery = useContext(SectionSearchContext);
+  if (searchQuery !== '' && !title.toLowerCase().includes(searchQuery.toLowerCase())) {
+    return null;
+  }
+
   return (
     <View style={[styles.section, spacedRows === true && styles.spacedSection]}>
       {/* Tracked caps with a rule running out to the margin. Caps rather than a

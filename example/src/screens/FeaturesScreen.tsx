@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   Animated as RNAnimated,
   Platform,
@@ -13,7 +13,14 @@ import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { useCompareText } from '../components/CompareText';
-import { CompareBox, Cover, Section, TextItem, screenStyles } from '../components/Specimen';
+import {
+  CompareBox,
+  Cover,
+  Section,
+  SectionSearchProvider,
+  TextItem,
+  screenStyles,
+} from '../components/Specimen';
 import { TextScrubber } from '../components/TextScrubber';
 import { COLOR, VARIABLE } from '../theme';
 
@@ -40,6 +47,29 @@ type Props = NativeStackScreenProps<ParamListBase>;
 // live on the Use Cases screen.
 export default function FeaturesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
+
+  // Native search bar in the stack header, installed once and left in place:
+  // only its callbacks close over fresh state, and those are stable refs into
+  // `setSearch`, so this doesn't need to re-run per keystroke like
+  // `useCompareText`'s header buttons do.
+  const [search, setSearch] = useState('');
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerSearchBarOptions: {
+        placeholder: 'Search sections',
+        onChangeText: (event) => setSearch(event.nativeEvent.text),
+        onCancelButtonPress: () => setSearch(''),
+        // iOS-only: a docked field under the nav bar rather than a
+        // magnifying-glass icon that expands into one on tap (`automatic` /
+        // `integrated`). `stacked` also sidesteps iOS 26's toolbar-pull and
+        // icon-only Cancel button, both particular to `integrated`.
+        placement: Platform.OS === 'ios' ? 'stacked' : undefined,
+        // Keep the field on screen while scrolling the sections below it,
+        // instead of iOS's default of hiding it as soon as you scroll down.
+        hideWhenScrolling: Platform.OS === 'ios' ? false : undefined,
+      },
+    });
+  }, [navigation]);
 
   // `.interpolate()` can't produce an arbitrary string, so the RN Animated side
   // bridges the value to `text` by hand: a listener + `setNativeProps`. The
@@ -91,128 +121,133 @@ export default function FeaturesScreen({ navigation }: Props) {
       ref={scrollRef}
       style={screenStyles.scroll}
       contentContainerStyle={screenStyles.container}
+      // Required by native-stack's header search bar on iOS: without it, the
+      // search field overlaps the first section instead of pushing it down.
+      contentInsetAdjustmentBehavior="automatic"
     >
       <Cover
         lockup={{ glyph: 'Aa', title: 'PlainText' }}
         blurb="A faster, lower-memory React Native <Text> alternative for simple, single-style text."
       />
-      <Section title="Font Size">
-        {FONT_SIZES.map((fontSize) => (
-          <TextItem
-            key={fontSize}
-            label={`${fontSize}pt`}
-            showText={showText}
-            style={{ fontSize }}
-            // A waterfall: one line per size, clipped at the column edge rather
-            // than wrapped, so the sizes stay comparable down the column.
-            numberOfLines={1}
-            ellipsizeMode="clip"
-          >
-            {SPECIMEN}
-          </TextItem>
-        ))}
-      </Section>
-      {/* Emoji glyphs sit outside every text font's own glyph table, so drawing
-          one forces color-emoji fallback regardless of fontFamily. Nothing
-          here to tune, just a line to check nothing drops the glyph or clips
-          its line height. */}
-      <Section title="Emoji">
-        <TextItem label="mixed" showText={showText}>
-          {EMOJI_SPECIMEN}
-        </TextItem>
-      </Section>
-      <Section title="Font Family" footer={FONT_FAMILY_RESOLUTION_FOOTER}>
-        {FONT_FAMILY_RESOLUTION.map(({ label, style }) => (
-          <TextItem key={label} label={label} showText={showText} style={style}>
-            {style.fontFamily}
-          </TextItem>
-        ))}
-      </Section>
-      <Section title="Color">
-        {COLORS.map(({ label, color }) => (
-          <TextItem
-            key={label}
-            label={label}
-            showText={showText}
-            style={{ fontSize: SHORT_ROW_SIZE, color }}
-          >
-            {SPECIMEN}
-          </TextItem>
-        ))}
-        <TextItem
-          label="inverse"
-          showText={showText}
-          style={{
-            fontSize: SHORT_ROW_SIZE,
-            color: COLOR.paper,
-            backgroundColor: COLOR.inkSurface,
-          }}
-        >
-          {SPECIMEN}
-        </TextItem>
-      </Section>
-      <Section title="Font Weight">
-        {FONT_WEIGHTS.map((fontWeight) => (
-          <TextItem
-            key={fontWeight}
-            label={fontWeight}
-            showText={showText}
-            style={{ fontSize: SHORT_ROW_SIZE, fontWeight }}
-          >
-            {SPECIMEN}
-          </TextItem>
-        ))}
-      </Section>
-      <Section title="Font Style">
-        <TextItem
-          label="italic"
-          showText={showText}
-          style={{ fontSize: SHORT_ROW_SIZE, fontStyle: 'italic' }}
-        >
-          {SPECIMEN}
-        </TextItem>
-        <TextItem
-          label="bold italic"
-          showText={showText}
-          style={{ fontSize: SHORT_ROW_SIZE, fontWeight: 'bold', fontStyle: 'italic' }}
-        >
-          {SPECIMEN}
-        </TextItem>
-      </Section>
-      <Section title="Text Align">
-        {TEXT_ALIGNS.map((textAlign) => (
-          <TextItem
-            key={textAlign}
-            label={textAlign}
-            showText={showText}
-            style={[styles.body, { textAlign }]}
-            containerStyle={screenStyles.wideRow}
-          >
-            {/* Justify only shows itself on text long enough to stretch more
-                than one line to the full measure. */}
-            {textAlign === 'justify' ? PARAGRAPH_LONG : PARAGRAPH}
-          </TextItem>
-        ))}
-      </Section>
-      {Platform.OS === 'ios' && (
-        // 'auto' textAlign resolves to the writing direction's own start edge (see
-        // the TEXT_ALIGNS comment above), so pinning writingDirection is the
-        // cleanest way to see it move without needing bidirectional text.
-        <Section title="Writing Direction (iOS-only)">
-          {(['ltr', 'rtl'] as const).map((writingDirection) => (
+      <SectionSearchProvider query={search}>
+        <Section title="Font Size">
+          {FONT_SIZES.map((fontSize) => (
             <TextItem
-              key={writingDirection}
-              label={writingDirection}
+              key={fontSize}
+              label={`${fontSize}pt`}
               showText={showText}
-              style={[styles.body, { textAlign: 'auto', writingDirection }]}
-              containerStyle={screenStyles.wideRow}
+              style={{ fontSize }}
+              // A waterfall: one line per size, clipped at the column edge rather
+              // than wrapped, so the sizes stay comparable down the column.
+              numberOfLines={1}
+              ellipsizeMode="clip"
             >
-              {PARAGRAPH}
+              {SPECIMEN}
             </TextItem>
           ))}
         </Section>
-      )}
-      {/* Three sizes, nothing else: no color, background or padding to explain
+        {/* Emoji glyphs sit outside every text font's own glyph table, so drawing
+          one forces color-emoji fallback regardless of fontFamily. Nothing
+          here to tune, just a line to check nothing drops the glyph or clips
+          its line height. */}
+        <Section title="Emoji">
+          <TextItem label="mixed" showText={showText}>
+            {EMOJI_SPECIMEN}
+          </TextItem>
+        </Section>
+        <Section title="Font Family" footer={FONT_FAMILY_RESOLUTION_FOOTER}>
+          {FONT_FAMILY_RESOLUTION.map(({ label, style }) => (
+            <TextItem key={label} label={label} showText={showText} style={style}>
+              {style.fontFamily}
+            </TextItem>
+          ))}
+        </Section>
+        <Section title="Color">
+          {COLORS.map(({ label, color }) => (
+            <TextItem
+              key={label}
+              label={label}
+              showText={showText}
+              style={{ fontSize: SHORT_ROW_SIZE, color }}
+            >
+              {SPECIMEN}
+            </TextItem>
+          ))}
+          <TextItem
+            label="inverse"
+            showText={showText}
+            style={{
+              fontSize: SHORT_ROW_SIZE,
+              color: COLOR.paper,
+              backgroundColor: COLOR.inkSurface,
+            }}
+          >
+            {SPECIMEN}
+          </TextItem>
+        </Section>
+        <Section title="Font Weight">
+          {FONT_WEIGHTS.map((fontWeight) => (
+            <TextItem
+              key={fontWeight}
+              label={fontWeight}
+              showText={showText}
+              style={{ fontSize: SHORT_ROW_SIZE, fontWeight }}
+            >
+              {SPECIMEN}
+            </TextItem>
+          ))}
+        </Section>
+        <Section title="Font Style">
+          <TextItem
+            label="italic"
+            showText={showText}
+            style={{ fontSize: SHORT_ROW_SIZE, fontStyle: 'italic' }}
+          >
+            {SPECIMEN}
+          </TextItem>
+          <TextItem
+            label="bold italic"
+            showText={showText}
+            style={{ fontSize: SHORT_ROW_SIZE, fontWeight: 'bold', fontStyle: 'italic' }}
+          >
+            {SPECIMEN}
+          </TextItem>
+        </Section>
+        <Section title="Text Align">
+          {TEXT_ALIGNS.map((textAlign) => (
+            <TextItem
+              key={textAlign}
+              label={textAlign}
+              showText={showText}
+              style={[styles.body, { textAlign }]}
+              containerStyle={screenStyles.wideRow}
+            >
+              {/* Justify only shows itself on text long enough to stretch more
+                than one line to the full measure. */}
+              {textAlign === 'justify' ? PARAGRAPH_LONG : PARAGRAPH}
+            </TextItem>
+          ))}
+        </Section>
+        {Platform.OS === 'ios' && (
+          // 'auto' textAlign resolves to the writing direction's own start edge (see
+          // the TEXT_ALIGNS comment above), so pinning writingDirection is the
+          // cleanest way to see it move without needing bidirectional text.
+          <Section title="Writing Direction (iOS-only)">
+            {(['ltr', 'rtl'] as const).map((writingDirection) => (
+              <TextItem
+                key={writingDirection}
+                label={writingDirection}
+                showText={showText}
+                style={[styles.body, { textAlign: 'auto', writingDirection }]}
+                containerStyle={screenStyles.wideRow}
+              >
+                {PARAGRAPH}
+              </TextItem>
+            ))}
+          </Section>
+        )}
+        {/* Three sizes, nothing else: no color, background or padding to explain
+
           away a misalignment as some other prop's doing. `alignItems: "baseline"`
           on the row asks each sibling where its own text baseline sits instead
           of lining them up on the row's cross-axis edges, and PlainText only
@@ -240,105 +275,105 @@ export default function FeaturesScreen({ navigation }: Props) {
           PlainText/RN comparison. Realistic shapes built on top of this (a
           price beside its VAT note, a heading beside its badge) live on the
           Use Cases screen. */}
-      <Section title="Baseline alignment">
-        <CompareBox
-          label="H / g / x, ruled at the baseline"
-          showText={showText}
-          containerStyle={styles.baselineRow}
-          overlay={
-            <View style={styles.baselineRow}>
-              {BASELINE_ALIGNMENT_GLYPHS.map(({ text, fontSize }, index) => (
-                <Text
-                  key={text}
-                  style={[{ fontSize, marginLeft: index === 0 ? 0 : 10 }, styles.overlayInline]}
-                >
-                  {text}
-                </Text>
-              ))}
-            </View>
-          }
-        >
-          {BASELINE_ALIGNMENT_GLYPHS.map(({ text, fontSize }, index) => (
-            <PlainText
-              key={text}
-              style={[
-                { fontSize, marginLeft: index === 0 ? 0 : 10 },
-                showText && styles.compareTextInline,
-              ]}
-            >
-              {text}
-            </PlainText>
-          ))}
-          <View style={styles.baselineRuler} />
-        </CompareBox>
-      </Section>
-      <Section title="Multiline">
-        <TextItem
-          label="wrap"
-          showText={showText}
-          style={styles.body}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH_LONG}
-        </TextItem>
-      </Section>
-      <Section title="Number of Lines">
-        {[1, 2, 3].map((numberOfLines) => (
-          <TextItem
-            key={numberOfLines}
-            label={`${numberOfLines} line${numberOfLines === 1 ? '' : 's'}`}
+        <Section title="Baseline alignment">
+          <CompareBox
+            label="H / g / x, ruled at the baseline"
             showText={showText}
-            numberOfLines={numberOfLines}
+            containerStyle={styles.baselineRow}
+            overlay={
+              <View style={styles.baselineRow}>
+                {BASELINE_ALIGNMENT_GLYPHS.map(({ text, fontSize }, index) => (
+                  <Text
+                    key={text}
+                    style={[{ fontSize, marginLeft: index === 0 ? 0 : 10 }, styles.overlayInline]}
+                  >
+                    {text}
+                  </Text>
+                ))}
+              </View>
+            }
+          >
+            {BASELINE_ALIGNMENT_GLYPHS.map(({ text, fontSize }, index) => (
+              <PlainText
+                key={text}
+                style={[
+                  { fontSize, marginLeft: index === 0 ? 0 : 10 },
+                  showText && styles.compareTextInline,
+                ]}
+              >
+                {text}
+              </PlainText>
+            ))}
+            <View style={styles.baselineRuler} />
+          </CompareBox>
+        </Section>
+        <Section title="Multiline">
+          <TextItem
+            label="wrap"
+            showText={showText}
             style={styles.body}
             containerStyle={screenStyles.wideRow}
           >
             {PARAGRAPH_LONG}
           </TextItem>
-        ))}
-      </Section>
-      {/* padding isn't a text-style prop: it stays in the style handed to the
+        </Section>
+        <Section title="Number of Lines">
+          {[1, 2, 3].map((numberOfLines) => (
+            <TextItem
+              key={numberOfLines}
+              label={`${numberOfLines} line${numberOfLines === 1 ? '' : 's'}`}
+              showText={showText}
+              numberOfLines={numberOfLines}
+              style={styles.body}
+              containerStyle={screenStyles.wideRow}
+            >
+              {PARAGRAPH_LONG}
+            </TextItem>
+          ))}
+        </Section>
+        {/* padding isn't a text-style prop: it stays in the style handed to the
           native view, so Yoga lays it out around the self-measured text. What to
           look at is the grey box growing while the glyphs move down with it: a
           box that grew but glyphs that stayed put means the space was reserved
           and nothing insetted the text. */}
-      <Section title="Padding">
-        <TextItem
-          label="none"
-          showText={showText}
-          style={styles.body}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH}
-        </TextItem>
-        <TextItem
-          label="vertical 16"
-          showText={showText}
-          style={[styles.body, { paddingVertical: 16 }]}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH}
-        </TextItem>
-        <TextItem
-          label="top 28 bottom 4"
-          showText={showText}
-          style={[styles.body, { paddingTop: 28, paddingBottom: 4 }]}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH}
-        </TextItem>
-        {/* On a wrapping string: padding shrinks the width left for text, so
+        <Section title="Padding">
+          <TextItem
+            label="none"
+            showText={showText}
+            style={styles.body}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH}
+          </TextItem>
+          <TextItem
+            label="vertical 16"
+            showText={showText}
+            style={[styles.body, { paddingVertical: 16 }]}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH}
+          </TextItem>
+          <TextItem
+            label="top 28 bottom 4"
+            showText={showText}
+            style={[styles.body, { paddingTop: 28, paddingBottom: 4 }]}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH}
+          </TextItem>
+          {/* On a wrapping string: padding shrinks the width left for text, so
             this is where a padding-blind measure pass shows up as a clipped or
             overflowing last line. */}
-        <TextItem
-          label="all 20, wrapped"
-          showText={showText}
-          style={[styles.body, { padding: 20 }]}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH_LONG}
-        </TextItem>
-      </Section>
-      {/* Borders are view styles too, and border width joins padding in the
+          <TextItem
+            label="all 20, wrapped"
+            showText={showText}
+            style={[styles.body, { padding: 20 }]}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH_LONG}
+          </TextItem>
+        </Section>
+        {/* Borders are view styles too, and border width joins padding in the
           contentInsets Yoga reserves, so the same two questions apply: is the
           border drawn at all, and is the text inset by it. The last row pairs
           both so the insets have to add up.
@@ -347,228 +382,228 @@ export default function FeaturesScreen({ navigation }: Props) {
           testing borderColor (the Colors section does that), so a row that changed
           hue as well as geometry only made the column harder to read down. Each row
           carries widths, a radius or a style and nothing else. */}
-      <Section title="Borders">
-        <TextItem
-          label="all 2"
-          showText={showText}
-          style={[styles.body, styles.bordered, { borderWidth: 2 }]}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH}
-        </TextItem>
-        <TextItem
-          label="radius 12"
-          showText={showText}
-          style={[styles.body, styles.bordered, { borderWidth: 2, borderRadius: 12 }]}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH}
-        </TextItem>
-        {/* Per-side, the accent-bar shape: only the left edge is inset. The color
+        <Section title="Borders">
+          <TextItem
+            label="all 2"
+            showText={showText}
+            style={[styles.body, styles.bordered, { borderWidth: 2 }]}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH}
+          </TextItem>
+          <TextItem
+            label="radius 12"
+            showText={showText}
+            style={[styles.body, styles.bordered, { borderWidth: 2, borderRadius: 12 }]}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH}
+          </TextItem>
+          {/* Per-side, the accent-bar shape: only the left edge is inset. The color
             comes from `bordered`, so the side widths are the only difference. */}
-        <TextItem
-          label="left 6"
-          showText={showText}
-          style={[styles.body, styles.bordered, { borderLeftWidth: 6 }]}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH}
-        </TextItem>
-        <TextItem
-          label="dashed"
-          showText={showText}
-          style={[styles.body, styles.bordered, { borderWidth: 2, borderStyle: 'dashed' }]}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH}
-        </TextItem>
-        <TextItem
-          label="all 4 + padding 12"
-          showText={showText}
-          style={[styles.body, styles.bordered, { borderWidth: 4, padding: 12 }]}
-          containerStyle={screenStyles.wideRow}
-        >
-          {PARAGRAPH_LONG}
-        </TextItem>
-      </Section>
-      <Section title="Line Height">
-        {LINE_HEIGHTS.map((lineHeight) => (
           <TextItem
-            key={lineHeight}
-            label={`${lineHeight} / 18`}
+            label="left 6"
             showText={showText}
-            style={{ fontSize: 18, lineHeight }}
+            style={[styles.body, styles.bordered, { borderLeftWidth: 6 }]}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH}
+          </TextItem>
+          <TextItem
+            label="dashed"
+            showText={showText}
+            style={[styles.body, styles.bordered, { borderWidth: 2, borderStyle: 'dashed' }]}
+            containerStyle={screenStyles.wideRow}
+          >
+            {PARAGRAPH}
+          </TextItem>
+          <TextItem
+            label="all 4 + padding 12"
+            showText={showText}
+            style={[styles.body, styles.bordered, { borderWidth: 4, padding: 12 }]}
             containerStyle={screenStyles.wideRow}
           >
             {PARAGRAPH_LONG}
           </TextItem>
-        ))}
-      </Section>
-      {/* Repro for RN issue #29507: tight lineHeight clipped by the row's box, across a few font families. */}
-      <Section
-        title="Line Height Clipping"
-        footer="RN Text has broken line height clipping on iOS. See RN issue #29507."
-      >
-        {REALWORLD_FONTS.map((font, index) => {
-          const fontSize = REALWORLD_FONT_SIZES[index]!;
-          const lineHeight = Math.round(fontSize * 0.8);
-          return (
+        </Section>
+        <Section title="Line Height">
+          {LINE_HEIGHTS.map((lineHeight) => (
             <TextItem
-              key={font.label}
-              label={`${lineHeight} / ${fontSize}`}
+              key={lineHeight}
+              label={`${lineHeight} / 18`}
               showText={showText}
-              style={[font.style, { fontSize, lineHeight }]}
-              containerStyle={[screenStyles.wideRow, styles.clippingRow]}
+              style={{ fontSize: 18, lineHeight }}
+              containerStyle={screenStyles.wideRow}
             >
-              {font.label}
-            </TextItem>
-          );
-        })}
-      </Section>
-      <Section title="Letter Spacing">
-        {LETTER_SPACINGS.map((letterSpacing) => (
-          <TextItem
-            key={letterSpacing}
-            label={`${letterSpacing > 0 ? '+' : ''}${letterSpacing}`}
-            showText={showText}
-            style={{ fontSize: SHORT_ROW_SIZE, letterSpacing }}
-          >
-            {SPECIMEN}
-          </TextItem>
-        ))}
-      </Section>
-      <Section title="Ellipsize Mode">
-        {ELLIPSIZE_MODES.map((ellipsizeMode) => (
-          <TextItem
-            key={ellipsizeMode}
-            label={ellipsizeMode}
-            showText={showText}
-            numberOfLines={1}
-            ellipsizeMode={ellipsizeMode}
-            style={styles.body}
-            containerStyle={screenStyles.wideRow}
-          >
-            {PARAGRAPH_LONG}
-          </TextItem>
-        ))}
-      </Section>
-      {Platform.OS === 'ios' && (
-        <Section title="Line Break Strategy (iOS-only)">
-          {(['none', 'push-out', 'standard'] as const).map((s) => (
-            <TextItem
-              key={s}
-              label={s}
-              showText={showText}
-              lineBreakStrategyIOS={s}
-              style={[styles.body, { width: 300 }]}
-            >
-              {ORPHAN_SPECIMEN}
-            </TextItem>
-          ))}
-          {(['none', 'hangul-word'] as const).map((s) => (
-            <TextItem
-              key={s}
-              label={s}
-              showText={showText}
-              lineBreakStrategyIOS={s}
-              style={[styles.body, { width: 220 }]}
-            >
-              {KOREAN_WORD_WRAP_SPECIMEN}
+              {PARAGRAPH_LONG}
             </TextItem>
           ))}
         </Section>
-      )}
-      {Platform.OS === 'android' && (
-        <Section title="Text Break Strategy (Android-only)">
-          {TEXT_BREAK_STRATEGIES.map((textBreakStrategy) => (
+        {/* Repro for RN issue #29507: tight lineHeight clipped by the row's box, across a few font families. */}
+        <Section
+          title="Line Height Clipping"
+          footer="RN Text has broken line height clipping on iOS. See RN issue #29507."
+        >
+          {REALWORLD_FONTS.map((font, index) => {
+            const fontSize = REALWORLD_FONT_SIZES[index]!;
+            const lineHeight = Math.round(fontSize * 0.8);
+            return (
+              <TextItem
+                key={font.label}
+                label={`${lineHeight} / ${fontSize}`}
+                showText={showText}
+                style={[font.style, { fontSize, lineHeight }]}
+                containerStyle={[screenStyles.wideRow, styles.clippingRow]}
+              >
+                {font.label}
+              </TextItem>
+            );
+          })}
+        </Section>
+        <Section title="Letter Spacing">
+          {LETTER_SPACINGS.map((letterSpacing) => (
             <TextItem
-              key={textBreakStrategy}
-              label={textBreakStrategy}
+              key={letterSpacing}
+              label={`${letterSpacing > 0 ? '+' : ''}${letterSpacing}`}
               showText={showText}
-              textBreakStrategy={textBreakStrategy}
-              style={[styles.body, { width: 300 }]}
+              style={{ fontSize: SHORT_ROW_SIZE, letterSpacing }}
             >
-              {TEXT_BREAK_STRATEGY_SPECIMEN}
+              {SPECIMEN}
             </TextItem>
           ))}
         </Section>
-      )}
-      <Section title="Text Decoration Line">
-        {TEXT_DECORATION_LINES.map((textDecorationLine) => (
+        <Section title="Ellipsize Mode">
+          {ELLIPSIZE_MODES.map((ellipsizeMode) => (
+            <TextItem
+              key={ellipsizeMode}
+              label={ellipsizeMode}
+              showText={showText}
+              numberOfLines={1}
+              ellipsizeMode={ellipsizeMode}
+              style={styles.body}
+              containerStyle={screenStyles.wideRow}
+            >
+              {PARAGRAPH_LONG}
+            </TextItem>
+          ))}
+        </Section>
+        {Platform.OS === 'ios' && (
+          <Section title="Line Break Strategy (iOS-only)">
+            {(['none', 'push-out', 'standard'] as const).map((s) => (
+              <TextItem
+                key={s}
+                label={s}
+                showText={showText}
+                lineBreakStrategyIOS={s}
+                style={[styles.body, { width: 300 }]}
+              >
+                {ORPHAN_SPECIMEN}
+              </TextItem>
+            ))}
+            {(['none', 'hangul-word'] as const).map((s) => (
+              <TextItem
+                key={s}
+                label={s}
+                showText={showText}
+                lineBreakStrategyIOS={s}
+                style={[styles.body, { width: 220 }]}
+              >
+                {KOREAN_WORD_WRAP_SPECIMEN}
+              </TextItem>
+            ))}
+          </Section>
+        )}
+        {Platform.OS === 'android' && (
+          <Section title="Text Break Strategy (Android-only)">
+            {TEXT_BREAK_STRATEGIES.map((textBreakStrategy) => (
+              <TextItem
+                key={textBreakStrategy}
+                label={textBreakStrategy}
+                showText={showText}
+                textBreakStrategy={textBreakStrategy}
+                style={[styles.body, { width: 300 }]}
+              >
+                {TEXT_BREAK_STRATEGY_SPECIMEN}
+              </TextItem>
+            ))}
+          </Section>
+        )}
+        <Section title="Text Decoration Line">
+          {TEXT_DECORATION_LINES.map((textDecorationLine) => (
+            <TextItem
+              key={textDecorationLine}
+              label={textDecorationLine}
+              showText={showText}
+              style={{ fontSize: SHORT_ROW_SIZE, textDecorationLine }}
+            >
+              {SPECIMEN}
+            </TextItem>
+          ))}
+        </Section>
+        <Section title="Text Shadow">
+          {TEXT_SHADOWS.map(({ label, style }) => (
+            <TextItem
+              key={label}
+              label={label}
+              showText={showText}
+              style={{ fontSize: SHORT_ROW_SIZE, ...style }}
+            >
+              {SPECIMEN}
+            </TextItem>
+          ))}
+        </Section>
+        <Section title="Text Transform" footer={TEXT_TRANSFORM_FOOTER}>
+          {TEXT_TRANSFORMS.map((textTransform) => (
+            <TextItem
+              key={textTransform}
+              label={textTransform}
+              showText={showText}
+              style={{ fontSize: SHORT_ROW_SIZE, textTransform }}
+            >
+              {TEXT_TRANSFORM_SPECIMEN}
+            </TextItem>
+          ))}
+          {/* capitalize's two gotchas: a digit-led word and a contraction. */}
           <TextItem
-            key={textDecorationLine}
-            label={textDecorationLine}
+            label="capitalize, digit-led word"
             showText={showText}
-            style={{ fontSize: SHORT_ROW_SIZE, textDecorationLine }}
+            style={{ fontSize: SHORT_ROW_SIZE, textTransform: 'capitalize' }}
           >
-            {SPECIMEN}
+            {TEXT_TRANSFORM_ORDINAL_SPECIMEN}
           </TextItem>
-        ))}
-      </Section>
-      <Section title="Text Shadow">
-        {TEXT_SHADOWS.map(({ label, style }) => (
           <TextItem
-            key={label}
-            label={label}
+            label="capitalize, contraction"
             showText={showText}
-            style={{ fontSize: SHORT_ROW_SIZE, ...style }}
+            style={{ fontSize: SHORT_ROW_SIZE, textTransform: 'capitalize' }}
           >
-            {SPECIMEN}
+            {TEXT_TRANSFORM_CONTRACTION_SPECIMEN}
           </TextItem>
-        ))}
-      </Section>
-      <Section title="Text Transform" footer={TEXT_TRANSFORM_FOOTER}>
-        {TEXT_TRANSFORMS.map((textTransform) => (
-          <TextItem
-            key={textTransform}
-            label={textTransform}
-            showText={showText}
-            style={{ fontSize: SHORT_ROW_SIZE, textTransform }}
-          >
-            {TEXT_TRANSFORM_SPECIMEN}
-          </TextItem>
-        ))}
-        {/* capitalize's two gotchas: a digit-led word and a contraction. */}
-        <TextItem
-          label="capitalize, digit-led word"
-          showText={showText}
-          style={{ fontSize: SHORT_ROW_SIZE, textTransform: 'capitalize' }}
-        >
-          {TEXT_TRANSFORM_ORDINAL_SPECIMEN}
-        </TextItem>
-        <TextItem
-          label="capitalize, contraction"
-          showText={showText}
-          style={{ fontSize: SHORT_ROW_SIZE, textTransform: 'capitalize' }}
-        >
-          {TEXT_TRANSFORM_CONTRACTION_SPECIMEN}
-        </TextItem>
-      </Section>
-      {/* Font scaling follows the OS accessibility text-size setting (Dynamic
+        </Section>
+        {/* Font scaling follows the OS accessibility text-size setting (Dynamic
           Type on iOS, Font size on Android). FONT_SCALING_FOOTER names the path
           for whichever platform is running. */}
-      <Section title="Font Scaling" footer={FONT_SCALING_FOOTER}>
-        <TextItem label="default" showText={showText} style={{ fontSize: SHORT_ROW_SIZE }}>
-          {SPECIMEN}
-        </TextItem>
-        <TextItem
-          label="disabled"
-          showText={showText}
-          style={{ fontSize: SHORT_ROW_SIZE }}
-          allowFontScaling={false}
-        >
-          {SPECIMEN}
-        </TextItem>
-        <TextItem
-          label="max 1.5x"
-          showText={showText}
-          style={{ fontSize: SHORT_ROW_SIZE }}
-          maxFontSizeMultiplier={1.5}
-        >
-          {SPECIMEN}
-        </TextItem>
-      </Section>
-      {/* fontVariant turns OpenType features on, so a row only changes if the
+        <Section title="Font Scaling" footer={FONT_SCALING_FOOTER}>
+          <TextItem label="default" showText={showText} style={{ fontSize: SHORT_ROW_SIZE }}>
+            {SPECIMEN}
+          </TextItem>
+          <TextItem
+            label="disabled"
+            showText={showText}
+            style={{ fontSize: SHORT_ROW_SIZE }}
+            allowFontScaling={false}
+          >
+            {SPECIMEN}
+          </TextItem>
+          <TextItem
+            label="max 1.5x"
+            showText={showText}
+            style={{ fontSize: SHORT_ROW_SIZE }}
+            maxFontSizeMultiplier={1.5}
+          >
+            {SPECIMEN}
+          </TextItem>
+        </Section>
+        {/* fontVariant turns OpenType features on, so a row only changes if the
           font actually carries the feature, which is why iOS runs these rows in
           a serif rather than SF, from the second baseline row down. See
           FONT_VARIANT_FEATURE_FAMILY. The figure-spacing rows above it stay on the
@@ -589,56 +624,56 @@ export default function FeaturesScreen({ navigation }: Props) {
           gray box drops the ffl/ffi ligatures and the overlay keeps them, now on
           both platforms, since the serif and Roboto both carry them. Both
           reasons are spelled out in docs/contributing/native-gotchas.md. */}
-      <Section title="Font Variant" footer={FONT_VARIANT_FOOTER}>
-        {/* Baseline to compare every row below against. */}
-        <TextItem label="default" showText={showText} style={fontVariantRow}>
-          {FONT_VARIANT_SPECIMEN}
-        </TextItem>
-        {/* Figure spacing first: the pair of values people actually reach for.
+        <Section title="Font Variant" footer={FONT_VARIANT_FOOTER}>
+          {/* Baseline to compare every row below against. */}
+          <TextItem label="default" showText={showText} style={fontVariantRow}>
+            {FONT_VARIANT_SPECIMEN}
+          </TextItem>
+          {/* Figure spacing first: the pair of values people actually reach for.
             It shows up as width: the two rows of each pair have the same digit
             count, so tabular figures make them equally wide (each row
             shrink-wraps to its text) and proportional ones do not. Compare
             within a pair, never across. The value name sits in the label gutter
             rather than in the string, so the row measures the digits and nothing
             else. */}
-        {TABULAR_FIGURE_ROWS.map((digits) => (
-          <TextItem
-            key={`tabular-${digits}`}
-            label="tabular-nums"
-            showText={showText}
-            style={{ ...fontVariantRow, fontVariant: ['tabular-nums'] }}
-          >
-            {digits}
-          </TextItem>
-        ))}
-        {TABULAR_FIGURE_ROWS.map((digits) => (
-          <TextItem
-            key={`proportional-${digits}`}
-            label="proportional-nums"
-            showText={showText}
-            style={{ ...fontVariantRow, fontVariant: ['proportional-nums'] }}
-          >
-            {digits}
-          </TextItem>
-        ))}
-        {/* Second baseline, in the serif the feature rows below use, so they have
+          {TABULAR_FIGURE_ROWS.map((digits) => (
+            <TextItem
+              key={`tabular-${digits}`}
+              label="tabular-nums"
+              showText={showText}
+              style={{ ...fontVariantRow, fontVariant: ['tabular-nums'] }}
+            >
+              {digits}
+            </TextItem>
+          ))}
+          {TABULAR_FIGURE_ROWS.map((digits) => (
+            <TextItem
+              key={`proportional-${digits}`}
+              label="proportional-nums"
+              showText={showText}
+              style={{ ...fontVariantRow, fontVariant: ['proportional-nums'] }}
+            >
+              {digits}
+            </TextItem>
+          ))}
+          {/* Second baseline, in the serif the feature rows below use, so they have
             something to differ from. On Android it is the same font as the first
             baseline: that platform stays on the system font throughout. */}
-        <TextItem label="default" showText={showText} style={fontVariantFeatureRow}>
-          {FONT_VARIANT_SPECIMEN}
-        </TextItem>
-        {FONT_VARIANTS.map(({ label, fontVariant }) => (
-          <TextItem
-            key={label}
-            label={label}
-            showText={showText}
-            style={{ ...fontVariantFeatureRow, fontVariant }}
-          >
+          <TextItem label="default" showText={showText} style={fontVariantFeatureRow}>
             {FONT_VARIANT_SPECIMEN}
           </TextItem>
-        ))}
-      </Section>
-      {/* Three things about this section:
+          {FONT_VARIANTS.map(({ label, fontVariant }) => (
+            <TextItem
+              key={label}
+              label={label}
+              showText={showText}
+              style={{ ...fontVariantFeatureRow, fontVariant }}
+            >
+              {FONT_VARIANT_SPECIMEN}
+            </TextItem>
+          ))}
+        </Section>
+        {/* Three things about this section:
 
           - It is the one with nothing to compare against. RN <Text> has no
             fontVariationSettings on either platform, so the scarlet overlay sits at
@@ -655,19 +690,19 @@ export default function FeaturesScreen({ navigation }: Props) {
             usable axes, so nothing moves) and to Roboto on Android (variable, so
             the axes still apply and it looks like it worked). That asymmetry is
             exactly how this section first read as iOS-only-broken. */}
-      <Section title="Font Variation Settings" footer={FONT_VARIATION_FOOTER}>
-        {FONT_VARIATION_SETTINGS.map(({ label, fontVariationSettings }) => (
-          <TextItem
-            key={label}
-            label={label}
-            showText={showText}
-            style={{ ...variableFontRow, fontVariationSettings }}
-          >
-            {SPECIMEN}
-          </TextItem>
-        ))}
-      </Section>
-      {/* Android-only in RN <Text>, closed on iOS here (see
+        <Section title="Font Variation Settings" footer={FONT_VARIATION_FOOTER}>
+          {FONT_VARIATION_SETTINGS.map(({ label, fontVariationSettings }) => (
+            <TextItem
+              key={label}
+              label={label}
+              showText={showText}
+              style={{ ...variableFontRow, fontVariationSettings }}
+            >
+              {SPECIMEN}
+            </TextItem>
+          ))}
+        </Section>
+        {/* Android-only in RN <Text>, closed on iOS here (see
           docs/contributing/workflow.md#when-rn-itself-has-the-platform-gap). Each box
           is taller than its text so the position is visible. Two native props reach
           the same gravity, and both get their own rows: `textAlignVertical` (the
@@ -677,51 +712,51 @@ export default function FeaturesScreen({ navigation }: Props) {
           (see docs/contributing/performance.md#prop-cost-policy), so the merge
           rows below exercise PlainTextView.kt's applyVerticalAlignGravity and
           PlainTextProps.mm's plainTextResolveVerticalAlign directly. */}
-      <Section title="Vertical Align" footer={VERTICAL_ALIGN_FOOTER}>
-        {VERTICAL_ALIGNS.map((verticalAlign) => (
-          <TextItem
-            key={verticalAlign}
-            label={`verticalAlign: ${verticalAlign}`}
-            showText={showText}
-            style={{ width: '100%', height: 72, fontSize: SHORT_ROW_SIZE, verticalAlign }}
-            containerStyle={screenStyles.wideRow}
-          >
-            {SPECIMEN}
-          </TextItem>
-        ))}
-        {/* Same three positions, driven by the other prop, so a row here should
+        <Section title="Vertical Align" footer={VERTICAL_ALIGN_FOOTER}>
+          {VERTICAL_ALIGNS.map((verticalAlign) => (
+            <TextItem
+              key={verticalAlign}
+              label={`verticalAlign: ${verticalAlign}`}
+              showText={showText}
+              style={{ width: '100%', height: 72, fontSize: SHORT_ROW_SIZE, verticalAlign }}
+              containerStyle={screenStyles.wideRow}
+            >
+              {SPECIMEN}
+            </TextItem>
+          ))}
+          {/* Same three positions, driven by the other prop, so a row here should
             land identically to its verticalAlign counterpart above: 'center' is
             textAlignVertical's own name for what 'middle' means to verticalAlign. */}
-        {TEXT_ALIGN_VERTICALS.map((textAlignVertical) => (
+          {TEXT_ALIGN_VERTICALS.map((textAlignVertical) => (
+            <TextItem
+              key={textAlignVertical}
+              label={`textAlignVertical: ${textAlignVertical}`}
+              showText={showText}
+              style={{ width: '100%', height: 72, fontSize: SHORT_ROW_SIZE, textAlignVertical }}
+              containerStyle={screenStyles.wideRow}
+            >
+              {SPECIMEN}
+            </TextItem>
+          ))}
+          {/* Both set, disagreeing: verticalAlign wins (matches RN <Text>'s
+            Text.js), so this should render identically to the "verticalAlign:
+            bottom" row above despite asking textAlignVertical for the opposite. */}
           <TextItem
-            key={textAlignVertical}
-            label={`textAlignVertical: ${textAlignVertical}`}
+            label="both set: textAlignVertical top, verticalAlign bottom"
             showText={showText}
-            style={{ width: '100%', height: 72, fontSize: SHORT_ROW_SIZE, textAlignVertical }}
+            style={{
+              width: '100%',
+              height: 72,
+              fontSize: SHORT_ROW_SIZE,
+              textAlignVertical: 'top',
+              verticalAlign: 'bottom',
+            }}
             containerStyle={screenStyles.wideRow}
           >
             {SPECIMEN}
           </TextItem>
-        ))}
-        {/* Both set, disagreeing: verticalAlign wins (matches RN <Text>'s
-            Text.js), so this should render identically to the "verticalAlign:
-            bottom" row above despite asking textAlignVertical for the opposite. */}
-        <TextItem
-          label="both set: textAlignVertical top, verticalAlign bottom"
-          showText={showText}
-          style={{
-            width: '100%',
-            height: 72,
-            fontSize: SHORT_ROW_SIZE,
-            textAlignVertical: 'top',
-            verticalAlign: 'bottom',
-          }}
-          containerStyle={screenStyles.wideRow}
-        >
-          {SPECIMEN}
-        </TextItem>
-      </Section>
-      {/*
+        </Section>
+        {/*
         Measured *width*, which is the one thing wrap detection decides. RN
         reports the full constraint width for text that word-wrapped and the
         tight widest-line width for text that didn't, so what to look at is the
@@ -739,136 +774,137 @@ export default function FeaturesScreen({ navigation }: Props) {
         sits above the row rather than beside it, so it costs these probes no
         width at all.
       */}
-      <Section title="Wrap Detection">
-        {/* Control. Nothing to detect: if this one disagrees, the harness is
+        <Section title="Wrap Detection">
+          {/* Control. Nothing to detect: if this one disagrees, the harness is
             wrong, not the wrap logic. */}
-        <TextItem label="control" showText={showText} style={styles.wrapProbe}>
-          {'One short line   '}
-        </TextItem>
-        {/* Hard breaks, nothing wraps → hug the longest line. */}
-        <TextItem label="hard breaks" showText={showText} style={styles.wrapProbe}>
-          {'Short\nthis line is longest   '}
-        </TextItem>
-        {/* Same with more paragraphs, and with the longest one in the middle:
+          <TextItem label="control" showText={showText} style={styles.wrapProbe}>
+            {'One short line   '}
+          </TextItem>
+          {/* Hard breaks, nothing wraps → hug the longest line. */}
+          <TextItem label="hard breaks" showText={showText} style={styles.wrapProbe}>
+            {'Short\nthis line is longest   '}
+          </TextItem>
+          {/* Same with more paragraphs, and with the longest one in the middle:
             the width comes from a max over paragraphs, so order shouldn't
             matter. */}
-        <TextItem label="longest in middle" showText={showText} style={styles.wrapProbe}>
-          {'A\nBB\nthis line is longest  \nCCC'}
-        </TextItem>
-        {/* Same paragraphs, longest one last: the width comes from a max over
+          <TextItem label="longest in middle" showText={showText} style={styles.wrapProbe}>
+            {'A\nBB\nthis line is longest  \nCCC'}
+          </TextItem>
+          {/* Same paragraphs, longest one last: the width comes from a max over
             paragraphs, so where it sits shouldn't matter. */}
-        <TextItem label="longest last" showText={showText} style={styles.wrapProbe}>
-          {'A\nBB\nCCC\nthis line is longest  '}
-        </TextItem>
-        {/* No hard break, too long to fit → full constraint width. */}
-        <TextItem label="soft wrap only" showText={showText} style={styles.wrapProbe}>
-          {'No breaks here, but this sentence is long enough that it has to ' +
-            'wrap onto several lines.'}
-        </TextItem>
-        {/* Both a hard break and a soft wrap → full constraint width. */}
-        <TextItem label="break then wrap" showText={showText} style={styles.wrapProbe}>
-          {'Break then wrap:\nthis second line is long enough that it also ' + 'has to wrap.'}
-        </TextItem>
-      </Section>
-      {/* Accessibility props are part of RN's ViewProps, so they pass straight
+          <TextItem label="longest last" showText={showText} style={styles.wrapProbe}>
+            {'A\nBB\nCCC\nthis line is longest  '}
+          </TextItem>
+          {/* No hard break, too long to fit → full constraint width. */}
+          <TextItem label="soft wrap only" showText={showText} style={styles.wrapProbe}>
+            {'No breaks here, but this sentence is long enough that it has to ' +
+              'wrap onto several lines.'}
+          </TextItem>
+          {/* Both a hard break and a soft wrap → full constraint width. */}
+          <TextItem label="break then wrap" showText={showText} style={styles.wrapProbe}>
+            {'Break then wrap:\nthis second line is long enough that it also ' + 'has to wrap.'}
+          </TextItem>
+        </Section>
+        {/* Accessibility props are part of RN's ViewProps, so they pass straight
           through to the native view. They're not visually distinct: turn on
           VoiceOver (iOS) / TalkBack (Android) to hear the label/role/state, or
           inspect the native tree for the testID. */}
-      <Section title="Accessibility">
-        <TextItem
-          label="testID"
-          showText={showText}
-          style={styles.a11yRow}
-          accessibilityProps={{ testID: 'plain-text-demo' }}
-        >
-          &quot;plain-text-demo&quot;, findable in the native tree
-        </TextItem>
-        <TextItem
-          label="label"
-          showText={showText}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            accessibilityLabel: 'A screen reader announces this instead',
-          }}
-        >
-          Overrides the spoken text
-        </TextItem>
-        <TextItem
-          label="role"
-          showText={showText}
-          style={styles.a11yRow}
-          accessibilityProps={{ accessibilityRole: 'header' }}
-        >
-          &quot;header&quot;
-        </TextItem>
-        <TextItem
-          label="role + hint"
-          showText={showText}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            accessibilityRole: 'link',
-            accessibilityHint: 'Opens the linked page',
-          }}
-        >
-          &quot;link&quot;, hinted
-        </TextItem>
-        <TextItem
-          label="state"
-          showText={showText}
-          style={styles.a11yRow}
-          accessibilityProps={{ accessibilityState: { disabled: true } }}
-        >
-          disabled
-        </TextItem>
-        <TextItem
-          label="hidden"
-          showText={showText}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            accessibilityElementsHidden: true,
-            importantForAccessibility: 'no-hide-descendants',
-          }}
-        >
-          Invisible to screen readers on both platforms
-        </TextItem>
-      </Section>
-      {/* Paired with padding since that's where the effect is visible. */}
-      {Platform.OS === 'android' && (
-        <Section title="Font Padding (Android-only)" footer={FONT_PADDING_FOOTER}>
+        <Section title="Accessibility">
           <TextItem
-            label="default, padding 4"
+            label="testID"
             showText={showText}
-            style={[styles.body, { padding: 4 }]}
-            containerStyle={screenStyles.wideRow}
+            style={styles.a11yRow}
+            accessibilityProps={{ testID: 'plain-text-demo' }}
           >
-            {PARAGRAPH}
+            &quot;plain-text-demo&quot;, findable in the native tree
           </TextItem>
           <TextItem
-            label="includeFontPadding false, padding 4"
+            label="label"
             showText={showText}
-            style={[styles.body, { padding: 4, includeFontPadding: false }]}
-            containerStyle={screenStyles.wideRow}
+            style={styles.a11yRow}
+            accessibilityProps={{
+              accessibilityLabel: 'A screen reader announces this instead',
+            }}
           >
-            {PARAGRAPH}
+            Overrides the spoken text
+          </TextItem>
+          <TextItem
+            label="role"
+            showText={showText}
+            style={styles.a11yRow}
+            accessibilityProps={{ accessibilityRole: 'header' }}
+          >
+            &quot;header&quot;
+          </TextItem>
+          <TextItem
+            label="role + hint"
+            showText={showText}
+            style={styles.a11yRow}
+            accessibilityProps={{
+              accessibilityRole: 'link',
+              accessibilityHint: 'Opens the linked page',
+            }}
+          >
+            &quot;link&quot;, hinted
+          </TextItem>
+          <TextItem
+            label="state"
+            showText={showText}
+            style={styles.a11yRow}
+            accessibilityProps={{ accessibilityState: { disabled: true } }}
+          >
+            disabled
+          </TextItem>
+          <TextItem
+            label="hidden"
+            showText={showText}
+            style={styles.a11yRow}
+            accessibilityProps={{
+              accessibilityElementsHidden: true,
+              importantForAccessibility: 'no-hide-descendants',
+            }}
+          >
+            Invisible to screen readers on both platforms
           </TextItem>
         </Section>
-      )}
-      <Section title="Animating text" footer={ANIMATING_TEXT_FOOTER} spacedRows>
-        <View style={styles.animatingRow}>
-          <Text style={styles.animatingLabel}>ANIMATED (RN CORE)</Text>
-          <RNAnimatedPlainText ref={rnAnimatedRef} style={styles.animatingText} text="" />
-        </View>
-        <View style={styles.animatingRow}>
-          <Text style={styles.animatingLabel}>REANIMATED</Text>
-          <ReanimatedPlainText
-            style={styles.animatingText}
-            text=""
-            animatedProps={reanimatedProps}
-          />
-        </View>
-        <Text style={styles.renderCountLabel}>RENDER COUNT: {renderCount.current}</Text>
-        <TextScrubber onChange={onScrub} onDragStateChange={onDragStateChange} />
-      </Section>
+        {/* Paired with padding since that's where the effect is visible. */}
+        {Platform.OS === 'android' && (
+          <Section title="Font Padding (Android-only)" footer={FONT_PADDING_FOOTER}>
+            <TextItem
+              label="default, padding 4"
+              showText={showText}
+              style={[styles.body, { padding: 4 }]}
+              containerStyle={screenStyles.wideRow}
+            >
+              {PARAGRAPH}
+            </TextItem>
+            <TextItem
+              label="includeFontPadding false, padding 4"
+              showText={showText}
+              style={[styles.body, { padding: 4, includeFontPadding: false }]}
+              containerStyle={screenStyles.wideRow}
+            >
+              {PARAGRAPH}
+            </TextItem>
+          </Section>
+        )}
+        <Section title="Animating text" footer={ANIMATING_TEXT_FOOTER} spacedRows>
+          <View style={styles.animatingRow}>
+            <Text style={styles.animatingLabel}>ANIMATED (RN CORE)</Text>
+            <RNAnimatedPlainText ref={rnAnimatedRef} style={styles.animatingText} text="" />
+          </View>
+          <View style={styles.animatingRow}>
+            <Text style={styles.animatingLabel}>REANIMATED</Text>
+            <ReanimatedPlainText
+              style={styles.animatingText}
+              text=""
+              animatedProps={reanimatedProps}
+            />
+          </View>
+          <Text style={styles.renderCountLabel}>RENDER COUNT: {renderCount.current}</Text>
+          <TextScrubber onChange={onScrub} onDragStateChange={onDragStateChange} />
+        </Section>
+      </SectionSearchProvider>
     </ScrollView>
   );
 }
