@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { CompareTextProvider } from './components/CompareText';
 import { VrtSpecimenProvider } from './components/Specimen';
@@ -22,9 +22,11 @@ export default function AppVrt({ testID }: { testID: string }) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <CompareTextProvider>
-          <VrtSpecimenProvider testID={testID}>{specimens}</VrtSpecimenProvider>
-        </CompareTextProvider>
+        <View testID="vrt-safe-area" collapsable={false} style={styles.container}>
+          <CompareTextProvider>
+            <VrtSpecimenProvider testID={testID}>{specimens}</VrtSpecimenProvider>
+          </CompareTextProvider>
+        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );

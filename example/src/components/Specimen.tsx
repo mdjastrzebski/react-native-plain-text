@@ -127,7 +127,7 @@ export function TextItem({
   children,
 }: {
   // Stable route target for visual regression captures. The runner derives the
-  // readiness selector by appending `-text` below before taking a full screenshot.
+  // readiness selector by appending `-text` below before capturing the safe area.
   testID: string;
   // The value this row varies, set in a caption above the specimen. Keeping it
   // out of the specimen is what lets the specimen be real text rather than a

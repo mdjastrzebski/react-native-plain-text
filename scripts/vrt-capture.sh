@@ -152,12 +152,12 @@ run_dev_replay() {
   [[ -f "$screenshot" ]] || fail "agent-device did not write $screenshot."
 }
 
-capture_full_screen() {
+capture_safe_area() {
   local capture_id="$1"
   local screenshot="$actual_dir/$capture_id.png"
   local -a screenshot_args
 
-  screenshot_args=("$screenshot")
+  screenshot_args=("$screenshot" --crop-on 'id="vrt-safe-area"')
   if [[ "$platform" == "ios" ]]; then
     screenshot_args+=(--pixel-density 3)
   fi
@@ -179,7 +179,7 @@ capture_all() {
     open_deep_link
     run_quiet wait "id=\"$capture_id-text\"" 15000
     run_quiet wait stable 200 5000
-    capture_full_screen "$capture_id"
+    capture_safe_area "$capture_id"
   done < "$capture_manifest"
 }
 

@@ -5,14 +5,15 @@
 The repository currently uses the smallest useful subset of this proposal.
 The root renders `AppVrt` when its deep link contains a `testID` query parameter
 and renders the regular app otherwise. agent-device opens one specimen at a
-time through the app's URL scheme and captures the full device viewport. `reg-cli`
-performs strict image comparison afterward.
+time through the app's URL scheme and crops the capture to the app's safe-area
+content. `reg-cli` performs strict image comparison afterward.
 
 The capture runner reads `.agent-device/vrt-captures.txt` and opens every
 platform-relevant specimen as
 `exp+react-native-plain-text-example://vrt?testID=<testID>`. `AppVrt` filters
 the shared Features and Use Cases specimen trees so only that test ID is mounted. The
-runner uses `screenshot` to write the fixed-size viewport directly to
+runner uses `screenshot --crop-on 'id="vrt-safe-area"'` to write the fixed-size
+safe-area content directly to
 `build/vrt/actual/<platform>/<profile>/`. When the corresponding
 `baselines/<platform>/<profile>/` directory does not exist, the wrapper moves
 the complete PNG set there after agent-device succeeds. Once the baseline
@@ -242,20 +243,22 @@ revision, device profile, display settings, font scale, agent-device version,
 ## Capture and artifact normalization
 
 agent-device writes each screenshot to the requested repository-relative path.
-The current runner waits for the specimen's `-text` test ID, then captures the
-full device viewport so every PNG has the same dimensions:
+The current runner waits for the specimen's `-text` test ID, then crops the
+screenshot to a stable inner view that fills the safe area so every PNG for a
+device profile has the same dimensions without system bars:
 
 ```sh
 agent-device screenshot \
+  --crop-on 'id="vrt-safe-area"' \
   build/vrt/actual/android/example/vrt-capture-font-sizes.png
 ```
 
 iOS captures pass `--pixel-density 3` to retain the simulator's native pixel
 resolution. Android captures use device pixels. Each
 deep link mounts its target near the top of the VRT root, so no scrolling or
-viewport discovery is required. A missing or unreadable readiness target is
-fatal. Fixed viewport dimensions keep native text measurement differences from
-changing the dimensions of the captured PNG itself.
+viewport discovery is required. A missing or unreadable readiness or crop
+target is fatal. Fixed safe-area dimensions keep native text measurement
+differences from changing the dimensions of the captured PNG itself.
 
 ## Comparison
 
