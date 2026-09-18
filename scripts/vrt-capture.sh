@@ -117,17 +117,38 @@ open_deep_link() {
       return
     fi
 
-    if [[ "$platform" != "ios" || \
-      "$output" != *"Error (COMMAND_FAILED): Simulator device failed to open"* || \
-      "$attempt" -eq 5 ]]; then
+    if [[ "$platform" != "ios" || "$attempt" -eq 5 ]]; then
       printf '%s\n' "$output" >&2
       return 1
     fi
 
-    printf 'iOS simulator refused the deep link; retrying (%d/5).\n' \
-      "$attempt" >&2
+    case "$output" in
+      *"Error (COMMAND_FAILED): Simulator device failed to open"*)
+        printf 'iOS simulator refused the deep link; retrying (%d/5).\n' \
+          "$attempt" >&2
+        ;;
+      *"Error (COMMAND_FAILED): Daemon request timed out"*)
+        # agent-device resets the local daemon for an open-command timeout.
+        # The next invocation starts a fresh daemon and can safely re-resolve
+        # the still-booted simulator and installed application.
+        printf 'agent-device timed out opening the iOS deep link; retrying (%d/5).\n' \
+          "$attempt" >&2
+        ;;
+      *)
+        printf '%s\n' "$output" >&2
+        return 1
+        ;;
+    esac
+
     sleep "$attempt"
   done
+}
+
+prepare_ios_runner() {
+  [[ "$platform" == "ios" ]] || return
+
+  printf 'Preparing the agent-device iOS runner.\n'
+  agent_device prepare ios-runner
 }
 
 run_dev_replay() {
@@ -184,6 +205,8 @@ capture_all() {
 }
 
 mkdir -p "$actual_dir"
+
+prepare_ios_runner
 
 if [[ "$dev_mode" -eq 1 ]]; then
   run_dev_replay

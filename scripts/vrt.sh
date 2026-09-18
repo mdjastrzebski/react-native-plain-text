@@ -63,13 +63,27 @@ run_setup() {
 }
 
 run_app() {
+  local ios_app ios_build_dir
+
   case "$platform" in
     android)
       # Expo resolves --device by AVD name, not by its adb serial.
       yarn android:release --device "$ANDROID_AVD_NAME"
       ;;
     ios)
-      yarn ios:release --device "$IOS_SIMULATOR_NAME"
+      # Expo normally installs the app and opens its development-client URL,
+      # even with --no-bundler. Build without a concrete device so production
+      # VRT never enters a development-client flow that expects Metro.
+      ios_build_dir="$PROJECT_ROOT/build/ios-vrt-app"
+      yarn del-cli "$ios_build_dir"
+      yarn ios:release --device generic --output "$ios_build_dir"
+
+      ios_app="$(find "$ios_build_dir" -type d -name '*.app' -print -quit)"
+      [[ -n "$ios_app" ]] || fail \
+        "Expo did not write an iOS app bundle under $ios_build_dir."
+
+      printf 'Installing %s on %s.\n' "$ios_app" "$IOS_SIMULATOR_NAME"
+      xcrun simctl install "$IOS_SIMULATOR_NAME" "$ios_app"
       ;;
   esac
 }

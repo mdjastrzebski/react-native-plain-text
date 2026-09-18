@@ -167,6 +167,15 @@ exist, the wrapper also writes the built-in `reg-cli` HTML and JSON reports to
 opens the HTML file. The report provides diff, side-by-side, slider, blend, and
 toggle views of the baseline and actual images.
 
+For production iOS VRT, Expo builds a Release simulator app without selecting
+a concrete device. The wrapper installs that app with `simctl`, avoiding Expo's
+development-client URL and its unused Metro address. Before capture,
+`agent-device prepare ios-runner` moves the XCTest runner startup cost out of
+the first interaction. Transient CoreSimulator deep-link refusals and daemon
+timeouts are retried. CI enables agent-device execution tracing and uploads its
+daemon, runner, event, and per-request diagnostic logs under
+`build/vrt/logs/agent-device/`.
+
 Use development mode to capture and compare only
 `vrt-capture-features-font-size-48` against its canonical baseline:
 

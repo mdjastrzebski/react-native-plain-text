@@ -113,6 +113,9 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
       OPEN_SIMULATOR: 0
       VRT_RESET_DEVICE: 1
+      # Include subprocess timing and command metadata in agent-device's
+      # diagnostics so transient CoreSimulator failures can be investigated.
+      AGENT_DEVICE_EXEC_TRACE: 1
 
     steps:
       - name: Checkout
@@ -142,6 +145,10 @@ jobs:
       # syncs baselines, captures specimens, and runs reg-cli.
       - name: Run iOS visual regression tests
         run: yarn vrt:ios
+
+      - name: Collect iOS agent-device diagnostics
+        if: always()
+        run: ./scripts/collect-ios-vrt-diagnostics.sh
 
       - name: Upload iOS visual regression results
         if: always()
