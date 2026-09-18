@@ -460,20 +460,21 @@ export default function FeaturesScreen({ navigation }: Props) {
           ))}
         </Section>
       )}
-      <Section title="Text Break Strategy (Android-only)" footer={TEXT_BREAK_STRATEGY_FOOTER}>
+      {Platform.OS === 'android' && (
+      <Section title="Text Break Strategy (Android-only)">
         {TEXT_BREAK_STRATEGIES.map((textBreakStrategy) => (
           <TextItem
             key={textBreakStrategy}
             label={textBreakStrategy}
             showText={showText}
             textBreakStrategy={textBreakStrategy}
-            style={styles.body}
-            containerStyle={screenStyles.wideRow}
+            style={[styles.body, { width: 300 }]}
           >
-            {PARAGRAPH_LONG}
+            {TEXT_BREAK_STRATEGY_SPECIMEN}
           </TextItem>
         ))}
       </Section>
+      )}
       <Section title="Text Decoration Line">
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
           <TextItem
@@ -996,10 +997,12 @@ const KOREAN_WORD_WRAP_SPECIMEN = '한글개행 한글개행 한글개행 한글
 
 const TEXT_BREAK_STRATEGIES = ['simple', 'highQuality', 'balanced'] as const;
 
-const TEXT_BREAK_STRATEGY_FOOTER = Platform.select({
-  ios: 'Android-only in RN Text; no-op here too.',
-  default: 'Word-wrap points can shift between rows, most visible at the second line break.',
-});
+// Deliberately irregular word lengths (unlike the pangram used elsewhere on this
+// screen): 'simple' breaks greedily line by line, 'highQuality' weighs the whole
+// paragraph's raggedness, and 'balanced' pushes hardest for equal-length lines, so
+// this is the one specimen where all three are meant to disagree with each other.
+const TEXT_BREAK_STRATEGY_SPECIMEN =
+  'Extraordinarily meticulous engineers occasionally debug astonishingly trivial issues quite carefully today, especially near release day, right before shipping.';
 
 const LINE_HEIGHTS = [18, 26, 36];
 
