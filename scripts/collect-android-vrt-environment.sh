@@ -10,6 +10,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # shellcheck source=./load-android-vrt-config.sh
 source "$SCRIPT_DIR/load-android-vrt-config.sh"
+# shellcheck source=./android-sdk-packages.sh
+source "$SCRIPT_DIR/android-sdk-packages.sh"
 
 output_dir="$PROJECT_ROOT/build/vrt/environment/android-details"
 mkdir -p "$output_dir"
@@ -112,9 +114,12 @@ for candidate in \
   fi
 done
 
-section "Emulator version and acceleration"
+section "Emulator package and acceleration"
 {
-  "$emulator" -version
+  printf 'version=%s\n' \
+    "$(installed_android_sdk_package_version "$android_sdk_root" emulator)"
+  printf 'build=%s\n' \
+    "$(installed_android_sdk_package_build "$android_sdk_root" emulator)"
   "$emulator" -accel-check
 } 2>&1 | tee "$output_dir/emulator-version.txt" || true
 
@@ -128,7 +133,8 @@ fi
 
 section "Available AVD hardware profiles"
 if [[ -x "$avdmanager" ]]; then
-  "$avdmanager" list device 2>&1 | tee "$output_dir/avd-device-profiles.txt" || true
+  "$avdmanager" list device > "$output_dir/avd-device-profiles.txt" 2>&1 || true
+  printf 'Saved to %s\n' "$output_dir/avd-device-profiles.txt"
 else
   printf 'avdmanager not found under %s\n' "$android_sdk_root" \
     | tee "$output_dir/avd-device-profiles.txt"
@@ -175,7 +181,8 @@ device_adb=("$adb" -s "$running_serial")
 
 section "Android device properties"
 "${device_adb[@]}" shell getprop 2>&1 | tr -d '\r' \
-  | tee "$output_dir/device-properties.txt" || true
+  > "$output_dir/device-properties.txt" || true
+printf 'Saved to %s\n' "$output_dir/device-properties.txt"
 
 section "Android display and renderer"
 {
@@ -184,23 +191,29 @@ section "Android display and renderer"
   "${device_adb[@]}" shell dumpsys display
   "${device_adb[@]}" shell dumpsys SurfaceFlinger \
     | grep -E 'GLES|Display|Color|density|orientation' || true
-} 2>&1 | tr -d '\r' | tee "$output_dir/display.txt" || true
+} 2>&1 | tr -d '\r' > "$output_dir/display.txt" || true
+"${device_adb[@]}" shell wm size 2>&1 | tr -d '\r'
+"${device_adb[@]}" shell wm density 2>&1 | tr -d '\r'
+printf 'Full display state saved to %s\n' "$output_dir/display.txt"
 
 for settings_namespace in system global secure; do
   section "Android $settings_namespace settings"
   "${device_adb[@]}" shell settings list "$settings_namespace" 2>&1 \
     | tr -d '\r' \
-    | tee "$output_dir/settings-$settings_namespace.txt" || true
+    > "$output_dir/settings-$settings_namespace.txt" || true
+  printf 'Saved to %s\n' "$output_dir/settings-$settings_namespace.txt"
 done
 
 section "Android system fonts"
 "${device_adb[@]}" shell \
   'find /system/fonts -type f -exec sha256sum {} \; 2>/dev/null; sha256sum /system/etc/fonts.xml 2>/dev/null' \
-  2>&1 | tr -d '\r' | tee "$output_dir/fonts.txt" || true
+  2>&1 | tr -d '\r' > "$output_dir/fonts.txt" || true
+printf 'Saved to %s\n' "$output_dir/fonts.txt"
 
 section "Android logcat"
 "${device_adb[@]}" logcat -d -v threadtime 2>&1 | tr -d '\r' \
-  | tee "$output_dir/logcat.txt" || true
+  > "$output_dir/logcat.txt" || true
+printf 'Saved to %s\n' "$output_dir/logcat.txt"
 
 section "Android package and build identity"
 {

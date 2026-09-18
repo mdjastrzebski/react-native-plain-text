@@ -86,7 +86,9 @@ jobs:
           enable-hw-keyboard: ${{ steps.android-vrt-config.outputs.enable_hw_keyboard }}
           emulator-build: ${{ steps.android-vrt-config.outputs.emulator_build }}
           channel: ${{ steps.android-vrt-config.outputs.channel }}
-          script: ./scripts/run-android-vrt-ci.sh
+          # The action otherwise invokes the script with /usr/bin/sh and omits
+          # Yarn's project-binary PATH, which contains agent-device.
+          script: yarn exec ./scripts/run-android-vrt-ci.sh
 
       - name: Collect final Android emulator diagnostics
         if: always()

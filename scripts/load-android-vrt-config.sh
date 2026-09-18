@@ -79,8 +79,8 @@ export ANDROID_DISABLE_LINUX_HW_ACCEL="$(android_config_value '.launch.disableLi
 export ANDROID_RESOLUTION="$(android_extra_arg_value '-skin')"
 export ANDROID_DENSITY="$(android_property_value 'qemu.vrt.density')"
 export ANDROID_FONT_SCALE="$(android_property_value 'qemu.vrt.font_scale')"
-export ANDROID_LOCALE="$(android_property_value 'persist.sys.locale')"
-export ANDROID_TIMEZONE="$(android_extra_arg_value '-timezone')"
+export ANDROID_LOCALE="$(android_config_value '.launch.locale')"
+export ANDROID_TIMEZONE="$(android_config_value '.launch.timezone')"
 export ANDROID_EMULATOR_OPTIONS="$(android_config_value '
   [
     (if .launch.headless then "-no-window" else empty end),

@@ -48,7 +48,6 @@ avdmanager="$tools_dir/bin/avdmanager"
 [[ -x "$avdmanager" ]] || fail "avdmanager was not installed at $avdmanager."
 
 device_catalog="$($avdmanager list device)"
-printf '%s\n' "$device_catalog"
 grep -Eq 'id: [0-9]+ or "pixel_9"' <<< "$device_catalog" \
   || fail "Command-line tools do not provide the pixel_9 hardware profile."
 
