@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# shellcheck source=./vrt-config.sh
+source "$SCRIPT_DIR/vrt-config.sh"
+
+fail() {
+  printf 'Error: %s\n' "$*" >&2
+  exit 1
+}
+
+platform="${1:-}"
+actual_dir="${2:-}"
+capture_manifest="$PROJECT_ROOT/.agent-device/vrt-captures.txt"
+app_id="plaintext.example"
+session_name="plaintext-vrt-$platform"
+dev_capture_id="vrt-capture-features-font-size-48"
+dev_mode="${VRT_MODE_DEV:-0}"
+session_open=0
+current_deep_link=""
+
+[[ "$platform" == "android" || "$platform" == "ios" ]] || \
+  fail "Platform must be 'android' or 'ios'."
+[[ -n "$actual_dir" ]] || fail "An output directory is required."
+[[ -f "$capture_manifest" ]] || fail "Capture manifest not found at $capture_manifest."
+
+if [[ "$platform" == "android" ]]; then
+  # shellcheck source=./load-android-vrt-config.sh
+  source "$SCRIPT_DIR/load-android-vrt-config.sh"
+fi
+
+case "$dev_mode" in
+  0 | 1) ;;
+  *) fail "VRT_MODE_DEV must be '0' or '1'." ;;
+esac
+
+command -v agent-device >/dev/null 2>&1 || \
+  fail "agent-device is required. Install version 0.21.0 or newer."
+
+case "$platform" in
+  android)
+    if [[ -n "${ANDROID_SERIAL:-}" ]]; then
+      target_args=(--serial "$ANDROID_SERIAL")
+    else
+      target_args=(--device "$ANDROID_AVD_NAME")
+      devices_output="$(agent-device devices --platform android --json)"
+      resolved_device="$(
+        jq -r --arg configured "$ANDROID_AVD_NAME" '
+          [
+            .data.devices[]
+            | select(.booted)
+            | select(
+                .id == $configured
+                or .name == $configured
+                or (.name | gsub(" "; "_")) == $configured
+              )
+            | .id
+          ][0] // empty
+        ' <<< "$devices_output"
+      )"
+      if [[ -n "$resolved_device" ]]; then
+        target_args=(--serial "$resolved_device")
+      fi
+    fi
+    ;;
+  ios) target_args=(--device "$IOS_SIMULATOR_NAME") ;;
+esac
+
+agent_device() {
+  AGENT_DEVICE_SESSION="$session_name" \
+    agent-device "$@" --platform "$platform" "${target_args[@]}"
+}
+
+run_quiet() {
+  local output
+
+  if output="$(agent_device "$@" 2>&1)"; then
+    return
+  fi
+
+  if [[ "$session_open" -eq 1 && "$output" == *"SESSION_NOT_FOUND"* ]]; then
+    reattach_app
+    if output="$(agent_device "$@" 2>&1)"; then
+      return
+    fi
+  fi
+
+  printf '%s\n' "$output" >&2
+  return 1
+}
+
+close_session() {
+  if [[ "$session_open" -eq 1 ]]; then
+    agent_device close >/dev/null 2>&1 || true
+  fi
+}
+
+trap close_session EXIT
+
+reattach_app() {
+  printf 'Reattaching expired agent-device session.\n'
+  open_deep_link
+}
+
+open_deep_link() {
+  local attempt output
+
+  for attempt in {1..5}; do
+    if output="$(
+      agent_device open "$app_id" "$current_deep_link" --foreground 2>&1
+    )"; then
+      session_open=1
+      return
+    fi
+
+    if [[ "$platform" != "ios" || "$attempt" -eq 5 ]]; then
+      printf '%s\n' "$output" >&2
+      return 1
+    fi
+
+    case "$output" in
+      *"Error (COMMAND_FAILED): Simulator device failed to open"*)
+        printf 'iOS simulator refused the deep link; retrying (%d/5).\n' \
+          "$attempt" >&2
+        ;;
+      *"Error (COMMAND_FAILED): Daemon request timed out"*)
+        # agent-device resets the local daemon for an open-command timeout.
+        # The next invocation starts a fresh daemon and can safely re-resolve
+        # the still-booted simulator and installed application.
+        printf 'agent-device timed out opening the iOS deep link; retrying (%d/5).\n' \
+          "$attempt" >&2
+        ;;
+      *)
+        printf '%s\n' "$output" >&2
+        return 1
+        ;;
+    esac
+
+    sleep "$attempt"
+  done
+}
+
+prepare_ios_runner() {
+  [[ "$platform" == "ios" ]] || return 0
+
+  printf 'Preparing the agent-device iOS runner.\n'
+  agent_device prepare ios-runner
+}
+
+run_dev_replay() {
+  local replay_file="$PROJECT_ROOT/.agent-device/vrt-dev-$platform.ad"
+  local screenshot="$actual_dir/$dev_capture_id.png"
+  local dev_client_url="${VRT_DEV_CLIENT_URL}&testID=$dev_capture_id"
+  local output
+
+  [[ -f "$replay_file" ]] || fail "Replay not found at $replay_file."
+  session_open=1
+
+  if ! output="$(
+    agent_device replay "$replay_file" \
+      --env "VRT_DEV_CLIENT_URL=$dev_client_url" \
+      --env "VRT_SCREENSHOT=$screenshot" 2>&1
+  )"; then
+    printf '%s\n' "$output" >&2
+    return 1
+  fi
+
+  session_open=0
+  [[ -f "$screenshot" ]] || fail "agent-device did not write $screenshot."
+}
+
+capture_safe_area() {
+  local capture_id="$1"
+  local screenshot="$actual_dir/$capture_id.png"
+  local -a screenshot_args
+
+  screenshot_args=("$screenshot" --crop-on 'id="vrt-safe-area"')
+  if [[ "$platform" == "ios" ]]; then
+    screenshot_args+=(--pixel-density 3)
+  fi
+
+  run_quiet screenshot "${screenshot_args[@]}"
+  [[ -f "$screenshot" ]] || fail "agent-device did not write $screenshot."
+}
+
+capture_all() {
+  local capture_platform capture_id
+
+  while read -r capture_platform capture_id; do
+    [[ "$capture_platform" == "#" || -z "$capture_platform" ]] && continue
+    [[ "$capture_platform" == "all" || "$capture_platform" == "$platform" ]] || continue
+    [[ "$dev_mode" -eq 0 || "$capture_id" == "$dev_capture_id" ]] || continue
+
+    printf 'Capturing %s\n' "$capture_id"
+    current_deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
+    open_deep_link
+    run_quiet wait "id=\"$capture_id-text\"" 15000
+    run_quiet wait stable 200 5000
+    capture_safe_area "$capture_id"
+  done < "$capture_manifest"
+}
+
+mkdir -p "$actual_dir"
+
+prepare_ios_runner
+
+if [[ "$dev_mode" -eq 1 ]]; then
+  run_dev_replay
+  exit 0
+fi
+
+run_quiet settings clear-app-state "$app_id"
+capture_all
+
+agent_device close >/dev/null
+session_open=0

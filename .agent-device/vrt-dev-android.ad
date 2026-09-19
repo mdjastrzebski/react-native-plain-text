@@ -1,0 +1,5 @@
+open "plaintext.example" "${VRT_DEV_CLIENT_URL}" --relaunch
+wait "id=\"vrt-capture-features-font-size-48-text\"" 15000
+wait "stable" 500 5000
+screenshot "${VRT_SCREENSHOT}" --crop-on "id=\"vrt-safe-area\""
+close

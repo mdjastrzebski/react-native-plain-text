@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "sdk": {
+    "channel": "stable",
+    "commandLineToolsVersion": "15859902",
+    "commandLineToolsLinuxSha256": "4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583"
+  },
+  "emulator": {
+    "version": "37.1.11",
+    "buildId": "15917651"
+  },
+  "systemImage": {
+    "apiLevel": "36",
+    "target": "google_apis_playstore",
+    "revision": "7",
+    "architectureByHost": {
+      "darwin-arm64": "arm64-v8a",
+      "darwin-x64": "x86_64",
+      "linux-x64": "x86_64"
+    }
+  },
+  "avd": {
+    "namePrefix": "plaintext_vrt",
+    "device": "pixel_9",
+    "cores": 4,
+    "ramSize": "2048M",
+    "heapSize": "512M",
+    "diskSize": "6G",
+    "hardwareKeyboard": true,
+    "forceRecreate": true
+  },
+  "launch": {
+    "port": 5554,
+    "bootTimeoutSeconds": 600,
+    "headless": true,
+    "gpu": "swiftshader_indirect",
+    "noSnapshot": true,
+    "noAudio": true,
+    "noBootAnimation": true,
+    "disableAnimations": true,
+    "disableSpellChecker": true,
+    "disableLinuxHardwareAcceleration": false,
+    "locale": "en-US",
+    "timezone": "UTC",
+    "extraArgs": [
+      "-no-metrics",
+      "-skin",
+      "1080x2400",
+      "-prop",
+      "qemu.vrt.density=420",
+      "-prop",
+      "qemu.vrt.font_scale=1",
+      "-wipe-data"
+    ]
+  }
+}

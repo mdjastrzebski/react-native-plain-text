@@ -1,3 +1,8 @@
 [submodule "references/react-native"]
 	path = references/react-native
 	url = https://github.com/facebook/react-native.git
+[submodule "baselines"]
+	path = baselines
+	url = https://github.com/troZee/react-native-plain-text-artifactory.git
+	branch = main
+	shallow = true

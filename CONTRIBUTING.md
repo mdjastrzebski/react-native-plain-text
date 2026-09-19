@@ -76,6 +76,150 @@ it is not part of `yarn validate`. Run it yourself after changing
 
 Add tests for your change where possible.
 
+## Visual regression testing
+
+To run the complete visual regression workflow against an already running,
+matching device, including device normalization, the Release build, and
+agent-device captures:
+
+```sh
+yarn vrt:android
+yarn vrt ios
+```
+
+The production test stage initializes the baseline submodule when needed, syncs
+its configured URL, and checks out the latest `origin/main` commit before
+capturing images. Git stops the update instead of overwriting uncommitted work
+inside `baselines/`.
+
+`yarn vrt:ios` is an equivalent shortcut for `yarn vrt ios`.
+
+The setup stage verifies and records the rendering environment in
+`build/vrt/environment/<platform>.txt`. Android CI uses the pinned
+[`ReactiveCircus/android-emulator-runner`](https://github.com/ReactiveCircus/android-emulator-runner)
+action to install, create, start, and stop a clean Pixel 9 AVD. The action inputs
+come from the project-owned `emulator.config.json`; the workflow does not rely
+on the action's moving defaults. CI gives the action a clean `.android-sdk`
+directory and installs a checksummed command-line-tools archive containing the
+Pixel 9 hardware profile before invoking the release-built action. This avoids
+both the runner image's moving profile catalog and unreleased action commits
+whose JavaScript dependencies are not bundled. iOS continues to use the Xcode
+and runtime builds declared in `scripts/vrt-config.sh`.
+
+Android scripts resolve the API, image, AVD name, host architecture, emulator
+revision, resolution, density, font scale, locale, timezone, capture profile,
+and baseline profile from `emulator.config.json`. Do not duplicate those values
+in workflow environment variables or `scripts/vrt-config.sh`.
+
+Inspect the exact action inputs that CI will use on the current host with:
+
+```sh
+./scripts/resolve-android-vrt-action-config.sh
+```
+
+Linux CI uses KVM and the API 36 Google Play x86_64 image. Apple Silicon uses
+the matching arm64-v8a image. Both hosts use the package-derived logical AVD
+name as the capture and baseline profile. The logical name intentionally omits
+the host ABI. Because the system-image architecture and host GPU stack differ,
+Apple Silicon output can be useful for iteration but is not expected to be
+pixel-identical to Linux CI.
+
+Every Android CI run prints and uploads the action inputs, raw AVD configuration,
+emulator command line and version, installed SDK packages, system-image metadata,
+host and KVM information, Android properties and settings, display and renderer
+state, and system-font checksums under `build/vrt/environment/android-details/`.
+The artifact also contains the reviewed baseline used by the comparison, the
+actual capture, diff, report, and a candidate baseline copied from the capture.
+Candidate baselines are never committed automatically; review one before
+promoting it to the baseline repository.
+
+Run the build or comparison stage independently against an already running,
+configured emulator when debugging or retrying a failure:
+
+```sh
+yarn vrt:android run
+yarn vrt:android test
+
+yarn vrt:ios setup
+yarn vrt:ios run
+yarn vrt:ios test
+```
+
+The capture stage requires `agent-device` 0.21.0 or newer. The app root renders
+`AppVrt` when the incoming deep link contains a `testID` query parameter and
+renders the regular app otherwise. For each manifest entry, agent-device opens
+`exp+react-native-plain-text-example://vrt?testID=<testID>` and uses
+`screenshot --crop-on 'id="vrt-safe-area"'` to write the safe-area content
+containing the isolated specimen into `build/vrt/actual/<platform>/<profile>/`.
+This excludes status and navigation bars, avoids tab navigation and scrolling
+through the specimen book, and keeps every image at fixed dimensions for its
+device profile. On the first successful `test` run for a
+profile, it moves those PNGs to
+`baselines/<platform>/<profile>/` for review and commit in the
+[`react-native-plain-text-artifactory`](https://github.com/troZee/react-native-plain-text-artifactory)
+repository. The `baselines/` directory is a shallow submodule. The VRT wrapper
+updates it to the latest reviewed artifact commit on `origin/main`. Later runs
+use `reg-cli` to compare actual images with that baseline and write comparison
+images to `build/vrt/diff/`. A visual difference makes the command fail. All
+generated VRT files remain ignored under `build/`. When comparison images
+exist, the wrapper also writes the built-in `reg-cli` HTML and JSON reports to
+`build/vrt/report/<platform>/<profile>.{html,json}` and prints the command that
+opens the HTML file. The report provides diff, side-by-side, slider, blend, and
+toggle views of the baseline and actual images.
+
+For production iOS VRT, Expo builds a Release simulator app without selecting
+a concrete device. The wrapper installs that app with `simctl`, avoiding Expo's
+development-client URL and its unused Metro address. Before capture,
+`agent-device prepare ios-runner` moves the XCTest runner startup cost out of
+the first interaction. Transient CoreSimulator deep-link refusals and daemon
+timeouts are retried. CI enables agent-device execution tracing and uploads its
+daemon, runner, event, and per-request diagnostic logs under
+`build/vrt/logs/agent-device/`.
+
+Use development mode to capture and compare only
+`vrt-capture-features-font-size-48` against its canonical baseline:
+
+```sh
+VRT_MODE_DEV=1 yarn vrt:android test
+VRT_MODE_DEV=1 yarn vrt:ios test
+```
+
+Development mode expects the Expo development server on port `8081`. On
+Android, the wrapper forwards that port to the host and agent-device opens the
+Expo development-client URL directly. This avoids the development-client
+launcher screen that a plain app launch would show. Override
+`VRT_DEV_SERVER_PORT` and `VRT_DEV_CLIENT_URL` together when Metro uses a
+different port or scheme. The development capture runs as a native `.ad`
+replay from `.agent-device/vrt-dev-<platform>.ad`.
+
+Start Metro before using development mode:
+
+```sh
+yarn example start
+```
+
+The first development-mode run creates a one-image baseline in the ignored
+`build/vrt/baseline-dev/` directory. Later development runs compare against
+that image. Development mode never creates or updates the production-ready
+baseline under `baselines/`.
+
+To update production baselines, create and check out a branch inside the
+`baselines/` submodule, commit the reviewed images there, and push that branch
+to the artifact repository. Then stage the updated submodule pointer in this
+repository. Cross-link the artifact and library pull requests so the image
+changes and the code change can be reviewed together. Actual captures, diffs,
+reports, and logs remain ignored under `build/` and belong in temporary CI
+artifacts rather than either Git repository.
+
+To confirm that the app is running with the new architecture, check the Metro
+logs for a message like this:
+
+```text
+Running "PlainTextExample" with {"fabric":true,"initialProps":{"concurrentRoot":true},"rootTag":1}
+```
+
+The `"fabric":true` and `"concurrentRoot":true` properties confirm it.
+
 ## Adding a prop
 
 **An unused prop costs only a prop check.** A prop left at its default must not

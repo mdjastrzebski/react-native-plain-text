@@ -15,6 +15,10 @@ type Props = NativeStackScreenProps<ParamListBase>;
 export default function UseCasesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
+  return <UseCaseSpecimens showText={showText} />;
+}
+
+export function UseCaseSpecimens({ showText }: { showText: boolean }) {
   return (
     <ScrollView style={screenStyles.scroll} contentContainerStyle={screenStyles.container}>
       {/* No lockup: "Aa" is a specimen of the type itself, which is the Features
@@ -30,16 +34,31 @@ export default function UseCasesScreen({ navigation }: Props) {
         <Section key={title} title={title}>
           {items.map((item) =>
             item.kind === 'baseline' ? (
-              <UseCaseBaselineRow key={item.label} showText={showText} {...item} />
+              <UseCaseBaselineRow
+                key={item.label}
+                testID={`vrt-capture-use-cases-${item.label}`}
+                showText={showText}
+                {...item}
+              />
             ) : (
-              <UseCaseRow key={item.label} showText={showText} {...item} />
+              <UseCaseRow
+                key={item.label}
+                testID={`vrt-capture-use-cases-${item.label}`}
+                showText={showText}
+                {...item}
+              />
             )
           )}
         </Section>
       ))}
       <Section title="Random Combinations">
         {RANDOM_USE_CASES.map((item) => (
-          <UseCaseRow key={item.label} showText={showText} {...item} />
+          <UseCaseRow
+            key={item.label}
+            testID={`vrt-capture-use-cases-${item.label}`}
+            showText={showText}
+            {...item}
+          />
         ))}
       </Section>
     </ScrollView>
@@ -50,13 +69,15 @@ export default function UseCasesScreen({ navigation }: Props) {
 // value), so `label` is only the key and the name to talk about it by.
 function UseCaseRow({
   showText,
+  testID,
   label: _label,
   text,
   style,
   ...props
-}: Combination & { showText: boolean }) {
+}: Combination & { showText: boolean; testID: string }) {
   return (
     <TextItem
+      testID={testID}
       showText={showText}
       // The platform default is pure black, which reads harder than anything else
       // on the page. Every row starts from the palette's ink instead, so the rows
@@ -139,16 +160,18 @@ type UseCaseGroup = {
 // (`BaselineYogaNode`, both shadow nodes) now has to match.
 function UseCaseBaselineRow({
   showText,
+  testID,
   label,
   parts,
-}: BaselineCombination & { showText: boolean }) {
+}: BaselineCombination & { showText: boolean; testID: string }) {
   return (
     <CompareBox
+      testID={testID}
       label={label}
       showText={showText}
       containerStyle={[useCaseStyles.baselineRow, screenStyles.wideRow]}
       overlay={
-        <View style={useCaseStyles.baselineRow}>
+        <View testID={`vrt-capture-use-cases-${label}-rn-text`} style={useCaseStyles.baselineRow}>
           {parts.map((part, index) => (
             <Text key={index} style={[part.style, useCaseStyles.baselineOverlayText]}>
               {part.text}

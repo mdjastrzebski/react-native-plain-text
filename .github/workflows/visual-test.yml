@@ -1,0 +1,160 @@
+name: Visual Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  merge_group:
+    types:
+      - checks_requested
+
+permissions:
+  contents: read
+
+concurrency:
+  # A PR number cannot collide when different forks use the same branch name.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Keep main and merge-queue runs intact because they gate integration.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  vrt-android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      # Use the repository's checksummed command-line tools rather than the
+      # runner image's avdmanager, whose profile catalog may omit Pixel 9.
+      ANDROID_HOME: ${{ github.workspace }}/.android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # GitHub's Linux runners expose /dev/kvm, but the emulator needs explicit
+      # access before it can use hardware acceleration.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install Android SDK command-line tools
+        run: ./scripts/install-android-command-line-tools.sh
+
+      - name: Resolve Android emulator configuration
+        id: android-vrt-config
+        run: ./scripts/resolve-android-vrt-action-config.sh | tee -a "$GITHUB_OUTPUT"
+
+      - name: Run Android visual regression tests
+        # android-emulator-runner v2.38.0. Use the release-built commit: main
+        # does not bundle the action's runtime dependencies.
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: ${{ steps.android-vrt-config.outputs.api_level }}
+          target: ${{ steps.android-vrt-config.outputs.target }}
+          arch: ${{ steps.android-vrt-config.outputs.arch }}
+          profile: ${{ steps.android-vrt-config.outputs.profile }}
+          cores: ${{ steps.android-vrt-config.outputs.cores }}
+          ram-size: ${{ steps.android-vrt-config.outputs.ram_size }}
+          heap-size: ${{ steps.android-vrt-config.outputs.heap_size }}
+          disk-size: ${{ steps.android-vrt-config.outputs.disk_size }}
+          avd-name: ${{ steps.android-vrt-config.outputs.avd_name }}
+          force-avd-creation: ${{ steps.android-vrt-config.outputs.force_avd_creation }}
+          emulator-boot-timeout: ${{ steps.android-vrt-config.outputs.boot_timeout }}
+          emulator-port: ${{ steps.android-vrt-config.outputs.emulator_port }}
+          emulator-options: ${{ steps.android-vrt-config.outputs.emulator_options }}
+          disable-animations: ${{ steps.android-vrt-config.outputs.disable_animations }}
+          disable-spellchecker: ${{ steps.android-vrt-config.outputs.disable_spellchecker }}
+          disable-linux-hw-accel: ${{ steps.android-vrt-config.outputs.disable_linux_hw_accel }}
+          enable-hw-keyboard: ${{ steps.android-vrt-config.outputs.enable_hw_keyboard }}
+          emulator-build: ${{ steps.android-vrt-config.outputs.emulator_build }}
+          channel: ${{ steps.android-vrt-config.outputs.channel }}
+          # The action otherwise invokes the script with /usr/bin/sh and omits
+          # Yarn's project-binary PATH, which contains agent-device.
+          script: yarn exec ./scripts/run-android-vrt-ci.sh
+
+      - name: Collect final Android emulator diagnostics
+        if: always()
+        run: |
+          ./scripts/collect-android-vrt-environment.sh || true
+          ./scripts/finalize-android-vrt-artifact.sh
+
+      - name: Upload Android visual regression results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-android-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            build/vrt
+          if-no-files-found: ignore
+          retention-days: 30
+
+  vrt-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+      OPEN_SIMULATOR: 0
+      VRT_RESET_DEVICE: 1
+      # Include subprocess timing and command metadata in agent-device's
+      # diagnostics so transient CoreSimulator failures can be investigated.
+      AGENT_DEVICE_EXEC_TRACE: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Resolve iOS VRT cache profile
+        id: ios-vrt-cache-profile
+        shell: bash
+        run: |
+          source scripts/vrt-config.sh
+          printf 'key=ios-pods-v1-%s-%s-xcode-%s-%s-cocoapods-%s\n' \
+            "$RUNNER_OS" "$RUNNER_ARCH" "$IOS_XCODE_VERSION" \
+            "$IOS_XCODE_BUILD" "$(pod --version)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache CocoaPods
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            example/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ steps.ios-vrt-cache-profile.outputs.key }}-${{ hashFiles('example/ios/Podfile.lock', 'yarn.lock') }}
+
+      # The shared command sets up a clean simulator, builds the Release app,
+      # syncs baselines, captures specimens, and runs reg-cli.
+      - name: Run iOS visual regression tests
+        run: yarn vrt:ios
+
+      - name: Collect iOS agent-device diagnostics
+        if: always()
+        run: ./scripts/collect-ios-vrt-diagnostics.sh
+
+      - name: Upload iOS visual regression results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-ios-${{ github.run_attempt }}
+          path: build/vrt
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { Children, createContext, isValidElement, useContext, type ReactNode } from 'react';
 import {
   Platform,
   Pressable,
@@ -15,24 +15,10 @@ import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { useCompatOn } from './CompareText';
 import { COLOR } from '../theme';
 
-export function Cover({
-  lockup,
-  blurb,
-}: {
-  lockup?: { glyph: string; title: string };
-  blurb: string;
-}) {
-  return (
-    <View style={styles.cover}>
-      {lockup != null && (
-        <View style={styles.lockup}>
-          <PlainText style={styles.coverGlyph}>{lockup.glyph}</PlainText>
-          <PlainText style={styles.coverTitle}>{lockup.title}</PlainText>
-        </View>
-      )}
-      <PlainText style={styles.coverBlurb}>{blurb}</PlainText>
-    </View>
-  );
+const VrtSpecimenContext = createContext<string | undefined>(undefined);
+
+export function VrtSpecimenProvider({ testID, children }: { testID: string; children: ReactNode }) {
+  return <VrtSpecimenContext.Provider value={testID}>{children}</VrtSpecimenContext.Provider>;
 }
 
 const SectionSearchContext = createContext('');
@@ -50,6 +36,11 @@ export function SearchField({
   onChangeText: (text: string) => void;
   placeholder: string;
 }) {
+  const vrtTestID = useContext(VrtSpecimenContext);
+  if (vrtTestID != null) {
+    return null;
+  }
+
   return (
     <View style={styles.searchBarRow}>
       <View style={styles.searchField}>
@@ -74,6 +65,57 @@ export function SearchField({
   );
 }
 
+function containsVrtSpecimen(children: ReactNode, testID: string): boolean {
+  return Children.toArray(children).some((child) => {
+    if (!isValidElement<{ testID?: string; children?: ReactNode }>(child)) {
+      return false;
+    }
+
+    return child.props.testID === testID || containsVrtSpecimen(child.props.children, testID);
+  });
+}
+
+// The specimen-book furniture both screens are set in: the title page, the
+// section headings and the row that puts one PlainText against the RN <Text>
+// overlay. Nothing here decides what to demonstrate: the screens do that.
+
+// Sets the register before the first section: optionally the largest glyphs on
+// the screen and the page's name, then one line on what the page holds.
+//
+// `lockup` is a pair rather than two props because the two halves are one mark
+// (see the styles at the bottom), and it is optional because it is worth its
+// space only on a page it says something about: the glyph is a specimen of the
+// type itself, which is the Features screen's subject rather than any other's,
+// and the title is the library's name set as a wordmark, so it belongs on that
+// same page and nowhere the nav bar already names.
+export function Cover({
+  lockup,
+  blurb,
+}: {
+  lockup?: { glyph: string; title: string };
+  blurb: string;
+}) {
+  const vrtTestID = useContext(VrtSpecimenContext);
+  if (vrtTestID != null) {
+    return null;
+  }
+
+  return (
+    <View style={styles.cover}>
+      {/* The two of them set side by side: a specimen book's "Aa" and the name of
+          the type it is showing belong together, and stacked they read as a
+          heading with a caption under it instead. */}
+      {lockup != null && (
+        <View style={styles.lockup}>
+          <PlainText style={styles.coverGlyph}>{lockup.glyph}</PlainText>
+          <PlainText style={styles.coverTitle}>{lockup.title}</PlainText>
+        </View>
+      )}
+      <PlainText style={styles.coverBlurb}>{blurb}</PlainText>
+    </View>
+  );
+}
+
 export function Section({
   title,
   footer,
@@ -90,7 +132,19 @@ export function Section({
   spacedRows?: boolean;
   children: ReactNode;
 }) {
+  const vrtTestID = useContext(VrtSpecimenContext);
   const searchQuery = useContext(SectionSearchContext);
+  if (vrtTestID != null && !containsVrtSpecimen(children, vrtTestID)) {
+    return null;
+  }
+
+  // VRT captures isolate one specimen. The section title and footer describe
+  // the surrounding specimen book, so including them adds unrelated pixels to
+  // the capture.
+  if (vrtTestID != null) {
+    return children;
+  }
+
   if (searchQuery !== '' && !title.toLowerCase().includes(searchQuery.toLowerCase())) {
     return null;
   }
@@ -112,6 +166,7 @@ export function Section({
 }
 
 export function TextItem({
+  testID,
   label,
   style,
   containerStyle,
@@ -125,6 +180,9 @@ export function TextItem({
   accessibilityProps,
   children,
 }: {
+  // Stable route target for visual regression captures. The runner derives the
+  // readiness selector by appending `-text` below before capturing the safe area.
+  testID: string;
   // The value this row varies, set in a caption above the specimen. Keeping it
   // out of the specimen is what lets the specimen be real text rather than a
   // description of itself. Above rather than beside, because a gutter would cost
@@ -151,17 +209,24 @@ export function TextItem({
   accessibilityProps?: AccessibilityProps & { testID?: string };
   children: string;
 }) {
+  const vrtTestID = useContext(VrtSpecimenContext);
   const compatOn = useCompatOn();
 
+  if (vrtTestID != null && vrtTestID !== testID) {
+    return null;
+  }
+
   return (
-    <View style={styles.rowContainer}>
-      {label != null && <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>}
+    <View testID={testID} style={styles.rowContainer}>
+      {vrtTestID == null && label != null && (
+        <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>
+      )}
       {/* Full width, and the overlay's containing block. The grey row inside
           shrink-wraps to PlainText. The overlay must NOT, or it would be handed
           PlainText's width as its own constraint and could only ever wrap where
           the real difference is that RN wanted a wider box. */}
       <View style={styles.specimen}>
-        <View style={[styles.row, containerStyle]}>
+        <View testID={`${testID}-text`} style={[styles.row, containerStyle]}>
           {/* No explicit height: the native text measures its own size. */}
           <PlainText
             // `base` first so a row that sets its own fontSize (most of them)
@@ -184,7 +249,11 @@ export function TextItem({
           </PlainText>
         </View>
         {showText && (
-          <View style={styles.overlay}>
+          // `alignItems: flex-start` leaves the Text a normal flex child, so it
+          // shrink-wraps to its own measured width but still wraps at the same
+          // available width PlainText was measured against, which is what makes
+          // the scarlet box edge comparable to the grey one.
+          <View testID={`${testID}-rn-text`} style={styles.overlay}>
             <Text
               // Cast back to what RN accepts. A fontVariationSettings in there is
               // dropped, which is the gap the Font Variation Settings section
@@ -215,23 +284,34 @@ export function TextItem({
 // TextItem's single `text`/`style`, since there is no one style to spread
 // across every sibling.
 export function CompareBox({
+  testID,
   label,
   containerStyle,
   showText,
   overlay,
   children,
 }: {
+  testID: string;
   label?: string;
   containerStyle?: StyleProp<ViewStyle>;
   showText: boolean;
   overlay: ReactNode;
   children: ReactNode;
 }) {
+  const vrtTestID = useContext(VrtSpecimenContext);
+  if (vrtTestID != null && vrtTestID !== testID) {
+    return null;
+  }
+
   return (
-    <View style={styles.rowContainer}>
-      {label != null && <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>}
+    <View testID={testID} style={styles.rowContainer}>
+      {vrtTestID == null && label != null && (
+        <PlainText style={styles.rowLabel}>{label.toUpperCase()}</PlainText>
+      )}
       <View style={styles.specimen}>
-        <View style={[styles.row, containerStyle]}>{children}</View>
+        <View testID={`${testID}-text`} style={[styles.row, containerStyle]}>
+          {children}
+        </View>
         {showText && <View style={styles.overlay}>{overlay}</View>}
       </View>
     </View>

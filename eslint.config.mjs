@@ -31,6 +31,6 @@ export default defineConfig([
     },
   },
   {
-    ignores: ['node_modules/', 'lib/', 'references/', 'android/build/', 'docs/'],
+    ignores: ['node_modules/', 'lib/', 'references/', 'android/build/', 'docs/', '.android-sdk/'],
   },
 ]);
