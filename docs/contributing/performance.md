@@ -68,14 +68,16 @@ of why it is still in [todo.md](todo.md).
 | `textDecorationLine`     | medium | Forces the iOS attributed-string path. The Android side is two paint flags.                                                                                                   |
 | `textShadow*`            | medium | Forces the iOS attributed-string path. The Android side is one `Paint.setShadowLayer` call.                                                                                   |
 | `textTransform`          | medium | Allocates a transformed copy of the string per apply on both platforms; `capitalize` additionally walks word boundaries.                                                      |
+| `writingDirection`       | medium | iOS only. Forces the iOS attributed-string path. No-op on Android.                                                                                                            |
 | everything else          | light  | One write, or one entry in the font cache key.                                                                                                                                |
 
-Four of those are medium for the same single reason: `applyContentFromProps`
+Five of those are medium for the same single reason: `applyContentFromProps`
 takes its plain path only when `lineHeight`, `letterSpacing`,
-`textDecorationLine` and `textShadowOffset` are all unset. Any one of them puts
-the node on the `NSAttributedString` path for good. A further prop that needs an
-attributed-string attribute is therefore free on top of the first, and that is
-the argument for expressing a new iOS text feature as one if it has the choice.
+`textDecorationLine`, `textShadowOffset` and `writingDirection` are all unset
+(at their defaults). Any one of them puts the node on the `NSAttributedString`
+path for good. A further prop that needs an attributed-string attribute is
+therefore free on top of the first, and that is the argument for expressing a
+new iOS text feature as one if it has the choice.
 
 ### Where the "unused is free" rule gets tested
 

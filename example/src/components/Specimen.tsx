@@ -1,7 +1,10 @@
 import { Children, createContext, isValidElement, useContext, type ReactNode } from 'react';
 import {
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
   type AccessibilityProps,
   type StyleProp,
@@ -16,6 +19,50 @@ const VrtSpecimenContext = createContext<string | undefined>(undefined);
 
 export function VrtSpecimenProvider({ testID, children }: { testID: string; children: ReactNode }) {
   return <VrtSpecimenContext.Provider value={testID}>{children}</VrtSpecimenContext.Provider>;
+}
+
+const SectionSearchContext = createContext('');
+
+export function SectionSearchProvider({ query, children }: { query: string; children: ReactNode }) {
+  return <SectionSearchContext.Provider value={query}>{children}</SectionSearchContext.Provider>;
+}
+
+export function SearchField({
+  value,
+  onChangeText,
+  placeholder,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+}) {
+  const vrtTestID = useContext(VrtSpecimenContext);
+  if (vrtTestID != null) {
+    return null;
+  }
+
+  return (
+    <View style={styles.searchBarRow}>
+      <View style={styles.searchField}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={COLOR.faint}
+          style={styles.searchInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+        {Platform.OS === 'android' && value !== '' && (
+          <Pressable onPress={() => onChangeText('')} hitSlop={8}>
+            <Text style={styles.searchClear}>×</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
 }
 
 function containsVrtSpecimen(children: ReactNode, testID: string): boolean {
@@ -86,6 +133,7 @@ export function Section({
   children: ReactNode;
 }) {
   const vrtTestID = useContext(VrtSpecimenContext);
+  const searchQuery = useContext(SectionSearchContext);
   if (vrtTestID != null && !containsVrtSpecimen(children, vrtTestID)) {
     return null;
   }
@@ -95,6 +143,10 @@ export function Section({
   // the capture.
   if (vrtTestID != null) {
     return children;
+  }
+
+  if (searchQuery !== '' && !title.toLowerCase().includes(searchQuery.toLowerCase())) {
+    return null;
   }
 
   return (
@@ -282,7 +334,7 @@ export const screenStyles = StyleSheet.create({
   },
   container: {
     flexGrow: 1,
-    paddingTop: 28,
+    paddingTop: 0,
     paddingBottom: 48,
     paddingHorizontal: 18,
     // Sections need to read as separate sheets of a specimen book, so the gap
@@ -355,6 +407,32 @@ const styles = StyleSheet.create({
     // and has to bring it. Without this the first heading rides 16 closer to the
     // blurb than every other heading does to what precedes it.
     paddingBottom: 4 + RUN_OFF,
+  },
+  // Opaque: once this row sticks, it must fully hide scrolled-under content.
+  searchBarRow: {
+    backgroundColor: COLOR.paper,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLOR.line,
+  },
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLOR.wash,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 16,
+    color: COLOR.ink,
+  },
+  searchClear: {
+    fontSize: 18,
+    color: COLOR.faint,
+    paddingHorizontal: 4,
   },
   lockup: {
     flexDirection: 'row',

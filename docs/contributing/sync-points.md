@@ -34,6 +34,8 @@ most props only touch a few.
 - `textAlign`
 - `textAlignVertical`
 - `verticalAlign`
+- `writingDirection` (iOS-only — no Android setter body, no Android entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `textDecorationLine`
 - `textShadowColor`
 - `textShadowOffsetWidth`
@@ -117,6 +119,8 @@ Notably _excluded_ — all draw-only, none affect the box:
 - `textAlign`
 - `textAlignVertical`
 - `verticalAlign`
+- `writingDirection` (iOS-only, like `lineBreakStrategyIOS` above, but it doesn't affect wrapping: it reorders glyphs,
+  not line breaks, so `boundingRectWithSize:` reports the same size either way)
 - `textDecorationLine`
 - `textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`, `textShadowRadius`
 - `lineHeightClippingCompat`
@@ -390,10 +394,10 @@ Only the invalidation logic is genuinely shared, in `cpp/PlainTextMeasurementHel
 
 **Props:** every prop `applyContentFromProps` applies to `_label` — text (`text`, `textTransform`), font (`fontFamily`,
 `fontSize`, `fontWeight`, `fontStyle`, `fontVariant`, `fontVariationSettings`, `allowFontScaling`,
-`maxFontSizeMultiplier`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`),
-`letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`, `lineBreakStrategyIOS`, plus the shadow props
-(`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`, `textShadowRadius`) — i.e. Set 2's list plus
-every draw-only prop from [Set 1](#set-1--any-prop-the-four-layer-flow).
+`maxFontSizeMultiplier`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`,
+`writingDirection`), `letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`,
+`lineBreakStrategyIOS`, plus the shadow props (`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`,
+`textShadowRadius`) — i.e. Set 2's list plus every draw-only prop from [Set 1](#set-1--any-prop-the-four-layer-flow).
 
 Fabric recycles component views by type. iOS does it unconditionally through `RCTComponentViewRegistry`; Android only if
 a view manager opts in via `setupViewRecycling()`, which `PlainTextViewManager` never calls — so this set is iOS-only

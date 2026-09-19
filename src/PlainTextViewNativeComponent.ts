@@ -48,6 +48,10 @@ export interface NativeProps extends ViewProps {
   textAlignVertical?: CodegenTypes.WithDefault<'auto' | 'top' | 'bottom' | 'center', 'auto'>;
   verticalAlign?: string;
 
+  // iOS only, no-op on Android, matching RN <Text>'s writingDirection style (iOS-only there too).
+  // Cost: medium. Forces iOS's attributed-string path.
+  writingDirection?: CodegenTypes.WithDefault<'auto' | 'ltr' | 'rtl', 'auto'>;
+
   // Free string: 'underline line-through' has a space, which codegen enums can't represent.
   // Cost: medium. Forces iOS's attributed-string path and two Android paint flags.
   textDecorationLine?: string;

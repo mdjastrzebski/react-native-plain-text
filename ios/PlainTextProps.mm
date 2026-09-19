@@ -53,6 +53,18 @@ NSTextAlignment textAlignmentFromProp(RNPlainTextTextAlign textAlign)
     }
 }
 
+NSWritingDirection writingDirectionFromProp(RNPlainTextWritingDirection writingDirection)
+{
+    switch (writingDirection) {
+        case RNPlainTextWritingDirection::Ltr:
+            return NSWritingDirectionLeftToRight;
+        case RNPlainTextWritingDirection::Rtl:
+            return NSWritingDirectionRightToLeft;
+        case RNPlainTextWritingDirection::Auto:
+            return NSWritingDirectionNatural;
+    }
+}
+
 BOOL textDecorationHasUnderline(const std::string &textDecorationLine)
 {
     return textDecorationLine.find("underline") != std::string::npos;

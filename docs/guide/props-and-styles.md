@@ -42,6 +42,7 @@ RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · 
 | `textShadowRadius`           | ✅                     |                                                                                         |
 | `textTransform`              | ✅                     |                                                                                         |
 | `verticalAlign`              | ✅ ⬆️                  | Android-only in RN Text. Implemented for both iOS & Android                             |
+| `writingDirection`           | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                           |
 | Every other `ViewStyle` prop | ✅                     | `width`, `margin`, `padding`, `backgroundColor`, `opacity`, etc                         |
 
 RN `<Text>` compatibility: ✅ fully compatible · ⬆️ added in Plain Text
@@ -75,7 +76,6 @@ Things Plain Text does that RN `<Text>` does not:
 | `adjustsFontSizeToFit` / `minimumFontScale`                             | To Do                  |
 | `selectable` / `selectionColor` / `suppressHighlighting` / `userSelect` | To Do                  |
 | `textDecorationColor` / `textDecorationStyle`                           | To Do                  |
-| `writingDirection`                                                      | To Do                  |
 | `dynamicTypeRamp`                                                       | To Do                  |
 | `android_hyphenationFrequency`                                          | To Do                  |
 
