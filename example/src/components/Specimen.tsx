@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import {
   Platform,
   Pressable,
@@ -33,12 +33,6 @@ export function Cover({
       <PlainText style={styles.coverBlurb}>{blurb}</PlainText>
     </View>
   );
-}
-
-const SectionSearchContext = createContext('');
-
-export function SectionSearchProvider({ query, children }: { query: string; children: ReactNode }) {
-  return <SectionSearchContext.Provider value={query}>{children}</SectionSearchContext.Provider>;
 }
 
 export function SearchField({
@@ -88,11 +82,6 @@ export function Section({
   spacedRows?: boolean;
   children: ReactNode;
 }) {
-  const searchQuery = useContext(SectionSearchContext);
-  if (searchQuery !== '' && !title.toLowerCase().includes(searchQuery.toLowerCase())) {
-    return null;
-  }
-
   return (
     <View style={[styles.section, spacedRows === true && styles.spacedSection]}>
       <View style={styles.sectionHeaderRow}>

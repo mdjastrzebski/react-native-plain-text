@@ -1,9 +1,9 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, type ComponentType, type ReactElement } from 'react';
 import { FlatList } from 'react-native';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCompareText } from '../components/CompareText';
-import { Cover, SearchField, SectionSearchProvider, screenStyles } from '../components/Specimen';
+import { Cover, SearchField, screenStyles } from '../components/Specimen';
 import { AccessibilitySection } from '../sections/AccessibilitySection';
 import { AnimatingTextSection } from '../sections/AnimatingTextSection';
 import { BaselineAlignmentSection } from '../sections/BaselineAlignmentSection';
@@ -54,7 +54,42 @@ export default function FeaturesScreen({ navigation }: Props) {
     scrollRef.current?.setNativeProps({ scrollEnabled: !dragging });
   };
 
-  const sections: ReactElement[] = [
+  // [title, Component] so search can filter on title directly. Key and title both
+  // derive from `title` below, since every entry here shares the same showText prop.
+  const sections: [string, ComponentType<{ showText: boolean }>][] = [
+    ['Font Size', FontSizeSection],
+    ['Emoji', EmojiSection],
+    ['Font Family', FontFamilySection],
+    ['Color', ColorSection],
+    ['Font Weight', FontWeightSection],
+    ['Font Style', FontStyleSection],
+    ['Text Align', TextAlignSection],
+    ['Writing Direction', WritingDirectionSection],
+    ['Baseline alignment', BaselineAlignmentSection],
+    ['Multiline', MultilineSection],
+    ['Number of Lines', NumberOfLinesSection],
+    ['Padding', PaddingSection],
+    ['Borders', BordersSection],
+    ['Line Height', LineHeightSection],
+    ['Line Height Clipping', LineHeightClippingSection],
+    ['Letter Spacing', LetterSpacingSection],
+    ['Ellipsize Mode', EllipsizeModeSection],
+    ['Line Break Strategy', LineBreakStrategySection],
+    ['Text Break Strategy', TextBreakStrategySection],
+    ['Text Decoration Line', TextDecorationLineSection],
+    ['Text Shadow', TextShadowSection],
+    ['Text Transform', TextTransformSection],
+    ['Font Scaling', FontScalingSection],
+    ['Font Variant', FontVariantSection],
+    ['Font Variation Settings', FontVariationSettingsSection],
+    ['Vertical Align', VerticalAlignSection],
+    ['Wrap Detection', WrapDetectionSection],
+    ['Accessibility', AccessibilitySection],
+    ['Font Padding', FontPaddingSection],
+  ];
+
+  const query = search.toLowerCase();
+  const items: ReactElement[] = [
     // Hidden rather than filtered: it's the title page, not a result.
     ...(search === ''
       ? [
@@ -65,52 +100,26 @@ export default function FeaturesScreen({ navigation }: Props) {
           />,
         ]
       : []),
-    <FontSizeSection key="font-size" showText={showText} />,
-    <EmojiSection key="emoji" showText={showText} />,
-    <FontFamilySection key="font-family" showText={showText} />,
-    <ColorSection key="color" showText={showText} />,
-    <FontWeightSection key="font-weight" showText={showText} />,
-    <FontStyleSection key="font-style" showText={showText} />,
-    <TextAlignSection key="text-align" showText={showText} />,
-    <WritingDirectionSection key="writing-direction" showText={showText} />,
-    <BaselineAlignmentSection key="baseline-alignment" showText={showText} />,
-    <MultilineSection key="multiline" showText={showText} />,
-    <NumberOfLinesSection key="number-of-lines" showText={showText} />,
-    <PaddingSection key="padding" showText={showText} />,
-    <BordersSection key="borders" showText={showText} />,
-    <LineHeightSection key="line-height" showText={showText} />,
-    <LineHeightClippingSection key="line-height-clipping" showText={showText} />,
-    <LetterSpacingSection key="letter-spacing" showText={showText} />,
-    <EllipsizeModeSection key="ellipsize-mode" showText={showText} />,
-    <LineBreakStrategySection key="line-break-strategy" showText={showText} />,
-    <TextBreakStrategySection key="text-break-strategy" showText={showText} />,
-    <TextDecorationLineSection key="text-decoration-line" showText={showText} />,
-    <TextShadowSection key="text-shadow" showText={showText} />,
-    <TextTransformSection key="text-transform" showText={showText} />,
-    <FontScalingSection key="font-scaling" showText={showText} />,
-    <FontVariantSection key="font-variant" showText={showText} />,
-    <FontVariationSettingsSection key="font-variation-settings" showText={showText} />,
-    <VerticalAlignSection key="vertical-align" showText={showText} />,
-    <WrapDetectionSection key="wrap-detection" showText={showText} />,
-    <AccessibilitySection key="accessibility" showText={showText} />,
-    <FontPaddingSection key="font-padding" showText={showText} />,
-    <AnimatingTextSection key="animating-text" onDragStateChange={onDragStateChange} />,
+    ...sections
+      .filter(([title]) => title.toLowerCase().includes(query))
+      .map(([title, Section]) => <Section key={title} showText={showText} />),
+    ...('animating text'.includes(query)
+      ? [<AnimatingTextSection key="animating-text" onDragStateChange={onDragStateChange} />]
+      : []),
   ];
 
   return (
-    <SectionSearchProvider query={search}>
-      <FlatList<ReactElement>
-        ref={scrollRef}
-        style={screenStyles.scroll}
-        contentContainerStyle={screenStyles.container}
-        stickyHeaderIndices={[0]}
-        ListHeaderComponent={
-          <SearchField value={search} onChangeText={setSearch} placeholder="Search sections" />
-        }
-        data={sections}
-        renderItem={({ item }) => item}
-        keyExtractor={(item, index) => item.key ?? String(index)}
-      />
-    </SectionSearchProvider>
+    <FlatList<ReactElement>
+      ref={scrollRef}
+      style={screenStyles.scroll}
+      contentContainerStyle={screenStyles.container}
+      stickyHeaderIndices={[0]}
+      ListHeaderComponent={
+        <SearchField value={search} onChangeText={setSearch} placeholder="Search sections" />
+      }
+      data={items}
+      renderItem={({ item }) => item}
+      keyExtractor={(item, index) => item.key ?? String(index)}
+    />
   );
 }

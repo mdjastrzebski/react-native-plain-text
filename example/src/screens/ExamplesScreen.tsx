@@ -1,8 +1,9 @@
+import { useState, type ComponentType, type ReactElement } from 'react';
 import { FlatList } from 'react-native';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCompareText } from '../components/CompareText';
-import { Cover, screenStyles } from '../components/Specimen';
+import { Cover, SearchField, screenStyles } from '../components/Specimen';
 import { BadgesSection } from '../sections/BadgesSection';
 import { BodyCopySection } from '../sections/BodyCopySection';
 import { ButtonsAndLinksSection } from '../sections/ButtonsAndLinksSection';
@@ -20,28 +21,46 @@ type Props = NativeStackScreenProps<ParamListBase>;
 export default function ExamplesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
-  const sections = [
-    // No lockup here; the typeface itself is Features' subject, not this screen's.
-    <Cover
-      key="cover"
-      blurb="Whole UI shapes rather than one prop: several styles stacked per row, the way an app would actually set them."
-    />,
-    <HeadingsSection key="headings" showText={showText} />,
-    <BodyCopySection key="body-copy" showText={showText} />,
-    <LabelsSection key="labels" showText={showText} />,
-    <ButtonsAndLinksSection key="buttons-and-links" showText={showText} />,
-    <CodeSection key="code" showText={showText} />,
-    <NumeralsSection key="numerals" showText={showText} />,
-    <BadgesSection key="badges" showText={showText} />,
-    <StatusAndFeedbackSection key="status-and-feedback" showText={showText} />,
-    <RandomCombinationsSection key="random-combinations" showText={showText} />,
+  const [search, setSearch] = useState('');
+
+  // [title, Component] so search can filter on title directly.
+  const sections: [string, ComponentType<{ showText: boolean }>][] = [
+    ['Headings', HeadingsSection],
+    ['Body Copy', BodyCopySection],
+    ['Labels', LabelsSection],
+    ['Buttons and Links', ButtonsAndLinksSection],
+    ['Code', CodeSection],
+    ['Numerals', NumeralsSection],
+    ['Badges', BadgesSection],
+    ['Status and Feedback', StatusAndFeedbackSection],
+    ['Random Combinations', RandomCombinationsSection],
+  ];
+
+  const query = search.toLowerCase();
+  const items: ReactElement[] = [
+    // Hidden rather than filtered: it's the title page, not a result.
+    ...(search === ''
+      ? [
+          <Cover
+            key="cover"
+            blurb="Whole UI shapes rather than one prop: several styles stacked per row, the way an app would actually set them."
+          />,
+        ]
+      : []),
+    ...sections
+      .filter(([title]) => title.toLowerCase().includes(query))
+      .map(([title, Section]) => <Section key={title} showText={showText} />),
   ];
 
   return (
-    <FlatList
+    <FlatList<ReactElement>
       style={screenStyles.scroll}
       contentContainerStyle={screenStyles.container}
-      data={sections}
+      stickyHeaderIndices={[0]}
+      ListHeaderComponent={
+        <SearchField value={search} onChangeText={setSearch} placeholder="Search sections" />
+      }
+      data={items}
       renderItem={({ item }) => item}
       keyExtractor={(item, index) => item.key ?? String(index)}
     />
