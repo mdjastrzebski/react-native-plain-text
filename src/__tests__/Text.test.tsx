@@ -36,4 +36,16 @@ describe('<Text />', () => {
 
     expect(screen.root).not.toHaveProp('text');
   });
+
+  it('renders as RN <Text> when forceRNText is set, even for a plain string child', async () => {
+    await render(<Text forceRNText>Hello</Text>);
+
+    expect(screen.root).not.toHaveProp('text');
+  });
+
+  it('does not forward forceRNText to the rendered element', async () => {
+    await render(<Text forceRNText testID="forced" />);
+
+    expect(screen.getByTestId('forced')).not.toHaveProp('forceRNText');
+  });
 });
