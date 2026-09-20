@@ -1,9 +1,6 @@
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import { COLOR, MONO } from '../theme';
 
-// Monospace, which measures unlike every other row here: no proportional widths
-// to collapse, hard line breaks the code block has to keep, and a path with no
-// spaces in it to break at.
 export function CodeSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Code">

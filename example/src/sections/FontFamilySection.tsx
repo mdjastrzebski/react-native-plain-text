@@ -1,39 +1,22 @@
 import { Platform, type TextStyle } from 'react-native';
 import { Section, TextItem } from '../components/Specimen';
 
-// Each row renders its own fontFamily value as its content, so what you read is
-// what was passed. There is no second copy of the name to fall out of step with
-// the style, and fontFamily is required rather than optional so the content
-// can't come out empty.
+// fontFamily is required (not optional) so a row's content can't come out empty.
 type FontFamilyRow = { label: string; style: TextStyle & { fontFamily: string } };
 
-// The first rows are plain registered family names, which resolve the easy way.
-// The rest take the names that don't, a row per branch of the iOS resolution in
-// ios/PlainTextFont.mm: weight matching inside a family, a family carrying a
-// single cut, a name that is neither family nor face, a face the family path
-// can't reach, a weight met by a real cut, the same cut named outright, a slant
-// met by none, and a face name.
+// Each row exercises a branch of the iOS resolution in ios/PlainTextFont.mm
+// (weight matching, single-cut families, face names, etc). Names are verified
+// present in the iOS 26.5 simulator runtime.
 //
-// Every face and family here is verified present in the iOS 26.5 simulator
-// runtime, and the PostScript names are read from its font files rather than
-// guessed. A name that isn't installed renders as the system font, which is
-// what the Unresolvable row is for, so a wrong name elsewhere would quietly read
-// as a passing row.
+// Face name vs Unresolvable is the key pair: resolution used to match only
+// UIFontDescriptorFamilyAttribute, so a face name silently fell back to the
+// system font — indistinguishable from a typo. Both should match the scarlet
+// <Text> overlay.
 //
-// The Face name and Unresolvable rows are the pair worth watching together.
-// Resolution used to match UIFontDescriptorFamilyAttribute, which takes a
-// registered family name and nothing else, so a face name silently produced the
-// system font, the very thing an unresolvable name produces, which is what made
-// the bug hard to see: a loaded custom font and a typo rendered identically.
-// They should look different now, and both should match the scarlet <Text> overlay.
-//
-// Android resolves fontFamily through Typeface family names, with no PostScript
-// names and no weight matching to do, so its rows are the nearest analogs rather
-// than the same cases.
+// Android resolves fontFamily via Typeface family names (no weight matching),
+// so its rows are analogs rather than the same cases.
 const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
   ios: [
-    // The straightforward ones first: a registered family name, which is the
-    // only thing the resolution this section exercises never had trouble with.
     { label: 'System', style: { fontSize: 26, fontFamily: 'System' } },
     { label: 'Georgia', style: { fontSize: 26, fontFamily: 'Georgia' } },
     { label: 'Menlo', style: { fontSize: 26, fontFamily: 'Menlo' } },
@@ -44,45 +27,36 @@ const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
       style: { fontSize: 26, fontFamily: 'Avenir Next', fontWeight: '100' },
     },
     {
-      // One cut in the family, so the bold has nothing to resolve to and must
-      // leave the row in Zapfino rather than fall back.
+      // Zapfino has one cut, so bold has nothing to resolve to and stays Zapfino.
       label: 'Single-cut family',
       style: { fontSize: 26, fontFamily: 'Zapfino', fontWeight: 'bold' },
     },
     {
-      // HelveticaNeue-Thin, picked because RCTGetFontWeight reads the name suffix:
-      // a weight trait alone would not have singled it out. Also the order in
-      // that suffix list earning its keep: the family carries UltraLight, Thin
-      // and Light, and "ultralight" has to be tested before "light" or the
-      // UltraLight face would answer to weight 300.
+      // RCTGetFontWeight matches by name suffix, tested in order: "ultralight"
+      // must precede "light" or this would resolve to UltraLight instead.
       label: 'Weight with a real cut',
       style: { fontSize: 26, fontFamily: 'Helvetica Neue', fontWeight: '200' },
     },
     {
-      // The same cut, asked for by name instead of by weight. Renders identically
-      // to the row above, by a different branch: no family matches this string, so
-      // it resolves as a face.
+      // Same cut as above, named directly: no family matches this string, so
+      // it resolves as a face instead.
       label: 'Weight suffix in the name',
       style: { fontSize: 26, fontFamily: 'HelveticaNeue-Thin' },
     },
     {
-      // Copperplate ships Regular, Light and Bold, and no italic. So the slant
-      // filter rejects every cut, the first face is taken instead, and the slant
-      // on top of it is synthesized. Contrast with the Georgia row, which has a
-      // real italic to find.
+      // Copperplate has no italic cut, so the slant filter rejects every face,
+      // the first one is taken, and the slant is synthesized on top.
       label: 'Slant with no cut',
       style: { fontSize: 26, fontFamily: 'Copperplate', fontStyle: 'italic' },
     },
     {
-      // A face carries its own slant, so fontStyle stays out of this row:
-      // nothing in it is synthesized.
+      // A face carries its own slant, so nothing here is synthesized.
       label: 'Face name',
       style: { fontSize: 26, fontFamily: 'Georgia-BoldItalic' },
     },
     {
-      // Both Condensed cuts sit in family "Helvetica Neue", but the family path
-      // filters condensed faces out, so no weight reaches them there: a face
-      // name is the only way in. The two branches are not interchangeable.
+      // The family path filters out condensed faces, so a face name is the
+      // only way to reach them.
       label: 'Condensed face',
       style: { fontSize: 26, fontFamily: 'HelveticaNeue-CondensedBlack' },
     },
@@ -109,8 +83,7 @@ const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
       style: { fontSize: 26, fontFamily: 'sans-serif-condensed-light' },
     },
     {
-      // Light rather than Thin, so this pair stays distinguishable from the
-      // family-and-weight row above.
+      // Light rather than Thin, so distinguishable from the row above.
       label: 'Weight with a real cut',
       style: { fontSize: 26, fontFamily: 'sans-serif', fontWeight: '300' },
     },
@@ -119,8 +92,7 @@ const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
       style: { fontSize: 26, fontFamily: 'sans-serif-light' },
     },
     {
-      // Android synthesizes the slant here too, for the same reason: the family
-      // carries no italic cut.
+      // Synthesized here too: the family carries no italic cut.
       label: 'Slant with no cut',
       style: { fontSize: 26, fontFamily: 'monospace', fontStyle: 'italic' },
     },
@@ -131,42 +103,29 @@ const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
   ],
 });
 
-// Custom fonts, as against the platform built-ins above, and the only rows in
-// this section that are the same on iOS and Android, because the name is ours
-// rather than the platform's. Loaded in App.tsx via expo-font, which is how most
-// apps get a custom font, and the reason this section exists: it is the case the
-// old resolution failed on hardest.
+// Custom fonts loaded via expo-font (App.tsx). On iOS, expo-font swizzles
+// +fontNames(forFamilyName:) so an unknown family retries as an alias and
+// returns the resolved PostScript name — UIFontDescriptorFamilyAttribute
+// matching doesn't call it, which is why these rows used to fall back to the
+// system font. (An earlier fix checking for a 0-length result never worked:
+// the swizzle returns one name, not none.)
 //
-// What expo-font does on iOS, in its own words (ios/UIFont+FontFamilyAlias.swift):
-// it swizzles +fontNames(forFamilyName:) so that an unknown family name gets
-// retried as an alias, and when the alias resolves to a PostScript name that is
-// not itself a family, it answers with that one name in a one-element array.
-// So resolution reaches the face only if it goes through that method:
-// UIFontDescriptorFamilyAttribute matching does not call it, which is why every
-// row here used to come out as the system font.
-//
-// It is also why the earlier attempt at this fix, which special-cased
-// `fontNamesForFamilyName:.count == 0`, could never have worked in an Expo app:
-// the swizzle returns one name, not none.
-//
-// On Android the same aliases resolve without any of this: expo-font registers
-// them into ReactFontManager (android FontLoaderModule.kt), which is what
-// PlainTextView.applyTypeface already resolves through.
+// Android needs no such workaround: expo-font registers the aliases into
+// ReactFontManager, which PlainTextView.applyTypeface already resolves through.
 const CUSTOM_FONT_ROWS: FontFamilyRow[] = [
   {
     label: 'expo-font alias',
     style: { fontSize: 26, fontFamily: 'Inter_400Regular' },
   },
   {
-    // Each cut is loaded under its own alias, so weight lives in the name here
-    // rather than in fontWeight: one alias is a one-face family, and there is
-    // no sibling cut for a weight to match against.
+    // Each cut is loaded under its own alias, so weight lives in the name
+    // rather than in fontWeight: no sibling cut to match against.
     label: 'expo-font alias, heavier cut',
     style: { fontSize: 26, fontFamily: 'Inter_600SemiBold' },
   },
   {
-    // Slant in the name too, and for the same reason. Nothing synthesized: the
-    // face is already italic, so plainTextFont's italic round-trip is skipped.
+    // Slant in the name too, for the same reason. Face is already italic, so
+    // nothing is synthesized.
     label: 'expo-font alias, light italic',
     style: { fontSize: 26, fontFamily: 'Inter_300Light_Italic' },
   },

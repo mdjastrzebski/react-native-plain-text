@@ -1,27 +1,18 @@
 import { StyleSheet } from 'react-native';
 import { Section, TextItem } from '../components/Specimen';
 
-// Measured *width*, which is the one thing wrap detection decides. RN
-// reports the full constraint width for text that word-wrapped and the
-// tight widest-line width for text that didn't, so what to look at is the
-// grey box edge, not the glyphs. None of these rows sets a width: the row
-// shrink-wraps to whatever the text measured, and "Compare Text" overlays
-// RN's own answer in scarlet on top.
+// Measured *width* is what wrap detection decides: RN reports the full
+// constraint width when text wraps, the tight widest-line width when it
+// doesn't. Rows set no width of their own, so the grey box edge shows the
+// answer directly; "Compare Text" overlays RN's own answer in scarlet.
 //
-// Two things to check, in order: PlainText against the scarlet Text overlay on
-// one platform, then iOS against Android.
-//
-// Rows 2 and 3 are the interesting case: hard breaks that all fit, so
-// nothing wrapped and the box must stop at the longest line. Every line is
-// kept well under ~25 characters so it still fits on a narrow phone. If a
-// line soft-wraps the row stops testing what it is here to test. The label
-// sits above the row rather than beside it, so it costs these probes no
-// width at all.
+// Rows with hard breaks keep every line under ~25 characters so none
+// soft-wraps even on a narrow phone — if one did, the row would stop
+// testing what it's here to test.
 export function WrapDetectionSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Wrap Detection">
-      {/* Control. Nothing to detect: if this one disagrees, the harness is
-        wrong, not the wrap logic. */}
+      {/* Control: if this one disagrees, the harness is wrong, not the wrap logic. */}
       <TextItem label="control" showText={showText} style={styles.wrapProbe}>
         {'One short line   '}
       </TextItem>
@@ -29,14 +20,13 @@ export function WrapDetectionSection({ showText }: { showText: boolean }) {
       <TextItem label="hard breaks" showText={showText} style={styles.wrapProbe}>
         {'Short\nthis line is longest   '}
       </TextItem>
-      {/* Same with more paragraphs, and with the longest one in the middle:
-        the width comes from a max over paragraphs, so order shouldn't
-        matter. */}
+      {/* Longest line in the middle: width is a max over paragraphs, so
+        order shouldn't matter. */}
       <TextItem label="longest in middle" showText={showText} style={styles.wrapProbe}>
         {'A\nBB\nthis line is longest  \nCCC'}
       </TextItem>
-      {/* Same paragraphs, longest one last: the width comes from a max over
-        paragraphs, so where it sits shouldn't matter. */}
+      {/* Longest line last: same max-over-paragraphs check, position
+        shouldn't matter. */}
       <TextItem label="longest last" showText={showText} style={styles.wrapProbe}>
         {'A\nBB\nCCC\nthis line is longest  '}
       </TextItem>
@@ -54,8 +44,8 @@ export function WrapDetectionSection({ showText }: { showText: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  // Deliberately no width, so it can't take `body`: the row shrink-wraps to the
-  // measured intrinsic width, which is the thing this section is checking.
+  // No width set (can't use `body`): the row shrink-wraps to the measured
+  // intrinsic width being tested.
   wrapProbe: {
     fontSize: 18,
   },

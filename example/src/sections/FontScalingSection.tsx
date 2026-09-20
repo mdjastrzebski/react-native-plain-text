@@ -8,9 +8,6 @@ const FONT_SCALING_FOOTER = Platform.select({
   default: 'Settings ▸ Display ▸ Display size and text ▸ Font size. Only the first row follows it.',
 });
 
-// Font scaling follows the OS accessibility text-size setting (Dynamic Type
-// on iOS, Font size on Android). FONT_SCALING_FOOTER names the path for
-// whichever platform is running.
 export function FontScalingSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Font Scaling" footer={FONT_SCALING_FOOTER}>

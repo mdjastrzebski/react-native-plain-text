@@ -37,24 +37,18 @@ import { WritingDirectionSection } from '../sections/WritingDirectionSection';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
-// One prop per section, one value per row. Rows that stack several props at once
-// live on the Examples screen. Each section is its own component in
-// ../sections/, named after the prop it demonstrates.
+// One prop per section, one value per row (multi-prop rows live on Examples).
+// Each section is a component in ../sections/, named after its prop.
 //
-// A FlatList of pre-built elements rather than a ScrollView of JSX children:
-// each entry in `sections` is already the element to render, so `renderItem`
-// only has to hand it back, and the list still gets FlatList's virtualization
-// for free. The search field stays a `ListHeaderComponent` (kept sticky via
-// `stickyHeaderIndices`, same as it was the ScrollView's first child before),
-// and the cover moves into `sections` itself so it scrolls away like any
-// other row instead of pinning alongside the search field.
+// FlatList of pre-built elements: renderItem just returns the item, keeping virtualization.
+// Search field is a sticky ListHeaderComponent; cover lives in `sections` so it scrolls
+// away instead of pinning alongside the search field.
 export default function FeaturesScreen({ navigation }: Props) {
   const showText = useCompareText(navigation);
 
   const [search, setSearch] = useState('');
 
-  // Scroll-lock during the animating-text drag is an imperative native-prop
-  // toggle, not state: a re-render here would be pointless.
+  // Native-prop toggle, not state — avoids a re-render on every drag frame.
   const scrollRef = useRef<FlatList<ReactElement>>(null);
   const onDragStateChange = (dragging: boolean) => {
     scrollRef.current?.setNativeProps({ scrollEnabled: !dragging });

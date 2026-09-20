@@ -2,9 +2,9 @@ import { Platform } from 'react-native';
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import { PARAGRAPH, sharedStyles } from './shared';
 
-// 'auto' textAlign resolves to the writing direction's own start edge (see the
-// TEXT_ALIGNS comment in TextAlignSection), so pinning writingDirection is the
-// cleanest way to see it move without needing bidirectional text.
+// 'auto' textAlign follows writingDirection's start edge (see TEXT_ALIGNS in
+// TextAlignSection), so pinning writingDirection shows it move without
+// needing bidirectional text.
 export function WritingDirectionSection({ showText }: { showText: boolean }) {
   if (Platform.OS !== 'ios') return null;
 

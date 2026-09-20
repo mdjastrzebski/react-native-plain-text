@@ -4,25 +4,18 @@ import { SHORT_ROW_SIZE, SPECIMEN } from './shared';
 
 const VERTICAL_ALIGNS = ['top', 'middle', 'bottom'] as const;
 
-// textAlignVertical's own names for the same three positions ('center' rather
-// than verticalAlign's 'middle'). 'auto' is left out: it is the unset default,
-// already shown implicitly by every other section's rows.
+// textAlignVertical's names for the same three positions ('center', not
+// 'middle'). 'auto' omitted: it's the unset default, already shown elsewhere.
 const TEXT_ALIGN_VERTICALS = ['top', 'center', 'bottom'] as const;
 
 const VERTICAL_ALIGN_FOOTER = Platform.select({
   ios: 'RN Text: Android-only ',
 });
 
-// Android-only in RN <Text>, closed on iOS here (see
-// docs/contributing/workflow.md#when-rn-itself-has-the-platform-gap). Each box
-// is taller than its text so the position is visible. Two native props reach
-// the same gravity, and both get their own rows: `textAlignVertical` (the
-// Android-native name) and `verticalAlign` (RN's cross-platform CSS name,
-// which RN's own Text.js aliases onto textAlignVertical). PlainText passes
-// both straight to native rather than resolving one from the other in JS
-// (see docs/contributing/performance.md#prop-cost-policy), so the merge
-// rows below exercise PlainTextView.kt's applyVerticalAlignGravity and
-// PlainTextProps.mm's plainTextResolveVerticalAlign directly.
+// Closed on iOS (Android-only in RN <Text>; see
+// workflow.md#when-rn-itself-has-the-platform-gap). textAlignVertical and
+// verticalAlign both map to the same native gravity and are resolved
+// natively, not in JS — the merge rows below exercise that native logic directly.
 export function VerticalAlignSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Vertical Align" footer={VERTICAL_ALIGN_FOOTER}>
@@ -37,9 +30,8 @@ export function VerticalAlignSection({ showText }: { showText: boolean }) {
           {SPECIMEN}
         </TextItem>
       ))}
-      {/* Same three positions, driven by the other prop, so a row here should
-        land identically to its verticalAlign counterpart above: 'center' is
-        textAlignVertical's own name for what 'middle' means to verticalAlign. */}
+      {/* Same three positions via the other prop: should land identically to
+        verticalAlign's rows above. */}
       {TEXT_ALIGN_VERTICALS.map((textAlignVertical) => (
         <TextItem
           key={textAlignVertical}
@@ -51,9 +43,8 @@ export function VerticalAlignSection({ showText }: { showText: boolean }) {
           {SPECIMEN}
         </TextItem>
       ))}
-      {/* Both set, disagreeing: verticalAlign wins (matches RN <Text>'s
-        Text.js), so this should render identically to the "verticalAlign:
-        bottom" row above despite asking textAlignVertical for the opposite. */}
+      {/* Both set, disagreeing: verticalAlign wins (matches RN Text.js) —
+        should match "verticalAlign: bottom" above. */}
       <TextItem
         label="both set: textAlignVertical top, verticalAlign bottom"
         showText={showText}

@@ -1,7 +1,6 @@
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 
-// What the app says when something went wrong, went right, or is empty.
 export function StatusAndFeedbackSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Status and Feedback">

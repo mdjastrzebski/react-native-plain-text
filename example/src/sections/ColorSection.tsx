@@ -2,10 +2,6 @@ import { Section, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 import { SHORT_ROW_SIZE, SPECIMEN } from './shared';
 
-// The section only has to show that `color` is honored, so these are the screen's
-// own accents in palette order rather than red/green/blue: same job, and the column
-// stays part of the page instead of turning into a primaries test. Labeled with the
-// pigment name each value is, which is also what it's called in COLOR.
 const COLORS = [
   { label: 'Indigo', color: COLOR.indigo },
   { label: 'Plum', color: COLOR.plum },

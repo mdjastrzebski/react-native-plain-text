@@ -3,8 +3,7 @@ import { SHORT_ROW_SIZE } from './shared';
 
 const TEXT_TRANSFORMS = ['none', 'lowercase', 'uppercase', 'capitalize'] as const;
 
-// Mid-word caps ("BROWN") make capitalize's row visibly diverge from the
-// scarlet <Text> overlay on iOS: see TEXT_TRANSFORM_FOOTER.
+// Mid-word caps ("BROWN") diverge from iOS's <Text> overlay: see TEXT_TRANSFORM_FOOTER.
 const TEXT_TRANSFORM_SPECIMEN = 'Quick BROWN fox';
 
 // A digit has no uppercase form, so capitalize leaves it alone.

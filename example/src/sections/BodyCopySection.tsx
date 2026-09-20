@@ -1,10 +1,6 @@
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import { COLOR, SERIF } from '../theme';
 
-// Running text, where the wrap points and the leading are the whole point:
-// whether it runs to its natural end or gets clamped after a line or two, which
-// is the same prose with a truncation rule on top rather than a different kind
-// of row.
 export function BodyCopySection({ showText }: { showText: boolean }) {
   return (
     <Section title="Body Copy">

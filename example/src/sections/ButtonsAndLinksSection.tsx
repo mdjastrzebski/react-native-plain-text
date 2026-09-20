@@ -1,8 +1,6 @@
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 
-// Tappable labels. These are the rows most likely to be centered inside a fixed
-// box, so a measurement that comes back a point wide is visible immediately.
 export function ButtonsAndLinksSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Buttons and Links">

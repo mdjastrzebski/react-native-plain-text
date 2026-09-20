@@ -2,10 +2,8 @@ import { StyleSheet } from 'react-native';
 import { Section, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 
-// Accessibility props are part of RN's ViewProps, so they pass straight
-// through to the native view. They're not visually distinct: turn on
-// VoiceOver (iOS) / TalkBack (Android) to hear the label/role/state, or
-// inspect the native tree for the testID.
+// Accessibility props pass straight through to the native view and aren't
+// visually distinct — verify with VoiceOver/TalkBack or the native tree.
 export function AccessibilitySection({ showText }: { showText: boolean }) {
   return (
     <Section title="Accessibility">
@@ -70,16 +68,8 @@ export function AccessibilitySection({ showText }: { showText: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  // Accessibility rows carry no visual difference at all, so they are set below
-  // body size: the label above the row is the content here.
-  //
-  // No width, like `wrapProbe` in WrapDetectionSection: these rows demonstrate
-  // props that do not affect layout at all, so both boxes should just hug their
-  // text. A `width: '100%'` here resolved against two different containing
-  // blocks (the shrink-wrapping row under the PlainText, the full-width overlay
-  // box over it) and showed a scarlet box running to the margin over a grey one
-  // hugging the glyphs, which is a difference in the harness rather than in
-  // anything either component measured.
+  // No width: these rows demonstrate props with no layout effect, so both
+  // boxes should hug their text.
   a11yRow: {
     fontSize: 15,
     color: COLOR.inkSoft,

@@ -3,14 +3,13 @@ import { Section, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 import { SHORT_ROW_SIZE, SPECIMEN } from './shared';
 
-// "offset only" shows iOS drawing with no radius set, since its gate is
-// textShadowOffset alone. "radius only" is the asymmetric case: no shadow on
-// iOS, but Android still draws (see the platform note on the offset props in
+// "offset only": iOS draws with no radius since its gate is textShadowOffset
+// alone. "radius only": iOS draws nothing, Android still does (see
 // PlainTextViewNativeComponent.ts).
 //
 // textShadowColor is excluded from compareText/overlayText (Specimen.tsx): a
-// shadow sits behind the glyphs, so flattening it there would fight the
-// overlay's multiply blend. "colored" keeps its own indigo instead.
+// shadow sits behind the glyphs and would fight the overlay's multiply
+// blend, so "colored" sets its own indigo instead.
 const TEXT_SHADOWS: { label: string; style: TextStyle }[] = [
   { label: 'offset only', style: { textShadowOffset: { width: 2, height: 2 } } },
   {

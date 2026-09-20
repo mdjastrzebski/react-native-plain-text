@@ -12,8 +12,7 @@ export function FontSizeSection({ showText }: { showText: boolean }) {
           label={`${fontSize}pt`}
           showText={showText}
           style={{ fontSize }}
-          // A waterfall: one line per size, clipped at the column edge rather
-          // than wrapped, so the sizes stay comparable down the column.
+          // Clipped rather than wrapped, so sizes stay comparable down the column.
           numberOfLines={1}
           ellipsizeMode="clip"
         >

@@ -1,11 +1,8 @@
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import { PARAGRAPH, PARAGRAPH_LONG, sharedStyles } from './shared';
 
-// padding isn't a text-style prop: it stays in the style handed to the native
-// view, so Yoga lays it out around the self-measured text. What to look at is
-// the grey box growing while the glyphs move down with it: a box that grew
-// but glyphs that stayed put means the space was reserved and nothing
-// insetted the text.
+// padding is a Yoga layout prop, not a text-style one: the grey box and the
+// glyphs should grow/shift together if it's applied correctly.
 export function PaddingSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Padding">
@@ -33,9 +30,8 @@ export function PaddingSection({ showText }: { showText: boolean }) {
       >
         {PARAGRAPH}
       </TextItem>
-      {/* On a wrapping string: padding shrinks the width left for text, so
-        this is where a padding-blind measure pass shows up as a clipped or
-        overflowing last line. */}
+      {/* Wrapping string: padding shrinks available width, so a padding-blind
+        measure pass clips or overflows the last line. */}
       <TextItem
         label="all 20, wrapped"
         showText={showText}

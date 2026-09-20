@@ -1,39 +1,16 @@
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import { COLOR, MONO, SERIF } from '../theme';
 
-// Fixed, hand-written rows (never generated, never shuffled) so two runs of
-// the app render byte-identical rows and screenshots diff cleanly.
+// Fixed, hand-written rows (never generated or shuffled), so runs are
+// byte-identical and screenshots diff cleanly.
 //
-// Arbitrary stacks of three to five props, there to catch interactions the
-// realistic use-case rows happen to avoid. Several are ugly, and some are
-// outright broken layouts (padding taller than the box, a radius larger than
-// half the height, text that outgrows a fixed height at 4x scaling), but each
-// one is a shape a real app can end up in by accident. Combinations that cannot
-// occur outside a test harness, and so tell us nothing when they render wrong,
-// don't belong here.
+// Arbitrary 3-5 prop stacks catching interactions the realistic rows avoid;
+// only shapes a real app could hit by accident belong here. Each row probes
+// something no other row does — see its own comment for what.
 //
-// Each row is named for the one thing it probes (see its comment), and no two
-// probe the same thing. A row that is another row's stack minus a prop is not
-// a second data point: it costs a screenful of scrolling and, when the pair
-// disagrees with the overlay together, twice the reading to reach the one
-// conclusion. So a new row has to name something no existing row already
-// covers: a right-aligned tracked serif, display type clipped at one line, a
-// clamp that does not bite, and a centered head-truncated line are each here
-// exactly once.
-//
-// Color in this section carries one meaning rather than one per row. Every row is
-// the neutral ramp unless it needs a tint to make its own subject visible, and then
-// there are only two: indigo where a surface is there to show a box's extents
-// (the leading, the padding, the corner radii, the whitespace) and oxblood on the
-// rows whose box is wrong on purpose (glyphs taller than the line, padding taller
-// than the box, a radius past half the height, text left free to outgrow its
-// height). Borders that are only structure stay on the ramp. Cycling five pigments
-// down the list made each row look like a statement about its color, which is the
-// one thing none of them is about.
-//
-// Rendered after every other group on the screen, for the same reason it is a
-// single section here rather than several: it is the one group whose rows no
-// app would deliberately write.
+// Color: neutral ramp by default. Indigo marks a surface added to show a
+// box's extent (leading, padding, radius); oxblood marks a box that's wrong
+// on purpose (overflow, clipped glyphs, undersized radius).
 export function RandomCombinationsSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Random Combinations">
@@ -281,10 +258,8 @@ export function RandomCombinationsSection({ showText }: { showText: boolean }) {
         Per-corner radii on a padded background: 24 top-left, 0 top-right, 24 bottom-right, 0
         bottom-left.
       </TextItem>
-      {/* four-edge-borders: four edges resolved independently, which is the
-        point, so they differ by width and by step on the neutral ramp rather
-        than by hue. Four pigments read as a swatch test and said nothing the
-        four widths do not. */}
+      {/* four-edge-borders: neutral ramp, not four hues — the widths are the
+        point, color would just be a swatch test. */}
       <TextItem
         showText={showText}
         style={{
@@ -489,10 +464,8 @@ export function RandomCombinationsSection({ showText }: { showText: boolean }) {
       >
         Fixed 40pt box holding 26pt text: the glyphs are taller than the line box allows.
       </TextItem>
-      {/* padding-taller-than-box: how an app actually reaches this: a row
-        pinned to a fixed height by design, and a vertical padding token that
-        outgrows it. 60-inside-70 said the same thing but only a test harness
-        would type it. */}
+      {/* padding-taller-than-box: realistic version of a fixed-height row
+        whose padding token outgrows it. */}
       <TextItem
         showText={showText}
         style={{
@@ -530,8 +503,8 @@ export function RandomCombinationsSection({ showText }: { showText: boolean }) {
       >
         Border radius 40 on a box only 30pt tall: the radius is larger than half the height.
       </TextItem>
-      {/* rgba-on-rgba: the palette's own ink and indigo with an alpha, so the
-        only thing new on this row is the transparency. */}
+      {/* rgba-on-rgba: palette's ink/indigo with alpha — only the
+        transparency is new here. */}
       <TextItem
         showText={showText}
         style={{

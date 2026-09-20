@@ -7,13 +7,12 @@ import { TextScrubber } from '../components/TextScrubber';
 import { COLOR } from '../theme';
 
 // `text`, not `children`: createAnimatedComponent writes updates onto the host
-// ref by prop name, bypassing PlainText's render and its children -> text remap.
+// ref by prop name, bypassing PlainText's children -> text remap.
 const RNAnimatedPlainText = RNAnimated.createAnimatedComponent(PlainText);
 const ReanimatedPlainText = ReanimatedAnimated.createAnimatedComponent(PlainText);
 
-// The scrubber (0-100) reveals this phrase one character at a time. Each step is
-// a new string length, so PlainText re-measures its intrinsic size every frame.
-// `'worklet'` lets the same function run on the RN Animated and Reanimated sides.
+// `'worklet'` lets the same function run on both the RN Animated and
+// Reanimated sides.
 const REVEAL_PHRASE = 'The quick brown fox jumps over the lazy dog.';
 
 function revealPhrase(value: number): string {
@@ -29,15 +28,13 @@ const ANIMATING_TEXT_FOOTER =
 export function AnimatingTextSection({
   onDragStateChange,
 }: {
-  // The parent ScrollView locks scrollEnabled for the drag's duration, since
-  // an imperative native-prop toggle on it isn't this section's own state.
+  // Parent ScrollView locks scrollEnabled for the drag's duration.
   onDragStateChange: (dragging: boolean) => void;
 }) {
   // `.interpolate()` can't produce an arbitrary string, so the RN Animated side
-  // bridges the value to `text` by hand: a listener + `setNativeProps`. The
-  // listener fires several times per frame; on Fabric that burst of commits can
-  // land out of order and strand a stale value, so coalesce to one write per
-  // frame. Reanimated's `useAnimatedProps` (below) needs none of this.
+  // bridges to `text` via a listener + `setNativeProps`. The listener can fire
+  // several times per frame and Fabric commits can land out of order, so
+  // coalesce to one write per frame.
   const rnValue = useRef(new RNAnimated.Value(0)).current;
   const rnAnimatedRef = useRef<ComponentRef<typeof RNAnimatedPlainText>>(null);
 
@@ -67,8 +64,8 @@ export function AnimatingTextSection({
     reanimatedValue.value = value;
   };
 
-  // Neither animated side re-renders this section while scrubbing; the counter
-  // shown below the rows stays at 1 to prove it.
+  // Neither animated side re-renders this section while scrubbing; the
+  // counter below stays at 1 to prove it.
   const renderCount = useRef(0);
   renderCount.current += 1;
 

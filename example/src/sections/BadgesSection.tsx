@@ -3,8 +3,6 @@ import { PlainText } from 'react-native-plain-text';
 import { CompareBox, Section, screenStyles, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 
-// Short strings inside a shape: the padding and the radius are doing as much work
-// as the type, and each one shrink-wraps to its own text.
 export function BadgesSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Badges">
@@ -58,11 +56,8 @@ export function BadgesSection({ showText }: { showText: boolean }) {
       >
         MJ
       </TextItem>
-      {/* A heading beside a badge: different size and weight, plus a badge with
-        its own padding and border radius. Yoga folds a baseline child's own
-        padding into where its box sits before aligning, so this also
-        exercises that the offset survives padding, not just a bare span of
-        text. */}
+      {/* Yoga folds a baseline child's own padding into its box before
+        aligning, so this exercises that the baseline offset survives padding. */}
       <CompareBox
         label="heading-with-badge"
         showText={showText}
@@ -131,15 +126,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
   },
-  // Same treatment Specimen.tsx's own `overlayText`/`compareText` give a
-  // single-string TextItem, reproduced here because a baseline row's overlay
-  // is several sibling `<Text>`s rather than one, so it can't go through
-  // TextItem at all.
+  // Reproduces Specimen.tsx's `overlayText` treatment: a baseline row's
+  // overlay is several sibling `<Text>`s, so it can't go through TextItem.
   overlayText: {
     backgroundColor: COLOR.wash,
     color: COLOR.scarlet,
   },
-  // Mirrors `overlayText`'s wash, since `row` no longer supplies one.
   compareText: {
     color: COLOR.cobalt,
     backgroundColor: COLOR.wash,

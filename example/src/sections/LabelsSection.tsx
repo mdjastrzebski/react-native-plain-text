@@ -1,10 +1,6 @@
 import { Section, TextItem } from '../components/Specimen';
 import { COLOR, MONO } from '../theme';
 
-// Set small and quiet next to something else that carries the meaning: the line
-// under a list row's title, the caption, the timestamp. Small type is where a wrong
-// measurement is hardest to see and easiest to ship, so they sit together, high
-// on the page, rather than being scattered through the sections they support.
 export function LabelsSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Labels">

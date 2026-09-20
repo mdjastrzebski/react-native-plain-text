@@ -28,9 +28,7 @@ export function NumeralsSection({ showText }: { showText: boolean }) {
       >
         98.4%
       </TextItem>
-      {/* A price and its tax note sharing one line, set at different sizes.
-        Needs `alignItems: "baseline"` on the row to sit together the way a
-        real price tag does, rather than lining up on the row's own edges. */}
+      {/* Needs alignItems:"baseline" on the row to sit like a real price tag. */}
       <CompareBox
         label="price-with-vat-note"
         showText={showText}
@@ -65,9 +63,8 @@ export function NumeralsSection({ showText }: { showText: boolean }) {
           {' incl. VAT'}
         </PlainText>
       </CompareBox>
-      {/* Three siblings, not two: baseline alignment is a property of the
-        whole row, not just a pair, so a fix that only special-cases the
-        first/last child would still show a gap here. */}
+      {/* Three siblings, not two: baseline alignment is a row-wide property,
+        not just first/last child. */}
       <CompareBox
         label="stat-with-unit-and-delta"
         showText={showText}
@@ -113,10 +110,8 @@ export function NumeralsSection({ showText }: { showText: boolean }) {
           {' +2.1 today'}
         </PlainText>
       </CompareBox>
-      {/* Same font size on both sides, so a size-only fix could pass the two
-        rows above and still fail this one: the first span pins a lineHeight
-        far taller than its own font, which only shifts where its baseline
-        lands if the extra leading above it is accounted for too. */}
+      {/* Same font size both sides: catches a lineHeight-driven baseline
+        shift that a size-only fix would miss. */}
       <CompareBox
         label="total-with-pinned-line-height"
         showText={showText}
@@ -180,10 +175,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
   },
-  // Same treatment Specimen.tsx's own `overlayText`/`compareText` give a
-  // single-string TextItem, reproduced here because a baseline row's overlay
-  // is several sibling `<Text>`s rather than one, so it can't go through
-  // TextItem at all.
+  // Mirrors Specimen.tsx's overlayText/compareText, reproduced here since a
+  // baseline row's overlay is several sibling <Text>s, not one, so it can't
+  // go through TextItem.
   overlayText: {
     backgroundColor: COLOR.wash,
     color: COLOR.scarlet,

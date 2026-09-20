@@ -1,8 +1,6 @@
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 
-// Display type: the biggest thing on a screen, the title inside a card, and the
-// tracked cap-height label that separates two groups of rows.
 export function HeadingsSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Headings">

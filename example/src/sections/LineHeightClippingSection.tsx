@@ -2,11 +2,11 @@ import { Platform, StyleSheet } from 'react-native';
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import type { PlainTextStyle } from 'react-native-plain-text';
 
-// Same lineHeight/fontSize ratio (0.8) at each size, paired 1:1 with REALWORLD_FONTS.
+// Paired 1:1 with REALWORLD_FONTS by index.
 const REALWORLD_FONT_SIZES = [16, 20, 24, 32, 40];
 
-// Families with varied ascender/descender/leading, to exercise the shift
-// formula in applyContentFromProps beyond the one font it was written against.
+// Varied ascender/descender/leading, to exercise the shift formula in
+// applyContentFromProps beyond the one font it was written against.
 const REALWORLD_FONTS: { label: string; style: PlainTextStyle }[] = Platform.select({
   ios: [
     { label: 'System', style: {} },
@@ -51,7 +51,7 @@ export function LineHeightClippingSection({ showText }: { showText: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  // iOS needs explicit clipping to reproduce the bug (clipsToBounds is off by
-  // default); Android's TextView already clips to its bounds.
+  // iOS needs explicit clipping to reproduce the bug (off by default);
+  // Android's TextView already clips to its bounds.
   clippingRow: Platform.select({ ios: { overflow: 'hidden' }, default: {} }),
 });
