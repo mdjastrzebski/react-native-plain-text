@@ -37,15 +37,15 @@ describe('<Text />', () => {
     expect(screen.root).not.toHaveProp('text');
   });
 
-  it('renders as RN <Text> when forceRNText is set, even for a plain string child', async () => {
-    await render(<Text forceRNText>Hello</Text>);
+  it('renders as RN <Text> when deopt is set, even for a plain string child', async () => {
+    await render(<Text deopt>Hello</Text>);
 
     expect(screen.root).not.toHaveProp('text');
   });
 
-  it('does not forward forceRNText to the rendered element', async () => {
-    await render(<Text forceRNText testID="forced" />);
+  it('does not forward deopt to the rendered element', async () => {
+    await render(<Text deopt testID="deopted" />);
 
-    expect(screen.getByTestId('forced')).not.toHaveProp('forceRNText');
+    expect(screen.getByTestId('deopted')).not.toHaveProp('deopt');
   });
 });

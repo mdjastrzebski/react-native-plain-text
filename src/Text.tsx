@@ -3,14 +3,15 @@ import { Text as RNText, unstable_TextAncestorContext, type TextProps } from 're
 import { PlainText, type PlainTextProps } from './PlainText';
 
 export type UnifiedTextProps = TextProps & {
-  /// Skips the PlainText/RNText selection and always renders RN <Text>, e.g.
-  /// for children with mixed styles that PlainText can't represent.
-  forceRNText?: boolean;
+  /// Deoptimizes: skips PlainText even for a plain, non-nested string, and
+  /// always renders RN <Text>. For a single-style string that needs a prop
+  /// PlainText doesn't support, or hits a PlainText rendering issue.
+  deopt?: boolean;
 };
 
-export function Text({ children, forceRNText, ...rest }: UnifiedTextProps) {
+export function Text({ children, deopt, ...rest }: UnifiedTextProps) {
   const isNestedText = use(unstable_TextAncestorContext);
-  if (!forceRNText && typeof children === 'string' && !isNestedText) {
+  if (!deopt && typeof children === 'string' && !isNestedText) {
     return <PlainText {...(rest as PlainTextProps)}>{children}</PlainText>;
   }
 
