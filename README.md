@@ -24,8 +24,9 @@ For most apps, RN's `<Text>` is a reasonable choice. Two reasons to pick
    and [animated text](https://mdjastrzebski.github.io/react-native-plain-text/guide/recipes#animating-text).
 
 You can mix it with `<Text>` in the same screen and only use it where it earns
-its place. A [unified `Text` component](#unified-text-component) uses conditional
-rendering to pick between the two for you.
+its place. The [`Text` component](#unified-text-component) is an easy adoption path: a
+drop-in replacement for RN `<Text>` that picks `PlainText` for you where it can.
+Using `PlainText` directly gives you the best performance.
 
 ## Installation
 
@@ -49,33 +50,23 @@ import { PlainText } from 'react-native-plain-text';
 
 ## Unified `Text` component
 
-`PlainText` is API-compatible with React Native `<Text>`, so you can define a
-selector component: `PlainText` for simple strings, falling back to RN `<Text>`
-for nested text. Use it anywhere you'd use `<Text>`.
+For an easy adoption path that doesn't require touching existing `<Text>` call
+sites, import `Text` instead of `PlainText`:
 
-This pattern gives you `PlainText`'s performance benefits across the app without
-changing any call sites.
+```jsx
+import { Text } from 'react-native-plain-text';
 
-```tsx
-import { use } from 'react';
-import { Text as RnText, unstable_TextAncestorContext, type TextProps } from 'react-native';
-import { PlainText, type PlainTextProps } from 'react-native-plain-text';
-
-export function Text({ children, ...rest }: TextProps) {
-  const isNestedText = use(unstable_TextAncestorContext);
-  if (typeof children === 'string' && !isNestedText) {
-    return <PlainText {...(rest as PlainTextProps)}>{children}</PlainText>;
-  }
-
-  return <RnText {...rest}>{children}</RnText>;
-}
+<Text style={{ fontSize: 16 }}>Hello from Text 👋</Text>;
 ```
 
-You can also apply this conditional rendering inside an existing centralized Text
-component (e.g. design system) instead of adding a separate component.
+It's a selector component: `PlainText` for simple strings, falling back to RN
+`<Text>` for anything `PlainText` doesn't support (nested text, non-string
+children). See the
+[`Text` component guide](https://mdjastrzebski.github.io/react-native-plain-text/guide/text-component)
+for how it decides and how to build the same pattern into your own centralized
+Text component.
 
-RN's `unstable_TextAncestorContext` is `true` when the text renders inside
-another `<Text>`.
+Using `PlainText` directly still gives you the best performance.
 
 ## Props and styles
 
