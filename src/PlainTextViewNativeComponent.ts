@@ -69,7 +69,6 @@ export interface NativeProps extends ViewProps {
   >;
 
   // BCP-47 language tag (e.g. 'de') for hyphenation/line-breaking. Empty means unset.
-  //
   // Cost: medium. Forces iOS's attributed-string path.
   lang?: string;
 

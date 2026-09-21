@@ -567,7 +567,6 @@ class PlainTextView : AppCompatTextView {
     gravity = (gravity and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
   }
 
-  // Null/empty restores the default locale.
   fun setLang(lang: String?) {
     val normalized = if (lang.isNullOrEmpty()) null else lang
     if (normalized == appliedLang) return

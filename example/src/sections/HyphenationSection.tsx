@@ -8,7 +8,6 @@ const HYPHENATION_FREQUENCIES = ['none', 'normal', 'full'] as const;
 const HYPHENATION_FREQUENCY_SPECIMEN =
   'Extraordinarily meticulous engineers occasionally debug astonishingly trivial issues quite carefully today, especially near release day, right before shipping.';
 
-// German sentence with a long compound word, for dictionary hyphenation guided by `lang`.
 const HYPHENATION_LANG_SPECIMEN =
   'Die Reisekrankenversicherung war früher nur etwas für Geschäftsreisende, heute nutzen sie auch ganz normale Familien.';
 
@@ -28,8 +27,7 @@ export function HyphenationSection({ showText }: { showText: boolean }) {
           {HYPHENATION_FREQUENCY_SPECIMEN}
         </TextItem>
       ))}
-      {/* lang picks the dictionary: without it, German text hyphenates against
-          the device's default locale instead. */}
+      {/* Without lang, German text hyphenates against the device's default locale. */}
       <TextItem
         label='full, lang="de"'
         showText={showText}

@@ -45,7 +45,6 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
     attributes[NSKernAttributeName] = @(props.letterSpacing.value());
   }
 
-  // Language picks the hyphenation dictionary and locale-sensitive breaking.
   if (!props.lang.empty()) {
     NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
     if (lang != nil) {
