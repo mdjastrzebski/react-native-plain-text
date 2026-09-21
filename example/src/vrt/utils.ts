@@ -513,4 +513,13 @@ export const vrtStyles = StyleSheet.create({
   example: {
     alignSelf: 'stretch',
   },
+  base: {
+    fontSize: 20,
+    backgroundColor: COLOR.wash,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  wideRow: {
+    alignSelf: 'stretch',
+  },
 });
