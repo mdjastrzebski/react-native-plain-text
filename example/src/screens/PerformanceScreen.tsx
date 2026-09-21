@@ -891,6 +891,16 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
+    // Forces the iOS attributed-string path (like lineHeight/letterSpacing
+    // above) and, on Android, a locale-sensitive line-break/hyphenation pass;
+    // see docs/contributing/performance.md's `lang` row.
+    key: 'lang',
+    section: 'Layout',
+    fp: 'lang',
+    target: 'prop',
+    options: [{ label: '(none)' }, { label: 'en', value: 'en' }, { label: 'de', value: 'de' }],
+  },
+  {
     key: 'padding',
     section: 'Layout',
     fp: 'p',
