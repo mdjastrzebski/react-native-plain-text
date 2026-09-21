@@ -588,11 +588,13 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
-  // Mirrors <Text> (TextAttributeProps#getHyphenationFrequency). "full" prefers
-  // FULL_FAST on API 33+: perf-only, not a prop value.
+  // Mirrors <Text> (TextAttributeProps#getHyphenationFrequency). "normal" and "full"
+  // prefer the *_FAST variants on API 33+: perf-only, not a prop value.
   fun setAndroidHyphenationFrequency(androidHyphenationFrequency: String?) {
     hyphenationFrequency = when (androidHyphenationFrequency) {
-      "normal" -> Layout.HYPHENATION_FREQUENCY_NORMAL
+      "normal" ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Layout.HYPHENATION_FREQUENCY_NORMAL_FAST
+        else Layout.HYPHENATION_FREQUENCY_NORMAL
       "full" ->
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Layout.HYPHENATION_FREQUENCY_FULL_FAST
         else Layout.HYPHENATION_FREQUENCY_FULL
