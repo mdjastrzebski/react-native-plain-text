@@ -129,8 +129,9 @@ using namespace plaintext;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
     BOOL hasWritingDirection = props.writingDirection != RNPlainTextWritingDirection::Auto;
     BOOL hasLang = !props.lang.empty();
+    BOOL needsAttributedString = hasLineHeight || hasLetterSpacing || hasTextDecoration || hasTextShadow || hasWritingDirection || hasLang;
 
-    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasWritingDirection && !hasLang) {
+    if (!needsAttributedString) {
         // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
         _label.attributedText = nil;
         _label.font = font;
