@@ -4,7 +4,7 @@ import { CompareTextProvider } from './components/CompareText';
 import { VrtSpecimenProvider } from './components/Specimen';
 import { useExampleFonts } from './fonts';
 import { FeaturesSpecimens } from './screens/FeaturesScreen';
-import { UseCaseSpecimens } from './screens/UseCasesScreen';
+import { ExamplesSpecimens } from './screens/ExamplesScreen';
 
 export default function AppVrt({ testID }: { testID: string }) {
   const fontsLoaded = useExampleFonts();
@@ -16,7 +16,7 @@ export default function AppVrt({ testID }: { testID: string }) {
   const specimens = testID.startsWith('vrt-capture-features-') ? (
     <FeaturesSpecimens showText={false} />
   ) : testID.startsWith('vrt-capture-use-cases-') ? (
-    <UseCaseSpecimens showText={false} />
+    <ExamplesSpecimens showText={false} />
   ) : null;
 
   return (
