@@ -4,8 +4,7 @@ import { sharedStyles } from './shared';
 
 const HYPHENATION_FREQUENCIES = ['none', 'normal', 'full'] as const;
 
-// Long compound words with irregular lengths, not the shared pangram: the three
-// frequencies only visibly diverge on text like this.
+// Irregular compound words, not the shared pangram: only these make the three frequencies visibly diverge.
 const HYPHENATION_FREQUENCY_SPECIMEN =
   'Extraordinarily meticulous engineers occasionally debug astonishingly trivial issues quite carefully today, especially near release day, right before shipping.';
 
@@ -20,7 +19,7 @@ export function HyphenationSection({ showText }: { showText: boolean }) {
           label={android_hyphenationFrequency}
           showText={showText}
           android_hyphenationFrequency={android_hyphenationFrequency}
-          style={[sharedStyles.body, { width: 300 }]}
+          style={[sharedStyles.body, { width: 320 }]}
         >
           {HYPHENATION_FREQUENCY_SPECIMEN}
         </TextItem>
