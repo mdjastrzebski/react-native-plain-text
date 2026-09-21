@@ -103,6 +103,7 @@ export function TextItem({
   ellipsizeMode,
   lineBreakStrategyIOS,
   textBreakStrategy,
+  android_hyphenationFrequency,
   allowFontScaling,
   maxFontSizeMultiplier,
   accessibilityProps,
@@ -120,6 +121,7 @@ export function TextItem({
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
+  android_hyphenationFrequency?: 'none' | 'normal' | 'full';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
   // Forwarded to both PlainText and the comparison Text so both expose the same
@@ -145,6 +147,7 @@ export function TextItem({
             ellipsizeMode={ellipsizeMode}
             lineBreakStrategyIOS={lineBreakStrategyIOS}
             textBreakStrategy={textBreakStrategy}
+            android_hyphenationFrequency={android_hyphenationFrequency}
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             unstable_lineHeightClippingCompat={compatOn}
@@ -163,6 +166,7 @@ export function TextItem({
               ellipsizeMode={ellipsizeMode}
               lineBreakStrategyIOS={lineBreakStrategyIOS}
               textBreakStrategy={textBreakStrategy}
+              android_hyphenationFrequency={android_hyphenationFrequency}
               allowFontScaling={allowFontScaling}
               maxFontSizeMultiplier={maxFontSizeMultiplier}
               {...accessibilityProps}

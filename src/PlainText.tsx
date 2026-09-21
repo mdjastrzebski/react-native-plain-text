@@ -15,6 +15,8 @@ export type PlainTextProps = AccessibilityProps & {
   lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
   /// Android-only, like RN <Text>.
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
+  /// Android-only, like RN <Text>.
+  android_hyphenationFrequency?: 'none' | 'normal' | 'full';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
   testID?: string;
@@ -36,6 +38,7 @@ export function mapPlainTextProps({
   ellipsizeMode,
   lineBreakStrategyIOS,
   textBreakStrategy,
+  android_hyphenationFrequency,
   allowFontScaling,
   maxFontSizeMultiplier,
   unstable_lineHeightClippingCompat,
@@ -90,6 +93,7 @@ export function mapPlainTextProps({
     ellipsizeMode,
     lineBreakStrategyIOS,
     textBreakStrategy,
+    android_hyphenationFrequency,
     allowFontScaling,
     maxFontSizeMultiplier,
     includeFontPadding,

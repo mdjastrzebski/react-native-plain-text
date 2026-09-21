@@ -87,6 +87,9 @@ folly::dynamic serializeProps(const RNPlainTextProps &props) {
   if (props.textBreakStrategy != RNPlainTextTextBreakStrategy::HighQuality) {
     serializedProps["textBreakStrategy"] = toString(props.textBreakStrategy);
   }
+  if (props.android_hyphenationFrequency != RNPlainTextAndroid_hyphenationFrequency::None) {
+    serializedProps["android_hyphenationFrequency"] = toString(props.android_hyphenationFrequency);
+  }
   return serializedProps;
 }
 

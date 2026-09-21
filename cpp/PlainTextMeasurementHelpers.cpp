@@ -21,6 +21,7 @@ bool measurementInputsEqual(
       a.maxFontSizeMultiplier == b.maxFontSizeMultiplier &&
       a.includeFontPadding == b.includeFontPadding &&
       a.textBreakStrategy == b.textBreakStrategy &&
+      a.android_hyphenationFrequency == b.android_hyphenationFrequency &&
       a.experiment == b.experiment;
 }
 

@@ -207,6 +207,12 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setTextBreakStrategy(textBreakStrategy)
   }
 
+  // Android-only, matching RN <Text>.
+  @ReactProp(name = "android_hyphenationFrequency")
+  override fun setAndroid_hyphenationFrequency(view: PlainTextView?, android_hyphenationFrequency: String?) {
+    view?.setAndroidHyphenationFrequency(android_hyphenationFrequency)
+  }
+
   @ReactProp(name = "allowFontScaling", defaultBoolean = true)
   override fun setAllowFontScaling(view: PlainTextView?, allowFontScaling: Boolean) {
     view?.setAllowFontScaling(allowFontScaling)
@@ -292,6 +298,9 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.includeFontPadding = props.getBooleanOr("includeFontPadding", true)
     // Changes where wrapped text breaks, so it affects the measured height too.
     view.setTextBreakStrategy(props?.getString("textBreakStrategy"))
+    // Hyphenating a wrapped word changes where the line breaks, so it affects the
+    // measured height too.
+    view.setAndroidHyphenationFrequency(props?.getString("android_hyphenationFrequency"))
     view.setPlainText(props?.getString("text") ?: "")
     // Applies the state the setters above marked dirty, in dependency order, so their
     // call order here doesn't matter.

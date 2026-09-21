@@ -90,6 +90,9 @@ export interface NativeProps extends ViewProps {
     'simple' | 'highQuality' | 'balanced',
     'highQuality'
   >;
+
+  // Android only, no-op on iOS. Matches RN <Text>'s values/default.
+  android_hyphenationFrequency?: CodegenTypes.WithDefault<'none' | 'normal' | 'full', 'none'>;
 }
 
 export default codegenNativeComponent<NativeProps>('RNPlainText', {
