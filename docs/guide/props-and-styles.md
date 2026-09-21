@@ -8,6 +8,7 @@
 | `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`                                                     |
 | `children`                     | 🟡                     | `string` only                                                                      |
 | `ellipsizeMode`                | ✅                     |                                                                                    |
+| `lang`                         | ⬆️                     | Not in RN `<Text>`. BCP-47 tag (e.g. `'de'`) for hyphenation and line breaking.    |
 | `lineBreakStrategyIOS`         | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
 | `maxFontSizeMultiplier`        | ✅                     |                                                                                    |
 | `nativeID`                     | ✅                     |                                                                                    |

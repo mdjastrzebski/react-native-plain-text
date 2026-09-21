@@ -68,6 +68,11 @@ export interface NativeProps extends ViewProps {
     'none'
   >;
 
+  // BCP-47 language tag (e.g. 'de') for hyphenation/line-breaking. Empty means unset.
+  //
+  // Cost: medium. Forces iOS's attributed-string path.
+  lang?: string;
+
   numberOfLines?: CodegenTypes.WithDefault<CodegenTypes.Int32, 0>;
   ellipsizeMode?: CodegenTypes.WithDefault<'head' | 'middle' | 'tail' | 'clip', 'tail'>;
 

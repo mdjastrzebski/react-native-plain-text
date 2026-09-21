@@ -102,7 +102,7 @@ using namespace plaintext;
   return self;
 }
 
-// Once lineHeight or letterSpacing is set, text/font/color/alignment must go through an NSAttributedString since UILabel has no plain properties for them.
+// Once lineHeight, letterSpacing, a decoration, a shadow, writingDirection or lang is set, text/font/color/alignment must go through an NSAttributedString since UILabel has no plain properties for them.
 // SYNC: PlainTextShadowNode::measureContent must mirror every attribute set here (font excepted, both go through resolveFont) or measured size won't match drawn text.
 // See docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size
 // and docs/contributing/sync-points.md#set-10--recycled-view-state-ios.
@@ -128,8 +128,9 @@ using namespace plaintext;
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
     BOOL hasWritingDirection = props.writingDirection != RNPlainTextWritingDirection::Auto;
+    BOOL hasLang = !props.lang.empty();
 
-    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasWritingDirection) {
+    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasWritingDirection && !hasLang) {
         // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
         _label.attributedText = nil;
         _label.font = font;
@@ -169,6 +170,13 @@ using namespace plaintext;
             shadow.shadowColor = RCTUIColorFromSharedColor(props.textShadowColor.value());
         }
         attributes[NSShadowAttributeName] = shadow;
+    }
+
+    if (hasLang) {
+        NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
+        if (lang != nil) {
+            attributes[NSLanguageIdentifierAttributeName] = lang;
+        }
     }
 
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
@@ -258,6 +266,7 @@ using namespace plaintext;
         oldViewProps.textShadowOffsetHeight != newViewProps.textShadowOffsetHeight ||
         oldViewProps.textShadowRadius != newViewProps.textShadowRadius ||
         oldViewProps.textTransform != newViewProps.textTransform ||
+        oldViewProps.lang != newViewProps.lang ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
         oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||

@@ -45,6 +45,14 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
     attributes[NSKernAttributeName] = @(props.letterSpacing.value());
   }
 
+  // Language picks the hyphenation dictionary and locale-sensitive breaking.
+  if (!props.lang.empty()) {
+    NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
+    if (lang != nil) {
+      attributes[NSLanguageIdentifierAttributeName] = lang;
+    }
+  }
+
   // The per-line height used to cap numberOfLines: the pinned lineHeight when
   // set, otherwise the font's natural line height.
   Float perLineHeight = static_cast<Float>(font.lineHeight);

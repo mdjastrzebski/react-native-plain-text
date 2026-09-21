@@ -106,6 +106,7 @@ export function TextItem({
   android_hyphenationFrequency,
   allowFontScaling,
   maxFontSizeMultiplier,
+  lang,
   accessibilityProps,
   children,
 }: {
@@ -124,6 +125,9 @@ export function TextItem({
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  // PlainText-only: RN <Text>'s TypeScript props have no `lang` key, so it's
+  // never forwarded to the comparison Text overlay below.
+  lang?: string;
   // Forwarded to both PlainText and the comparison Text so both expose the same
   // accessibility surface.
   accessibilityProps?: AccessibilityProps & { testID?: string };
@@ -151,6 +155,7 @@ export function TextItem({
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             unstable_lineHeightClippingCompat={compatOn}
+            lang={lang}
             {...accessibilityProps}
           >
             {children}

@@ -96,7 +96,8 @@ Everything below is API-compatible with RN `<Text>`. Most commonly used:
 See
 [Props and styles](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles)
 for the full support matrix, platform notes, and additions beyond RN `<Text>`
-such as `fontVariationSettings`.
+such as `fontVariationSettings` and `lang` (a BCP-47 language tag, e.g. `'de'`,
+picking the hyphenation dictionary and locale-sensitive line breaking).
 
 ## Not supported
 

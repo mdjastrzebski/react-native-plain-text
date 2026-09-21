@@ -19,6 +19,9 @@ export type PlainTextProps = AccessibilityProps & {
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  /// BCP-47 language tag (e.g. 'de'); picks the hyphenation dictionary and
+  /// locale-sensitive line breaking.
+  lang?: string;
   testID?: string;
   nativeID?: string;
   id?: string;
@@ -41,6 +44,7 @@ export function mapPlainTextProps({
   android_hyphenationFrequency,
   allowFontScaling,
   maxFontSizeMultiplier,
+  lang,
   unstable_lineHeightClippingCompat,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
@@ -96,6 +100,7 @@ export function mapPlainTextProps({
     android_hyphenationFrequency,
     allowFontScaling,
     maxFontSizeMultiplier,
+    lang,
     includeFontPadding,
     lineHeightClippingCompat: unstable_lineHeightClippingCompat,
     style: viewStyle,

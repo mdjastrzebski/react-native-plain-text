@@ -42,6 +42,7 @@ most props only touch a few.
 - `textShadowOffsetHeight`
 - `textShadowRadius`
 - `textTransform`
+- `lang`
 - `numberOfLines`
 - `ellipsizeMode`
 - `lineBreakStrategyIOS` (iOS-only — no Android setter body, no Android entry in
@@ -91,6 +92,7 @@ Common: touch all five files below.
 - `lineHeight`
 - `letterSpacing`
 - `textTransform`
+- `lang`
 - `numberOfLines`
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
@@ -182,6 +184,7 @@ agree on. Two flavors, both three-way:
   - `fontSize` (`14.0`)
   - `lineHeight` (`0.0`)
   - `textTransform` (`None`)
+  - `lang` (`""`)
   - `numberOfLines` (`0`)
   - `allowFontScaling` (`true`)
   - `maxFontSizeMultiplier` (`0.0`)
