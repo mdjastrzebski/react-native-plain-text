@@ -122,6 +122,66 @@ Self-measured from the example app. See
 [Performance](https://mdjastrzebski.github.io/react-native-plain-text/guide/performance)
 for the method and the per-device numbers behind these percentages.
 
+## Visual regression testing
+
+The example app has a dedicated visual regression testing (VRT) screen. Set
+`VRT_ENABLED=1` while building the release app to include it. A deep link can
+then select an individual specimen by its `testID`.
+
+### iOS
+
+Build and install the VRT app on the simulator. Replace the simulator UDID when
+using a different simulator.
+
+```sh
+cd example
+
+VRT_ENABLED=1 yarn ios:release \
+  --device 209AB9A4-2731-42F5-99A3-775A17889C9D \
+  --no-bundler
+```
+
+Verify the installation:
+
+```sh
+xcrun simctl get_app_container \
+  209AB9A4-2731-42F5-99A3-775A17889C9D \
+  plaintext.example app
+```
+
+Open a specimen using its deep link:
+
+```sh
+xcrun simctl openurl \
+  209AB9A4-2731-42F5-99A3-775A17889C9D \
+  'exp+react-native-plain-text-example://vrt?testID=vrt-features-48pt'
+```
+
+### Android
+
+Build and reinstall the VRT app:
+
+```sh
+cd example
+VRT_ENABLED=1 yarn android:release --no-build-cache
+```
+
+Stop the app, then open a specimen using its deep link:
+
+```sh
+adb shell 'am force-stop plaintext.example'
+
+adb shell 'am start -W \
+  -a android.intent.action.VIEW \
+  -c android.intent.category.BROWSABLE \
+  -d "exp+react-native-plain-text-example://vrt?testID=vrt-features-48pt" \
+  -p plaintext.example'
+```
+
+Release builds use the direct app URL above. Do not use the
+`/expo-development-client/?url=...` URL, which is for development-client
+builds.
+
 ## Contributing
 
 - [Development workflow](CONTRIBUTING.md#development-workflow)

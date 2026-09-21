@@ -1,15 +1,16 @@
-import { Children, isValidElement, type ReactNode } from 'react';
+import { Children, isValidElement, type ReactNode } from "react";
 import {
   Inter_300Light_Italic,
   Inter_400Regular,
   Inter_600SemiBold,
   useFonts,
-} from '@expo-google-fonts/inter';
-import { Platform, ScrollView, View } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { screenStyles } from './components/Specimen';
-import { groups } from './vrt/groups';
-import { testIDSlug, vrtStyles } from './vrt/utils';
+} from "@expo-google-fonts/inter";
+import { Platform, ScrollView, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { screenStyles } from "./components/Specimen";
+import { groups } from "./vrt/groups";
+import { useVrtDeepLink } from "./vrt/useVrtDeepLink";
+import { testIDSlug, vrtStyles } from "./vrt/utils";
 
 export default function AppVrt() {
   const [fontsLoaded] = useFonts({
@@ -17,19 +18,20 @@ export default function AppVrt() {
     Inter_400Regular,
     Inter_600SemiBold,
   });
+  const testID = useVrtDeepLink();
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || testID === undefined) return null;
 
   return (
     <SafeAreaProvider>
       <SafeAreaView style={vrtStyles.screen}>
-        <VrtExamples />
+        <VrtExamples testID={testID} />
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
 
-function VrtExamples() {
+function VrtExamples({ testID }: { testID: string | null }) {
   const occurrences = new Map<string, number>();
   const examples = groups
     .filter(({ platform }) => platform == null || platform === Platform.OS)
@@ -40,7 +42,7 @@ function VrtExamples() {
 
       return Children.toArray(sectionChildren).map((specimen, index) => {
         const label =
-          isValidElement<{ label?: string }>(specimen) && typeof specimen.props.label === 'string'
+          isValidElement<{ label?: string }>(specimen) && typeof specimen.props.label === "string"
             ? specimen.props.label
             : `item-${index + 1}`;
         const baseTestID = `vrt-features-${testIDSlug(label)}`;
@@ -54,14 +56,26 @@ function VrtExamples() {
       });
     });
 
+  let visibleExamples =
+    testID == null ? examples : examples.filter((example) => example.testID === testID);
+  if (__DEV__) {
+    // only for development purposes
+    visibleExamples = examples[0] ? [examples[0]] : examples;
+  }
+
   return (
     <ScrollView
       testID="vrt-screen"
       style={screenStyles.scroll}
       contentContainerStyle={screenStyles.container}
     >
-      {examples.map(({ testID, specimen }) => (
-        <View key={testID} testID={testID} collapsable={false} style={vrtStyles.example}>
+      {visibleExamples.map(({ testID: exampleTestID, specimen }) => (
+        <View
+          key={exampleTestID}
+          testID={exampleTestID}
+          collapsable={false}
+          style={vrtStyles.example}
+        >
           {specimen}
         </View>
       ))}
