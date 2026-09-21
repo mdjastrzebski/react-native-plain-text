@@ -26,6 +26,9 @@ jobs:
   vrt-android:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/.android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
 
     steps:
       - name: Checkout
@@ -67,6 +70,23 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+
+      - name: Install Android SDK command-line tools
+        run: |
+          archive="$RUNNER_TEMP/command-line-tools.zip"
+          extracted="$RUNNER_TEMP/command-line-tools"
+          tools_root="$ANDROID_HOME/cmdline-tools"
+
+          curl --fail --location --silent --show-error \
+            'https://dl.google.com/android/repository/commandlinetools-linux-15859902_latest.zip' \
+            --output "$archive"
+          echo '4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583  '"$archive" \
+            | sha256sum --check --status
+          mkdir -p "$extracted" "$tools_root"
+          unzip -q "$archive" -d "$extracted"
+          mv "$extracted/cmdline-tools" "$tools_root/latest"
+          "$tools_root/latest/bin/avdmanager" list device \
+            | grep -Eq 'id: [0-9]+ or "pixel_9"'
 
       - name: Start Android VRT emulator
         # android-emulator-runner v2.38.0. All rendering inputs are deliberately
