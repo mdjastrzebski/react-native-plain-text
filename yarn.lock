@@ -5042,6 +5042,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"babel-plugin-transform-inline-environment-variables@npm:0.4.4":
+  version: 0.4.4
+  resolution: "babel-plugin-transform-inline-environment-variables@npm:0.4.4"
+  checksum: 10c0/f1bb9d57e83184a8413939032c570a286447186e6b78fdc0d3cade4dcab51955d3b549d2a0af4f866b172221d287d67a9f4e6d742de7df4c411fe085e20aadeb
+  languageName: node
+  linkType: hard
+
 "babel-preset-current-node-syntax@npm:^1.0.0":
   version: 1.2.0
   resolution: "babel-preset-current-node-syntax@npm:1.2.0"
@@ -12260,6 +12267,7 @@ __metadata:
     "@react-navigation/bottom-tabs": "npm:^7.18.13"
     "@react-navigation/native": "npm:^7.3.13"
     "@react-navigation/native-stack": "npm:^7.18.5"
+    babel-plugin-transform-inline-environment-variables: "npm:0.4.4"
     expo: "npm:~57.0.9"
     expo-dev-client: "npm:~57.0.10"
     expo-font: "npm:~57.0.1"
