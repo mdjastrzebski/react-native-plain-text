@@ -9,11 +9,11 @@ const HYPHENATION_FREQUENCIES = ['none', 'normal', 'full'] as const;
 const HYPHENATION_FREQUENCY_SPECIMEN =
   'Extraordinarily meticulous engineers occasionally debug astonishingly trivial issues quite carefully today, especially near release day, right before shipping.';
 
-export function HyphenationFrequencySection({ showText }: { showText: boolean }) {
+export function HyphenationSection({ showText }: { showText: boolean }) {
   if (Platform.OS !== 'android') return null;
 
   return (
-    <Section title="Hyphenation Frequency (Android-only)">
+    <Section title="Hyphenation (Android-only)">
       {HYPHENATION_FREQUENCIES.map((android_hyphenationFrequency) => (
         <TextItem
           key={android_hyphenationFrequency}
