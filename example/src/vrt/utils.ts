@@ -3,7 +3,6 @@ import { Platform, StyleSheet, type TextStyle } from 'react-native';
 import type { PlainTextStyle } from 'react-native-plain-text';
 import { COLOR, VARIABLE } from '../theme';
 export type VrtGroup = {
-  section: string;
   platform?: 'ios' | 'android';
   children: ReactNode;
 };

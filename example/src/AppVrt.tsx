@@ -5,11 +5,18 @@ import {
   Inter_600SemiBold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import {
+  Platform,
+  ScrollView,
+  Text,
+  View,
+  type AccessibilityProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { PlainText } from 'react-native-plain-text';
-import { CompareTextProvider } from './components/CompareText';
-import { CompareBox, TextItem, screenStyles } from './components/Specimen';
+import { PlainText, type PlainTextProps } from 'react-native-plain-text';
+import { screenStyles } from './components/Specimen';
 import { COLOR } from './theme';
 import {
   testIDSlug,
@@ -65,19 +72,17 @@ export default function AppVrt() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={vrtStyles.screen}>
-        <CompareTextProvider>
-          <VrtExamples />
-        </CompareTextProvider>
+        <VrtExamples />
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
 
 function VrtExamples() {
+  const occurrences = new Map<string, number>();
   const examples = groups
     .filter(({ platform }) => platform == null || platform === Platform.OS)
-    .flatMap(({ section, children }) => {
-      const occurrences = new Map<string, number>();
+    .flatMap(({ children }) => {
       const sectionChildren = isValidElement<{ children?: ReactNode }>(children)
         ? children.props.children
         : children;
@@ -87,7 +92,7 @@ function VrtExamples() {
           isValidElement<{ label?: string }>(specimen) && typeof specimen.props.label === 'string'
             ? specimen.props.label
             : `item-${index + 1}`;
-        const baseTestID = `vrt-features-${section}-${testIDSlug(label)}`;
+        const baseTestID = `vrt-features-${testIDSlug(label)}`;
         const occurrence = (occurrences.get(baseTestID) ?? 0) + 1;
         occurrences.set(baseTestID, occurrence);
 
@@ -113,13 +118,52 @@ function VrtExamples() {
   );
 }
 
+type VrtTextProps = PlainTextProps & {
+  label?: string;
+  showText: boolean;
+  containerStyle?: PlainTextProps['style'];
+  accessibilityProps?: AccessibilityProps & { testID?: string };
+};
+
+function VrtText({
+  label: _label,
+  showText: _showText,
+  containerStyle,
+  accessibilityProps,
+  style,
+  ...props
+}: VrtTextProps) {
+  return (
+    <PlainText
+      {...props}
+      {...accessibilityProps}
+      style={[screenStyles.base, containerStyle, style]}
+    />
+  );
+}
+
+function VrtBox({
+  label: _label,
+  showText: _showText,
+  overlay: _overlay,
+  containerStyle,
+  children,
+}: {
+  label?: string;
+  showText: boolean;
+  overlay: ReactNode;
+  containerStyle?: StyleProp<ViewStyle>;
+  children: ReactNode;
+}) {
+  return <View style={containerStyle}>{children}</View>;
+}
+
 const groups: VrtGroup[] = [
   {
-    section: 'font-size',
     children: (
       <>
         {FONT_SIZES.map((fontSize) => (
-          <TextItem
+          <VrtText
             key={fontSize}
             label={`${fontSize}pt`}
             showText={false}
@@ -132,39 +176,36 @@ const groups: VrtGroup[] = [
             ellipsizeMode="clip"
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'emoji',
     children: (
       <>
-        <TextItem label="mixed" showText={false}>
+        <VrtText label="mixed" showText={false}>
           {EMOJI_SPECIMEN}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'font-family',
     children: (
       <>
         {FONT_FAMILY_RESOLUTION.map(({ label, style }) => (
-          <TextItem key={label} label={label} showText={false} style={style}>
+          <VrtText key={label} label={label} showText={false} style={style}>
             {style.fontFamily}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'color',
     children: (
       <>
         {COLORS.map(({ label, color }) => (
-          <TextItem
+          <VrtText
             key={label}
             label={label}
             showText={false}
@@ -174,9 +215,9 @@ const groups: VrtGroup[] = [
             }}
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
-        <TextItem
+        <VrtText
           label="inverse"
           showText={false}
           style={{
@@ -186,16 +227,15 @@ const groups: VrtGroup[] = [
           }}
         >
           {SPECIMEN}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'font-weight',
     children: (
       <>
         {FONT_WEIGHTS.map((fontWeight) => (
-          <TextItem
+          <VrtText
             key={fontWeight}
             label={fontWeight}
             showText={false}
@@ -205,16 +245,15 @@ const groups: VrtGroup[] = [
             }}
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'font-style',
     children: (
       <>
-        <TextItem
+        <VrtText
           label="italic"
           showText={false}
           style={{
@@ -223,8 +262,8 @@ const groups: VrtGroup[] = [
           }}
         >
           {SPECIMEN}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="bold italic"
           showText={false}
           style={{
@@ -234,16 +273,15 @@ const groups: VrtGroup[] = [
           }}
         >
           {SPECIMEN}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'text-align',
     children: (
       <>
         {TEXT_ALIGNS.map((textAlign) => (
-          <TextItem
+          <VrtText
             key={textAlign}
             label={textAlign}
             showText={false}
@@ -258,18 +296,17 @@ const groups: VrtGroup[] = [
             {/* Justify only shows itself on text long enough to stretch more
               than one line to the full measure. */}
             {textAlign === 'justify' ? PARAGRAPH_LONG : PARAGRAPH}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'writing-direction',
     platform: 'ios',
     children: (
       <>
         {(['ltr', 'rtl'] as const).map((writingDirection) => (
-          <TextItem
+          <VrtText
             key={writingDirection}
             label={writingDirection}
             showText={false}
@@ -283,16 +320,15 @@ const groups: VrtGroup[] = [
             containerStyle={screenStyles.wideRow}
           >
             {PARAGRAPH}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'baseline-alignment',
     children: (
       <>
-        <CompareBox
+        <VrtBox
           label="H / g / x, ruled at the baseline"
           showText={false}
           containerStyle={styles.baselineRow}
@@ -330,31 +366,29 @@ const groups: VrtGroup[] = [
             </PlainText>
           ))}
           <View style={styles.baselineRuler} />
-        </CompareBox>
+        </VrtBox>
       </>
     ),
   },
   {
-    section: 'multiline',
     children: (
       <>
-        <TextItem
+        <VrtText
           label="wrap"
           showText={false}
           style={styles.body}
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH_LONG}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'number-of-lines',
     children: (
       <>
         {[1, 2, 3].map((numberOfLines) => (
-          <TextItem
+          <VrtText
             key={numberOfLines}
             label={`${numberOfLines} line${numberOfLines === 1 ? '' : 's'}`}
             showText={false}
@@ -363,24 +397,23 @@ const groups: VrtGroup[] = [
             containerStyle={screenStyles.wideRow}
           >
             {PARAGRAPH_LONG}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'padding',
     children: (
       <>
-        <TextItem
+        <VrtText
           label="none"
           showText={false}
           style={styles.body}
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="vertical 16"
           showText={false}
           style={[
@@ -392,8 +425,8 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="top 28 bottom 4"
           showText={false}
           style={[
@@ -406,11 +439,11 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
+        </VrtText>
         {/* On a wrapping string: padding shrinks the width left for text, so
           this is where a padding-blind measure pass shows up as a clipped or
           overflowing last line. */}
-        <TextItem
+        <VrtText
           label="all 20, wrapped"
           showText={false}
           style={[
@@ -422,15 +455,14 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH_LONG}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'borders',
     children: (
       <>
-        <TextItem
+        <VrtText
           label="all 2"
           showText={false}
           style={[
@@ -443,8 +475,8 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="radius 12"
           showText={false}
           style={[
@@ -458,10 +490,10 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
+        </VrtText>
         {/* Per-side, the accent-bar shape: only the left edge is inset. The color
           comes from `bordered`, so the side widths are the only difference. */}
-        <TextItem
+        <VrtText
           label="left 6"
           showText={false}
           style={[
@@ -474,8 +506,8 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="dashed"
           showText={false}
           style={[
@@ -489,8 +521,8 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="all 4 + padding 12"
           showText={false}
           style={[
@@ -504,16 +536,15 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH_LONG}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'line-height',
     children: (
       <>
         {LINE_HEIGHTS.map((lineHeight) => (
-          <TextItem
+          <VrtText
             key={lineHeight}
             label={`${lineHeight} / 18`}
             showText={false}
@@ -524,20 +555,19 @@ const groups: VrtGroup[] = [
             containerStyle={screenStyles.wideRow}
           >
             {PARAGRAPH_LONG}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'line-height-clipping',
     children: (
       <>
         {REALWORLD_FONTS.map((font, index) => {
           const fontSize = REALWORLD_FONT_SIZES[index]!;
           const lineHeight = Math.round(fontSize * 0.8);
           return (
-            <TextItem
+            <VrtText
               key={font.label}
               label={`${lineHeight} / ${fontSize}`}
               showText={false}
@@ -551,18 +581,17 @@ const groups: VrtGroup[] = [
               containerStyle={[screenStyles.wideRow, styles.clippingRow]}
             >
               {font.label}
-            </TextItem>
+            </VrtText>
           );
         })}
       </>
     ),
   },
   {
-    section: 'letter-spacing',
     children: (
       <>
         {LETTER_SPACINGS.map((letterSpacing) => (
-          <TextItem
+          <VrtText
             key={letterSpacing}
             label={`${letterSpacing > 0 ? '+' : ''}${letterSpacing}`}
             showText={false}
@@ -572,17 +601,16 @@ const groups: VrtGroup[] = [
             }}
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'ellipsize-mode',
     children: (
       <>
         {ELLIPSIZE_MODES.map((ellipsizeMode) => (
-          <TextItem
+          <VrtText
             key={ellipsizeMode}
             label={ellipsizeMode}
             showText={false}
@@ -592,18 +620,17 @@ const groups: VrtGroup[] = [
             containerStyle={screenStyles.wideRow}
           >
             {PARAGRAPH_LONG}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'line-break-strategy',
     platform: 'ios',
     children: (
       <>
         {(['none', 'push-out', 'standard'] as const).map((s) => (
-          <TextItem
+          <VrtText
             key={s}
             label={s}
             showText={false}
@@ -616,10 +643,10 @@ const groups: VrtGroup[] = [
             ]}
           >
             {ORPHAN_SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
         {(['none', 'hangul-word'] as const).map((s) => (
-          <TextItem
+          <VrtText
             key={s}
             label={s}
             showText={false}
@@ -632,18 +659,17 @@ const groups: VrtGroup[] = [
             ]}
           >
             {KOREAN_WORD_WRAP_SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'text-break-strategy',
     platform: 'android',
     children: (
       <>
         {TEXT_BREAK_STRATEGIES.map((textBreakStrategy) => (
-          <TextItem
+          <VrtText
             key={textBreakStrategy}
             label={textBreakStrategy}
             showText={false}
@@ -656,17 +682,16 @@ const groups: VrtGroup[] = [
             ]}
           >
             {TEXT_BREAK_STRATEGY_SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'text-decoration-line',
     children: (
       <>
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
-          <TextItem
+          <VrtText
             key={textDecorationLine}
             label={textDecorationLine}
             showText={false}
@@ -676,17 +701,16 @@ const groups: VrtGroup[] = [
             }}
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'text-shadow',
     children: (
       <>
         {TEXT_SHADOWS.map(({ label, style }) => (
-          <TextItem
+          <VrtText
             key={label}
             label={label}
             showText={false}
@@ -696,17 +720,16 @@ const groups: VrtGroup[] = [
             }}
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'text-transform',
     children: (
       <>
         {TEXT_TRANSFORMS.map((textTransform) => (
-          <TextItem
+          <VrtText
             key={textTransform}
             label={textTransform}
             showText={false}
@@ -716,10 +739,10 @@ const groups: VrtGroup[] = [
             }}
           >
             {TEXT_TRANSFORM_SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
         {/* capitalize's two gotchas: a digit-led word and a contraction. */}
-        <TextItem
+        <VrtText
           label="capitalize, digit-led word"
           showText={false}
           style={{
@@ -728,8 +751,8 @@ const groups: VrtGroup[] = [
           }}
         >
           {TEXT_TRANSFORM_ORDINAL_SPECIMEN}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="capitalize, contraction"
           showText={false}
           style={{
@@ -738,15 +761,14 @@ const groups: VrtGroup[] = [
           }}
         >
           {TEXT_TRANSFORM_CONTRACTION_SPECIMEN}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'font-scaling',
     children: (
       <>
-        <TextItem
+        <VrtText
           label="default"
           showText={false}
           style={{
@@ -754,8 +776,8 @@ const groups: VrtGroup[] = [
           }}
         >
           {SPECIMEN}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="disabled"
           showText={false}
           style={{
@@ -764,8 +786,8 @@ const groups: VrtGroup[] = [
           allowFontScaling={false}
         >
           {SPECIMEN}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="max 1.5x"
           showText={false}
           style={{
@@ -774,18 +796,17 @@ const groups: VrtGroup[] = [
           maxFontSizeMultiplier={1.5}
         >
           {SPECIMEN}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'font-variant',
     children: (
       <>
         {/* Baseline to compare every row below against. */}
-        <TextItem label="default" showText={false} style={fontVariantRow}>
+        <VrtText label="default" showText={false} style={fontVariantRow}>
           {FONT_VARIANT_SPECIMEN}
-        </TextItem>
+        </VrtText>
         {/* Figure spacing first: the pair of values people actually reach for.
           It shows up as width: the two rows of each pair have the same digit
           count, so tabular figures make them equally wide (each row
@@ -794,7 +815,7 @@ const groups: VrtGroup[] = [
           rather than in the string, so the row measures the digits and nothing
           else. */}
         {TABULAR_FIGURE_ROWS.map((digits) => (
-          <TextItem
+          <VrtText
             key={`tabular-${digits}`}
             label="tabular-nums"
             showText={false}
@@ -804,10 +825,10 @@ const groups: VrtGroup[] = [
             }}
           >
             {digits}
-          </TextItem>
+          </VrtText>
         ))}
         {TABULAR_FIGURE_ROWS.map((digits) => (
-          <TextItem
+          <VrtText
             key={`proportional-${digits}`}
             label="proportional-nums"
             showText={false}
@@ -817,16 +838,16 @@ const groups: VrtGroup[] = [
             }}
           >
             {digits}
-          </TextItem>
+          </VrtText>
         ))}
         {/* Second baseline, in the serif the feature rows below use, so they have
           something to differ from. On Android it is the same font as the first
           baseline: that platform stays on the system font throughout. */}
-        <TextItem label="default" showText={false} style={fontVariantFeatureRow}>
+        <VrtText label="default" showText={false} style={fontVariantFeatureRow}>
           {FONT_VARIANT_SPECIMEN}
-        </TextItem>
+        </VrtText>
         {FONT_VARIANTS.map(({ label, fontVariant }) => (
-          <TextItem
+          <VrtText
             key={label}
             label={label}
             showText={false}
@@ -836,17 +857,16 @@ const groups: VrtGroup[] = [
             }}
           >
             {FONT_VARIANT_SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'font-variation-settings',
     children: (
       <>
         {FONT_VARIATION_SETTINGS.map(({ label, fontVariationSettings }) => (
-          <TextItem
+          <VrtText
             key={label}
             label={label}
             showText={false}
@@ -856,17 +876,16 @@ const groups: VrtGroup[] = [
             }}
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
       </>
     ),
   },
   {
-    section: 'vertical-align',
     children: (
       <>
         {VERTICAL_ALIGNS.map((verticalAlign) => (
-          <TextItem
+          <VrtText
             key={verticalAlign}
             label={`verticalAlign: ${verticalAlign}`}
             showText={false}
@@ -879,13 +898,13 @@ const groups: VrtGroup[] = [
             containerStyle={screenStyles.wideRow}
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
         {/* Same three positions, driven by the other prop, so a row here should
           land identically to its verticalAlign counterpart above: 'center' is
           textAlignVertical's own name for what 'middle' means to verticalAlign. */}
         {TEXT_ALIGN_VERTICALS.map((textAlignVertical) => (
-          <TextItem
+          <VrtText
             key={textAlignVertical}
             label={`textAlignVertical: ${textAlignVertical}`}
             showText={false}
@@ -898,12 +917,12 @@ const groups: VrtGroup[] = [
             containerStyle={screenStyles.wideRow}
           >
             {SPECIMEN}
-          </TextItem>
+          </VrtText>
         ))}
         {/* Both set, disagreeing: verticalAlign wins (matches RN <Text>'s
           Text.js), so this should render identically to the "verticalAlign:
           bottom" row above despite asking textAlignVertical for the opposite. */}
-        <TextItem
+        <VrtText
           label="both set: textAlignVertical top, verticalAlign bottom"
           showText={false}
           style={{
@@ -916,51 +935,49 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {SPECIMEN}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'wrap-detection',
     children: (
       <>
         {/* Control. Nothing to detect: if this one disagrees, the harness is
           wrong, not the wrap logic. */}
-        <TextItem label="control" showText={false} style={styles.wrapProbe}>
+        <VrtText label="control" showText={false} style={styles.wrapProbe}>
           {'One short line   '}
-        </TextItem>
+        </VrtText>
         {/* Hard breaks, nothing wraps → hug the longest line. */}
-        <TextItem label="hard breaks" showText={false} style={styles.wrapProbe}>
+        <VrtText label="hard breaks" showText={false} style={styles.wrapProbe}>
           {'Short\nthis line is longest   '}
-        </TextItem>
+        </VrtText>
         {/* Same with more paragraphs, and with the longest one in the middle:
           the width comes from a max over paragraphs, so order shouldn't
           matter. */}
-        <TextItem label="longest in middle" showText={false} style={styles.wrapProbe}>
+        <VrtText label="longest in middle" showText={false} style={styles.wrapProbe}>
           {'A\nBB\nthis line is longest  \nCCC'}
-        </TextItem>
+        </VrtText>
         {/* Same paragraphs, longest one last: the width comes from a max over
           paragraphs, so where it sits shouldn't matter. */}
-        <TextItem label="longest last" showText={false} style={styles.wrapProbe}>
+        <VrtText label="longest last" showText={false} style={styles.wrapProbe}>
           {'A\nBB\nCCC\nthis line is longest  '}
-        </TextItem>
+        </VrtText>
         {/* No hard break, too long to fit → full constraint width. */}
-        <TextItem label="soft wrap only" showText={false} style={styles.wrapProbe}>
+        <VrtText label="soft wrap only" showText={false} style={styles.wrapProbe}>
           {'No breaks here, but this sentence is long enough that it has to ' +
             'wrap onto several lines.'}
-        </TextItem>
+        </VrtText>
         {/* Both a hard break and a soft wrap → full constraint width. */}
-        <TextItem label="break then wrap" showText={false} style={styles.wrapProbe}>
+        <VrtText label="break then wrap" showText={false} style={styles.wrapProbe}>
           {'Break then wrap:\nthis second line is long enough that it also ' + 'has to wrap.'}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'accessibility',
     children: (
       <>
-        <TextItem
+        <VrtText
           label="testID"
           showText={false}
           style={styles.a11yRow}
@@ -969,8 +986,8 @@ const groups: VrtGroup[] = [
           }}
         >
           &quot;plain-text-demo&quot;, findable in the native tree
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="label"
           showText={false}
           style={styles.a11yRow}
@@ -979,8 +996,8 @@ const groups: VrtGroup[] = [
           }}
         >
           Overrides the spoken text
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="role"
           showText={false}
           style={styles.a11yRow}
@@ -989,8 +1006,8 @@ const groups: VrtGroup[] = [
           }}
         >
           &quot;header&quot;
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="role + hint"
           showText={false}
           style={styles.a11yRow}
@@ -1000,8 +1017,8 @@ const groups: VrtGroup[] = [
           }}
         >
           &quot;link&quot;, hinted
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="state"
           showText={false}
           style={styles.a11yRow}
@@ -1012,8 +1029,8 @@ const groups: VrtGroup[] = [
           }}
         >
           disabled
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="hidden"
           showText={false}
           style={styles.a11yRow}
@@ -1023,16 +1040,15 @@ const groups: VrtGroup[] = [
           }}
         >
           Invisible to screen readers on both platforms
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
   {
-    section: 'font-padding',
     platform: 'android',
     children: (
       <>
-        <TextItem
+        <VrtText
           label="default, padding 4"
           showText={false}
           style={[
@@ -1044,8 +1060,8 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
-        <TextItem
+        </VrtText>
+        <VrtText
           label="includeFontPadding false, padding 4"
           showText={false}
           style={[
@@ -1058,7 +1074,7 @@ const groups: VrtGroup[] = [
           containerStyle={screenStyles.wideRow}
         >
           {PARAGRAPH}
-        </TextItem>
+        </VrtText>
       </>
     ),
   },
