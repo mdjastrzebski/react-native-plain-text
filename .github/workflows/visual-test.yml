@@ -58,29 +58,6 @@ jobs:
           restore-keys: |
             android-vrt-build-v1-${{ runner.os }}-${{ runner.arch }}-api36-emulator15917651-
 
-      - name: Build Android VRT app
-        if: steps.android-build-cache.outputs.cache-hit != 'true'
-        working-directory: example/android
-        run: ./gradlew :app:assembleRelease
-
-      - name: Stage Android APK
-        if: steps.android-build-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p build/visual-test/android
-          cp example/android/app/build/outputs/apk/release/app-release.apk \
-            build/visual-test/android/app-release.apk
-
-      - name: Save Android build
-        if: steps.android-build-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
-        with:
-          path: |
-            build/visual-test/android/app-release.apk
-            example/android/.gradle
-            example/android/build
-            example/android/app/build
-          key: ${{ steps.android-build-cache.outputs.cache-primary-key }}
-
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
@@ -122,8 +99,25 @@ jobs:
             adb shell settings put system font_scale 1
             adb shell settings put system system_locales en-US
             adb shell cmd alarm set-timezone UTC
-            adb install -r build/visual-test/android/app-release.apk
+            if [ '${{ steps.android-build-cache.outputs.cache-hit }}' = 'true' ]; then
+              adb install -r build/visual-test/android/app-release.apk
+            else
+              yarn example android:release --device plaintext_vrt_api36_pixel9 --no-bundler
+              mkdir -p build/visual-test/android
+              cp example/android/app/build/outputs/apk/release/app-release.apk build/visual-test/android/app-release.apk
+            fi
             adb shell pm path plaintext.example
+
+      - name: Save Android build
+        if: steps.android-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            build/visual-test/android/app-release.apk
+            example/android/.gradle
+            example/android/build
+            example/android/app/build
+          key: ${{ steps.android-build-cache.outputs.cache-primary-key }}
 
   vrt-ios:
     runs-on: macos-26
@@ -204,15 +198,9 @@ jobs:
 
       - name: Build iOS VRT app
         if: steps.ios-build-cache.outputs.cache-hit != 'true'
-        run: |
-          xcodebuild \
-            -workspace example/ios/PlainTextExample.xcworkspace \
-            -scheme PlainTextExample \
-            -configuration Release \
-            -sdk iphonesimulator \
-            -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_UDID" \
-            -derivedDataPath build/visual-test/ios \
-            -quiet
+        run: >-
+          yarn example ios:release --device generic --no-bundler
+          --output "$GITHUB_WORKSPACE/build/visual-test/ios"
 
       - name: Save iOS build
         if: steps.ios-build-cache.outputs.cache-hit != 'true'
@@ -223,8 +211,8 @@ jobs:
 
       - name: Verify iOS VRT app
         run: |
-          ios_app="build/visual-test/ios/Build/Products/Release-iphonesimulator/PlainTextExample.app"
-          test -d "$ios_app"
+          ios_app="$(find build/visual-test/ios -type d -name '*.app' -print -quit)"
+          test -n "$ios_app"
           xcrun simctl install "$IOS_SIMULATOR_UDID" "$ios_app"
           xcrun simctl launch "$IOS_SIMULATOR_UDID" plaintext.example
 
