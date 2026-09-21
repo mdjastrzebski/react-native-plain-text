@@ -291,7 +291,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setLetterSpacingDip(props.getFloatOr("letterSpacing", 0f))
     view.setLineHeight(props.getFloatOr("lineHeight", 0f))
     // Locale-sensitive line breaking, so it affects the measured height too.
-    view.setLang(props?.getString("lang")?.ifEmpty { null })
+    view.setLang(props?.getString("lang"))
     // Transforms the measured string itself (case changes can change width), so it
     // must be applied before setPlainText below.
     view.setTextTransform(props?.getString("textTransform"))

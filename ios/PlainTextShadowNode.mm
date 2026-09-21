@@ -45,10 +45,10 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
     attributes[NSKernAttributeName] = @(props.letterSpacing.value());
   }
 
-  if (!props.lang.empty()) {
-    NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
-    if (lang != nil) {
-      attributes[NSLanguageIdentifierAttributeName] = lang;
+  if (props.lang.has_value()) {
+    NSString *langIdentifier = [NSString stringWithUTF8String:props.lang.value().c_str()];
+    if (langIdentifier != nil) {
+      attributes[NSLanguageIdentifierAttributeName] = langIdentifier;
     }
   }
 

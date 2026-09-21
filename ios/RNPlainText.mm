@@ -128,7 +128,7 @@ using namespace plaintext;
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
     BOOL hasWritingDirection = props.writingDirection != RNPlainTextWritingDirection::Auto;
-    BOOL hasLang = !props.lang.empty();
+    BOOL hasLang = props.lang.has_value();
     BOOL needsAttributedString = hasLineHeight || hasLetterSpacing || hasTextDecoration || hasTextShadow || hasWritingDirection || hasLang;
 
     if (!needsAttributedString) {
@@ -174,9 +174,9 @@ using namespace plaintext;
     }
 
     if (hasLang) {
-        NSString *lang = [NSString stringWithUTF8String:props.lang.c_str()];
-        if (lang != nil) {
-            attributes[NSLanguageIdentifierAttributeName] = lang;
+        NSString *langIdentifier = [NSString stringWithUTF8String:props.lang.value().c_str()];
+        if (langIdentifier != nil) {
+            attributes[NSLanguageIdentifierAttributeName] = langIdentifier;
         }
     }
 
