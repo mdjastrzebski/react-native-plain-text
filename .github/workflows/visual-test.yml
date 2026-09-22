@@ -148,22 +148,9 @@ jobs:
           enable-hw-keyboard: true
           emulator-build: 15917651
           channel: stable
-          script: |
-            set -euo pipefail
-            run_stage() {
-              printf '\n::group::yarn vrt android %s (started %s)\n' "$1" "$(date -u +%H:%M:%SZ)"
-              ANDROID_HEADLESS=1 yarn vrt android "$1"
-              printf 'yarn vrt android %s finished %s\n' "$1" "$(date -u +%H:%M:%SZ)"
-              printf '::endgroup::\n'
-            }
-            run_stage setup
-            if [ '${{ steps.android-build-cache.outputs.cache-hit }}' != 'true' ]; then
-              run_stage build
-            fi
-            run_stage install
-            run_stage e2e
-            run_stage capture
-            run_stage compare
+          # This action runs `script:` one line at a time through `sh`, so it cannot hold a
+          # bash function or `set -o pipefail`. The orchestration lives in a real bash file.
+          script: ANDROID_BUILD_CACHE_HIT='${{ steps.android-build-cache.outputs.cache-hit }}' ./scripts/run-vrt-android-ci.sh
 
       # Saved even when a later stage failed: a capture flake must not throw away a
       # freshly built app. The gate keeps a run that died before producing the APK
