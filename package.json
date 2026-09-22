@@ -52,7 +52,8 @@
     "vrt:android": "yarn vrt android",
     "vrt:ios": "yarn vrt ios",
     "validate": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn test:cpp && yarn prepare",
-    "release": "release-it --only-version"
+    "release": "release-it --only-version",
+    "fixGitSubmodule": "git -C baselines remote set-url --push origin git@github.com:troZee/react-native-plain-text-artifactory.git"
   },
   "keywords": [
     "react-native",
