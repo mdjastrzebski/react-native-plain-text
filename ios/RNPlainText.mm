@@ -140,6 +140,7 @@ using namespace plaintext;
         _label.text = text;
         _label.verticalTextShift = 0;
         _label.verticalAlignment = resolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
+        _label.accessibilityLanguage = nil;
         return;
     }
 
@@ -178,6 +179,9 @@ using namespace plaintext;
         if (langIdentifier != nil) {
             attributes[NSLanguageIdentifierAttributeName] = langIdentifier;
         }
+        _label.accessibilityLanguage = langIdentifier;
+    } else {
+        _label.accessibilityLanguage = nil;
     }
 
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
