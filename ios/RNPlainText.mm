@@ -128,8 +128,12 @@ using namespace plaintext;
     BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
     BOOL hasWritingDirection = props.writingDirection != RNPlainTextWritingDirection::Auto;
+    // No standalone UILabel property for this, unlike lineBreakStrategyIOS/ellipsizeMode
+    // below: it only exists as a paragraph-style attribute, so it must force this path.
+    BOOL hasHyphenationFactor = props.hyphenationFactor > 0;
 
-    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasWritingDirection) {
+    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasWritingDirection &&
+        !hasHyphenationFactor) {
         // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
         _label.attributedText = nil;
         _label.font = font;
@@ -186,6 +190,7 @@ using namespace plaintext;
     paragraphStyle.lineBreakMode = lineBreakModeFromProp(props.ellipsizeMode);
     paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
     paragraphStyle.baseWritingDirection = writingDirectionFromProp(props.writingDirection);
+    paragraphStyle.hyphenationFactor = props.hyphenationFactor;
 
     CGFloat verticalTextShift = 0;
     if (hasLineHeight) {
@@ -236,7 +241,7 @@ using namespace plaintext;
     const auto &newViewProps = *std::static_pointer_cast<RNPlainTextProps const>(props);
 
     // These all feed applyContentFromProps since they may share an attributed string
-    // (ellipsizeMode/lineBreakStrategyIOS via its paragraph style).
+    // (ellipsizeMode/lineBreakStrategyIOS/hyphenationFactor via its paragraph style).
     if (_forceApplyProps ||
         oldViewProps.text != newViewProps.text ||
         oldViewProps.fontSize != newViewProps.fontSize ||
@@ -260,6 +265,7 @@ using namespace plaintext;
         oldViewProps.textTransform != newViewProps.textTransform ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
         oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS ||
+        oldViewProps.hyphenationFactor != newViewProps.hyphenationFactor ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||
         oldViewProps.maxFontSizeMultiplier != newViewProps.maxFontSizeMultiplier ||
         oldViewProps.lineHeightClippingCompat != newViewProps.lineHeightClippingCompat) {

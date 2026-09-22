@@ -93,6 +93,13 @@ export interface NativeProps extends ViewProps {
 
   // Android only, no-op on iOS. Matches RN <Text>'s values/default.
   android_hyphenationFrequency?: CodegenTypes.WithDefault<'none' | 'normal' | 'full', 'none'>;
+
+  // iOS only, no-op on Android. Not in RN <Text>: NSParagraphStyle's own hyphenation
+  // knob, with no Android equivalent — Android's is android_hyphenationFrequency above.
+  // 0 disables hyphenation (the default); UIKit clamps everything else to [0, 1].
+  // Cost: medium. Forces iOS's attributed-string path (no standalone UILabel property
+  // for it, unlike lineBreakStrategyIOS).
+  hyphenationFactor?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
 }
 
 export default codegenNativeComponent<NativeProps>('RNPlainText', {

@@ -46,6 +46,8 @@ most props only touch a few.
 - `ellipsizeMode`
 - `lineBreakStrategyIOS` (iOS-only — no Android setter body, no Android entry in
   [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
+- `hyphenationFactor` (iOS-only — no Android setter body, no Android entry in
+  [Set 2](#set-2--a-prop-that-affects-measured-size)'s measurement plumbing)
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
 - `lineHeightClippingCompat` (`unstable_lineHeightClippingCompat` at the JS boundary — see
@@ -99,6 +101,7 @@ iOS-only: touches `measurementInputsEqual`, `ios/PlainTextShadowNode.mm`, `RNPla
 `PlainTextMeasurementsManager.cpp` or `PlainTextViewManager.kt` `measure()` entry.
 
 - `lineBreakStrategyIOS`
+- `hyphenationFactor`
 
 Android-only: touches `measurementInputsEqual`, `PlainTextMeasurementsManager.cpp`, `PlainTextViewManager.kt`
 `measure()`. No `ios/PlainTextShadowNode.mm` or `RNPlainText.mm` entry.
@@ -130,7 +133,8 @@ Notably _excluded_ — all draw-only, none affect the box:
 
 Applying one of the common props above has to happen identically in five places, or the box and the rendered text
 disagree. That's a stale or wrong size, not a crash. The groups above already say which of the five apply to
-`lineBreakStrategyIOS`, `includeFontPadding`, `textBreakStrategy`, `android_hyphenationFrequency`, and `experiment`.
+`lineBreakStrategyIOS`, `hyphenationFactor`, `includeFontPadding`, `textBreakStrategy`, `android_hyphenationFrequency`,
+and `experiment`.
 
 **Files:**
 
@@ -157,14 +161,15 @@ an already-scaled size, so `scaledFontSize`'s unrounded `fontSize * fontSizeMult
 callers instead (also unrounded, matching RN), so it stays a sync point between `measureContent` and `RNPlainText.mm`.
 
 `measurementInputsEqual` is shared C++, so every prop above runs through it on both platforms, even the ones a
-platform never reads. `lineBreakStrategyIOS`, `textBreakStrategy` and `android_hyphenationFrequency` stay in there
-permanently on the platform that can't measure them. `experiment` stays in there even while no benchmark has plugged
-it into either platform. Drop an entry and the platform that does read the prop compares stale without knowing it.
+platform never reads. `lineBreakStrategyIOS`, `hyphenationFactor`, `textBreakStrategy` and `android_hyphenationFrequency`
+stay in there permanently on the platform that can't measure them. `experiment` stays in there even while no benchmark
+has plugged it into either platform. Drop an entry and the platform that does read the prop compares stale without
+knowing it.
 
-**`lineBreakStrategyIOS` and `experiment` currently have an empty Android `@ReactProp` setter.** Codegen's interface has
-no per-platform prop list, so `PlainTextViewManager.kt` has to implement every setter regardless.
-`lineBreakStrategyIOS`'s stays empty permanently, same as `lineHeightClippingCompat`'s. `experiment`'s stays empty only
-until a benchmark wires it into Android.
+**`lineBreakStrategyIOS`, `hyphenationFactor` and `experiment` currently have an empty Android `@ReactProp` setter.**
+Codegen's interface has no per-platform prop list, so `PlainTextViewManager.kt` has to implement every setter
+regardless. `lineBreakStrategyIOS`'s and `hyphenationFactor`'s stay empty permanently, same as
+`lineHeightClippingCompat`'s. `experiment`'s stays empty only until a benchmark wires it into Android.
 
 **`includeFontPadding` has no `PlainTextView.kt` setter.** `PlainTextViewManager.kt`'s `@ReactProp` writes straight to
 `TextView`'s own `includeFontPadding` property instead. There's no shared work to defer (see
@@ -174,9 +179,9 @@ until a benchmark wires it into Android.
 
 ## Set 3 — The three-way default contract
 
-**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS`, which
-this set skips entirely — it is never serialized in `PlainTextMeasurementsManager.cpp`, so there is no Android default to
-agree on. Two flavors, both three-way:
+**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS` and
+`hyphenationFactor`, which this set skips entirely — neither is ever serialized in `PlainTextMeasurementsManager.cpp`,
+so there is no Android default to agree on. Two flavors, both three-way:
 
 - Value-defaulted (a plain C++ default, not `std::optional`) — an omitted serialized key means "use this default":
   - `fontSize` (`14.0`)
@@ -212,8 +217,9 @@ agree on. Two flavors, both three-way:
 
 ## Set 4 — The reused measuring view (Android)
 
-**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS` (see that
-set's exception) — all of them must be (re-)applied on every `measure()` call, since the view is shared across nodes.
+**Props:** every prop in [Set 2](#set-2--a-prop-that-affects-measured-size)'s list except `lineBreakStrategyIOS` and
+`hyphenationFactor` (see that set's exception) — all of them must be (re-)applied on every `measure()` call, since the
+view is shared across nodes.
 
 `PlainTextViewManager.measure()` sizes one shared off-screen view rather than a fresh one per node (see
 [performance.md](performance.md)). Three invariants hold because of that, only one of them enforced:
@@ -400,7 +406,7 @@ Only the invalidation logic is genuinely shared, in `cpp/PlainTextMeasurementHel
 `fontSize`, `fontWeight`, `fontStyle`, `fontVariant`, `fontVariationSettings`, `allowFontScaling`,
 `maxFontSizeMultiplier`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`,
 `writingDirection`), `letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`,
-`lineBreakStrategyIOS`, plus the shadow props (`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`,
+`lineBreakStrategyIOS`, `hyphenationFactor`, plus the shadow props (`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`,
 `textShadowRadius`) — i.e. Set 2's list plus every draw-only prop from [Set 1](#set-1--any-prop-the-four-layer-flow).
 
 Fabric recycles component views by type. iOS does it unconditionally through `RCTComponentViewRegistry`; Android only if

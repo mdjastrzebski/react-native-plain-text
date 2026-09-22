@@ -104,6 +104,7 @@ export function TextItem({
   lineBreakStrategyIOS,
   textBreakStrategy,
   android_hyphenationFrequency,
+  hyphenationFactor,
   allowFontScaling,
   maxFontSizeMultiplier,
   accessibilityProps,
@@ -122,6 +123,9 @@ export function TextItem({
   lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
+  // iOS-only, not in RN <Text>, so unlike the props above this isn't forwarded to the
+  // comparison Text overlay below — there's nothing there for it to compare against.
+  hyphenationFactor?: number;
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
   // Forwarded to both PlainText and the comparison Text so both expose the same
@@ -148,6 +152,7 @@ export function TextItem({
             lineBreakStrategyIOS={lineBreakStrategyIOS}
             textBreakStrategy={textBreakStrategy}
             android_hyphenationFrequency={android_hyphenationFrequency}
+            hyphenationFactor={hyphenationFactor}
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             unstable_lineHeightClippingCompat={compatOn}

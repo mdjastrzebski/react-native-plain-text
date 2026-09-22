@@ -50,7 +50,8 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
   Float perLineHeight = static_cast<Float>(font.lineHeight);
   bool hasLineHeight = props.lineHeight > 0;
   bool hasLineBreakStrategy = props.lineBreakStrategyIOS != RNPlainTextLineBreakStrategyIOS::None;
-  if (hasLineHeight || hasLineBreakStrategy) {
+  bool hasHyphenationFactor = props.hyphenationFactor > 0;
+  if (hasLineHeight || hasLineBreakStrategy || hasHyphenationFactor) {
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     if (hasLineHeight) {
       // Scaled by the same multiplier as the font (mirrors RNPlainText.mm).
@@ -62,6 +63,10 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
     if (hasLineBreakStrategy) {
       // Affects wrapping, so must match RNPlainText.mm's rendered value.
       paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
+    }
+    if (hasHyphenationFactor) {
+      // Affects where words break, so must match RNPlainText.mm's rendered value.
+      paragraphStyle.hyphenationFactor = props.hyphenationFactor;
     }
     attributes[NSParagraphStyleAttributeName] = paragraphStyle;
   }

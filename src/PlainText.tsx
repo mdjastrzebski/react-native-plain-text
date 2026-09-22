@@ -17,6 +17,9 @@ export type PlainTextProps = AccessibilityProps & {
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   /// Android-only, like RN <Text>.
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
+  /// iOS-only, no-op on Android. Not in RN <Text>. 0 disables hyphenation
+  /// (the default); UIKit clamps everything else to [0, 1].
+  hyphenationFactor?: number;
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
   testID?: string;
@@ -39,6 +42,7 @@ export function mapPlainTextProps({
   lineBreakStrategyIOS,
   textBreakStrategy,
   android_hyphenationFrequency,
+  hyphenationFactor,
   allowFontScaling,
   maxFontSizeMultiplier,
   unstable_lineHeightClippingCompat,
@@ -94,6 +98,7 @@ export function mapPlainTextProps({
     lineBreakStrategyIOS,
     textBreakStrategy,
     android_hyphenationFrequency,
+    hyphenationFactor,
     allowFontScaling,
     maxFontSizeMultiplier,
     includeFontPadding,

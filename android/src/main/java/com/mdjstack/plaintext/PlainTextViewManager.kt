@@ -212,6 +212,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setAndroidHyphenationFrequency(android_hyphenationFrequency)
   }
 
+  // iOS-only; Android's own hyphenation knob is android_hyphenationFrequency above.
+  @ReactProp(name = "hyphenationFactor")
+  override fun setHyphenationFactor(view: PlainTextView?, hyphenationFactor: Float) {
+  }
+
   @ReactProp(name = "allowFontScaling", defaultBoolean = true)
   override fun setAllowFontScaling(view: PlainTextView?, allowFontScaling: Boolean) {
     view?.setAllowFontScaling(allowFontScaling)

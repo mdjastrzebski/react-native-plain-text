@@ -19,6 +19,7 @@ import { FontStyleSection } from '../sections/FontStyleSection';
 import { FontVariantSection } from '../sections/FontVariantSection';
 import { FontVariationSettingsSection } from '../sections/FontVariationSettingsSection';
 import { FontWeightSection } from '../sections/FontWeightSection';
+import { HyphenationFactorSection } from '../sections/HyphenationFactorSection';
 import { HyphenationSection } from '../sections/HyphenationSection';
 import { LetterSpacingSection } from '../sections/LetterSpacingSection';
 import { LineBreakStrategySection } from '../sections/LineBreakStrategySection';
@@ -78,6 +79,7 @@ export default function FeaturesScreen({ navigation }: Props) {
     ['Line Break Strategy', LineBreakStrategySection],
     ['Text Break Strategy', TextBreakStrategySection],
     ['Hyphenation', HyphenationSection],
+    ['Hyphenation Factor', HyphenationFactorSection],
     ['Text Decoration Line', TextDecorationLineSection],
     ['Text Shadow', TextShadowSection],
     ['Text Transform', TextTransformSection],

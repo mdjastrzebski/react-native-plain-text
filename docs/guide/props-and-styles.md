@@ -2,22 +2,23 @@
 
 ## Supported props
 
-| Prop                           | RN `<Text>` compatible | Notes                                                                              |
-| ------------------------------ | ---------------------- | ---------------------------------------------------------------------------------- |
-| `allowFontScaling`             | ✅                     |                                                                                    |
-| `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`                                                     |
-| `children`                     | 🟡                     | `string` only                                                                      |
-| `ellipsizeMode`                | ✅                     |                                                                                    |
-| `lineBreakStrategyIOS`         | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
-| `maxFontSizeMultiplier`        | ✅                     |                                                                                    |
-| `nativeID`                     | ✅                     |                                                                                    |
-| `id`                           | ✅                     |                                                                                    |
-| `numberOfLines`                | ✅                     |                                                                                    |
-| `onLayout`                     | ✅                     |                                                                                    |
-| `testID`                       | ✅                     |                                                                                    |
-| `text`                         | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
-| `textBreakStrategy`            | ✅                     | Android-only, like RN `<Text>`                                                     |
-| Accessibility props            | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
+| Prop                           | RN `<Text>` compatible | Notes                                                                                  |
+| ------------------------------ | ---------------------- | -------------------------------------------------------------------------------------- |
+| `allowFontScaling`             | ✅                     |                                                                                        |
+| `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`                                                         |
+| `children`                     | 🟡                     | `string` only                                                                          |
+| `ellipsizeMode`                | ✅                     |                                                                                        |
+| `hyphenationFactor`            | ⬆️                     | iOS-only. No-op on Android; see `android_hyphenationFrequency` for Android's own knob. |
+| `lineBreakStrategyIOS`         | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                          |
+| `maxFontSizeMultiplier`        | ✅                     |                                                                                        |
+| `nativeID`                     | ✅                     |                                                                                        |
+| `id`                           | ✅                     |                                                                                        |
+| `numberOfLines`                | ✅                     |                                                                                        |
+| `onLayout`                     | ✅                     |                                                                                        |
+| `testID`                       | ✅                     |                                                                                        |
+| `text`                         | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).       |
+| `textBreakStrategy`            | ✅                     | Android-only, like RN `<Text>`                                                         |
+| Accessibility props            | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc     |
 
 RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
 
@@ -69,6 +70,9 @@ Things Plain Text does that RN `<Text>` does not:
   ([RN#29507](https://github.com/facebook/react-native/issues/29507)). Plain
   Text corrects the vertical offset at draw time so the text stays centered in
   its line box.
+- **`hyphenationFactor` on iOS**: RN `<Text>` has no hyphenation control on iOS
+  at all. Plain Text exposes `NSParagraphStyle`'s own hyphenation knob directly;
+  Android already has one via `android_hyphenationFrequency`.
 
 ## Planned
 
