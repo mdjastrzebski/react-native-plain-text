@@ -20,6 +20,7 @@ hash_command() {
   fi
 }
 
+#TODO problably we should consider using expo-fingerprint or https://github.com/mdjastrzebski/fs-fingerprint
 calculate_fingerprint() {
   (
     cd "$PROJECT_ROOT"
