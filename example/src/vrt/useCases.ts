@@ -1,107 +1,8 @@
-import { ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
-import type { ParamListBase } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { PlainText } from 'react-native-plain-text';
-import { useCompareText } from '../components/CompareText';
-import { CompareBox, Cover, Section, TextItem, screenStyles } from '../components/Specimen';
+import type { TextStyle } from 'react-native';
 import { COLOR, MONO, SERIF } from '../theme';
 
-type Props = NativeStackScreenProps<ParamListBase>;
-
-// The Features screen varies one prop at a time. This one stacks three to six of
-// them at once, which is where props that are individually fine start disagreeing:
-// padding against a border against a clamped line count, letterSpacing against
-// wrap detection, lineHeight against verticalAlign.
-export default function UseCasesScreen({ navigation }: Props) {
-  const showText = useCompareText(navigation);
-
-  return (
-    <ScrollView style={screenStyles.scroll} contentContainerStyle={screenStyles.container}>
-      {/* No lockup: "Aa" is a specimen of the type itself, which is the Features
-          screen's subject rather than this one's, and the header already says
-          "Use Cases". What is left is the line that says what the page holds. */}
-      <Cover blurb="Whole UI shapes rather than one prop: several styles stacked per row, the way an app would actually set them." />
-      {/* One section per kind of shape rather than one long "Example Use Cases"
-          run: grouped, a row can be read against the three or four rows it would
-          really sit next to in an app, and a whole group going wrong at once
-          points at what they share (all the clamped rows, all the shrink-wrapped
-          ones) instead of at thirty unrelated specimens. */}
-      {USE_CASE_GROUPS.map(({ title, items }) => (
-        <Section key={title} title={title}>
-          {items.map((item) =>
-            item.kind === 'baseline' ? (
-              <UseCaseBaselineRow key={item.label} showText={showText} {...item} />
-            ) : (
-              <UseCaseRow key={item.label} showText={showText} {...item} />
-            )
-          )}
-        </Section>
-      ))}
-      <Section title="Random Combinations">
-        {RANDOM_USE_CASES.map((item) => (
-          <UseCaseRow key={item.label} showText={showText} {...item} />
-        ))}
-      </Section>
-    </ScrollView>
-  );
-}
-
-// The rows carry no label caption (a use case is a whole shape rather than one
-// value), so `label` is only the key and the name to talk about it by.
-function UseCaseRow({
-  showText,
-  label: _label,
-  text,
-  style,
-  ...props
-}: Combination & { showText: boolean }) {
-  return (
-    <TextItem
-      showText={showText}
-      // The platform default is pure black, which reads harder than anything else
-      // on the page. Every row starts from the palette's ink instead, so the rows
-      // that set no color of their own still belong to the same ramp as the
-      // headings and the labels around them.
-      style={[useCaseStyles.base, style]}
-      // A row that takes the full measure needs the grey box to stretch with it
-      // instead of shrink-wrapping. Read off the style rather than flagged per
-      // row: it was a hand-maintained `wide: true` on all 52 of them, which is 52
-      // chances for the flag and the width to disagree. A row with an explicit
-      // point width (the avatar, the narrow box) needs nothing: the box already
-      // shrink-wraps to exactly that.
-      containerStyle={style.width === '100%' ? screenStyles.wideRow : undefined}
-      {...props}
-    >
-      {text}
-    </TextItem>
-  );
-}
-
-const useCaseStyles = StyleSheet.create({
-  base: {
-    color: COLOR.ink,
-  },
-  baselineRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  // Same treatment Specimen.tsx's own `overlayText`/`compareText` give a
-  // single-string TextItem, reproduced here because a baseline row's overlay
-  // is several sibling `<Text>`s rather than one, so it can't go through
-  // TextItem at all.
-  baselineOverlayText: {
-    backgroundColor: COLOR.wash,
-    color: COLOR.scarlet,
-  },
-  // Mirrors `baselineOverlayText`'s wash, since `row` no longer supplies one.
-  baselineCompareText: {
-    color: COLOR.cobalt,
-    backgroundColor: COLOR.wash,
-  },
-});
-
-// A row that varies several props stacked in one style, the way UseCaseRow
-// renders it: one PlainText, one string.
+// A row that varies several props stacked in one style, rendered by VrtUseCase
+// as one PlainText with one string.
 export type Combination = {
   kind?: undefined;
   label: string;
@@ -113,8 +14,8 @@ export type Combination = {
   maxFontSizeMultiplier?: number;
 };
 
-// A row that is several PlainTexts sharing one `alignItems: "baseline"` line,
-// the shape a Combination's single string/style can't express: a price beside
+// A row with several PlainTexts sharing one `alignItems: "baseline"` line,
+// which a Combination's single string/style can't express: a price beside
 // its VAT note, a heading beside its badge. `label` still names the row, but
 // there is no single `style`/`text` to spread onto one PlainText.
 export type BaselineCombination = {
@@ -125,46 +26,11 @@ export type BaselineCombination = {
 
 export type UseCaseItem = Combination | BaselineCombination;
 
-// A group is one section on the screen: a handful of rows that would appear in the
-// same part of a real UI, and that therefore fail in the same way when they fail.
+// A group preserves the original fixture ordering for stable VRT screenshots.
 type UseCaseGroup = {
   title: string;
   items: UseCaseItem[];
 };
-
-// Renders a BaselineCombination: several PlainText siblings on one
-// `alignItems: "baseline"` row, with the same siblings as real RN `<Text>`s
-// overlaid in scarlet, since RN's `<Text>` has always gotten baseline
-// alignment right and is exactly what PlainText's own baseline function
-// (`BaselineYogaNode`, both shadow nodes) now has to match.
-function UseCaseBaselineRow({
-  showText,
-  label,
-  parts,
-}: BaselineCombination & { showText: boolean }) {
-  return (
-    <CompareBox
-      label={label}
-      showText={showText}
-      containerStyle={[useCaseStyles.baselineRow, screenStyles.wideRow]}
-      overlay={
-        <View style={useCaseStyles.baselineRow}>
-          {parts.map((part, index) => (
-            <Text key={index} style={[part.style, useCaseStyles.baselineOverlayText]}>
-              {part.text}
-            </Text>
-          ))}
-        </View>
-      }
-    >
-      {parts.map((part, index) => (
-        <PlainText key={index} style={[part.style, showText && useCaseStyles.baselineCompareText]}>
-          {part.text}
-        </PlainText>
-      ))}
-    </CompareBox>
-  );
-}
 
 // Fixed, hand-written lists (never generated, never shuffled) so two runs of
 // the app render byte-identical rows and screenshots diff cleanly.

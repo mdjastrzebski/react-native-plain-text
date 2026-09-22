@@ -27,25 +27,16 @@ import { COLOR, MONO, SERIF, VARIABLE } from '../theme';
 // Matches the Text Count row's default option below, see COUNT_ATTR.
 const DEFAULT_COUNT = 5000;
 
-// Per-mount offset added to item indices, so labels differ across mounts and a
-// cached attributed string can't make a later mount look cheaper than the first.
-// Fixed above COUNT_ATTR's largest option rather than derived, so ranges never
-// overlap; bump if that option grows past 10000.
+// Per-mount offset for item indices, so a cached attributed string can't make a
+// later mount look cheaper. Fixed above COUNT_ATTR's largest option; bump if that
+// option grows past 10000.
 const MOUNT_TEXT_STRIDE = 10_000;
 
-// Native allocations (CoreText layout, CALayer backing stores, JS heap growth)
-// are deferred past the React commit, so sampling immediately undercounts. Every
-// run waits this out before sampling, because memory has no completion signal to
-// observe the way the timings do. An unmount needs it at least as much as a
-// mount: releasing is lazier than allocating.
-//
-// Adjustable per run from the Props sheet (the 'settleMs' row below). Longer is
-// not safer: the window has to be long enough for the run's own transients to be
-// collected (below ~1s on Android nothing has been, and every number reads ~35%
-// high) and short enough that no ART heap trim fires inside it (past ~15s a trim
-// returns pages to the kernel mid-window, deflating the `incl.` figure and
-// inflating the next window's). 5s sat between both on the device this was tuned
-// on; both edges move with device and OS version.
+// Native/JS allocations land after the commit, so sampling must wait (mount and
+// unmount both — releasing is lazier than allocating).
+// Window must be long enough for transients to settle (<1s on Android reads ~35%
+// high) yet short enough to avoid a GC trim mid-window (>~15s); 5s tuned per-device,
+// adjustable via the Props sheet's 'settleMs'.
 const DEFAULT_SETTLE_MS = 5_000;
 
 type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
@@ -61,60 +52,47 @@ function labelFor(kind: Kind) {
   return VARIANTS.find((v) => v.kind === kind)?.label ?? kind;
 }
 
-// How far an Event Timing entry may sit from the press timestamp and still
-// count as this run's: the native event is stamped before the JS handler runs,
-// so the entry always starts a little earlier.
+// Native event is stamped before the JS handler runs, so allow slack when
+// matching an Event Timing entry to the press timestamp.
 const EVENT_MATCH_SLACK_MS = 1_000;
 
 const START_MARK = 'plaintext-bench:press';
 
-// Every scenario. `mount` and `unmount` change what is on screen, the other
-// three update what is already there.
+// mount/unmount change what's on screen; the rest update what's already there.
 type Scenario = 'mount' | 'unmount' | 'parent' | 'color' | 'layout';
 
-// The two colors the "Color" scenario alternates between. A toggle rather than
-// an absolute value so every press commits something, and so the run never
-// needs a value picker. Both from the palette: the page's ink, and the oxblood
-// accent — deliberately not indigo, so the toggle still commits a real color
-// change when the config's own `color` row is already set to indigo.
+// Toggle rather than an absolute value, so every press commits a change with no
+// value picker needed. Moss (not indigo) so the toggle still changes color even
+// when the config's own `color` row is set to indigo.
 const COLORS = [COLOR.ink, COLOR.moss];
 
-// The "Layout" scenario alternates fontSize by half a point: every item has to
-// re-measure, while the drawn area changes by ~2%. That isolates measurement
-// invalidation from re-draw and re-composite cost, which a full font-size step
-// mixes together.
+// Half-point bump forces re-measure while the drawn area only changes ~2%,
+// isolating measurement invalidation from redraw/composite cost.
 const SIZE_BUMP = 0.5;
 
-// One shape for every scenario, so the readouts stay directly comparable and a
-// new scenario needs no new plumbing.
 type RunStats = {
   commitMs: number;
   interactionMs: number | null;
-  // The four samples, one per settle window: press time, the run's own commit,
-  // then two re-renders of the container above the mounted items. The last two
-  // are null until their window closes, and all three deltas are in the
-  // headline, so the total only appears once the last has landed.
+  // memBefore/memAfter plus two post-mount re-render samples; the last two are
+  // null until their settle window closes, so the headline total only appears
+  // once all three deltas have landed.
   memBefore: number;
   memAfter: number;
   memFirstTouch: number | null;
   memFinal: number | null;
-  // Sampled before the mount, so every cell's `retained` is the same
-  // subtraction against the same baseline and the column reads as one running
-  // total. On the mount run itself this is the same sample as memBefore.
+  // Sampled once before the mount; every `retained` figure subtracts against
+  // this same baseline (equal to memBefore on the mount run itself).
   mountBaseline: number;
   // Captured, not read live: after unmount the Text Count row is editable
   // again, but perView must divide by the count this run actually used.
   count: number;
 };
 
-// The two re-render windows are in the headline rather than reported separately
-// because any screen that re-renders above its text pays them. On Android with
-// RN's <Text> they are most of what the screen costs, as a Paragraph clone
-// starts with an empty content cache and `layout()` rebuilds content for every
-// node. PlainText's clone carries no such payload, so both of its re-render
-// steps are noise. Three windows and not more: successive re-renders converge
-// fast (RN <Text> reads ~23 KB/view, then ~9, then ~0), and a fourth is another
-// chance for a heap trim to land inside a window.
+// The two re-render windows land in the headline because any screen re-rendering
+// above its text pays them — dominant cost for RN <Text> on Android (Paragraph
+// clone rebuilds its content cache), near-zero for PlainText. Capped at three:
+// RN <Text> converges by then (~23KB/view, then ~9, then ~0), and a fourth window
+// risks a GC trim landing inside it.
 
 const SCENARIO_TERMS: Record<Scenario, string> = {
   mount: 'mount',
@@ -124,16 +102,9 @@ const SCENARIO_TERMS: Record<Scenario, string> = {
   layout: 'update',
 };
 
-// Measured with RN's own Web Performance APIs, stable since 0.83, rather than
-// hand-rolled timing. See docs/contributing/measuring.md.
-//
-// `interaction` is the headline: for an event whose handler causes rendering
-// updates, EventPerformanceLogger holds the entry until the shadow tree mounts
-// and reports `duration = mountTime - eventStartTime`. Press to mounted,
-// measured by the core, RN's analogue of INP.
-//
-// Typed locally: tsconfig has no DOM lib and RN's strict TS API doesn't declare
-// these globals, though the runtime installs them.
+// RN's Web Performance API (stable since 0.83). `duration` = mountTime -
+// eventStartTime, RN's analogue of INP. See docs/contributing/measuring.md.
+// Typed locally: tsconfig has no DOM lib, though the runtime installs these globals.
 type EventTimingEntry = {
   startTime: number;
   duration: number;
@@ -154,56 +125,43 @@ const PerformanceObserverGlobal = (
   }
 ).PerformanceObserver;
 
-// Hermes only, and only when it's built with GC exposed to JS. Called before
-// sampling memory on mount and unmount, so a run's own garbage doesn't count
-// toward its per-view numbers, never on the other scenarios, where a GC pause
-// would otherwise land inside the commit/interaction measurement instead of
-// after it.
+// Hermes-only, when built with GC exposed to JS. Called before sampling on
+// mount/unmount only; on other scenarios a forced GC would land inside the
+// commit/interaction measurement instead of after it.
 const forceGC = (globalThis as unknown as { gc?: () => void }).gc;
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
 export default function PerformanceScreen({ navigation }: Props) {
-  // Persisted for the session: the run procedure says kill the app between
-  // runs, so a config that reset on launch could never be held constant across
-  // the runs being compared.
+  // Persisted: runs are compared across app kills, so config can't reset on launch.
   const [config, setConfig] = useSessionState<AttrConfig>('perf-attrs', DEFAULT_CONFIG);
   const [sheetVisible, setSheetVisible] = useState(false);
 
-  // Which component the next mount will use. Persisted for the same reason the
-  // config is: the run procedure kills the app between runs, and re-picking the
-  // variant every launch is friction on the one control pressed most.
+  // Persisted for the same reason as config: avoids re-picking the most-used
+  // control after every app kill.
   const [variant, setVariant] = useSessionState<Kind>('perf-variant', 'plain');
 
-  // Which variant is currently on screen, if any. One at a time: mounting a
-  // second variant into a tree that already holds 1000 of another is not a
-  // scenario worth a number.
+  // Only one variant mounted at a time — mixing two isn't a meaningful scenario.
   const [mounted, setMounted] = useState<Kind | null>(null);
 
-  // Mounts this session, incl. current. Shifts label indices by
-  // MOUNT_TEXT_STRIDE so no mount re-renders another's exact text.
+  // Mounts this session, incl. current; shifts label indices by
+  // MOUNT_TEXT_STRIDE so no mount reuses another's exact text.
   const [mountCount, setMountCount] = useState(0);
 
-  // One entry per scenario, each rendered under the button that produced it and
-  // kept there until the next mount clears the board. Only a re-run of the same
-  // scenario overwrites its own entry, so the five numbers of one session stay
-  // on screen together.
+  // One entry per scenario; cleared on next mount, otherwise only a re-run of
+  // the same scenario overwrites its own entry.
   const [stats, setStats] = useState<Partial<Record<Scenario, RunStats>>>({});
 
-  // The component and config the numbers on screen were taken against, frozen
-  // at mount time. Without this the header tracked the live selection, so
-  // picking a different component after an unmount relabelled results that had
-  // been measured against the previous one.
+  // Component/config frozen at mount time, so switching variants after unmount
+  // doesn't relabel results measured against the previous one.
   const [captured, setCaptured] = useState<string | null>(null);
 
-  // The scenario whose settle window is still open, if any. Every action is
-  // disabled meanwhile: a second commit inside the window would land in the
-  // middle of the memory sample it is about to invalidate.
+  // Non-null while a settle window is open; all actions are disabled meanwhile
+  // so a second commit can't land mid-sample.
   const [running, setRunning] = useState<Scenario | null>(null);
   const settling = running != null;
 
-  // The three update scenarios. `rerenders` is fed into the No-op Update
-  // button's `testID` on purpose. See runParentRerender.
+  // `rerenders` feeds the No-op Update button's testID on purpose. See runParentRerender.
   const [rerenders, setRerenders] = useState(0);
   const [colorIndex, setColorIndex] = useState(0);
   const [sizeBump, setSizeBump] = useState(0);
@@ -211,36 +169,31 @@ export default function PerformanceScreen({ navigation }: Props) {
   // In-flight measurement. Only one runs at a time, so a single ref is enough.
   const pending = useRef<{ scenario: Scenario; memBefore: number } | null>(null);
 
-  // The footprint sampled before the mount, kept so the unmount run can say how
-  // much never came back rather than only how much was freed.
+  // Baseline before mount, so unmount can report what didn't come back, not
+  // just what was freed.
   const mountBaseline = useRef<number | null>(null);
 
-  // Text Count this mount used, captured like mountBaseline: a live read at
-  // stats-build time could pick up a value this run never measured against.
-  // See RunStats.count.
+  // Captured like mountBaseline: a live read at stats-build time could see a
+  // value this run didn't use. See RunStats.count.
   const mountedCount = useRef<number>(DEFAULT_COUNT);
 
-  // Event Timing arrives after mount, later than the effect that clears
-  // `pending`, so the press timestamp it matches against has to outlive it. Read
-  // when the settle timer fires, by which point every entry for that press has
-  // long since landed.
+  // Event Timing arrives after mount, later than the effect clearing `pending`,
+  // so read it when the settle timer fires rather than immediately.
   const interactionMs = useRef<number | null>(null);
   const runStartTime = useRef<number | null>(null);
 
-  // Not memoized: every render rebuilds all count elements anyway, so a stable
-  // object here would save nothing.
+  // Not memoized: every render already rebuilds all count elements, so
+  // memoizing here would save nothing.
   const applied = buildApplied(config, colorIndex, sizeBump);
   // 0, MOUNT_TEXT_STRIDE, 2×... per mount; only read once something's mounted.
   const textOffset = (mountCount - 1) * MOUNT_TEXT_STRIDE;
   const settleDelayMs = settleMsFor(config);
   const count = countFor(config);
   const fingerprint = formatFingerprint(config);
-  // What the next mount would run.
   const live = `${labelFor(variant)} · ${fingerprint}`;
 
-  // Props are edited from the native header, which keeps the panel out of the
-  // measured tree entirely: the tree the benchmark commits into is the same
-  // whether one prop is set or ten.
+  // Edited via the native header, not JS, so the panel is never part of the
+  // measured tree.
   useLayoutEffect(() => {
     const button = (
       <Pressable
@@ -272,13 +225,10 @@ export default function PerformanceScreen({ navigation }: Props) {
     );
 
     navigation.setOptions({
-      // Same split as the Compare Text toggle: Android draws `headerRight`, iOS
-      // takes the item form so the bar's iOS 26 glass capsule can be turned off.
-      //
-      // The rule cannot tell a header-slot render callback from a component. The
-      // element it returns is built once above, outside the callback. The same
-      // pattern in CompareText sits in a hook rather than a component, which is
-      // why only this one needs the exemption.
+      // Android draws headerRight; iOS uses the item form so the glass capsule
+      // can be turned off (same split as CompareText).
+      // Returns a stable element built above, not a component; CompareText's
+      // equivalent lives in a hook, so only this one needs the exemption.
       // eslint-disable-next-line react/no-unstable-nested-components
       headerRight: () => button,
       unstable_headerRightItems: () => [
@@ -296,9 +246,8 @@ export default function PerformanceScreen({ navigation }: Props) {
 
       for (const entry of list.getEntries()) {
         if (Math.abs(entry.startTime - start) > EVENT_MATCH_SLACK_MS) continue;
-        // A press emits several entries (touchstart, touchend, click…); only
-        // the one whose handler triggered the render waits for mount, so it is
-        // by far the longest.
+        // A press emits several entries; only the one whose handler triggers
+        // the render waits for mount, so it's by far the longest.
         if (entry.duration <= (interactionMs.current ?? -1)) continue;
         interactionMs.current = entry.duration;
       }
@@ -309,12 +258,9 @@ export default function PerformanceScreen({ navigation }: Props) {
     return () => observer.disconnect();
   }, []);
 
-  // Arms a run. The caller must then trigger a state change that actually
-  // commits, otherwise the armed run leaks into the next press.
-  //
-  // Memory is sampled here, before the render. The commit start is a User Timing
-  // mark rather than a bare timestamp so the span also shows up in React Native
-  // DevTools' Performance panel.
+  // Arms a run; the caller must trigger a state change that actually commits,
+  // or the armed run leaks into the next press. Memory is sampled before the
+  // render; commit start uses a User Timing mark so it shows up in RN DevTools.
   const beginRun = useCallback((scenario: Scenario) => {
     const memBefore = getMemoryFootprint();
     performance.mark(START_MARK);
@@ -330,8 +276,7 @@ export default function PerformanceScreen({ navigation }: Props) {
     (kind: Kind) => {
       mountBaseline.current = beginRun('mount');
       mountedCount.current = count;
-      // Every number on screen belongs to the previous mount, which may have
-      // used a different variant or config.
+      // Clears prior numbers, which may belong to a different variant/config.
       setStats({});
       setCaptured(`${labelFor(kind)} · ${fingerprint}`);
       setMountCount((n) => n + 1);
@@ -341,30 +286,17 @@ export default function PerformanceScreen({ navigation }: Props) {
   );
 
   const runUnmount = useCallback(() => {
-    // memBefore is sampled at press time, so for this run it is the peak:
-    // everything the mount allocated is still live.
+    // memBefore here is the peak: sampled at press time, before anything is freed.
     beginRun('unmount');
     setMounted(null);
   }, [beginRun]);
 
-  // The control for the other two update runs: re-render the screen *without*
-  // touching any prop the mounted text receives. This is what isolates
-  // `shouldNewRevisionDirtyMeasurement`'s `fragment.props == nullptr` early
-  // return, the ancestor-re-render path, where Fabric clones every child of a
-  // changed parent purely to re-own its Yoga node
-  // (`YogaLayoutableShadowNode::adoptYogaChild`) and nothing should re-measure.
-  //
-  // The counter has to be *rendered* somewhere for this to test anything: a
-  // state change that produces an identical tree makes React bail out, Fabric
-  // commits no clones, and the run measures nothing at all rather than
-  // measuring a cheap re-own. Feeding it into the No-op Update button's
-  // `testID` changes a real prop inside the same content container as the
-  // items, which forces that container to be cloned with a new children list,
-  // and that is what re-owns all ~1000 mounted items. Keep the counter
-  // reaching some real prop under that container. How deeply nested, or
-  // whether it's user-visible, does not matter. Moving it into the header or
-  // into a view outside the ScrollView, or dropping it, silently turns this
-  // run into a no-op.
+  // Isolates Fabric's ancestor-re-render clone path (`fragment.props == nullptr`,
+  // re-owns Yoga nodes, no re-measure) from a true no-op, which React would skip
+  // entirely. The counter must reach a real prop inside the same content
+  // container as the items — here, the No-op Update button's testID — to force
+  // that clone; moving it to the header or outside the ScrollView silently turns
+  // this run into a no-op.
   const runParentRerender = useCallback(() => {
     beginRun('parent');
     setRerenders((n) => n + 1);
@@ -380,28 +312,23 @@ export default function PerformanceScreen({ navigation }: Props) {
     setSizeBump((n) => (n === 0 ? SIZE_BUMP : 0));
   }, [beginRun]);
 
-  // One pipeline for all five scenarios. Runs after React has committed.
-  // Memory is sampled settleDelayMs later, once native allocation (or release) has
-  // caught up, and the interaction number is read at the same moment because
-  // every Event Timing entry for that press has landed well before then.
-  //
-  // The dependency list is every piece of state a scenario touches, plus
-  // settleDelayMs itself, so exactly one of them changing is what runs this.
+  // Runs after commit. Memory is sampled settleDelayMs later, once native
+  // alloc/release has caught up; interaction is read at the same time since
+  // Event Timing entries land well before then.
+  // Deps are every piece of state a scenario touches, plus settleDelayMs, so
+  // exactly one changing is what triggers this.
   useEffect(() => {
     const run = pending.current;
     if (!run) return;
     pending.current = null;
 
-    // The JS thread only: React render, Fabric commit, Yoga layout. Mounting
-    // happens on the UI thread after this fires, so `interaction - commit` is
-    // roughly what mounting cost. Named per scenario so the runs stay separable
-    // in React Native DevTools' Performance panel.
+    // JS thread only (render, commit, layout); mounting happens on the UI thread
+    // after this fires, so `interaction - commit` roughly gives mounting cost.
     const commitMs = performance.measure(`${START_MARK}:${run.scenario}`, START_MARK).duration;
 
-    // Mount and unmount only: those are the two scenarios whose memory number
-    // is supposed to reflect count views' worth of allocation, so a run's own
-    // garbage shouldn't count toward it. Both timings are already latched by
-    // now, so a GC pause in here can't skew either.
+    // Mount/unmount only: their memory number should reflect count views' worth
+    // of allocation, not this run's own garbage. Timings are already latched,
+    // so a GC pause here can't skew them.
     const sample = () => {
       if (run.scenario === 'mount' || run.scenario === 'unmount') forceGC?.();
       return getMemoryFootprint();
@@ -409,8 +336,7 @@ export default function PerformanceScreen({ navigation }: Props) {
 
     const timers: ReturnType<typeof setTimeout>[] = [];
 
-    // A no-op once the board has been cleared, so a window closing after that
-    // can't resurrect an entry.
+    // No-op once the board is cleared, so a late-closing window can't resurrect an entry.
     const patch = (fields: Partial<RunStats>) =>
       setStats((prev) => {
         const entry = prev[run.scenario];
@@ -436,14 +362,11 @@ export default function PerformanceScreen({ navigation }: Props) {
           },
         }));
 
-        // That setStats is itself the second window's event: the readout lives
-        // in the same content container as the mounted items, so
-        // displaying these numbers commits the tree change runParentRerender
-        // exists to price. The `patch` below is the third window's event, which
-        // is how three windows come from two writes.
-        //
-        // Buttons re-enable above rather than after these windows. A press
-        // cancels the effect and the headline's total just never fills in.
+        // This setStats is itself the second window's event (readout shares the
+        // mounted items' content container); `patch` below is the third — how
+        // three windows come from two writes.
+        // Buttons re-enable above, not after these windows; a press cancels the
+        // effect and the headline total just never fills in.
         timers.push(
           setTimeout(() => {
             patch({ memFirstTouch: sample() });
@@ -458,30 +381,15 @@ export default function PerformanceScreen({ navigation }: Props) {
 
   return (
     <>
-      {/*
-        The control block scrolls with the content. It stays a child of the same
-        content container as the items, which is what runParentRerender depends
-        on, but it is deliberately not a sticky header: a sticky child gets extra
-        native handling of its own, and that is chrome inside the tree every run
-        commits into. Cost: reaching the actions after a mount means scrolling
-        back to the top.
-      */}
+      {/* Not a sticky header: a sticky child adds native handling of its own inside
+          the tree every run commits into, and runParentRerender depends on this
+          block staying a plain child of the same content container as the items. */}
       <ScrollView style={screenStyles.scroll} contentContainerStyle={styles.container}>
         <View style={styles.controls}>
-          {/* No cover: the other two pages open with a blurb about what they
-              hold, and this one's first line is the build warning, which no
-              amount of prose above it should push down the page.
-
-              Debug numbers are not comparable to anything, so say so before the
-              first press rather than in a doc nobody reads mid-run. Set as the
-              banner shape the Use Cases page uses for the same job (a tinted
-              wash with the pigment as a left rule) rather than as a pill,
-              because this is a note about the whole page.
-
-              Two PlainTexts in a row rather than one string with a bold span in
-              it: PlainText is one style per node by design, which is the point of
-              the library. They are set to wrap, so on a narrow phone the note
-              drops below the tag instead of being clipped. */}
+          {/* No cover: the build-status banner is this page's first line.
+              Two PlainTexts, not one string with a bold span: PlainText is one
+              style per node by design. Set to wrap so the note drops below the
+              tag on a narrow phone instead of clipping. */}
           <View style={[styles.build, __DEV__ ? styles.buildDebug : styles.buildRelease]}>
             <PlainText
               style={[styles.buildTag, __DEV__ ? styles.buildDebugInk : styles.buildReleaseInk]}
@@ -498,16 +406,9 @@ export default function PerformanceScreen({ navigation }: Props) {
           </View>
 
           <Section title="Component" spacedRows>
-            {/*
-              The full component name, never the chips' abbreviation, and no
-              instance count, which is fixed and already named on the mount
-              button. Frozen at mount time rather than following the live
-              selection, so it never relabels results measured against something
-              else. Until the first mount it shows what the next one will run.
-
-              Set in the mono face the page uses for every recorded value: it is
-              a record to be read character by character and quoted, not prose.
-            */}
+            {/* Frozen at mount time so it never relabels results against a later
+                selection; shows the next mount's config until then. Mono face:
+                a record to be read character by character, not prose. */}
             <PlainText style={styles.fingerprint}>{captured ?? live}</PlainText>
 
             {/* Selecting a variant is only meaningful for the next mount, so the
@@ -606,16 +507,11 @@ function renderItems(kind: Kind, applied: Applied, offset: number, count: number
   const label = (n: number) => text(n + offset);
 
   if (kind === 'nativePlain') {
-    // Same rendered result as the PlainText branch, but with props already in
-    // native shape: no StyleSheet.flatten, no rest destructure, and only the
-    // props actually set. The delta is the JS wrapper's cost. Every key in
-    // textStyle is also a native prop name, so it spreads straight through,
-    // except textShadowOffset: PlainText flattens that one object
-    // into textShadowOffsetWidth/Height, so it needs the same translation here
-    // rather than a raw spread. Not factored into a
-    // shared helper: this branch exists specifically to measure the
-    // wrapper's own cost, so it has to redo the wrapper's work rather than
-    // call into it.
+    // Props already in native shape (no StyleSheet.flatten/rest destructure) to
+    // isolate the JS wrapper's own cost — why this doesn't share a helper with
+    // the PlainText branch below.
+    // textShadowOffset needs manual translation to textShadowOffsetWidth/Height;
+    // every other textStyle key is already a native prop name and spreads through.
     const { textShadowOffset, ...nativeTextStyle } = textStyle as PlainTextStyle;
     if (textShadowOffset != null) {
       (nativeTextStyle as Record<string, unknown>).textShadowOffsetWidth = textShadowOffset.width;
@@ -633,9 +529,8 @@ function renderItems(kind: Kind, applied: Applied, offset: number, count: number
   }
 
   const style = [styles.listItem, textStyle, viewStyle];
-  // What RN's own components accept, which is the same array minus the one key
-  // they have no entry for. Dropped rather than translated: there is nothing to
-  // translate it to.
+  // Same array minus the one key RN's own components lack an entry for — dropped,
+  // not translated.
   const rnStyle = style as StyleProp<TextStyle>;
 
   if (kind === 'plain') {
@@ -662,29 +557,22 @@ function renderItems(kind: Kind, applied: Applied, offset: number, count: number
   ));
 }
 
-// Zero-based and padded to five digits, so every label is the same character
-// count (00000 through 09999 for a 10000-item mount) and the grey boxes are
-// uniform in size. An unpadded counter makes the box width jump at 1000 and
-// 10000, which reads as a layout bug and makes the measured-area comparison
-// harder than it needs to be. The width also has to clear the per-mount
-// index shift (see MOUNT_TEXT_STRIDE): the nth mount renders "Text Item
-// 10000" upward.
+// Zero-padded to 5 digits so label width stays uniform (unpadded, the box width
+// jumps at 1000/10000, muddying the area comparison). Must also clear
+// MOUNT_TEXT_STRIDE's per-mount shift.
 const SHORT_TEXT = (n: number) => `Text Item ${pad(n)}`;
 const WRAPPING_TEXT = (n: number) =>
   `Text Item ${pad(n)}: a longer string that has to wrap onto more than one line on a phone.`;
-// No index: every row renders the identical string, so this prices content
-// that never changes across the list rather than a per-row computed one.
+// No index: every row is identical, pricing static content rather than
+// per-row computation.
 const STATIC_TEXT = () => 'ListItem Static';
-// A BMP symbol most text fonts don't cover, so it still forces fallback, but
-// (unlike an emoji) resolves to a scalar/vector glyph rather than color
-// bitmap data. Separates "fallback font resolution" from "color glyph data"
-// as the cause of any memory delta the emoji row shows.
+// A BMP symbol most fonts lack (forces fallback) but resolves to a vector glyph,
+// not color bitmap data — isolates fallback-resolution cost from the emoji
+// row's color-glyph cost.
 const SYMBOL_TEXT = (n: number) => `${SHORT_TEXT(n)} ★`;
-// A different emoji per row (cycled, not random, so runs are reproducible), to
-// price color glyph data across many distinct glyphs rather than one repeated
-// one. If that data is a shared, deduplicated cache keyed on the glyph, this
-// should cost about the same per view as a single repeated emoji; if it
-// costs more, that data isn't being shared across views.
+// Cycled (not random) per row for reproducibility, across many distinct emoji
+// rather than one repeated: if glyph data were shared/deduped, cost per view
+// should match a single repeated emoji; if higher, it isn't shared.
 const EMOJIS = ['🎉', '🦊', '🐇', '🐶', '🚀', '🌈', '🍕', '⚽️', '🎈', '🐝'];
 const EMOJI_TEXT = (n: number) => `${SHORT_TEXT(n)} ${EMOJIS[n % EMOJIS.length]}`;
 
@@ -693,16 +581,13 @@ const pad = (n: number) => String(n).padStart(5, '0');
 // ---------------------------------------------------------------------------
 // Tunable props
 //
-// Named Attr* throughout rather than Prop*, so nothing in here reads as the
-// screen's own React props (see `type Props` above).
+// Named Attr* rather than Prop* so nothing here reads as the screen's own
+// React props (see `type Props` above).
 // ---------------------------------------------------------------------------
 
-// Where a chosen value goes. `text` values are text-style props (native props
-// on NativePlainText, style entries everywhere else), `view` values are view
-// styles Yoga lays out around the self-measured text, `prop` values are
-// component props, `content` picks the string.
-// 'settle' and 'count' aren't rendered onto anything. They're read
-// separately, see settleMsFor and countFor below.
+// Where a chosen value goes: `text` = text-style props/style entries, `view` =
+// Yoga-laid-out view styles, `prop` = component props, `content` = the string.
+// `settle`/`count` aren't rendered — read via settleMsFor/countFor below.
 type Target = 'text' | 'view' | 'prop' | 'content' | 'settle' | 'count';
 
 type AttrOption = {
@@ -712,39 +597,32 @@ type AttrOption = {
 };
 
 type AttrDef = {
-  // Doubles as the style entry / prop name the chosen value is written to, so
-  // every row but `content` needs nothing else to be applied.
+  // Doubles as the style entry/prop name the value is written to (every row
+  // but `content`).
   key: string;
-  // Only where the row is not named after a real prop. Otherwise the key is the
-  // label.
+  // Only where the row isn't named after a real prop; otherwise the key is the label.
   label?: string;
   section: string;
   // Fingerprint prefix, e.g. 'fs' + '20'.
   fp: string;
   target: Target;
   options: AttrOption[];
-  // Which option counts as the default. Omitted means the first one, which is
-  // what every row with an 'off' state uses. Rows whose options read naturally
-  // in another order (fontSize, largest first) set it explicitly.
+  // Omitted = first option (used by every row with an 'off' state); set
+  // explicitly when the natural order differs (fontSize: largest first).
   defaultIndex?: number;
-  // Always name this row in the fingerprint, even at its default value. For a
-  // row with no unset state, "absent from the line" and "left at the default"
-  // look identical, and the value is too load-bearing to leave implied.
+  // Always names the row in the fingerprint, even at default: for a row with no
+  // unset state, "absent" and "default" would otherwise look identical.
   alwaysInFingerprint?: boolean;
 };
 
-// Deliberately not every prop the library supports: these are the ones that
-// plausibly cost something (an extra native attribute to set, or a re-measure
-// to force). No sliders and no free text, because a discrete value is what makes
-// two runs comparable and quotable, and it keeps the persisted shape trivial.
+// Only props that plausibly cost something (an extra native attribute, or a
+// forced re-measure). No sliders/free text: discrete values keep runs
+// comparable, quotable, and the persisted shape trivial.
 //
-// Every row starts with `(none)`, which leaves the attribute unset, and then
-// lists the real values explicitly, including the ones that equal the platform
-// default (`fontStyle normal`, `textDecorationLine none`, `allowFontScaling
-// true`). That distinction is the point: unset means the prop never reaches the
-// native view, while an explicit default-valued prop still costs a diff, a
-// bridge entry and, on Android, sometimes a span. Pricing that gap is a thing
-// the harness should be able to do.
+// Every row starts with `(none)` (unset) then explicit values, including ones
+// equal to the platform default. Unset means the prop never reaches the native
+// view; an explicit default-valued prop still costs a diff/bridge entry/span —
+// that gap is what this prices.
 const ATTRIBUTES: AttrDef[] = [
   {
     key: 'fontSize',
@@ -785,9 +663,9 @@ const ATTRIBUTES: AttrDef[] = [
       { label: '(none)' },
       { label: 'serif', value: SERIF },
       { label: 'mono', value: MONO },
-      // The bundled variable face. Also the only family the fontVariationSettings
-      // row below can move, so the two are meant to be set together: an axis on a
-      // system font costs the same work and shows nothing.
+      // Bundled variable face; the only family fontVariationSettings can move,
+      // so the two are meant to be set together (an axis on a system font
+      // costs the same work but shows nothing).
       { label: 'OpenSans', value: VARIABLE },
     ],
   },
@@ -797,9 +675,8 @@ const ATTRIBUTES: AttrDef[] = [
     section: 'Text',
     fp: 'c',
     target: 'text',
-    // Same grey/indigo, same two alphas as backgroundColor below, so the two
-    // rows can be paired to price compositing a translucent text color over a
-    // translucent background rather than just a flat one.
+    // Mirrors backgroundColor's grey/indigo and alphas, so the two rows can be
+    // paired to price translucent-over-translucent compositing.
     options: [
       { label: '(none)' },
       { label: '50% grey', value: `${COLOR.faint}80` },
@@ -814,10 +691,8 @@ const ATTRIBUTES: AttrDef[] = [
     section: 'Text',
     fp: 'bg',
     target: 'view',
-    // Grey is the page's own neutral (COLOR.faint); indigo is the accent the
-    // rest of the sheet already uses. Alpha as an 8-digit hex suffix (80 =
-    // 50%) rather than an rgba() string, so the value is one flat color prop
-    // either way, not a format switch between options.
+    // Grey = page's neutral, indigo = the sheet's accent. Alpha as an 8-digit
+    // hex suffix (not rgba()) so every value is one flat-color prop.
     options: [
       { label: '(none)' },
       { label: '50% grey', value: `${COLOR.faint}80` },
@@ -877,19 +752,17 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
-    // Only moves glyphs when fontFamily is OpenSans, but it costs its work on any
-    // family: both platforms derive a font from the string before the fvar table
-    // gets a say. So (none) -> one axis is the price of the prop, and pairing it
-    // with OpenSans is what makes the re-measure real as well as priced.
+    // Only moves glyphs on OpenSans, but costs its parse work on any family
+    // (both platforms derive a font before fvar applies). (none)→one axis prices
+    // the prop; pairing with OpenSans makes the re-measure real too.
     key: 'fontVariationSettings',
     section: 'Text',
     fp: 'fvs',
     target: 'text',
     options: [
       { label: '(none)' },
-      // One axis at both ends of its range: same parse and same derivation either
-      // way, but the heavier instance measures wider, so a run that re-measures
-      // shows it in the layout and not only in the timings.
+      // Same axis at both range ends: same parse/derivation, but the heavier
+      // instance measures wider, so a re-measuring run shows it in layout too.
       { label: 'wght 300', value: '"wght" 300' },
       { label: 'wght 800', value: '"wght" 800' },
       { label: 'wdth 75', value: '"wdth" 75' },
@@ -911,11 +784,9 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
-    // Only draws once textShadowOffset is also set (or, on Android alone,
-    // textShadowRadius), same as the border rows below need borderWidth. Left
-    // separate rather than folded into one combined row so each half of the
-    // cost (the color write vs. forcing the attributed-string path) can be
-    // priced on its own.
+    // Only draws once textShadowOffset (or Android's textShadowRadius) is also
+    // set, like the border rows need borderWidth. Kept separate so the color
+    // write and the attributed-string-path cost can each be priced alone.
     key: 'textShadowColor',
     section: 'Text',
     fp: 'tsc',
@@ -977,11 +848,10 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
-    // Keyed on the native prop name rather than the `verticalAlign` alias, so
-    // the nativePlain variant can still spread it straight through. Costs its
-    // work on any row, but only moves glyphs where the box is taller than the
-    // text, so pair it with the Layout `height` row to see it as well as price
-    // it.
+    // Keyed on the native prop name (not the `verticalAlign` alias) so
+    // nativePlain can spread it straight through. Only moves glyphs when the
+    // box is taller than the text — pair with Layout `height` to see it, not
+    // just price it.
     key: 'textAlignVertical',
     section: 'Text',
     fp: 'tav',
@@ -1119,11 +989,9 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
-    // The library's internal `experiment` prop (src/PlainTextViewNativeComponent.ts):
-    // one generic on/off switch for whatever the perf suite is currently A/B
-    // testing. `(none)`/`false` is baseline, and `true` is the experiment.
-    // Meaning is platform- and experiment-specific, and currently unread on
-    // both. See docs/contributing/perf-experiments.md.
+    // Library's internal `experiment` prop (PlainTextViewNativeComponent.ts): a
+    // generic on/off switch for whatever the perf suite is A/B testing;
+    // currently unread on both platforms. See docs/contributing/perf-experiments.md.
     key: 'experiment',
     section: 'Params',
     fp: 'exp',
@@ -1135,9 +1003,8 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
-    // How long a run waits before sampling memory. See DEFAULT_SETTLE_MS.
-    // Always in the fingerprint, since it changes whether a recorded memory
-    // number is trustworthy.
+    // See DEFAULT_SETTLE_MS. Always in the fingerprint since it affects whether
+    // a recorded memory number is trustworthy.
     key: 'settleMs',
     label: 'Settle Time',
     section: 'Params',
@@ -1156,9 +1023,9 @@ const ATTRIBUTES: AttrDef[] = [
     alwaysInFingerprint: true,
   },
   {
-    // Item count. Always in the fingerprint: other figures (bytes/view, commit
-    // time) scale by it, so differently-scaled runs would otherwise look
-    // comparable. See countFor and RunStats.count.
+    // Always in the fingerprint: other figures (bytes/view, commit time) scale
+    // by it, so differently-scaled runs would otherwise look comparable. See
+    // countFor and RunStats.count.
     key: 'count',
     label: 'Text Count',
     section: 'Params',
@@ -1175,14 +1042,12 @@ const ATTRIBUTES: AttrDef[] = [
   },
 ];
 
-// Derived, so adding an attribute above is the only edit: a hardcoded list is one
-// more place to forget, and forgetting means the new row renders nowhere.
-// Insertion-ordered, so the sheet's section order is ATTRIBUTES' own order.
+// Derived from ATTRIBUTES so adding a row is the only edit needed; a hardcoded
+// list risks a new row rendering nowhere. Insertion-ordered to match ATTRIBUTES.
 const SECTIONS = [...new Set(ATTRIBUTES.map((attr) => attr.section))];
 
-// Option index per attribute key. Anything missing falls back to the
-// attribute's default, so a config persisted before an attribute existed still
-// loads.
+// Value is the option index; a missing key falls back to the attribute's
+// default, so a config persisted before an attribute existed still loads.
 type AttrConfig = Record<string, number>;
 
 const DEFAULT_CONFIG: AttrConfig = {};
@@ -1202,10 +1067,9 @@ function selectedOption(config: AttrConfig, attr: AttrDef): AttrOption {
   return attr.options[selectedIndex(config, attr)] ?? { label: '(none)' };
 }
 
-// Named starting points for the rows below: the three shapes text actually
-// takes in an app, so a run can be quoted as "header at 1000 nodes" rather than
-// as a fingerprint someone has to decode. Matched by option *value* rather than
-// by label, so a relabelled chip cannot repoint a preset.
+// Named starting points so a run can be quoted as "header at 1000 nodes" rather
+// than a fingerprint to decode. Matched by option value, not label, so a
+// relabelled chip can't repoint a preset.
 type Preset = {
   name: string;
   values: Record<string, unknown>;
@@ -1233,17 +1097,16 @@ const PRESETS: Preset[] = [
       fontFamily: VARIABLE,
       color: COLOR.faint,
       lineHeight: 24,
-      // The one preset that also says how much text there is: a body is where
-      // wrapping, and so the measure pass, is the whole cost.
+      // Only preset that also sets content: a body is where wrapping (the
+      // measure pass) is the whole cost.
       content: WRAPPING_TEXT,
     },
   },
 ];
 
-// A preset is a whole look, not a patch: every styling row it does not name is
-// returned to its default, so pressing one twice from different states lands in
-// the same place. Params rows are left alone, since settle time and the
-// experiment switch are how a run is measured, not what it looks like.
+// A preset is a whole look, not a patch: unnamed rows reset to default so
+// pressing one twice from different states converges. Params rows (settle
+// time, experiment) are left alone — they affect measurement, not appearance.
 function presetConfig(config: AttrConfig, preset: Preset): AttrConfig {
   const next: AttrConfig = {};
   for (const attr of ATTRIBUTES) {
@@ -1281,18 +1144,16 @@ function countFor(config: AttrConfig): number {
   return selectedOption(config, COUNT_ATTR).value as number;
 }
 
-// What the header badge counts. Rows that always name themselves in the
-// fingerprint are excluded: they are visible on the line whatever their value,
-// so counting them too would double-report them.
+// Excludes always-fingerprinted rows: they're visible on the line regardless,
+// so counting them too would double-report.
 function countChangedProps(config: AttrConfig) {
   return ATTRIBUTES.filter(
     (attr) => !attr.alwaysInFingerprint && selectedIndex(config, attr) !== defaultIndex(attr)
   ).length;
 }
 
-// What deviates from the default, plus the rows that always name themselves. A
-// row left at an unset default contributes nothing, so the line stays a record
-// of what this run changed rather than a dump of every row.
+// Unset-default rows contribute nothing, so the line records only what this
+// run changed, plus the always-fingerprinted rows.
 function formatFingerprint(config: AttrConfig) {
   return ATTRIBUTES.filter(
     (attr) => attr.alwaysInFingerprint || selectedIndex(config, attr) !== defaultIndex(attr)
@@ -1304,15 +1165,12 @@ function formatFingerprint(config: AttrConfig) {
 type TextBuilder = (n: number) => string;
 
 type Applied = {
-  // PlainTextStyle, not TextStyle: the fontVariationSettings row writes a key RN
-  // has no style entry for. The two <Text> branches below cast it away again,
-  // which is exactly the gap the row is there to price.
+  // PlainTextStyle, not TextStyle: fontVariationSettings writes a key RN's
+  // TextStyle lacks. The <Text> branches cast it away — exactly the gap being priced.
   textStyle: PlainTextStyle;
   viewStyle: ViewStyle;
-  // numberOfLines, ellipsizeMode, allowFontScaling, maxFontSizeMultiplier:
-  // whichever of them are set. Kept as a bag rather than named fields so adding
-  // a row to ATTRIBUTES is the only edit needed, and so a prop that is `(none)`
-  // is genuinely absent from the element rather than passed as undefined.
+  // Bag, not named fields, so adding an ATTRIBUTES row is the only edit needed,
+  // and an unset `(none)` prop stays genuinely absent rather than `undefined`.
   props: Record<string, unknown>;
   text: TextBuilder;
 };
@@ -1334,14 +1192,12 @@ function buildApplied(config: AttrConfig, colorIndex: number, sizeBump: number):
     else text = option.value as TextBuilder;
   }
 
-  // A border with no color draws nothing on either platform. Indigo, the same
-  // accent the Features page draws its border rows in.
+  // No color = no visible border on either platform. Indigo matches Features' border rows.
   if (viewStyle.borderWidth != null) viewStyle.borderColor = COLOR.indigo;
 
-  // The two update scenarios, applied last so they win over the config. Color
-  // only overrides once the scenario has actually toggled it away from index
-  // 0: at rest, the config's own `color` row (or the native default) should
-  // reach the text unstomped.
+  // Applied last so update scenarios win over config. Color only overrides once
+  // toggled from index 0, so at rest the config's own color (or native default)
+  // reaches the text unstomped.
   if (colorIndex !== 0) textStyle.color = COLORS[colorIndex];
   textStyle.fontSize = (textStyle.fontSize as number) + sizeBump;
 
@@ -1394,9 +1250,8 @@ function PropsSheet({
             </View>
           </Section>
 
-          {/* The screens' own section furniture (tracked caps and a rule out to
-              the margin) so the sheet reads as a page of the same book rather
-              than as a settings dialog bolted to it. */}
+          {/* Reuses the screens' own section furniture so the sheet reads as
+              part of the same book, not a bolted-on settings dialog. */}
           {SECTIONS.map((section) => (
             <Section key={section} title={section} spacedRows>
               {ATTRIBUTES.filter((attr) => attr.section === section).map((attr) => {
@@ -1453,9 +1308,7 @@ function Chip({
 // Actions and readouts
 // ---------------------------------------------------------------------------
 
-// One action and the result it produced, as a unit. Grouping them means the
-// result cannot drift away from its own button when a sibling's result appears
-// or changes height.
+// Groups a button with its result so the result can't drift when a sibling's height changes.
 function Action({
   title,
   testID,
@@ -1478,12 +1331,8 @@ function Action({
   const isSettling = running === scenario;
   return (
     <View style={styles.action}>
-      {/*
-        Not RN's <Button>: it renders differently per platform (a bare text link
-        on iOS, a filled surface with its own grey disabled state and elevation
-        on Android), and its internal label padding is not adjustable, which the
-        card layout has to reason about. A Pressable is the same box everywhere.
-      */}
+      {/* Not RN's <Button>: it renders differently per platform and its label
+          padding isn't adjustable. Pressable is the same box everywhere. */}
       <Pressable
         onPress={onPress}
         disabled={disabled}
@@ -1496,13 +1345,9 @@ function Action({
           {title}
         </PlainText>
       </Pressable>
-      {/*
-        One readout instance per action, mounted for the life of the screen:
-        placeholder, profiling line and numbers are the same node with a
-        different string in it. This View sits in the same content container as
-        the mounted items, so a node added or removed inside it would be
-        tree churn charged to the run being measured.
-      */}
+      {/* Mounted for the life of the screen (placeholder/profiling/numbers are
+          the same node, different string): adding or removing a node here would
+          be tree churn charged to the run being measured. */}
       <PlainText
         style={[styles.readout, result != null && !isSettling ? styles.stats : styles.settling]}
       >
@@ -1516,12 +1361,10 @@ function Action({
   );
 }
 
-// One readout for every scenario: same lines, same order, same units, so a
-// mount number and a re-render number can be read against each other without
-// re-learning the format.
+// Same lines/order/units for every scenario, so numbers can be compared
+// without re-learning the format.
 function formatStats(stats: RunStats, scenario: Scenario) {
-  // The memory rows are withheld until the last window has closed: a partial
-  // figure reads exactly like a finished one.
+  // Withheld until the last window closes — a partial figure would read like a finished one.
   const memFinal = stats.memFinal;
   const memory =
     memFinal == null
@@ -1535,24 +1378,24 @@ function formatProfiling(phase: number) {
   return `Profiling memory${'.'.repeat(phase)}`;
 }
 
-// All three windows in one per-view figure, because that is what someone
-// optimizing their own app multiplies by their node count. The `incl.` term
-// breaks out the run's own commit, leaving the two re-renders as the remainder.
+// Per-view figure across all three windows, since that's what someone scales
+// by their own node count. `incl.` breaks out this run's own commit from the
+// two re-renders.
 function formatHeadline(stats: RunStats, memFinal: number, scenario: Scenario) {
   const own = perView(stats.memAfter - stats.memBefore, stats.count);
   const total = perView(memFinal - stats.memBefore, stats.count);
   return `${total} KB/view headline (${own} KB/view ${SCENARIO_TERMS[scenario]})`;
 }
 
-// Absolute rather than relative on purpose: a delta that looks impossible is
-// usually a footprint that was already somewhere unexpected when the run began.
+// Absolute, not relative: an impossible-looking delta usually means the
+// footprint was already off before the run began.
 function formatChain(stats: RunStats, memFinal: number) {
   const retained = formatSignedMB(memFinal - stats.mountBaseline);
   return `${formatMB(stats.memBefore)} MB → ${formatMB(memFinal)} MB (retained ${retained})`;
 }
 
-// Unitless: the headline carries the one unit for the whole row. `count` is
-// the run's own, not the live Text Count selection, see RunStats.count.
+// Unitless; headline carries the unit. `count` is this run's own, not the
+// live Text Count selection — see RunStats.count.
 function perView(bytes: number, count: number) {
   return `${bytes >= 0 ? '+' : '−'}${Math.abs(bytes / count / 1024).toFixed(1)}`;
 }
@@ -1574,32 +1417,25 @@ function formatTiming({
   commitMs: number;
 }) {
   const interaction = interactionMs == null ? '—' : `${interactionMs.toFixed(0)} ms`;
-  // Nested rather than side by side: the commit is the JS-thread slice of the
-  // interaction, so the gap between the two is what mounting on the UI thread
-  // cost.
+  // Nested, not side by side: commit is the JS-thread slice of interaction, so
+  // the gap is UI-thread mount cost.
   return `${interaction} interaction (incl. ${commitMs.toFixed(0)} ms commit)`;
 }
 
 const styles = StyleSheet.create({
-  // `screenStyles.container` with its `gap` dropped and `alignItems` set: the
-  // gap between sections is 40pt there, and this content container also holds
-  // the 1000 items, which would each take that gap in place of their own
-  // margin. Everything else (the margins, the top and bottom padding) is the
-  // same page as the other two screens, so the control block above the items
-  // sits on the same measure as a specimen row.
+  // screenStyles.container with `gap` dropped (this container also holds 1000
+  // items, which would each eat that 40pt gap) and alignItems added; margins
+  // and padding otherwise match the other screens.
   container: {
     flexGrow: 1,
-    // Keeps the items shrink-wrapped to their own measured width, on the left
-    // margin with the rest of the page, rather than stretched to the container.
+    // Shrink-wraps items to their own width on the left margin, not stretched.
     alignItems: 'flex-start',
     paddingTop: 28,
     paddingHorizontal: 18,
     paddingBottom: 48,
   },
-  // Carries the 40pt section gap the page style would have given it, so the
-  // items below are free to space themselves. Opaque, and closed with the same
-  // hairline the section rules use: below it the page stops being prose and
-  // becomes 1000 specimens.
+  // Carries the 40pt section gap so items below can space themselves freely.
+  // Closed with the section hairline: below it the page becomes specimens, not prose.
   controls: {
     alignSelf: 'stretch',
     backgroundColor: COLOR.paper,
@@ -1608,16 +1444,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLOR.line,
   },
-  // No card. The action's own 6pt against the section's row gap is what binds a
-  // result to the button that produced it (the same ratio the specimen rows
-  // use to bind a caption to its specimen), and the readout carries a wash of
-  // its own, so the pairing survives without a box drawn around it.
+  // No card: the action's 6pt gap (same ratio the specimen rows use for
+  // caption-to-specimen) binds result to button; the readout's own wash carries the pairing.
   action: {
     alignSelf: 'stretch',
     gap: 6,
   },
-  // Tinted rather than filled: five of these stacked in solid indigo drowned out
-  // the numbers, which are the thing being read.
+  // Tinted, not filled: five stacked in solid indigo drowned out the numbers.
   button: {
     alignSelf: 'stretch',
     alignItems: 'center',
@@ -1637,25 +1470,21 @@ const styles = StyleSheet.create({
   buttonLabelDisabled: {
     color: COLOR.disabled,
   },
-  // The error-banner shape from the Use Cases page: wash, the pigment as a left
-  // rule, and text in the same pigment rather than in ink.
-  // Now the box only, with the type in the two children: the tag and the note are
-  // separate nodes, so size, weight and colour move down to them.
+  // Examples' error-banner shape (wash, pigment left rule, text in pigment).
+  // Box only — the tag/note children carry their own size, weight, and color.
   build: {
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    // What the two spaces between the tag and the note used to be.
     columnGap: 7,
     overflow: 'hidden',
     paddingVertical: 9,
     paddingHorizontal: 12,
     borderLeftWidth: 4,
     borderRadius: 6,
-    // The banner is a note on the page rather than a section of it, so it does
-    // not take the page's top margin or a full 40pt section gap below it. The box
-    // carries its own padding, which reads as space of its own on both sides.
+    // A note on the page, not a section: skips the top margin/40pt section gap,
+    // using its own padding as spacing instead.
     marginTop: -8,
     marginBottom: -16,
   },
@@ -1691,15 +1520,13 @@ const styles = StyleSheet.create({
     fontFamily: MONO,
     color: COLOR.muted,
   },
-  // The box under a button, whatever it currently holds: the same wash the
-  // specimen rows put behind their type.
+  // Same wash the specimen rows use behind their type.
   readout: {
     fontSize: 12,
     lineHeight: 18,
     color: COLOR.inkSoft,
     // Centered under the button's own centered label, so the pair reads as one
-    // block. The page is left-aligned everywhere else, but these lines are a
-    // caption on the control above them rather than another row of prose.
+    // block (page is otherwise left-aligned).
     textAlign: 'center',
     backgroundColor: COLOR.wash,
     paddingVertical: 8,
@@ -1707,15 +1534,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden',
   },
-  // Tabular figures rather than a mono face: the readout is three short
-  // sentences of units and arrows, not a code listing, and mono made a block of
-  // it. Tabular is what the column of five actually needs: the digits still
-  // line up run to run, in the page's own face.
+  // Tabular, not mono: this is short sentences of units and arrows, not a code
+  // listing, but digits still need to line up run to run.
   stats: {
     fontVariant: ['tabular-nums'],
   },
-  // The waiting line is a sentence rather than a value, so it reads quiet and
-  // italic like a caption instead.
+  // Reads as a quiet, italic caption rather than a value.
   settling: {
     color: COLOR.muted,
     fontStyle: 'italic',
@@ -1725,14 +1549,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-  // marginTop rather than marginBottom, so the first item is also clear of the
-  // control block above it. Margin is a view style: Yoga lays it out around the
-  // self-measured text and it never reaches the text measurement itself.
+  // marginTop, not marginBottom, keeps the first item clear of the control
+  // block too. Margin is a view style: Yoga lays it out around the
+  // self-measured text without touching the measurement itself.
   listItem: {
     marginTop: 10,
-    // The ramp's rule grey: dark enough to read against the white page in the
-    // 10pt gaps, where the wash the specimen rows use only has to hold an edge
-    // rather than separate 1000 stacked items.
+    // Dark enough to read in the 10pt gaps against white, unlike the specimen
+    // wash which only needs to hold an edge.
     backgroundColor: COLOR.line,
   },
   headerButton: {
@@ -1751,10 +1574,8 @@ const styles = StyleSheet.create({
   headerButtonDisabled: {
     color: COLOR.disabled,
   },
-  // Unselected chips sit on the neutral ramp rather than in outlined indigo:
-  // there are up to seven in a row, and seven blue outlines read as seven things
-  // asking to be pressed. Only the chosen one takes the accent, filled, which is
-  // also the one piece of state the row carries.
+  // Neutral ramp, not outlined indigo: up to seven chips in a row would
+  // otherwise read as seven things asking to be pressed. Only the selected one takes the accent.
   chip: {
     paddingVertical: 7,
     paddingHorizontal: 10,
@@ -1790,20 +1611,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLOR.line,
   },
-  // The sheet is its own screen, so its title takes the register the nav bar
-  // titles take, a size down: this bar has two actions beside it.
+  // Register of nav bar titles, a size down — this bar has two actions beside it.
   sheetTitle: {
     fontSize: 17,
     fontWeight: '600',
     color: COLOR.ink,
   },
-  // Same indigo as the header buttons on every screen, which is what these are.
+  // Same indigo as the header buttons on every screen.
   sheetAction: {
     fontSize: 16,
     color: COLOR.indigo,
   },
-  // The page's margins, and the section gap the specimen pages use. The extra
-  // room at the bottom keeps the last row clear of Android's gesture bar.
+  // Page margins and section gap from the specimen pages; extra bottom padding
+  // clears Android's gesture bar.
   sheetBody: {
     paddingTop: 24,
     paddingBottom: 72,

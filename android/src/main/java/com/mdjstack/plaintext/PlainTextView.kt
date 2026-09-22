@@ -588,6 +588,19 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
+  // Mirrors <Text>: "normal"/"full" prefer the *_FAST variants on API 33+ (perf-only).
+  fun setAndroidHyphenationFrequency(androidHyphenationFrequency: String?) {
+    hyphenationFrequency = when (androidHyphenationFrequency) {
+      "normal" ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Layout.HYPHENATION_FREQUENCY_NORMAL_FAST
+        else Layout.HYPHENATION_FREQUENCY_NORMAL
+      "full" ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Layout.HYPHENATION_FREQUENCY_FULL_FAST
+        else Layout.HYPHENATION_FREQUENCY_FULL
+      else -> Layout.HYPHENATION_FREQUENCY_NONE
+    }
+  }
+
   // A text-size change touches no prop, so Fabric's diff never fires and
   // textSize/letterSpacing/lineHeight stay stale in pixels. Re-derive them here since
   // Android calls this on every attached view regardless of Fabric.

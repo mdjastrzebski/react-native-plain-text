@@ -2,21 +2,22 @@
 
 ## Supported props
 
-| Prop                    | RN `<Text>` compatible | Notes                                                                              |
-| ----------------------- | ---------------------- | ---------------------------------------------------------------------------------- |
-| `allowFontScaling`      | ✅                     |                                                                                    |
-| `children`              | 🟡                     | `string` only                                                                      |
-| `ellipsizeMode`         | ✅                     |                                                                                    |
-| `lineBreakStrategyIOS`  | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
-| `maxFontSizeMultiplier` | ✅                     |                                                                                    |
-| `nativeID`              | ✅                     |                                                                                    |
-| `id`                    | ✅                     |                                                                                    |
-| `numberOfLines`         | ✅                     |                                                                                    |
-| `onLayout`              | ✅                     |                                                                                    |
-| `testID`                | ✅                     |                                                                                    |
-| `text`                  | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
-| `textBreakStrategy`     | ✅                     | Android-only, like RN `<Text>`                                                     |
-| Accessibility props     | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
+| Prop                           | RN `<Text>` compatible | Notes                                                                              |
+| ------------------------------ | ---------------------- | ---------------------------------------------------------------------------------- |
+| `allowFontScaling`             | ✅                     |                                                                                    |
+| `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`                                                     |
+| `children`                     | 🟡                     | `string` only                                                                      |
+| `ellipsizeMode`                | ✅                     |                                                                                    |
+| `lineBreakStrategyIOS`         | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
+| `maxFontSizeMultiplier`        | ✅                     |                                                                                    |
+| `nativeID`                     | ✅                     |                                                                                    |
+| `id`                           | ✅                     |                                                                                    |
+| `numberOfLines`                | ✅                     |                                                                                    |
+| `onLayout`                     | ✅                     |                                                                                    |
+| `testID`                       | ✅                     |                                                                                    |
+| `text`                         | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
+| `textBreakStrategy`            | ✅                     | Android-only, like RN `<Text>`                                                     |
+| Accessibility props            | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
 
 RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
 
@@ -77,7 +78,6 @@ Things Plain Text does that RN `<Text>` does not:
 | `selectable` / `selectionColor` / `suppressHighlighting` / `userSelect` | To Do                  |
 | `textDecorationColor` / `textDecorationStyle`                           | To Do                  |
 | `dynamicTypeRamp`                                                       | To Do                  |
-| `android_hyphenationFrequency`                                          | To Do                  |
 
 Open an issue for the one you need. Real-world usage sets the priority.
 

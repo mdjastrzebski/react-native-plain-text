@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Text, View, type AccessibilityProps, type StyleProp, type ViewStyle } from 'react-native';
 import { PlainText, type PlainTextProps } from 'react-native-plain-text';
-import { RANDOM_USE_CASES, USE_CASE_GROUPS, type UseCaseItem } from '../screens/UseCasesScreen';
 import { COLOR } from '../theme';
+import { RANDOM_USE_CASES, USE_CASE_GROUPS, type UseCaseItem } from './useCases';
 import {
   SHORT_ROW_SIZE,
   styles,
@@ -87,7 +87,7 @@ function VrtBox({
   children: ReactNode;
 }) {
   return (
-    <View testID={testID} style={containerStyle}>
+    <View testID={`${testID}-box`} style={containerStyle}>
       {children}
     </View>
   );
