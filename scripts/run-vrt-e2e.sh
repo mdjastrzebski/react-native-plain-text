@@ -46,14 +46,30 @@ if [[ "$platform" == "ios" ]]; then
   # A fresh simulator gates the first custom-scheme deep link behind a one-time
   # "Open in app?" confirmation dialog. Until it is accepted, launching
   # "$deep_link" on a stopped app fails with "Simulator device failed to open".
-  # Disarm that dialog deterministically before the cold test exercises it: open
-  # the exact deep link, block until the dialog is actually present instead of
-  # blindly accepting it, accept it, then require the app to reach the deep-link
-  # screen so the "always open" choice is committed before we clear app state.
-  agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 60000 >/dev/null 2>&1 || true
-  agent_device alert wait 10000 >/dev/null 2>&1 \
-    && agent_device alert accept >/dev/null 2>&1 || true
-  agent_device wait "id=\"$capture_id\"" 20000 >/dev/null 2>&1 || fail \
+  # Disarm that dialog before the cold test exercises it, then require the app to
+  # reach the deep-link screen so the "always open" choice is committed before we
+  # clear app state.
+  #
+  # Each attempt arms the scheme with a cold open (that is what surfaces the
+  # dialog) but confirms over the warm foreground path, the same open every
+  # capture uses: once the app is running it delivers the URL through the 'url'
+  # event reliably, whereas the very first launch right after accepting the
+  # dialog can drop the URL and render every specimen instead of the requested
+  # one. The genuinely cold deep link is still exercised, with its own retries,
+  # by vrt-deep-link-cold.ad below. Retry so one slow or URL-dropping launch
+  # cannot hard-fail the job the way a single unguarded wait did.
+  armed=0
+  for _ in 1 2 3; do
+    agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 60000 >/dev/null 2>&1 || true
+    agent_device alert wait 10000 >/dev/null 2>&1 \
+      && agent_device alert accept >/dev/null 2>&1 || true
+    agent_device open "$VRT_APP_ID" "$deep_link" --foreground --timeout 60000 >/dev/null 2>&1 || true
+    if agent_device wait "id=\"$capture_id\"" 20000 >/dev/null 2>&1; then
+      armed=1
+      break
+    fi
+  done
+  [[ "$armed" == "1" ]] || fail \
     "iOS deep-link pre-warm never reached '$capture_id'; cold launch is not armed."
   agent_device close >/dev/null
 fi
