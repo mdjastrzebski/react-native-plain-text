@@ -7,6 +7,12 @@ import { COLOR } from '../theme';
 export function AccessibilitySection({ showText }: { showText: boolean }) {
   return (
     <Section title="Accessibility">
+      <TextItem label="no accessibilityLanguage" showText={showText} style={styles.a11yRow}>
+        Un&apos;espressione italiana pronunciata con la voce inglese di default
+      </TextItem>
+      <TextItem label='accessibilityLanguage="it"' showText={showText} style={styles.a11yRow} accessibilityProps={{ accessibilityLanguage: 'it' }}>
+        Un&apos;espressione italiana pronunciata con la voce italiana corretta
+      </TextItem>
       <TextItem
         label="testID"
         showText={showText}
