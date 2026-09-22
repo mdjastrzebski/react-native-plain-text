@@ -144,7 +144,9 @@ normalize_environment() {
     # CI renders the same AVD on x86_64 while Apple Silicon development hosts
     # use arm64. The rendering policy deliberately shares one baseline and
     # handles the small rasterization delta with Android's matching threshold.
-    sed -E '/^android_(architecture|system_image)=/d' "$input" > "$output"
+    # The adb serial is recorded too, but it names an emulator port rather than
+    # a rendering input, so it stays out of the equality check.
+    sed -E '/^android_(architecture|system_image|serial)=/d' "$input" > "$output"
   else
     cp -a "$input" "$output"
   fi

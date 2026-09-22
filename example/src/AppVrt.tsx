@@ -35,8 +35,8 @@ function VrtExamples({ testID }: { testID: string | null }) {
 
   let visibleExamples =
     testID == null ? examples : examples.filter((example) => example.testID === testID);
-  if (__DEV__) {
-    // only for development purposes
+  if (__DEV__ && testID == null) {
+    // only for development purposes; a requested specimen is always honored
     visibleExamples = examples[0] ? [examples[0]] : examples;
   }
 

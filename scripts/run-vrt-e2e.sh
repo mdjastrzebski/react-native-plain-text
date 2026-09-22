@@ -58,19 +58,38 @@ if [[ "$platform" == "ios" ]]; then
   # one. The genuinely cold deep link is still exercised, with its own retries,
   # by vrt-deep-link-cold.ad below. Retry so one slow or URL-dropping launch
   # cannot hard-fail the job the way a single unguarded wait did.
+  #
+  # Every attempt is logged rather than sent to /dev/null. This stage gates the
+  # whole job, so a run that exhausts the budget has to say what the simulator
+  # actually did on each attempt.
+  diagnostics_dir="$PROJECT_ROOT/build/vrt/agent-device/$platform/prewarm"
+  mkdir -p "$diagnostics_dir"
   armed=0
-  for _ in 1 2 3; do
-    agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 60000 >/dev/null 2>&1 || true
-    agent_device alert wait 10000 >/dev/null 2>&1 \
-      && agent_device alert accept >/dev/null 2>&1 || true
-    agent_device open "$VRT_APP_ID" "$deep_link" --foreground --timeout 60000 >/dev/null 2>&1 || true
-    if agent_device wait "id=\"$capture_id\"" 20000 >/dev/null 2>&1; then
-      armed=1
-      break
-    fi
+  for attempt in 1 2 3; do
+    attempt_log="$diagnostics_dir/attempt-$attempt.log"
+    {
+      printf '=== attempt %s: cold open\n' "$attempt"
+      agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 60000 ||
+        printf 'cold open exited %s\n' "$?"
+      printf '=== attempt %s: confirmation dialog\n' "$attempt"
+      if agent_device alert wait 10000; then
+        agent_device alert accept || printf 'alert accept exited %s\n' "$?"
+      else
+        printf 'no alert to accept\n'
+      fi
+      printf '=== attempt %s: warm open\n' "$attempt"
+      agent_device open "$VRT_APP_ID" "$deep_link" --foreground --timeout 60000 ||
+        printf 'warm open exited %s\n' "$?"
+      printf '=== attempt %s: wait for %s\n' "$attempt" "$capture_id"
+      agent_device wait "id=\"$capture_id\"" 20000
+    } > "$attempt_log" 2>&1 && armed=1 && break
+    printf 'Prewarm attempt %s did not reach %s; see %s\n' "$attempt" "$capture_id" "$attempt_log" >&2
   done
-  [[ "$armed" == "1" ]] || fail \
-    "iOS deep-link pre-warm never reached '$capture_id'; cold launch is not armed."
+  if [[ "$armed" != "1" ]]; then
+    tail -n 40 "$diagnostics_dir/attempt-3.log" >&2 || true
+    agent_device screenshot "$diagnostics_dir/failure.png" || true
+    fail "iOS deep-link pre-warm never reached '$capture_id'; cold launch is not armed. Logs: $diagnostics_dir"
+  fi
   agent_device close >/dev/null
 fi
 agent_device settings clear-app-state "$VRT_APP_ID"

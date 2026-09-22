@@ -73,7 +73,7 @@ while read -r capture_platform capture_id extra; do
     --crop-on "id=\"$capture_id\""
   )
   if [[ "$platform" == "ios" ]]; then
-    screenshot_command+=(--pixel-density 3)
+    screenshot_command+=(--pixel-density "$IOS_VRT_PIXEL_DENSITY")
   fi
   agent_device "${screenshot_command[@]}" >/dev/null
 done < "$manifest"

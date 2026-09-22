@@ -51,3 +51,7 @@ export IOS_RUNTIME_ID="${IOS_RUNTIME_ID:-com.apple.CoreSimulator.SimRuntime.iOS-
 export IOS_DEVICE_TYPE_ID="${IOS_DEVICE_TYPE_ID:-com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro}"
 export IOS_LANGUAGE="${IOS_LANGUAGE:-en}"
 export IOS_LOCALE="${IOS_LOCALE:-en_US}"
+# Screenshots are requested at the pinned device's scale (iPhone 16 Pro is @3x).
+# Baselines were captured at this density, so changing it invalidates every iOS
+# image rather than rescaling it.
+export IOS_VRT_PIXEL_DENSITY="${IOS_VRT_PIXEL_DENSITY:-3}"

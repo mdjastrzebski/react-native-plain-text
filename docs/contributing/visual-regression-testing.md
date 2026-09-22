@@ -104,13 +104,14 @@ match.
 
 This prevents comparisons across different simulator runtimes, device types,
 densities, font scales, locales, or other verified rendering inputs. Android's
-CPU architecture and architecture-specific system-image path are recorded but
-excluded from the equality check. CI renders the same AVD on x86_64 while Apple
-Silicon development hosts use arm64, so the two environments deliberately
-share a baseline. Android's matching threshold handles the small rasterization
-difference. When any enforced input differs, use the environment that produced
-the reviewed baseline or intentionally review and update the whole platform
-baseline.
+CPU architecture, architecture-specific system-image path, and adb serial are
+recorded but excluded from the equality check. CI renders the same AVD on x86_64
+while Apple Silicon development hosts use arm64, so the two environments
+deliberately share a baseline. Android's matching threshold handles the small
+rasterization difference. When any enforced input differs, use the environment that
+produced the reviewed baseline or intentionally review and update the whole
+platform baseline. Every mismatch is reported in one run, and the environment file
+records the observed values even when they do not match.
 
 ## Pixel comparison and reports
 
@@ -123,4 +124,19 @@ and can be overridden for investigation without changing the reviewed policy.
 Comparison writes a self-contained report under
 `build/vrt/report/<platform>/`. It includes actual, expected, and diff images,
 the HTML report, the JSON result, capture-set diagnostics, and both environment
-files. CI uploads the whole `build/vrt` directory even when comparison fails.
+files. CI uploads the captures, the report, the environment files, the device
+metadata, and the device logs even when comparison fails. The built app under
+`build/vrt/apps/` is cached, not uploaded.
+
+## Build fingerprint
+
+`scripts/vrt-app-state.sh fingerprint <platform>` hashes the tracked sources whose
+bytes reach the compiled app, per platform: the library's `src`, `cpp`, and platform
+tree, plus the example's bundle entry, its configs, sources, and assets. Generated
+trees (`example/android`, `example/ios`, `Podfile.lock`) are derived from those and
+are not hashed, so the value moves only when something a person changed moves it.
+
+The same value is written beside each built app and checked before install, capture,
+and comparison, and CI uses it as the cache key for that app. Cache hit and staleness
+check are therefore the same function: a cached app can never restore for one commit
+and be called stale by the next.

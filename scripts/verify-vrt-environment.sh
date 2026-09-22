@@ -13,12 +13,18 @@ fail() {
   exit 1
 }
 
+environment_mismatches=()
+
+# Records the observed value either way and collects mismatches: a device that is
+# being brought onto the VRT profile should report everything that is wrong in one
+# run, not one failure per attempt.
 expect() {
   local name="$1"
   local expected="$2"
   local actual="$3"
-  [[ "$actual" == "$expected" ]] || fail \
-    "$name must be '$expected', but is '${actual:-missing}'."
+  if [[ "$actual" != "$expected" ]]; then
+    environment_mismatches+=("$name must be '$expected', but is '${actual:-missing}'")
+  fi
   printf '%s=%s\n' "$name" "$actual"
 }
 
@@ -34,6 +40,16 @@ without_megabyte_suffix() {
   printf '%s' "${1%M}"
 }
 
+summarize_mismatches() {
+  [[ "${#environment_mismatches[@]}" -eq 0 ]] && return 0
+  printf 'Mismatched VRT environment settings:\n' >&2
+  local mismatch
+  for mismatch in "${environment_mismatches[@]}"; do
+    printf '  %s\n' "$mismatch" >&2
+  done
+  return 1
+}
+
 platform="${1:-}"
 metadata_dir="$PROJECT_ROOT/build/vrt/environment"
 mkdir -p "$metadata_dir"
@@ -42,6 +58,7 @@ mkdir -p "$metadata_dir"
   "agent-device is not installed. Run 'yarn'."
 : > "$metadata_dir/$platform.txt"
 
+{
 case "$platform" in
   android)
     android_sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
@@ -149,6 +166,8 @@ case "$platform" in
     expect ios_content_size large "$(xcrun simctl ui "$ios_udid" content_size)"
     ;;
   *) fail "Platform must be 'android' or 'ios'." ;;
-esac | tee -a "$metadata_dir/$platform.txt"
+esac
+summarize_mismatches
+} | tee -a "$metadata_dir/$platform.txt"
 
 printf 'VRT environment verified: %s\n' "$metadata_dir/$platform.txt"
