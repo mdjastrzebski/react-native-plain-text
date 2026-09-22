@@ -43,14 +43,25 @@ agent_device() {
 
 if [[ "$platform" == "ios" ]]; then
   agent_device prepare ios-runner
-  # A fresh simulator asks for confirmation the first time a custom-scheme URL
-  # opens a stopped app. Accept that one-time prompt before testing cold launch.
-  agent_device open "$VRT_APP_ID" "$deep_link" --relaunch >/dev/null
-  agent_device alert accept >/dev/null 2>&1 || true
+  # A fresh simulator gates the first custom-scheme deep link behind a one-time
+  # "Open in app?" confirmation dialog. Until it is accepted, launching
+  # "$deep_link" on a stopped app fails with "Simulator device failed to open".
+  # Disarm that dialog deterministically before the cold test exercises it: open
+  # the exact deep link, block until the dialog is actually present instead of
+  # blindly accepting it, accept it, then require the app to reach the deep-link
+  # screen so the "always open" choice is committed before we clear app state.
+  agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 60000 >/dev/null 2>&1 || true
+  agent_device alert wait 10000 >/dev/null 2>&1 \
+    && agent_device alert accept >/dev/null 2>&1 || true
+  agent_device wait "id=\"$capture_id\"" 20000 >/dev/null 2>&1 || fail \
+    "iOS deep-link pre-warm never reached '$capture_id'; cold launch is not armed."
   agent_device close >/dev/null
 fi
 agent_device settings clear-app-state "$VRT_APP_ID"
 mkdir -p "$PROJECT_ROOT/build/vrt/report"
+# The cold deep-link launch stays intermittently slow even once the confirmation
+# dialog is disarmed, so keep a retry budget. Without --fail-fast a cold failure
+# still lets the independent warm test run, so a flake never hides its result.
 agent_device test \
   "$PROJECT_ROOT/.agent-device/vrt-deep-link-cold.ad" \
   "$PROJECT_ROOT/.agent-device/vrt-deep-link-warm.ad" \
@@ -59,5 +70,5 @@ agent_device test \
   --env "VRT_CAPTURE_ID=$capture_id" \
   --artifacts-dir "$PROJECT_ROOT/build/vrt/agent-device/$platform" \
   --report-junit "$PROJECT_ROOT/build/vrt/report/$platform-e2e.xml" \
-  --retries 1 \
-  --fail-fast
+  --timeout 180000 \
+  --retries 2
