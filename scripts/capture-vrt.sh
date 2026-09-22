@@ -65,7 +65,7 @@ while read -r capture_platform capture_id extra; do
   screenshot_command=(
     screenshot
     "$actual_dir/$capture_id.png"
-    --crop-on 'id="vrt-safe-area"'
+    --crop-on "id=\"$capture_id\""
   )
   if [[ "$platform" == "ios" ]]; then
     screenshot_command+=(--pixel-density 3)
