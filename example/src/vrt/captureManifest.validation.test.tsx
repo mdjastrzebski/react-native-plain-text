@@ -15,7 +15,9 @@ function manifestFeatureIDs(platform: 'ios' | 'android') {
 
 function loadRenderedFeatureIDs(platform: 'ios' | 'android') {
   jest.resetModules();
-  jest.doMock('react-native-plain-text', () => ({ PlainText: 'PlainText' }));
+  jest.doMock('react-native-plain-text', () => ({ PlainText: 'PlainText' }), {
+    virtual: true,
+  });
   jest.doMock('react-native', () => ({
     Platform: {
       OS: platform,
