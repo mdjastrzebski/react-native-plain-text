@@ -40,6 +40,7 @@ import {
   FONT_WEIGHTS,
   FONT_FAMILY_RESOLUTION,
   type VrtGroup,
+  testIDSlug,
   vrtStyles,
 } from './utils';
 
@@ -51,6 +52,7 @@ type VrtTextProps = PlainTextProps & {
 };
 
 function VrtText({
+  testID,
   label: _label,
   showText: _showText,
   containerStyle,
@@ -59,24 +61,35 @@ function VrtText({
   ...props
 }: VrtTextProps) {
   return (
-    <PlainText {...props} {...accessibilityProps} style={[vrtStyles.base, containerStyle, style]} />
+    <PlainText
+      {...props}
+      {...accessibilityProps}
+      testID={accessibilityProps?.testID ?? `${testID}-text`}
+      style={[vrtStyles.base, containerStyle, style]}
+    />
   );
 }
 
 function VrtBox({
+  testID,
   label: _label,
   showText: _showText,
   overlay: _overlay,
   containerStyle,
   children,
 }: {
+  testID: string;
   label?: string;
   showText: boolean;
   overlay: ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
   children: ReactNode;
 }) {
-  return <View style={containerStyle}>{children}</View>;
+  return (
+    <View testID={testID} style={containerStyle}>
+      {children}
+    </View>
+  );
 }
 
 export const groups: VrtGroup[] = [
@@ -85,6 +98,7 @@ export const groups: VrtGroup[] = [
       <>
         {FONT_SIZES.map((fontSize) => (
           <VrtText
+            testID={`vrt-capture-features-font-size-${fontSize}`}
             key={fontSize}
             label={`${fontSize}pt`}
             showText={false}
@@ -105,7 +119,7 @@ export const groups: VrtGroup[] = [
   {
     children: (
       <>
-        <VrtText label="mixed" showText={false}>
+        <VrtText testID="vrt-capture-features-emoji-mixed" label="mixed" showText={false}>
           {EMOJI_SPECIMEN}
         </VrtText>
       </>
@@ -115,7 +129,13 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         {FONT_FAMILY_RESOLUTION.map(({ label, style }) => (
-          <VrtText key={label} label={label} showText={false} style={style}>
+          <VrtText
+            testID={`vrt-capture-features-font-family-${testIDSlug(label)}`}
+            key={label}
+            label={label}
+            showText={false}
+            style={style}
+          >
             {style.fontFamily}
           </VrtText>
         ))}
@@ -127,6 +147,7 @@ export const groups: VrtGroup[] = [
       <>
         {COLORS.map(({ label, color }) => (
           <VrtText
+            testID={`vrt-capture-features-color-${testIDSlug(label)}`}
             key={label}
             label={label}
             showText={false}
@@ -139,6 +160,7 @@ export const groups: VrtGroup[] = [
           </VrtText>
         ))}
         <VrtText
+          testID="vrt-capture-features-color-inverse"
           label="inverse"
           showText={false}
           style={{
@@ -157,6 +179,7 @@ export const groups: VrtGroup[] = [
       <>
         {FONT_WEIGHTS.map((fontWeight) => (
           <VrtText
+            testID={`vrt-capture-features-font-weight-${fontWeight}`}
             key={fontWeight}
             label={fontWeight}
             showText={false}
@@ -175,6 +198,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         <VrtText
+          testID="vrt-capture-features-font-style-italic"
           label="italic"
           showText={false}
           style={{
@@ -185,6 +209,7 @@ export const groups: VrtGroup[] = [
           {SPECIMEN}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-font-style-bold-italic"
           label="bold italic"
           showText={false}
           style={{
@@ -203,6 +228,7 @@ export const groups: VrtGroup[] = [
       <>
         {TEXT_ALIGNS.map((textAlign) => (
           <VrtText
+            testID={`vrt-capture-features-text-align-${textAlign}`}
             key={textAlign}
             label={textAlign}
             showText={false}
@@ -228,6 +254,7 @@ export const groups: VrtGroup[] = [
       <>
         {(['ltr', 'rtl'] as const).map((writingDirection) => (
           <VrtText
+            testID={`vrt-capture-features-writing-direction-${writingDirection}`}
             key={writingDirection}
             label={writingDirection}
             showText={false}
@@ -250,6 +277,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         <VrtBox
+          testID="vrt-capture-features-baseline-alignment"
           label="H / g / x, ruled at the baseline"
           showText={false}
           containerStyle={styles.baselineRow}
@@ -295,6 +323,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         <VrtText
+          testID="vrt-capture-features-multiline-wrap"
           label="wrap"
           showText={false}
           style={styles.body}
@@ -310,6 +339,7 @@ export const groups: VrtGroup[] = [
       <>
         {[1, 2, 3].map((numberOfLines) => (
           <VrtText
+            testID={`vrt-capture-features-number-of-lines-${numberOfLines}`}
             key={numberOfLines}
             label={`${numberOfLines} line${numberOfLines === 1 ? '' : 's'}`}
             showText={false}
@@ -327,6 +357,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         <VrtText
+          testID="vrt-capture-features-padding-none"
           label="none"
           showText={false}
           style={styles.body}
@@ -335,6 +366,7 @@ export const groups: VrtGroup[] = [
           {PARAGRAPH}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-padding-vertical-16"
           label="vertical 16"
           showText={false}
           style={[
@@ -348,6 +380,7 @@ export const groups: VrtGroup[] = [
           {PARAGRAPH}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-padding-top-28-bottom-4"
           label="top 28 bottom 4"
           showText={false}
           style={[
@@ -365,6 +398,7 @@ export const groups: VrtGroup[] = [
           this is where a padding-blind measure pass shows up as a clipped or
           overflowing last line. */}
         <VrtText
+          testID="vrt-capture-features-padding-all-20-wrapped"
           label="all 20, wrapped"
           showText={false}
           style={[
@@ -384,6 +418,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         <VrtText
+          testID="vrt-capture-features-borders-all-2"
           label="all 2"
           showText={false}
           style={[
@@ -398,6 +433,7 @@ export const groups: VrtGroup[] = [
           {PARAGRAPH}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-borders-radius-12"
           label="radius 12"
           showText={false}
           style={[
@@ -415,6 +451,7 @@ export const groups: VrtGroup[] = [
         {/* Per-side, the accent-bar shape: only the left edge is inset. The color
           comes from `bordered`, so the side widths are the only difference. */}
         <VrtText
+          testID="vrt-capture-features-borders-left-6"
           label="left 6"
           showText={false}
           style={[
@@ -429,6 +466,7 @@ export const groups: VrtGroup[] = [
           {PARAGRAPH}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-borders-dashed"
           label="dashed"
           showText={false}
           style={[
@@ -444,6 +482,7 @@ export const groups: VrtGroup[] = [
           {PARAGRAPH}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-borders-all-4-padding-12"
           label="all 4 + padding 12"
           showText={false}
           style={[
@@ -466,6 +505,7 @@ export const groups: VrtGroup[] = [
       <>
         {LINE_HEIGHTS.map((lineHeight) => (
           <VrtText
+            testID={`vrt-capture-features-line-height-${lineHeight}`}
             key={lineHeight}
             label={`${lineHeight} / 18`}
             showText={false}
@@ -489,6 +529,7 @@ export const groups: VrtGroup[] = [
           const lineHeight = Math.round(fontSize * 0.8);
           return (
             <VrtText
+              testID={`vrt-capture-features-line-height-clipping-${testIDSlug(font.label)}`}
               key={font.label}
               label={`${lineHeight} / ${fontSize}`}
               showText={false}
@@ -513,6 +554,7 @@ export const groups: VrtGroup[] = [
       <>
         {LETTER_SPACINGS.map((letterSpacing) => (
           <VrtText
+            testID={`vrt-capture-features-letter-spacing-${letterSpacing < 0 ? `negative-${Math.abs(letterSpacing)}` : letterSpacing}`}
             key={letterSpacing}
             label={`${letterSpacing > 0 ? '+' : ''}${letterSpacing}`}
             showText={false}
@@ -532,6 +574,7 @@ export const groups: VrtGroup[] = [
       <>
         {ELLIPSIZE_MODES.map((ellipsizeMode) => (
           <VrtText
+            testID={`vrt-capture-features-ellipsize-mode-${ellipsizeMode}`}
             key={ellipsizeMode}
             label={ellipsizeMode}
             showText={false}
@@ -552,6 +595,7 @@ export const groups: VrtGroup[] = [
       <>
         {(['none', 'push-out', 'standard'] as const).map((s) => (
           <VrtText
+            testID={`vrt-capture-features-line-break-strategy-${s}`}
             key={s}
             label={s}
             showText={false}
@@ -568,6 +612,7 @@ export const groups: VrtGroup[] = [
         ))}
         {(['none', 'hangul-word'] as const).map((s) => (
           <VrtText
+            testID={`vrt-capture-features-line-break-strategy-${s === 'none' ? 'korean-none' : s}`}
             key={s}
             label={s}
             showText={false}
@@ -591,6 +636,7 @@ export const groups: VrtGroup[] = [
       <>
         {TEXT_BREAK_STRATEGIES.map((textBreakStrategy) => (
           <VrtText
+            testID={`vrt-capture-features-text-break-strategy-${testIDSlug(textBreakStrategy)}`}
             key={textBreakStrategy}
             label={textBreakStrategy}
             showText={false}
@@ -613,6 +659,7 @@ export const groups: VrtGroup[] = [
       <>
         {TEXT_DECORATION_LINES.map((textDecorationLine) => (
           <VrtText
+            testID={`vrt-capture-features-text-decoration-line-${testIDSlug(textDecorationLine)}`}
             key={textDecorationLine}
             label={textDecorationLine}
             showText={false}
@@ -632,6 +679,7 @@ export const groups: VrtGroup[] = [
       <>
         {TEXT_SHADOWS.map(({ label, style }) => (
           <VrtText
+            testID={`vrt-capture-features-text-shadow-${testIDSlug(label)}`}
             key={label}
             label={label}
             showText={false}
@@ -651,6 +699,7 @@ export const groups: VrtGroup[] = [
       <>
         {TEXT_TRANSFORMS.map((textTransform) => (
           <VrtText
+            testID={`vrt-capture-features-text-transform-${textTransform}`}
             key={textTransform}
             label={textTransform}
             showText={false}
@@ -664,6 +713,7 @@ export const groups: VrtGroup[] = [
         ))}
         {/* capitalize's two gotchas: a digit-led word and a contraction. */}
         <VrtText
+          testID="vrt-capture-features-text-transform-capitalize-digit-led-word"
           label="capitalize, digit-led word"
           showText={false}
           style={{
@@ -674,6 +724,7 @@ export const groups: VrtGroup[] = [
           {TEXT_TRANSFORM_ORDINAL_SPECIMEN}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-text-transform-capitalize-contraction"
           label="capitalize, contraction"
           showText={false}
           style={{
@@ -690,6 +741,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         <VrtText
+          testID="vrt-capture-features-font-scaling-default"
           label="default"
           showText={false}
           style={{
@@ -699,6 +751,7 @@ export const groups: VrtGroup[] = [
           {SPECIMEN}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-font-scaling-disabled"
           label="disabled"
           showText={false}
           style={{
@@ -709,6 +762,7 @@ export const groups: VrtGroup[] = [
           {SPECIMEN}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-font-scaling-max-1-5x"
           label="max 1.5x"
           showText={false}
           style={{
@@ -725,7 +779,12 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         {/* Baseline to compare every row below against. */}
-        <VrtText label="default" showText={false} style={fontVariantRow}>
+        <VrtText
+          testID="vrt-capture-features-font-variant-system-default"
+          label="default"
+          showText={false}
+          style={fontVariantRow}
+        >
           {FONT_VARIANT_SPECIMEN}
         </VrtText>
         {/* Figure spacing first: the pair of values people actually reach for.
@@ -737,6 +796,7 @@ export const groups: VrtGroup[] = [
           else. */}
         {TABULAR_FIGURE_ROWS.map((digits) => (
           <VrtText
+            testID={`vrt-capture-features-font-variant-tabular-nums-${digits}`}
             key={`tabular-${digits}`}
             label="tabular-nums"
             showText={false}
@@ -750,6 +810,7 @@ export const groups: VrtGroup[] = [
         ))}
         {TABULAR_FIGURE_ROWS.map((digits) => (
           <VrtText
+            testID={`vrt-capture-features-font-variant-proportional-nums-${digits}`}
             key={`proportional-${digits}`}
             label="proportional-nums"
             showText={false}
@@ -764,11 +825,17 @@ export const groups: VrtGroup[] = [
         {/* Second baseline, in the serif the feature rows below use, so they have
           something to differ from. On Android it is the same font as the first
           baseline: that platform stays on the system font throughout. */}
-        <VrtText label="default" showText={false} style={fontVariantFeatureRow}>
+        <VrtText
+          testID="vrt-capture-features-font-variant-feature-font-default"
+          label="default"
+          showText={false}
+          style={fontVariantFeatureRow}
+        >
           {FONT_VARIANT_SPECIMEN}
         </VrtText>
         {FONT_VARIANTS.map(({ label, fontVariant }) => (
           <VrtText
+            testID={`vrt-capture-features-font-variant-${testIDSlug(label)}`}
             key={label}
             label={label}
             showText={false}
@@ -788,6 +855,7 @@ export const groups: VrtGroup[] = [
       <>
         {FONT_VARIATION_SETTINGS.map(({ label, fontVariationSettings }) => (
           <VrtText
+            testID={`vrt-capture-features-font-variation-settings-${testIDSlug(label)}`}
             key={label}
             label={label}
             showText={false}
@@ -807,6 +875,7 @@ export const groups: VrtGroup[] = [
       <>
         {VERTICAL_ALIGNS.map((verticalAlign) => (
           <VrtText
+            testID={`vrt-capture-features-vertical-align-${verticalAlign}`}
             key={verticalAlign}
             label={`verticalAlign: ${verticalAlign}`}
             showText={false}
@@ -826,6 +895,7 @@ export const groups: VrtGroup[] = [
           textAlignVertical's own name for what 'middle' means to verticalAlign. */}
         {TEXT_ALIGN_VERTICALS.map((textAlignVertical) => (
           <VrtText
+            testID={`vrt-capture-features-text-align-vertical-${textAlignVertical}`}
             key={textAlignVertical}
             label={`textAlignVertical: ${textAlignVertical}`}
             showText={false}
@@ -844,6 +914,7 @@ export const groups: VrtGroup[] = [
           Text.js), so this should render identically to the "verticalAlign:
           bottom" row above despite asking textAlignVertical for the opposite. */}
         <VrtText
+          testID="vrt-capture-features-vertical-align-overrides-text-align-vertical"
           label="both set: textAlignVertical top, verticalAlign bottom"
           showText={false}
           style={{
@@ -865,31 +936,61 @@ export const groups: VrtGroup[] = [
       <>
         {/* Control. Nothing to detect: if this one disagrees, the harness is
           wrong, not the wrap logic. */}
-        <VrtText label="control" showText={false} style={styles.wrapProbe}>
+        <VrtText
+          testID="vrt-capture-features-wrap-detection-control"
+          label="control"
+          showText={false}
+          style={styles.wrapProbe}
+        >
           {'One short line   '}
         </VrtText>
         {/* Hard breaks, nothing wraps → hug the longest line. */}
-        <VrtText label="hard breaks" showText={false} style={styles.wrapProbe}>
+        <VrtText
+          testID="vrt-capture-features-wrap-detection-hard-breaks"
+          label="hard breaks"
+          showText={false}
+          style={styles.wrapProbe}
+        >
           {'Short\nthis line is longest   '}
         </VrtText>
         {/* Same with more paragraphs, and with the longest one in the middle:
           the width comes from a max over paragraphs, so order shouldn't
           matter. */}
-        <VrtText label="longest in middle" showText={false} style={styles.wrapProbe}>
+        <VrtText
+          testID="vrt-capture-features-wrap-detection-longest-in-middle"
+          label="longest in middle"
+          showText={false}
+          style={styles.wrapProbe}
+        >
           {'A\nBB\nthis line is longest  \nCCC'}
         </VrtText>
         {/* Same paragraphs, longest one last: the width comes from a max over
           paragraphs, so where it sits shouldn't matter. */}
-        <VrtText label="longest last" showText={false} style={styles.wrapProbe}>
+        <VrtText
+          testID="vrt-capture-features-wrap-detection-longest-last"
+          label="longest last"
+          showText={false}
+          style={styles.wrapProbe}
+        >
           {'A\nBB\nCCC\nthis line is longest  '}
         </VrtText>
         {/* No hard break, too long to fit → full constraint width. */}
-        <VrtText label="soft wrap only" showText={false} style={styles.wrapProbe}>
+        <VrtText
+          testID="vrt-capture-features-wrap-detection-soft-wrap-only"
+          label="soft wrap only"
+          showText={false}
+          style={styles.wrapProbe}
+        >
           {'No breaks here, but this sentence is long enough that it has to ' +
             'wrap onto several lines.'}
         </VrtText>
         {/* Both a hard break and a soft wrap → full constraint width. */}
-        <VrtText label="break then wrap" showText={false} style={styles.wrapProbe}>
+        <VrtText
+          testID="vrt-capture-features-wrap-detection-break-then-wrap"
+          label="break then wrap"
+          showText={false}
+          style={styles.wrapProbe}
+        >
           {'Break then wrap:\nthis second line is long enough that it also ' + 'has to wrap.'}
         </VrtText>
       </>
@@ -899,6 +1000,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         <VrtText
+          testID="vrt-capture-features-accessibility-test-id"
           label="testID"
           showText={false}
           style={styles.a11yRow}
@@ -909,6 +1011,7 @@ export const groups: VrtGroup[] = [
           &quot;plain-text-demo&quot;, findable in the native tree
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-accessibility-label"
           label="label"
           showText={false}
           style={styles.a11yRow}
@@ -919,6 +1022,7 @@ export const groups: VrtGroup[] = [
           Overrides the spoken text
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-accessibility-role"
           label="role"
           showText={false}
           style={styles.a11yRow}
@@ -929,6 +1033,7 @@ export const groups: VrtGroup[] = [
           &quot;header&quot;
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-accessibility-role-hint"
           label="role + hint"
           showText={false}
           style={styles.a11yRow}
@@ -940,6 +1045,7 @@ export const groups: VrtGroup[] = [
           &quot;link&quot;, hinted
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-accessibility-state"
           label="state"
           showText={false}
           style={styles.a11yRow}
@@ -952,6 +1058,7 @@ export const groups: VrtGroup[] = [
           disabled
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-accessibility-hidden"
           label="hidden"
           showText={false}
           style={styles.a11yRow}
@@ -970,6 +1077,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         <VrtText
+          testID="vrt-capture-features-font-padding-default-padding-4"
           label="default, padding 4"
           showText={false}
           style={[
@@ -983,6 +1091,7 @@ export const groups: VrtGroup[] = [
           {PARAGRAPH}
         </VrtText>
         <VrtText
+          testID="vrt-capture-features-font-padding-disabled-padding-4"
           label="includeFontPadding false, padding 4"
           showText={false}
           style={[

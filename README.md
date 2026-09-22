@@ -154,7 +154,7 @@ Open a specimen using its deep link:
 ```sh
 xcrun simctl openurl \
   209AB9A4-2731-42F5-99A3-775A17889C9D \
-  'exp+react-native-plain-text-example://vrt?testID=vrt-features-48pt'
+  'exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48'
 ```
 
 ### Android
@@ -174,7 +174,7 @@ adb shell 'am force-stop plaintext.example'
 adb shell 'am start -W \
   -a android.intent.action.VIEW \
   -c android.intent.category.BROWSABLE \
-  -d "exp+react-native-plain-text-example://vrt?testID=vrt-features-48pt" \
+  -d "exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48" \
   -p plaintext.example'
 ```
 
