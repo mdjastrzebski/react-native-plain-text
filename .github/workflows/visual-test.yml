@@ -121,6 +121,7 @@ jobs:
             yarn vrt android install
             yarn vrt android e2e
             yarn vrt android capture
+            yarn vrt android compare
 
       - name: Save Android build
         if: steps.android-build-cache.outputs.cache-hit != 'true'
@@ -224,6 +225,7 @@ jobs:
           yarn vrt ios install
           yarn vrt ios e2e
           yarn vrt ios capture
+          yarn vrt ios compare
 
       - name: Upload iOS VRT results
         if: always()

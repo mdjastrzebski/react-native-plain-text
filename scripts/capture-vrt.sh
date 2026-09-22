@@ -37,6 +37,11 @@ case "$platform" in
   *) fail "Platform must be 'android' or 'ios'." ;;
 esac
 
+# Refresh the metadata that comparison binds to these captures. Keeping this in
+# the capture stage makes a standalone capture as trustworthy as the full VRT
+# workflow, without making the cheap compare stage require a running device.
+"$SCRIPT_DIR/verify-vrt-environment.sh" "$platform" >/dev/null
+
 agent_device() {
   AGENT_DEVICE_SESSION="$session_name" "$agent_device_bin" "$@" "${target_args[@]}"
 }

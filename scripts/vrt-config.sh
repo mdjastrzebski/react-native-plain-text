@@ -6,6 +6,13 @@ export VRT_APP_SCHEME="${VRT_APP_SCHEME:-exp+react-native-plain-text-example}"
 # iOS ONLY
 export VRT_RESET_DEVICE="${VRT_RESET_DEVICE:-0}"
 
+# Pixel-level comparison policy. matchingThreshold controls how different a
+# pixel must be to count as changed. thresholdPixel controls how many changed
+# pixels the suite permits after that classification.
+export ANDROID_VRT_MATCHING_THRESHOLD="${ANDROID_VRT_MATCHING_THRESHOLD:-0.02}"
+export IOS_VRT_MATCHING_THRESHOLD="${IOS_VRT_MATCHING_THRESHOLD:-0}"
+export VRT_THRESHOLD_PIXEL="${VRT_THRESHOLD_PIXEL:-0}"
+
 export ANDROID_AVD_NAME="${ANDROID_AVD_NAME:-plaintext_vrt_api36_pixel9}"
 export ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-36}"
 export ANDROID_SYSTEM_IMAGE_TARGET="${ANDROID_SYSTEM_IMAGE_TARGET:-google_apis_playstore}"

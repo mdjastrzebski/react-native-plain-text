@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 usage() {
-  printf 'Usage: yarn vrt <android|ios> [all|setup|build|install|verify|e2e|capture]\n'
+  printf 'Usage: yarn vrt <android|ios> [all|setup|build|install|verify|e2e|capture|compare|update]\n'
 }
 
 fail() {
@@ -23,7 +23,7 @@ if [[ "$platform" == "-h" || "$platform" == "--help" ]]; then
   exit 0
 fi
 case "$platform" in android | ios) ;; *) fail "Platform must be 'android' or 'ios'." ;; esac
-case "$stage" in all | setup | build | install | verify | e2e | capture) ;; *) fail "Unknown stage '$stage'." ;; esac
+case "$stage" in all | setup | build | install | verify | e2e | capture | compare | update) ;; *) fail "Unknown stage '$stage'." ;; esac
 
 run_setup() {
   case "$platform" in
@@ -37,6 +37,8 @@ run_install() { "$SCRIPT_DIR/install-vrt-app.sh" "$platform"; }
 run_verify() { "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"; }
 run_e2e() { "$SCRIPT_DIR/run-vrt-e2e.sh" "$platform"; }
 run_capture() { "$SCRIPT_DIR/capture-vrt.sh" "$platform"; }
+run_compare() { "$SCRIPT_DIR/compare-vrt.sh" "$platform"; }
+run_update() { "$SCRIPT_DIR/compare-vrt.sh" "$platform" update; }
 
 cd "$PROJECT_ROOT"
 case "$stage" in
@@ -46,6 +48,7 @@ case "$stage" in
     run_install
     run_e2e
     run_capture
+    run_compare
     ;;
   setup) run_setup ;;
   build) run_build ;;
@@ -53,4 +56,6 @@ case "$stage" in
   verify) run_verify ;;
   e2e) run_e2e ;;
   capture) run_capture ;;
+  compare) run_compare ;;
+  update) run_update ;;
 esac

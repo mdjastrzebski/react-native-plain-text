@@ -30,8 +30,9 @@ Run from the repo root:
 | `yarn test`                                 | Jest (`yarn test path -t "name"` for one case)         |
 | `yarn test:cpp`                             | C++ unit tests in `tests/cpp/`, no framework           |
 | `yarn test:android`                         | Kotlin unit tests in `android/src/test/` (Robolectric) |
-| `yarn vrt android` / `yarn vrt ios`         | Build, install, and capture the VRT suite              |
+| `yarn vrt android` / `yarn vrt ios`         | Build, install, capture, and compare the VRT suite     |
 | `yarn vrt <platform> <stage>`               | Run a VRT stage such as `setup`, `verify`, or `e2e`    |
+| `yarn vrt <platform> update`                | Replace that platform's reviewed VRT baselines         |
 | `yarn example ios` / `yarn example android` | Build & run the example app                            |
 | `yarn example start`                        | Metro only (no native rebuild)                         |
 | `yarn prepare`                              | Build the shippable library into `lib/`                |
@@ -131,6 +132,7 @@ below.
 | Touching a font/measurement cache, or comparing caching to RN's               | [caching.md](docs/contributing/caching.md): what the library caches, what RN's `<Text>` caches, and why the two designs differ                |
 | Asked for an A/B perf test on the same release build                          | [perf-experiments.md](docs/contributing/perf-experiments.md): the `experiment` prop: how to wire, drive from the perf suite, and conclude one |
 | Comparing `PlainText` to RN's `<Text>`, or explaining why this library exists | [rn-text-history.md](docs/contributing/rn-text-history.md): how RN core measures text, and why it never used `UILabel`                        |
+| Capturing, comparing, or updating visual baselines                            | [visual-regression-testing.md](docs/contributing/visual-regression-testing.md): stages, baseline policy, reports, and environment checks      |
 | Asked about `adjustsFontSizeToFit` / `minimumFontScale`                       | [adjusts-font-size-to-fit.md](docs/contributing/adjusts-font-size-to-fit.md): why it needs the final frame, and the two shapes it could take  |
 | Looking for prior art on what RN `<Text>` bugs/requests people care about     | [rn-text-issues.md](docs/contributing/rn-text-issues.md): ranked survey of RN `<Text>` issues/PRs by reactions, with nested-text ones flagged |
 
