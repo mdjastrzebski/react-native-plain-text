@@ -2,8 +2,8 @@
 
 The visual regression suite renders each entry in
 `.agent-device/vrt-captures.txt` by itself, captures the specimen bounds, and
-compares the resulting PNG with a reviewed baseline committed in this
-repository.
+compares the resulting PNG with a reviewed baseline from the pinned `baselines`
+submodule.
 
 ## Commands
 
@@ -30,9 +30,34 @@ yarn vrt ios compare
 
 ## Baselines
 
-Reviewed images live in `baselines/android/` and `baselines/ios/`. Each
-directory also contains `environment.txt`, which records the rendering
-environment that produced those images.
+Reviewed images live in the `baselines` submodule:
+[react-native-plain-text-artifactory](https://github.com/troZee/react-native-plain-text-artifactory)
+checked out at the commit this repository pins. `baselines/android/` and
+`baselines/ios/` hold one PNG per capture id, and each directory also contains
+`environment.txt`, which records the rendering environment that produced those
+images.
+
+The submodule is empty after a plain `git clone`, and no VRT stage fetches it
+for you:
+
+```sh
+git submodule update --init baselines
+```
+
+### Pinning
+
+This repository records exactly one commit of the baselines repository, and that
+commit is the only baseline source. CI checks it out with `git submodule update
+--init baselines` and never with `--remote`, so the same application commit
+always compares against the same images. A run cannot pass one day and fail the
+next because the baselines repository happened to move.
+
+Comparison scripts only read the checked out tree. Neither `compare` nor
+`update` runs `git submodule update`, `git checkout`, or any other command that
+changes Git state, so a result always describes the pinned commit rather than
+whatever was current when the script started.
+
+### Updating
 
 A missing or incomplete baseline is an error. Normal comparison never creates
 or changes baselines. After reviewing a complete capture, replace one
@@ -46,9 +71,19 @@ Review every changed PNG and `environment.txt` before committing them. The
 update command requires a complete actual capture set and verified environment
 metadata. It refuses to turn a partial capture into a baseline.
 
-Baselines currently live in this repository. Keeping the comparison command
-independent of their storage location leaves open a later move to external
-artifact storage.
+`update` rewrites the checked out `baselines/<platform>/` directory and stops
+there. Review, commit, and merge those images in the baselines repository, then
+record the resulting commit here:
+
+```sh
+git -C baselines add --all && git -C baselines commit -m 'Reviewed iOS baselines'
+# push and merge the baselines pull request, then:
+git add baselines
+```
+
+The pointer bump is the reviewable baseline change in the library pull request.
+The image diff itself is reviewed in the baselines repository pull request, and
+the two should cross-reference each other.
 
 ## Capture-set validation
 

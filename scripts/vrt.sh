@@ -41,6 +41,15 @@ run_compare() { "$SCRIPT_DIR/compare-vrt.sh" "$platform"; }
 run_update() { "$SCRIPT_DIR/compare-vrt.sh" "$platform" update; }
 
 cd "$PROJECT_ROOT"
+
+# Fail before the expensive stages instead of at the comparison they lead to.
+# Nothing here checks the submodule out: the pinned commit has to be chosen by a
+# person, not by a script.
+if [[ "$stage" == all || "$stage" == compare || "$stage" == update ]]; then
+  [[ -e baselines/.git ]] || fail \
+    "The baselines submodule is not checked out. Run 'git submodule update --init baselines'."
+fi
+
 case "$stage" in
   all)
     run_setup

@@ -40,6 +40,13 @@ cd "$PROJECT_ROOT"
 [[ -f "$current_environment" ]] || fail \
   "Environment metadata not found. Run 'yarn vrt $platform verify' first."
 
+# Baselines live in the `baselines` submodule, at the commit this repository
+# pins. This script only reads that working tree: it never runs `git submodule
+# update` or touches any other Git state, so a comparison always reflects the
+# reviewed commit instead of whatever the baseline branch tip happens to be.
+[[ -e baselines/.git ]] || fail \
+  "The baselines submodule is not checked out. Run 'git submodule update --init baselines' to materialize the pinned commit."
+
 yarn del-cli "$report_dir"
 mkdir -p "$report_dir"
 
@@ -114,8 +121,8 @@ if [[ "$mode" == "update" ]]; then
     cp -a "$actual_dir/$image" "$baseline_dir/$image"
   done < "$expected_list"
   cp -a "$current_environment" "$baseline_environment"
-  printf 'Updated reviewed %s baselines in %s. Review and commit these files.\n' \
-    "$platform" "$baseline_dir"
+  printf 'Updated reviewed %s baselines in %s.\n' "$platform" "$baseline_dir"
+  printf 'Commit and merge them in the baselines repository, then record the new submodule commit with "git add baselines".\n'
   exit 0
 fi
 

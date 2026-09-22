@@ -34,6 +34,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
+      # The baselines commit recorded by this repository is the only baseline
+      # source. Never pass --remote: that would resolve the submodule to whatever
+      # its branch tip happens to be, so the same commit could pass one day and
+      # fail the next. Baseline changes arrive as an explicit pointer bump.
+      - name: Checkout pinned VRT baselines
+        run: git submodule update --init baselines
+
       - name: Setup
         uses: ./.github/actions/setup
 
@@ -155,6 +162,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      # The baselines commit recorded by this repository is the only baseline
+      # source. Never pass --remote: that would resolve the submodule to whatever
+      # its branch tip happens to be, so the same commit could pass one day and
+      # fail the next. Baseline changes arrive as an explicit pointer bump.
+      - name: Checkout pinned VRT baselines
+        run: git submodule update --init baselines
 
       - name: Setup
         uses: ./.github/actions/setup

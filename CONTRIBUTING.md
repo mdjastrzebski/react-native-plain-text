@@ -41,6 +41,12 @@ Run from the repo root:
 
 Install dependencies with `yarn`.
 
+Two submodules are empty after a plain `git clone` and are populated on demand:
+`references/react-native` (RN sources, reference only) and `baselines`
+(reviewed visual regression images, pinned to an exact commit of
+[react-native-plain-text-artifactory](https://github.com/troZee/react-native-plain-text-artifactory)).
+Populate either with `git submodule update --init <path>`.
+
 The example app uses the local copy of the library. Changes to the library's
 JavaScript are picked up on reload, native changes need a rebuild.
 
@@ -132,7 +138,7 @@ below.
 | Touching a font/measurement cache, or comparing caching to RN's               | [caching.md](docs/contributing/caching.md): what the library caches, what RN's `<Text>` caches, and why the two designs differ                |
 | Asked for an A/B perf test on the same release build                          | [perf-experiments.md](docs/contributing/perf-experiments.md): the `experiment` prop: how to wire, drive from the perf suite, and conclude one |
 | Comparing `PlainText` to RN's `<Text>`, or explaining why this library exists | [rn-text-history.md](docs/contributing/rn-text-history.md): how RN core measures text, and why it never used `UILabel`                        |
-| Capturing, comparing, or updating visual baselines                            | [visual-regression-testing.md](docs/contributing/visual-regression-testing.md): stages, baseline policy, reports, and environment checks      |
+| Capturing, comparing, or updating visual baselines                            | [visual-regression-testing.md](docs/contributing/visual-regression-testing.md): stages, the pinned baselines submodule, reports, environment  |
 | Asked about `adjustsFontSizeToFit` / `minimumFontScale`                       | [adjusts-font-size-to-fit.md](docs/contributing/adjusts-font-size-to-fit.md): why it needs the final frame, and the two shapes it could take  |
 | Looking for prior art on what RN `<Text>` bugs/requests people care about     | [rn-text-issues.md](docs/contributing/rn-text-issues.md): ranked survey of RN `<Text>` issues/PRs by reactions, with nested-text ones flagged |
 
