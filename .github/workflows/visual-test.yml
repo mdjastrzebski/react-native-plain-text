@@ -17,6 +17,10 @@ permissions:
 
 env:
   VRT_ENABLED: '1'
+  # The VRT app drives its specimen switching through Appduct, so the Release build
+  # must carry Appduct's native module and JS. Read at autolinking/pod-install time and
+  # at bundle time; set here so every step (prebuild, pod install, build) agrees.
+  APPDUCT_ENABLED: '1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -277,6 +281,11 @@ jobs:
       - name: Build iOS VRT app
         if: steps.ios-build-cache.outputs.cache-hit != 'true'
         run: yarn vrt ios build
+
+      # Capture drives specimens through Appduct, so the artifact must carry it. Assert
+      # against the built app bundle (a cache hit included) rather than APPDUCT_ENABLED.
+      - name: Verify Appduct is in the iOS VRT artifact
+        run: ./node_modules/.bin/appduct doctor build/vrt/apps/ios/PlainTextExample.app --assert-present
 
       # See the Android job: saving survives a failing capture, but never publishes
       # a cache that would restore as a hit with no app inside it.

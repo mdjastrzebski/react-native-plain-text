@@ -20,7 +20,7 @@ case "$platform" in
     [[ -f "$serial_file" ]] || fail "Run 'yarn vrt android setup' first."
     android_serial="$(<"$serial_file")"
 
-    VRT_ENABLED=1 ANDROID_SERIAL="$android_serial" \
+    VRT_ENABLED=1 APPDUCT_ENABLED=1 ANDROID_SERIAL="$android_serial" \
       yarn android:release --device "$ANDROID_AVD_NAME" --no-bundler
 
     source_apk="$PROJECT_ROOT/example/android/app/build/outputs/apk/release/app-release.apk"
@@ -36,7 +36,16 @@ case "$platform" in
     target_app="$PROJECT_ROOT/build/vrt/apps/ios/PlainTextExample.app"
     yarn del-cli "$expo_output" "$target_app"
 
-    VRT_ENABLED=1 yarn ios:release --device generic --no-bundler --output "$expo_output"
+    # Appduct's iOS inclusion is an autolinking decision made when `pod install` runs, keyed
+    # to APPDUCT_ENABLED — and `expo run:ios` does not reliably pass that variable through to
+    # the `pod install` it invokes internally, so a naive release build silently drops Appduct.
+    # Resolve/autolink and install the pods explicitly, with the variable set.
+    if [[ ! -d "$PROJECT_ROOT/example/ios" ]]; then
+      VRT_ENABLED=1 APPDUCT_ENABLED=1 yarn example expo prebuild --platform ios --no-install
+    fi
+    (cd "$PROJECT_ROOT/example/ios" && APPDUCT_ENABLED=1 pod install)
+
+    VRT_ENABLED=1 APPDUCT_ENABLED=1 yarn ios:release --device generic --no-bundler --output "$expo_output"
 
     mapfile_command="mapfile"
     if ! command -v "$mapfile_command" >/dev/null 2>&1; then

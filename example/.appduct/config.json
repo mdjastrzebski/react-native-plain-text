@@ -1,0 +1,7 @@
+{
+  "scheme": "exp+react-native-plain-text-example",
+  "appId": {
+    "ios": "plaintext.example",
+    "android": "plaintext.example"
+  }
+}

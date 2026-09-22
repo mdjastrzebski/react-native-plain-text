@@ -1,6 +1,0 @@
-open "${VRT_APP_ID}" --relaunch
-wait "id=\"vrt-screen\"" 15000
-open "${VRT_APP_ID}" "${VRT_DEEP_LINK}"
-wait "id=\"${VRT_CAPTURE_ID}\"" 15000
-wait stable 200 5000
-close

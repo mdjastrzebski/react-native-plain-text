@@ -1,4 +1,6 @@
 import { registerRootComponent } from 'expo';
+// Installs the appduct deep-link bootstrap listener + session recovery
+import '@appduct/react-native/auto';
 
 const App =
   process.env.VRT_ENABLED === '1' ? require('./src/AppVrt').default : require('./src/App').default;

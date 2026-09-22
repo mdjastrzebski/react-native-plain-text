@@ -46,7 +46,11 @@ agent_device() {
   AGENT_DEVICE_SESSION="$session_name" "$agent_device_bin" "$@" "${target_args[@]}"
 }
 
+# shellcheck source=./vrt-appduct.sh
+source "$SCRIPT_DIR/vrt-appduct.sh"
+
 close_session() {
+  appduct_disconnect || true
   if [[ "$session_open" == "1" ]]; then
     agent_device close >/dev/null 2>&1 || true
   fi
@@ -56,24 +60,45 @@ trap close_session EXIT
 yarn del-cli "$actual_dir"
 mkdir -p "$actual_dir"
 
+# One Appduct session for the whole run: the specimen is switched in-process with the
+# `show_specimen` tool instead of opening a deep link per capture.
+appduct_connect "$platform"
+
 while read -r capture_platform capture_id extra; do
   [[ -z "$capture_platform" || "$capture_platform" == "#"* ]] && continue
   [[ -z "$extra" ]] || fail "Invalid capture manifest line for '$capture_id'."
   [[ "$capture_platform" == "all" || "$capture_platform" == "$platform" ]] || continue
 
   printf 'Capturing %s\n' "$capture_id"
-  deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
-  agent_device open "$VRT_APP_ID" "$deep_link" --foreground >/dev/null
   session_open=1
-  agent_device wait "id=\"$capture_id\"" 15000 >/dev/null
-  agent_device wait stable 200 5000 >/dev/null
+  rendered=0
+  # First try rides the stage's session. A specimen swap can lag one accessibility refresh
+  # behind, or the long run can wedge the app's JS thread (the socket stays "active", so
+  # that is not detectable from the daemon) — on a retry, relaunch a fresh app via a full
+  # reconnect rather than only when the session has actually dropped.
+  for attempt in 1 2 3; do
+    if [[ "$attempt" == "1" ]]; then
+      appduct_is_active || appduct_connect "$platform" || true
+    else
+      printf 'Recovering with a fresh app before %s (attempt %s).\n' "$capture_id" "$attempt" >&2
+      appduct_connect "$platform" || true
+    fi
+    appduct_invoke show_specimen "{\"testID\":\"$capture_id\"}" >/dev/null 2>&1 || true
+    if agent_device wait "id=\"$capture_id\"" 15000 >/dev/null 2>&1 &&
+      agent_device wait stable 200 5000 >/dev/null 2>&1; then
+      rendered=1
+      break
+    fi
+    printf 'Specimen %s did not settle (attempt %s).\n' "$capture_id" "$attempt" >&2
+  done
+  [[ "$rendered" == "1" ]] || fail "Specimen '$capture_id' never rendered."
   screenshot_command=(
     screenshot
     "$actual_dir/$capture_id.png"
     --crop-on "id=\"$capture_id\""
   )
   if [[ "$platform" == "ios" ]]; then
-    screenshot_command+=(--pixel-density "$IOS_VRT_PIXEL_DENSITY")
+    screenshot_command+=(--pixel-density 3)
   fi
   agent_device "${screenshot_command[@]}" >/dev/null
 done < "$manifest"

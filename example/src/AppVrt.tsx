@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Inter_300Light_Italic,
   Inter_400Regular,
@@ -7,8 +8,8 @@ import {
 import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { screenStyles } from './components/Specimen';
+import { AppductVrtTools } from './vrt/appductTools';
 import { getVrtExamples } from './vrt/examples';
-import { useVrtDeepLink } from './vrt/useVrtDeepLink';
 import { vrtStyles } from './vrt/utils';
 
 export default function AppVrt() {
@@ -17,16 +18,24 @@ export default function AppVrt() {
     Inter_400Regular,
     Inter_600SemiBold,
   });
-  const testID = useVrtDeepLink();
-
-  if (!fontsLoaded || testID === undefined) return null;
+  // Which specimen renders is driven only by the Appduct `show_specimen` tool: no deep
+  // link is opened per capture. Start undefined — render nothing until a specimen is
+  // chosen — so the (non-virtualized) list never mounts all specimens at once, which
+  // spiked memory and stalled long capture runs.
+  const [selectedTestID, setSelectedTestID] = useState<string | null | undefined>(undefined);
+  const ready = fontsLoaded && (selectedTestID !== undefined || __DEV__);
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView testID="vrt-safe-area" style={vrtStyles.screen}>
-        <VrtExamples testID={testID} />
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <>
+      <AppductVrtTools activeTestID={selectedTestID ?? null} onSelect={setSelectedTestID} />
+      {!ready ? null : (
+        <SafeAreaProvider>
+          <SafeAreaView testID="vrt-safe-area" style={vrtStyles.screen}>
+            <VrtExamples testID={selectedTestID ?? null} />
+          </SafeAreaView>
+        </SafeAreaProvider>
+      )}
+    </>
   );
 }
 

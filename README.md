@@ -188,12 +188,18 @@ xcrun simctl get_app_container \
   "$(cat build/vrt/devices/ios-udid)" plaintext.example app
 ```
 
-Open a specimen using its deep link:
+Open a specimen through Appduct. The VRT app is built with `APPDUCT_ENABLED=1`, so its
+`show_specimen` tool is callable; one Appduct session drives every specimen, and the CLI
+starts its daemon on first use.
 
 ```sh
-xcrun simctl openurl \
-  "$(cat build/vrt/devices/ios-udid)" \
-  'exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48'
+appduct=./node_modules/.bin/appduct
+scheme=exp+react-native-plain-text-example
+
+"$appduct" link --open ios-sim \
+  --device "$(cat build/vrt/devices/ios-udid)" --scheme "$scheme"
+"$appduct" invoke show_specimen \
+  --input '{"testID":"vrt-capture-features-font-size-48"}'
 ```
 
 ### Android
@@ -206,22 +212,24 @@ yarn vrt android build
 yarn vrt android install
 ```
 
-Stop the app, then open a specimen using its deep link:
+The emulator reaches the Appduct daemon over `adb reverse`, then the specimen is
+switched with the same `show_specimen` tool:
 
 ```sh
+appduct=./node_modules/.bin/appduct
+scheme=exp+react-native-plain-text-example
 android_serial="$(cat build/vrt/devices/android-serial)"
-adb -s "$android_serial" shell 'am force-stop plaintext.example'
 
-adb -s "$android_serial" shell 'am start -W \
-  -a android.intent.action.VIEW \
-  -c android.intent.category.BROWSABLE \
-  -d "exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48" \
-  -p plaintext.example'
+adb -s "$android_serial" reverse tcp:8443 tcp:8443
+"$appduct" link --open android --device "$android_serial" \
+  --scheme "$scheme" --app-id plaintext.example
+"$appduct" invoke show_specimen \
+  --input '{"testID":"vrt-capture-features-font-size-48"}'
 ```
 
-Release builds use the direct app URL above. Do not use the
-`/expo-development-client/?url=...` URL, which is for development-client
-builds.
+Release VRT builds carry Appduct (built with `APPDUCT_ENABLED=1`) precisely so these
+tools are callable; verify with
+`./node_modules/.bin/appduct doctor build/vrt/apps/android/app-release.apk --assert-present`.
 
 ## Contributing
 
