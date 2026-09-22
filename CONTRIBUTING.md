@@ -30,6 +30,8 @@ Run from the repo root:
 | `yarn test`                                 | Jest (`yarn test path -t "name"` for one case)         |
 | `yarn test:cpp`                             | C++ unit tests in `tests/cpp/`, no framework           |
 | `yarn test:android`                         | Kotlin unit tests in `android/src/test/` (Robolectric) |
+| `yarn vrt android` / `yarn vrt ios`         | Build, install, and capture the VRT suite              |
+| `yarn vrt <platform> <stage>`               | Run a VRT stage such as `setup`, `verify`, or `e2e`    |
 | `yarn example ios` / `yarn example android` | Build & run the example app                            |
 | `yarn example start`                        | Metro only (no native rebuild)                         |
 | `yarn prepare`                              | Build the shippable library into `lib/`                |

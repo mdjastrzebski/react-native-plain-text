@@ -102,7 +102,7 @@ const useCaseStyles = StyleSheet.create({
 
 // A row that varies several props stacked in one style, the way UseCaseRow
 // renders it: one PlainText, one string.
-type Combination = {
+export type Combination = {
   kind?: undefined;
   label: string;
   text: string;
@@ -117,13 +117,13 @@ type Combination = {
 // the shape a Combination's single string/style can't express: a price beside
 // its VAT note, a heading beside its badge. `label` still names the row, but
 // there is no single `style`/`text` to spread onto one PlainText.
-type BaselineCombination = {
+export type BaselineCombination = {
   kind: 'baseline';
   label: string;
   parts: { text: string; style: TextStyle }[];
 };
 
-type UseCaseItem = Combination | BaselineCombination;
+export type UseCaseItem = Combination | BaselineCombination;
 
 // A group is one section on the screen: a handful of rows that would appear in the
 // same part of a real UI, and that therefore fail in the same way when they fail.
@@ -182,7 +182,7 @@ function UseCaseBaselineRow({
 // rows that matter most is the first thing on the screen rather than the last.
 // RANDOM_USE_CASES is rendered after all of them, for the same reason: it is the
 // one group whose rows no app would deliberately write.
-const USE_CASE_GROUPS: UseCaseGroup[] = [
+export const USE_CASE_GROUPS: UseCaseGroup[] = [
   // Display type: the biggest thing on a screen, the title inside a card, and the
   // tracked cap-height label that separates two groups of rows.
   {
@@ -626,7 +626,7 @@ const USE_CASE_GROUPS: UseCaseGroup[] = [
 // height). Borders that are only structure stay on the ramp. Cycling five pigments
 // down the list made each row look like a statement about its color, which is the
 // one thing none of them is about.
-const RANDOM_USE_CASES: Combination[] = [
+export const RANDOM_USE_CASES: Combination[] = [
   {
     label: 'tracked-serif-right',
     text: 'Negative tracking on a thin serif face, right-aligned in a wide box.',

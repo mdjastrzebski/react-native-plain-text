@@ -23,7 +23,7 @@ export default function AppVrt() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={vrtStyles.screen}>
+      <SafeAreaView testID="vrt-safe-area" style={vrtStyles.screen}>
         <VrtExamples testID={testID} />
       </SafeAreaView>
     </SafeAreaProvider>

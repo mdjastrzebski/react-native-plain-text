@@ -2,18 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expect, it, jest } from '@jest/globals';
 
-const featureCaptures = fs
+const captures = fs
   .readFileSync(path.join(__dirname, '../../../.agent-device/vrt-captures.txt'), 'utf8')
-  .split('# use-cases')[0]!;
+  .split('\n');
 
-function manifestFeatureIDs(platform: 'ios' | 'android') {
-  return featureCaptures
-    .split('\n')
+function manifestIDs(platform: 'ios' | 'android') {
+  return captures
     .filter((line) => line.startsWith('all ') || line.startsWith(`${platform} `))
     .map((line) => line.split(' ')[1]!);
 }
 
-function loadRenderedFeatureIDs(platform: 'ios' | 'android') {
+function loadRenderedIDs(platform: 'ios' | 'android') {
   jest.resetModules();
   jest.doMock('react-native-plain-text', () => ({ PlainText: 'PlainText' }), {
     virtual: true,
@@ -36,12 +35,9 @@ function loadRenderedFeatureIDs(platform: 'ios' | 'android') {
   return getVrtExamples(platform).map(({ testID }) => testID);
 }
 
-it.each(['ios', 'android'] as const)(
-  '%s feature capture IDs exist in the VRT groups',
-  (platform) => {
-    const renderedIDs = new Set(loadRenderedFeatureIDs(platform));
-    const missingIDs = manifestFeatureIDs(platform).filter((testID) => !renderedIDs.has(testID));
+it.each(['ios', 'android'] as const)('%s capture IDs exist in the VRT groups', (platform) => {
+  const renderedIDs = new Set(loadRenderedIDs(platform));
+  const missingIDs = manifestIDs(platform).filter((testID) => !renderedIDs.has(testID));
 
-    expect(missingIDs).toEqual([]);
-  }
-);
+  expect(missingIDs).toEqual([]);
+});

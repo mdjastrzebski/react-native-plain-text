@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Text, View, type AccessibilityProps, type StyleProp, type ViewStyle } from 'react-native';
 import { PlainText, type PlainTextProps } from 'react-native-plain-text';
+import { RANDOM_USE_CASES, USE_CASE_GROUPS, type UseCaseItem } from '../screens/UseCasesScreen';
 import { COLOR } from '../theme';
 import {
   SHORT_ROW_SIZE,
@@ -89,6 +90,37 @@ function VrtBox({
     <View testID={testID} style={containerStyle}>
       {children}
     </View>
+  );
+}
+
+function VrtUseCase({ item, testID }: { item: UseCaseItem; testID: string }) {
+  if (item.kind === 'baseline') {
+    return (
+      <VrtBox
+        testID={testID}
+        showText={false}
+        overlay={null}
+        containerStyle={[styles.baselineRow, vrtStyles.wideRow]}
+      >
+        {item.parts.map((part, index) => (
+          <PlainText key={index} style={[vrtStyles.base, part.style]}>
+            {part.text}
+          </PlainText>
+        ))}
+      </VrtBox>
+    );
+  }
+
+  return (
+    <VrtText
+      {...item}
+      testID={testID}
+      showText={false}
+      style={[{ color: COLOR.ink }, item.style]}
+      containerStyle={item.style.width === '100%' ? vrtStyles.wideRow : undefined}
+    >
+      {item.text}
+    </VrtText>
   );
 }
 
@@ -1105,6 +1137,15 @@ export const groups: VrtGroup[] = [
         >
           {PARAGRAPH}
         </VrtText>
+      </>
+    ),
+  },
+  {
+    children: (
+      <>
+        {[...USE_CASE_GROUPS.flatMap(({ items }) => items), ...RANDOM_USE_CASES].map((item) => (
+          <VrtUseCase key={item.label} item={item} testID={`vrt-capture-use-cases-${item.label}`} />
+        ))}
       </>
     ),
   },

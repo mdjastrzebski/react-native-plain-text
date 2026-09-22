@@ -56,13 +56,13 @@ jobs:
         uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: |
-            build/visual-test/android/app-release.apk
+            build/vrt/apps/android
             example/android/.gradle
             example/android/build
             example/android/app/build
-          key: android-vrt-build-v1-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-api36-emulator15917651-${{ hashFiles('yarn.lock', 'package.json', 'example/package.json', 'example/app.json', 'example/plugins/**', 'example/assets/**', 'src/**', 'android/**', 'ios/**', 'cpp/**') }}
+          key: android-vrt-build-v3-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-api36-emulator15917651-${{ hashFiles('yarn.lock', 'package.json', 'react-native.config.js', 'example/package.json', 'example/app.json', 'example/index.js', 'example/babel.config.js', 'example/metro.config.js', 'example/src/**', 'example/plugins/**', 'example/assets/**', 'patches/**', 'src/**', 'android/**', 'ios/**', 'cpp/**') }}
           restore-keys: |
-            android-vrt-build-v1-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-api36-emulator15917651-
+            android-vrt-build-v3-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-api36-emulator15917651-
 
       - name: Enable KVM
         run: |
@@ -116,25 +116,31 @@ jobs:
           emulator-build: 15917651
           channel: stable
           script: |
-            test "$(sed -n 's/^Pkg.Revision=//p' "$ANDROID_HOME/system-images/android-36/google_apis_playstore/x86_64/source.properties")" = 7
-            adb shell wm size 1080x2400
-            adb shell wm density 420
-            adb shell settings put system font_scale 1
-            adb shell settings put system system_locales en-US
-            adb shell cmd alarm set-timezone UTC
-            if [ '${{ steps.android-build-cache.outputs.cache-hit }}' = 'true' ]; then adb install -r build/visual-test/android/app-release.apk; else yarn example android:release --device plaintext_vrt_api36_pixel9 --no-bundler && mkdir -p build/visual-test/android && cp example/android/app/build/outputs/apk/release/app-release.apk build/visual-test/android/app-release.apk; fi
-            adb shell pm path plaintext.example
+            ANDROID_HEADLESS=1 yarn vrt android setup
+            if [ '${{ steps.android-build-cache.outputs.cache-hit }}' != 'true' ]; then yarn vrt android build; fi
+            yarn vrt android install
+            yarn vrt android e2e
+            yarn vrt android capture
 
       - name: Save Android build
         if: steps.android-build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: |
-            build/visual-test/android/app-release.apk
+            build/vrt/apps/android
             example/android/.gradle
             example/android/build
             example/android/app/build
           key: ${{ steps.android-build-cache.outputs.cache-primary-key }}
+
+      - name: Upload Android VRT results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-android-${{ github.run_attempt }}
+          path: build/vrt
+          if-no-files-found: ignore
+          retention-days: 7
 
   vrt-ios:
     runs-on: macos-26
@@ -191,48 +197,46 @@ jobs:
           key: ${{ steps.cocoapods-cache.outputs.cache-primary-key }}
 
       - name: Create iOS VRT simulator
-        run: |
-          simulator_udid="$(xcrun simctl create \
-            "$IOS_SIMULATOR_NAME" \
-            "$IOS_DEVICE_TYPE_ID" \
-            "$IOS_RUNTIME_ID")"
-          echo "IOS_SIMULATOR_UDID=$simulator_udid" >> "$GITHUB_ENV"
-          xcrun simctl boot "$simulator_udid"
-          xcrun simctl bootstatus "$simulator_udid" -b
-          xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLanguages -array en
-          xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLocale -string en_US
-          xcrun simctl ui "$simulator_udid" appearance light
-          xcrun simctl ui "$simulator_udid" content_size large
+        run: VRT_RESET_DEVICE=1 yarn vrt ios setup
 
       - name: Restore iOS build
         id: ios-build-cache
         uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          path: build/visual-test/ios
-          key: ios-vrt-build-v1-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-ios26.5-23F77-xcode26.5-17F42-iphone16pro-${{ hashFiles('yarn.lock', 'package.json', 'example/package.json', 'example/app.json', 'example/plugins/**', 'example/assets/**', 'src/**', 'android/**', 'ios/**', 'cpp/**', 'example/ios/Podfile.lock') }}
+          path: build/vrt/apps/ios
+          key: ios-vrt-build-v3-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-ios26.5-23F77-xcode26.5-17F42-iphone16pro-${{ hashFiles('yarn.lock', 'package.json', 'react-native.config.js', 'example/package.json', 'example/app.json', 'example/index.js', 'example/babel.config.js', 'example/metro.config.js', 'example/src/**', 'example/plugins/**', 'example/assets/**', 'patches/**', 'src/**', 'android/**', 'ios/**', 'cpp/**', 'example/ios/Podfile.lock') }}
           restore-keys: |
-            ios-vrt-build-v1-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-ios26.5-23F77-xcode26.5-17F42-iphone16pro-
+            ios-vrt-build-v3-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-ios26.5-23F77-xcode26.5-17F42-iphone16pro-
 
       - name: Build iOS VRT app
         if: steps.ios-build-cache.outputs.cache-hit != 'true'
-        run: >-
-          yarn example ios:release --device generic --no-bundler
-          --output "$GITHUB_WORKSPACE/build/visual-test/ios"
+        run: yarn vrt ios build
 
       - name: Save iOS build
         if: steps.ios-build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          path: build/visual-test/ios
+          path: build/vrt/apps/ios
           key: ${{ steps.ios-build-cache.outputs.cache-primary-key }}
 
-      - name: Verify iOS VRT app
+      - name: Run iOS VRT
         run: |
-          ios_app="$(find build/visual-test/ios -type d -name '*.app' -print -quit)"
-          test -n "$ios_app"
-          xcrun simctl install "$IOS_SIMULATOR_UDID" "$ios_app"
-          xcrun simctl launch "$IOS_SIMULATOR_UDID" plaintext.example
+          yarn vrt ios install
+          yarn vrt ios e2e
+          yarn vrt ios capture
+
+      - name: Upload iOS VRT results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-ios-${{ github.run_attempt }}
+          path: build/vrt
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stop iOS VRT simulator
-        if: always() && env.IOS_SIMULATOR_UDID != ''
-        run: xcrun simctl shutdown "$IOS_SIMULATOR_UDID"
+        if: always()
+        run: |
+          if [ -f build/vrt/devices/ios-udid ]; then
+            xcrun simctl shutdown "$(cat build/vrt/devices/ios-udid)"
+          fi
