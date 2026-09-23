@@ -17,9 +17,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getMemoryFootprint } from 'react-native-memory-footprint';
 import {
   PlainText,
-  // Aliased: the library's own unified selector component, benchmarked here
-  // under "Compat Text" since VARIANTS already uses the bare label "Text" for
-  // RN's own component.
   Text as CompatText,
   unstable_NativePlainText as NativePlainText,
   type PlainTextStyle,
@@ -48,9 +45,7 @@ type Kind = 'plain' | 'nativePlain' | 'compat' | 'text' | 'nativeText';
 const VARIANTS: { kind: Kind; label: string }[] = [
   { kind: 'plain', label: 'PlainText' },
   { kind: 'nativePlain', label: 'NativePlainText' },
-  // The library's own unified Text component (picks PlainText or RN <Text>
-  // per instance). Labelled "Compat Text" here, not "Text", to stay distinct
-  // from the RN <Text> row right below it.
+  // The library's unified Text, labelled "Compat Text" to stay distinct from RN <Text>.
   { kind: 'compat', label: 'Compat Text' },
   { kind: 'text', label: 'Text' },
   { kind: 'nativeText', label: 'NativeText' },
@@ -550,10 +545,8 @@ function renderItems(kind: Kind, applied: Applied, offset: number, count: number
   }
 
   if (kind === 'compat') {
-    // rnStyle, not style: CompatText's props are typed as RN's TextProps, same
-    // as the 'text' branch below. The dropped key is a type-level narrowing
-    // only (see rnStyle's own comment) — fontVariationSettings still reaches
-    // the native view on whichever run resolves to PlainText underneath.
+    // rnStyle: CompatText takes RN's TextProps. The cast is type-only, so
+    // fontVariationSettings still reaches PlainText at runtime.
     return Array.from({ length: count }, (_, n) => (
       <CompatText key={n} style={rnStyle} {...extra}>
         {label(n)}
