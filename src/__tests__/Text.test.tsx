@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { render, screen } from '@testing-library/react-native';
-import { Text as RNText, unstable_TextAncestorContext } from 'react-native';
+import { createRef } from 'react';
+import { Text as RNText, unstable_TextAncestorContext, type HostInstance } from 'react-native';
 import type { PlainTextOwnProps } from '../PlainText';
 import { Text, type TextProps } from '../Text';
 
@@ -48,6 +49,30 @@ describe('<Text />', () => {
     await render(<Text deopt testID="deopted" />);
 
     expect(screen.getByTestId('deopted')).not.toHaveProp('deopt');
+  });
+
+  it('forwards ref to the PlainText host element', async () => {
+    const ref = createRef<HostInstance>();
+
+    await render(<Text ref={ref}>Hello</Text>);
+
+    expect(screen.root).toHaveProp('text', 'Hello');
+    expect(ref.current).not.toBeNull();
+    expect(typeof ref.current?.measure).toBe('function');
+  });
+
+  it('forwards ref to the RN <Text> host element on fallback', async () => {
+    const ref = createRef<HostInstance>();
+
+    await render(
+      <Text ref={ref} deopt>
+        Hello
+      </Text>
+    );
+
+    expect(screen.root).not.toHaveProp('text');
+    expect(ref.current).not.toBeNull();
+    expect(typeof ref.current?.measure).toBe('function');
   });
 
   it('forwards PlainText own props to PlainText', async () => {
@@ -116,6 +141,9 @@ describe('<Text />', () => {
     // @ts-expect-error fontVariationSettings must be a string
     const badStyle = <Text style={{ fontVariationSettings: 700 }}>Hello</Text>;
 
-    expect([badHyphens, badStyle]).toHaveLength(2);
+    // @ts-expect-error ref must target a host element
+    const badRef = <Text ref={createRef<string>()}>Hello</Text>;
+
+    expect([badHyphens, badStyle, badRef]).toHaveLength(3);
   });
 });
