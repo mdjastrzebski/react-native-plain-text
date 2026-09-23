@@ -1,8 +1,8 @@
 /*
  * Prop-to-platform-value conversions. Most are for <RNPlainText>'s mounted
- * view only; applyTextTransform is the exception, shared with the
- * shadow node so both transform the same text the same way, otherwise the
- * measured box and the drawn text could disagree.
+ * view only; applyTextTransform is the exception, shared with the shadow
+ * node so both transform the same text the same way, otherwise the measured
+ * box and the drawn text could disagree.
  *
  * fontWeightFromProp, isItalicFromProp and fontVariantDescriptors mirror
  * RCTFont.mm's own prop-name lookup tables, feeding PlainTextFont.mm's font

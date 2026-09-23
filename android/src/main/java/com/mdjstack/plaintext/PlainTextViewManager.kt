@@ -228,6 +228,16 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.includeFontPadding = includeFontPadding
   }
 
+  @ReactProp(name = "hyphens")
+  override fun setHyphens(view: PlainTextView?, value: String?) {
+    view?.setHyphens(value)
+  }
+
+  @ReactProp(name = "lang")
+  override fun setLang(view: PlainTextView?, lang: String?) {
+    view?.setLang(lang)
+  }
+
   // Unread: no experiment is currently using it. See docs/contributing/perf-experiments.md.
   @ReactProp(name = "experiment", defaultBoolean = false)
   override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
@@ -285,6 +295,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     // applied for the measured size to match.
     view.setLetterSpacingDip(props.getFloatOr("letterSpacing", 0f))
     view.setLineHeight(props.getFloatOr("lineHeight", 0f))
+    // hyphens and lang both move soft line breaks, so the wrapped height depends
+    // on them. hyphens feeds the same resolution as android_hyphenationFrequency
+    // below (see PlainTextView.kt).
+    view.setHyphens(props?.getString("hyphens"))
+    view.setLang(props?.getString("lang"))
     // Transforms the measured string itself (case changes can change width), so it
     // must be applied before setPlainText below.
     view.setTextTransform(props?.getString("textTransform"))
@@ -297,7 +312,6 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.includeFontPadding = props.getBooleanOr("includeFontPadding", true)
     // Changes where wrapped text breaks, so it affects the measured height too.
     view.setTextBreakStrategy(props?.getString("textBreakStrategy"))
-    // Changes where wrapped words break, so it affects the measured height too.
     view.setAndroidHyphenationFrequency(props?.getString("android_hyphenationFrequency"))
     view.setPlainText(props?.getString("text") ?: "")
     // Applies the state the setters above marked dirty, in dependency order, so their

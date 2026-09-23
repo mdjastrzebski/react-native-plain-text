@@ -865,6 +865,39 @@ const ATTRIBUTES: AttrDef[] = [
     ],
   },
   {
+    // A plain prop, not a style key, hence `target: 'prop'`.
+    key: 'hyphens',
+    section: 'Text',
+    fp: 'hy',
+    target: 'prop',
+    options: [
+      { label: '(none)' },
+      { label: 'none', value: 'none' },
+      { label: 'auto', value: 'auto' },
+    ],
+  },
+  {
+    // RN <Text> compat, priced separately from hyphens above.
+    key: 'android_hyphenationFrequency',
+    section: 'Text',
+    fp: 'ahf',
+    target: 'prop',
+    options: [
+      { label: '(none)' },
+      { label: 'none', value: 'none' },
+      { label: 'normal', value: 'normal' },
+      { label: 'full', value: 'full' },
+    ],
+  },
+  {
+    // 'de' pairs with hyphens="auto" above.
+    key: 'lang',
+    section: 'Text',
+    fp: 'lang',
+    target: 'prop',
+    options: [{ label: '(none)' }, { label: 'en', value: 'en' }, { label: 'de', value: 'de' }],
+  },
+  {
     key: 'numberOfLines',
     section: 'Layout',
     fp: 'nol',

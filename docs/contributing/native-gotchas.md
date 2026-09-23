@@ -283,6 +283,7 @@ time to track down the first time it came up.
   The Features screen's Font Variant rows carry a `fontStyle: 'normal'` purely to
   trip the gate, so that the `<Text>` overlay is comparable at all.
 
+- **A manually-inserted soft hyphen (U+00AD) is not a wrap point on Android, with or without `hyphens`/`android_hyphenationFrequency`.** `UILabel` on iOS breaks at one regardless of `hyphens`. `TextView` doesn't: neither `HYPHENATION_FREQUENCY_NONE` (the `hyphens="none"`/unset default) nor a non-default frequency makes Android's line breaker treat an author-supplied U+00AD as a break opportunity — see the Hyphenation section's soft-hyphen row in the example app, which labels this explicitly per platform.
 - **Mutating a `Paint` field alone doesn't invalidate anything.**
   `applyTypeface()`'s `isSubpixelText`/`isLinearText` writes looked inert when
   toggled alone: `TextView` doesn't watch its own paint, so nothing redraws

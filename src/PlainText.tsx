@@ -3,7 +3,12 @@ import type { ComponentRef, Ref } from 'react';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 import { normalizeFontVariant } from './utils';
 
-export type PlainTextStyle = TextStyle & { fontVariationSettings?: string };
+// RN's TextStyle plus a key it has no entry for. Widened, not replaced, so a
+// plain TextStyle stays assignable.
+export type PlainTextStyle = TextStyle & {
+  // Upstream attempts to add it (react/react-native#44685, #44667) never merged.
+  fontVariationSettings?: string;
+};
 
 export type PlainTextProps = AccessibilityProps & {
   children?: string;
@@ -15,10 +20,22 @@ export type PlainTextProps = AccessibilityProps & {
   lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
   /// Android-only, like RN <Text>.
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
-  /// Android-only, like RN <Text>.
+  /// Android-only, like RN <Text>'s prop of the same name. iOS ignores it.
+  /// Only a fallback on Android, used whenever `hyphens` is left unset.
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
+  /// Not in RN <Text>. `'none'` (default) keeps the platform's default
+  /// hyphenation behavior; `'auto'` turns on dictionary-based hyphenation.
+  /// On Android, whichever one is set here wins over
+  /// `android_hyphenationFrequency`, even `'none'`; leave `hyphens` unset to
+  /// let `android_hyphenationFrequency` apply instead. `'none'` never strips
+  /// or otherwise touches an inserted soft hyphen (U+00AD) on either
+  /// platform.
+  hyphens?: 'none' | 'auto';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  /// BCP-47 language tag (e.g. 'de'); picks the hyphenation dictionary and
+  /// locale-sensitive line breaking.
+  lang?: string;
   testID?: string;
   nativeID?: string;
   id?: string;
@@ -41,6 +58,8 @@ export function mapPlainTextProps({
   android_hyphenationFrequency,
   allowFontScaling,
   maxFontSizeMultiplier,
+  hyphens,
+  lang,
   unstable_lineHeightClippingCompat,
   ...accessibilityProps
 }: PlainTextProps): NativeProps {
@@ -96,6 +115,8 @@ export function mapPlainTextProps({
     android_hyphenationFrequency,
     allowFontScaling,
     maxFontSizeMultiplier,
+    hyphens,
+    lang,
     includeFontPadding,
     lineHeightClippingCompat: unstable_lineHeightClippingCompat,
     style: viewStyle,

@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
+import android.os.LocaleList
 import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
@@ -105,6 +106,12 @@ class PlainTextView : AppCompatTextView {
   // onConfigurationChanged (API 31+) without invalidating this field, silently
   // resetting a variable font's axes, benign, self-heals on the next font/axis change.
   private var appliedBaseTypeface: Typeface? = baseTypeface
+
+  private var appliedLang: String? = null
+
+  // Combined by applyHyphenationFrequency regardless of which setter ran last.
+  private var hyphens: String? = null
+  private var androidHyphenationFrequency: String? = null
 
   // Reused by PlainTextViewManager for measurement. Never attached to a window, so
   // posting measureAndLayout would queue forever.
@@ -564,6 +571,26 @@ class PlainTextView : AppCompatTextView {
     gravity = (gravity and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
   }
 
+  // Null/empty restores the default locale.
+  fun setLang(lang: String?) {
+    val normalized = if (lang.isNullOrEmpty()) null else lang
+    if (normalized == appliedLang) return
+    appliedLang = normalized
+
+    textLocales = if (normalized == null) {
+      LocaleList.getAdjustedDefault()
+    } else {
+      LocaleList(Locale.forLanguageTag(normalized))
+    }
+  }
+
+  // Wins over android_hyphenationFrequency whenever the app sets it at all,
+  // even to 'none'. See applyHyphenationFrequency.
+  fun setHyphens(value: String?) {
+    hyphens = value
+    applyHyphenationFrequency()
+  }
+
   // 0 means unlimited, matching <Text>. It also bounds the off-screen measure pass.
   fun setNumberOfLines(numberOfLines: Int) {
     maxLines = if (numberOfLines <= 0) Integer.MAX_VALUE else numberOfLines
@@ -588,17 +615,46 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
-  // Mirrors <Text>: "normal"/"full" prefer the *_FAST variants on API 33+ (perf-only).
-  fun setAndroidHyphenationFrequency(androidHyphenationFrequency: String?) {
-    hyphenationFrequency = when (androidHyphenationFrequency) {
+  // RN <Text> compat; only a fallback for whenever `hyphens` is unset. See
+  // applyHyphenationFrequency.
+  fun setAndroidHyphenationFrequency(value: String?) {
+    androidHyphenationFrequency = value
+    applyHyphenationFrequency()
+  }
+
+  // "full" prefers FULL_FAST on API 33+: perf-only, not a prop value.
+  // `hyphens == null` means the app never touched the prop (see setHyphens
+  // above), so android_hyphenationFrequency applies unopposed.
+  //
+  // Known gap: the off-screen measuring pass (PlainTextViewManager.measure(),
+  // via PlainTextMeasurementsManager.cpp's serializeProps) can't tell "unset"
+  // apart from "explicitly 'none'" — both resolve to the same default enum
+  // value before they ever reach native code, since hyphens's codegen'd C++
+  // field isn't optional. So for `hyphens="none"` combined with a non-default
+  // `android_hyphenationFrequency`, the measured size can assume that
+  // frequency while the mounted view renders NONE.
+  private fun applyHyphenationFrequency() {
+    val frequency = when {
+      hyphens == "auto" -> "full"
+      hyphens == "none" -> "none"
+      else -> androidHyphenationFrequency
+    }
+    val value = when (frequency) {
+      null, "none" -> Layout.HYPHENATION_FREQUENCY_NONE
       "normal" ->
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Layout.HYPHENATION_FREQUENCY_NORMAL_FAST
         else Layout.HYPHENATION_FREQUENCY_NORMAL
       "full" ->
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Layout.HYPHENATION_FREQUENCY_FULL_FAST
         else Layout.HYPHENATION_FREQUENCY_FULL
-      else -> Layout.HYPHENATION_FREQUENCY_NONE
+      else -> {
+        FLog.w(ReactConstants.TAG, "Invalid android_hyphenationFrequency: $frequency")
+        Layout.HYPHENATION_FREQUENCY_NONE
+      }
     }
+
+    if (hyphenationFrequency == value) return
+    hyphenationFrequency = value
   }
 
   // A text-size change touches no prop, so Fabric's diff never fires and

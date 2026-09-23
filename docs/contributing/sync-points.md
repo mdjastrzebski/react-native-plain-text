@@ -42,6 +42,8 @@ most props only touch a few.
 - `textShadowOffsetHeight`
 - `textShadowRadius`
 - `textTransform`
+- `hyphens`
+- `lang`
 - `numberOfLines`
 - `ellipsizeMode`
 - `lineBreakStrategyIOS` (iOS-only — no Android setter body, no Android entry in
@@ -91,6 +93,8 @@ Common: touch all five files below.
 - `lineHeight`
 - `letterSpacing`
 - `textTransform`
+- `hyphens`
+- `lang`
 - `numberOfLines`
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
@@ -182,6 +186,7 @@ agree on. Two flavors, both three-way:
   - `fontSize` (`14.0`)
   - `lineHeight` (`0.0`)
   - `textTransform` (`None`)
+  - `hyphens` (`None`)
   - `numberOfLines` (`0`)
   - `allowFontScaling` (`true`)
   - `maxFontSizeMultiplier` (`0.0`)
@@ -198,6 +203,7 @@ agree on. Two flavors, both three-way:
   - `fontVariant`
   - `fontVariationSettings`
   - `letterSpacing`
+  - `lang`
 
 **Files, per prop above, all three must agree on what "absent" resolves to:**
 
@@ -399,9 +405,10 @@ Only the invalidation logic is genuinely shared, in `cpp/PlainTextMeasurementHel
 **Props:** every prop `applyContentFromProps` applies to `_label` — text (`text`, `textTransform`), font (`fontFamily`,
 `fontSize`, `fontWeight`, `fontStyle`, `fontVariant`, `fontVariationSettings`, `allowFontScaling`,
 `maxFontSizeMultiplier`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`,
-`writingDirection`), `letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`,
-`lineBreakStrategyIOS`, plus the shadow props (`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`,
-`textShadowRadius`) — i.e. Set 2's list plus every draw-only prop from [Set 1](#set-1--any-prop-the-four-layer-flow).
+`writingDirection`), `letterSpacing`, `lineHeight`, `textDecorationLine`, `hyphens`, `lang`, `numberOfLines`,
+`ellipsizeMode`, `lineBreakStrategyIOS`, plus the shadow props (`textShadowColor`, `textShadowOffsetWidth`,
+`textShadowOffsetHeight`, `textShadowRadius`) — i.e. Set 2's list plus every draw-only prop from
+[Set 1](#set-1--any-prop-the-four-layer-flow).
 
 Fabric recycles component views by type. iOS does it unconditionally through `RCTComponentViewRegistry`; Android only if
 a view manager opts in via `setupViewRecycling()`, which `PlainTextViewManager` never calls — so this set is iOS-only

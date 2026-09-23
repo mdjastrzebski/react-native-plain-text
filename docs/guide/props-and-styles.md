@@ -5,9 +5,11 @@
 | Prop                           | RN `<Text>` compatible | Notes                                                                              |
 | ------------------------------ | ---------------------- | ---------------------------------------------------------------------------------- |
 | `allowFontScaling`             | ✅                     |                                                                                    |
-| `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`                                                     |
+| `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`. Only a fallback for when `hyphens` is unset.       |
 | `children`                     | 🟡                     | `string` only                                                                      |
 | `ellipsizeMode`                | ✅                     |                                                                                    |
+| `hyphens`                      | ⬆️                     | Not in RN `<Text>`. `'none' \| 'auto'`, default `'none'`. See below.               |
+| `lang`                         | ⬆️                     | Not in RN `<Text>`. BCP-47 tag (e.g. `'de'`) for hyphenation and line breaking.    |
 | `lineBreakStrategyIOS`         | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
 | `maxFontSizeMultiplier`        | ✅                     |                                                                                    |
 | `nativeID`                     | ✅                     |                                                                                    |
@@ -69,6 +71,25 @@ Things Plain Text does that RN `<Text>` does not:
   ([RN#29507](https://github.com/facebook/react-native/issues/29507)). Plain
   Text corrects the vertical offset at draw time so the text stays centered in
   its line box.
+- **`hyphens` prop**: hyphenation control. RN `<Text>` has no iOS hyphenation
+  control at all, and no cross-platform one on either platform. `'none'`
+  (default) keeps hyphenation at the platform's own default behavior on both
+  iOS and Android — it never strips or otherwise touches an inserted soft
+  hyphen (`­`). `'auto'` turns on dictionary-based hyphenation:
+  iOS's `usesDefaultHyphenation` (pair with `lang` to pick the dictionary),
+  and Android's `Layout.HYPHENATION_FREQUENCY_FULL`
+  ([`PlainTextView.kt`](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/android/src/main/java/com/mdjstack/plaintext/PlainTextView.kt)).
+  On Android, `hyphens` takes priority over `android_hyphenationFrequency`
+  whenever the app sets it at all — including `'none'` — and
+  `android_hyphenationFrequency` only applies
+  as a fallback when `hyphens` is left unset entirely. **Known gap:** this
+  distinction only exists at the mounted view; the off-screen pass used to
+  measure/wrap the text can't tell "unset" apart from "explicitly `'none'`"
+  (both collapse to the same default before they reach native code), so it
+  always falls back to `android_hyphenationFrequency` regardless. For
+  `hyphens="none"` combined with a non-default `android_hyphenationFrequency`,
+  this means the measured size can assume that frequency while the rendered
+  text uses `NONE`.
 
 ## Planned
 

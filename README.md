@@ -93,6 +93,20 @@ Everything below is API-compatible with RN `<Text>`. Most commonly used:
   RN's accessibility props (`accessible`, `accessibilityLabel`,
   `accessibilityRole`, `accessibilityState`, …).
 
+Beyond RN `<Text>`, PlainText adds hyphenation control:
+
+- `hyphens` (prop): `'none' | 'auto'`, default `'none'`. `'none'` keeps the
+  platform's default hyphenation behavior — it never touches an inserted soft
+  hyphen (`­`) on either platform. `'auto'` hyphenates automatically (pair
+  with `lang` on iOS). On Android, `hyphens` wins over
+  `android_hyphenationFrequency` whenever the prop is passed at all; omit it
+  entirely to let `android_hyphenationFrequency` apply instead.
+- `android_hyphenationFrequency` (prop): Android only, like RN `<Text>`:
+  `'none' | 'normal' | 'full'`. Only applies as a fallback when `hyphens` is
+  left unset.
+- `lang` (prop): BCP-47 language tag (e.g. `'de'`), picking the hyphenation
+  dictionary and locale-sensitive line breaking.
+
 See
 [Props and styles](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles)
 for the full support matrix, platform notes, and additions beyond RN `<Text>`
