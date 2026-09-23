@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { PlainText, type PlainTextOwnProps } from './PlainText';
 
-export type TextProps = RNTextProps &
+export type TextProps = Omit<RNTextProps, keyof PlainTextOwnProps> &
   PlainTextOwnProps & {
     /** Always render RN <Text>, even for a plain string. Escape hatch for props
      * PlainText doesn't support or PlainText rendering issues.*/
