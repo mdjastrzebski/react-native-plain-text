@@ -5,13 +5,11 @@ import { normalizeFontVariant } from './utils';
 
 /** RN's `TextStyle` plus `fontVariationSettings`. Any `TextStyle` is assignable. */
 export type PlainTextStyle = TextStyle & {
-  // Upstream added it Android-only in RN 0.88 (facebook/react-native#57804), so
-  // older RN's TextStyle lacks it.
-  /** Variable-font axes in CSS syntax, e.g. `'"wght" 700, "wdth" 87.5'`. */
+  /** Variable-font axes in CSS syntax, e.g. `'"wght" 700, "wdth" 87.5'`. Added to RN in v0.88 (facebook/react-native#57804). */
   fontVariationSettings?: string;
 };
 
-// Props PlainText adds or narrows relative to RN's TextProps.
+/** Props PlainText adds to RN's TextProps. */
 export type PlainTextOwnProps = {
   /** Alias for `children`, for animating text with Animated/Reanimated. */
   text?: string;
