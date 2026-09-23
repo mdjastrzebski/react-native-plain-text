@@ -30,9 +30,22 @@ import { use } from 'react';
 import { Text as RnText, unstable_TextAncestorContext, type TextProps } from 'react-native';
 import { PlainText } from 'react-native-plain-text';
 
+function hasUnsupportedProp(props: TextProps): boolean {
+  return (
+    props.onPress != null ||
+    props.onLongPress != null ||
+    props.onPressIn != null ||
+    props.onPressOut != null ||
+    props.onTextLayout != null ||
+    !!props.selectable ||
+    !!props.adjustsFontSizeToFit ||
+    props.dataDetectorType != null
+  );
+}
+
 export function Text({ children, deopt, ...rest }: TextProps & { deopt?: boolean }) {
   const isNestedText = use(unstable_TextAncestorContext);
-  if (!deopt && typeof children === 'string' && !isNestedText) {
+  if (!deopt && typeof children === 'string' && !isNestedText && !hasUnsupportedProp(rest)) {
     return <PlainText {...rest}>{children}</PlainText>;
   }
 
@@ -48,28 +61,26 @@ export function Text({ children, deopt, ...rest }: TextProps & { deopt?: boolean
 - It isn't itself nested inside another `<Text>` — RN's `unstable_TextAncestorContext`
   is `true` for descendants of a `<Text>`, and `PlainText` doesn't support nested
   `<Text>` composition. Falling back keeps that nesting working.
+- No prop that `PlainText` can't reproduce is set: `onPress`, `onLongPress`,
+  `onPressIn`, `onPressOut`, `onTextLayout`, `selectable`, `adjustsFontSizeToFit`, or
+  `dataDetectorType`. Any of these falls back to RN `<Text>`, so they keep working.
 
 Whichever branch is taken, all other props are forwarded unchanged, so `Text` is
-API-compatible with RN `<Text>`: existing `style`, `numberOfLines`, `onPress`,
-accessibility props, and so on keep working. When it resolves to `PlainText`, only the
-props and styles [`PlainText` supports](./props-and-styles) apply — the rest are simply
-not read by `PlainText`, which is generally fine since press handlers, for example,
-don't make sense outside the RN `<Text>` fallback branch anyway.
+API-compatible with RN `<Text>`. When it resolves to `PlainText`, only the props and
+styles [`PlainText` supports](./props-and-styles) apply.
 
 ## Deoptimizing a single instance
 
-`children` shape and text nesting are handled automatically — you don't need `deopt` for
-those. It's for the case automatic detection can't see: a single-style string that would
-otherwise take the `PlainText` path, but needs a prop `PlainText` doesn't support, or hits
-a `PlainText` rendering issue. Pass `deopt` to skip the selection for that instance and
+`children` shape, text nesting, and the props listed above are handled automatically —
+you don't need `deopt` for those. It's for the case automatic detection can't see: a
+single-style string that would otherwise take the `PlainText` path, but relies on
+something else `PlainText` doesn't support, or hits a `PlainText` rendering issue. Pass `deopt` to skip the selection for that instance and
 always render RN `<Text>`:
 
 ```jsx
 import { Text } from 'react-native-plain-text';
 
-<Text deopt onPress={handlePress}>
-  Hello there 👋
-</Text>;
+<Text deopt>Hello there 👋</Text>;
 ```
 
 `deopt` itself is never forwarded to either rendered component.

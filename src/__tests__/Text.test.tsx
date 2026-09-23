@@ -45,6 +45,34 @@ describe('<Text />', () => {
     expect(screen.root).not.toHaveProp('text');
   });
 
+  it.each([
+    ['onPress', { onPress: () => {} }],
+    ['onLongPress', { onLongPress: () => {} }],
+    ['onPressIn', { onPressIn: () => {} }],
+    ['onPressOut', { onPressOut: () => {} }],
+    ['onTextLayout', { onTextLayout: () => {} }],
+    ['selectable', { selectable: true }],
+    ['adjustsFontSizeToFit', { adjustsFontSizeToFit: true }],
+    ['dataDetectorType', { dataDetectorType: 'link' }],
+  ] satisfies [string, TextProps][])(
+    'renders as RN <Text> when %s is set, even for a plain string child',
+    async (_, props) => {
+      await render(<Text {...props}>Hello</Text>);
+
+      expect(screen.root).not.toHaveProp('text');
+    }
+  );
+
+  it.each([
+    ['onPress={undefined}', { onPress: undefined }],
+    ['selectable={false}', { selectable: false }],
+    ['adjustsFontSizeToFit={false}', { adjustsFontSizeToFit: false }],
+  ] satisfies [string, TextProps][])('still renders PlainText when %s', async (_, props) => {
+    await render(<Text {...props}>Hello</Text>);
+
+    expect(screen.root).toHaveProp('text', 'Hello');
+  });
+
   it('does not forward deopt to the rendered element', async () => {
     await render(<Text deopt testID="deopted" />);
 

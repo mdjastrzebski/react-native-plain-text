@@ -16,9 +16,25 @@ export type TextProps = Omit<RNTextProps, keyof PlainTextOwnProps> &
     ref?: Ref<HostInstance>;
   };
 
+// RN <Text> props that change behavior PlainText can't reproduce. Props that only
+// matter alongside one of these (selectionColor, disabled, suppressHighlighting)
+// aren't listed. Plain property reads: no allocation on the hot path.
+function hasUnsupportedProp(props: RNTextProps): boolean {
+  return (
+    props.onPress != null ||
+    props.onLongPress != null ||
+    props.onPressIn != null ||
+    props.onPressOut != null ||
+    props.onTextLayout != null ||
+    !!props.selectable ||
+    !!props.adjustsFontSizeToFit ||
+    props.dataDetectorType != null
+  );
+}
+
 export function Text({ children, deopt, ...rest }: TextProps) {
   const isNestedText = use(unstable_TextAncestorContext);
-  if (!deopt && typeof children === 'string' && !isNestedText) {
+  if (!deopt && typeof children === 'string' && !isNestedText && !hasUnsupportedProp(rest)) {
     return <PlainText {...rest}>{children}</PlainText>;
   }
 
