@@ -6,7 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 usage() {
-  printf 'Usage: yarn vrt <android|ios> [all|setup|build|install|verify|e2e|capture|compare|update]\n'
+  printf 'Usage: yarn vrt <android|ios> [all|setup|build|install|verify|e2e|capture|compare|update] [options]\n'
+  printf '       yarn vrt <android|ios> capture [--filter <substring>[,...]] [--limit <n>] [--out <dir>]\n'
+  printf '       yarn vrt <android|ios> compare partial\n'
 }
 
 fail() {
@@ -17,13 +19,32 @@ fail() {
 
 platform="${1:-}"
 stage="${2:-all}"
-[[ $# -le 2 ]] || fail "Too many arguments."
 if [[ "$platform" == "-h" || "$platform" == "--help" ]]; then
   usage
   exit 0
 fi
+if [[ "$stage" == "-h" || "$stage" == "--help" ]]; then
+  usage
+  exit 0
+fi
+if [[ $# -gt 2 ]]; then
+  shift 2
+elif [[ $# -gt 0 ]]; then
+  shift $#
+fi
+stage_args=("$@")
+
 case "$platform" in android | ios) ;; *) fail "Platform must be 'android' or 'ios'." ;; esac
-case "$stage" in all | setup | build | install | verify | e2e | capture | compare | update) ;; *) fail "Unknown stage '$stage'." ;; esac
+case "$stage" in
+  all | setup | build | install | verify | e2e | capture | compare | update) ;;
+  *) fail "Unknown stage '$stage'." ;;
+esac
+if [[ "${#stage_args[@]}" -gt 0 && "$stage" != "capture" && "$stage" != "compare" ]]; then
+  fail "Stage '$stage' takes no options."
+fi
+if [[ "$stage" == "compare" && "${#stage_args[@]}" -gt 1 ]]; then
+  fail "compare takes at most one mode: 'partial'."
+fi
 
 run_setup() {
   case "$platform" in
@@ -36,8 +57,8 @@ run_build() { "$SCRIPT_DIR/build-vrt-app.sh" "$platform"; }
 run_install() { "$SCRIPT_DIR/install-vrt-app.sh" "$platform"; }
 run_verify() { "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"; }
 run_e2e() { "$SCRIPT_DIR/run-vrt-e2e.sh" "$platform"; }
-run_capture() { "$SCRIPT_DIR/capture-vrt.sh" "$platform"; }
-run_compare() { "$SCRIPT_DIR/compare-vrt.sh" "$platform"; }
+run_capture() { "$SCRIPT_DIR/capture-vrt.sh" "$platform" "$@"; }
+run_compare() { "$SCRIPT_DIR/compare-vrt.sh" "$platform" "${1:-compare}"; }
 run_update() { "$SCRIPT_DIR/compare-vrt.sh" "$platform" update; }
 
 cd "$PROJECT_ROOT"
@@ -64,7 +85,7 @@ case "$stage" in
   install) run_install ;;
   verify) run_verify ;;
   e2e) run_e2e ;;
-  capture) run_capture ;;
-  compare) run_compare ;;
+  capture) run_capture ${stage_args[@]+"${stage_args[@]}"} ;;
+  compare) run_compare ${stage_args[@]+"${stage_args[@]}"} ;;
   update) run_update ;;
 esac

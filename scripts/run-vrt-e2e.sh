@@ -69,16 +69,19 @@ if [[ "$platform" == "ios" ]]; then
     attempt_log="$diagnostics_dir/attempt-$attempt.log"
     {
       printf '=== attempt %s: cold open\n' "$attempt"
-      agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 60000 ||
+      agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 30000 ||
         printf 'cold open exited %s\n' "$?"
       printf '=== attempt %s: confirmation dialog\n' "$attempt"
-      if agent_device alert wait 10000; then
+      # The dialog is armed by a cold open on a simulator that has never accepted
+      # this scheme, so it is either up within a moment or not coming. An unaccepted
+      # dialog surfaces as the wait below failing, not as this one timing out.
+      if agent_device alert wait 1500; then
         agent_device alert accept || printf 'alert accept exited %s\n' "$?"
       else
         printf 'no alert to accept\n'
       fi
       printf '=== attempt %s: warm open\n' "$attempt"
-      agent_device open "$VRT_APP_ID" "$deep_link" --foreground --timeout 60000 ||
+      agent_device open "$VRT_APP_ID" "$deep_link" --foreground --timeout 30000 ||
         printf 'warm open exited %s\n' "$?"
       printf '=== attempt %s: wait for %s\n' "$attempt" "$capture_id"
       agent_device wait "id=\"$capture_id\"" 20000

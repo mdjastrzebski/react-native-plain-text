@@ -14,14 +14,47 @@ yarn vrt ios
 The workflow is split into independently runnable stages:
 
 ```text
-setup -> build -> install -> e2e -> capture -> compare
+setup -> build -> install -> verify -> e2e -> capture -> compare
 ```
 
-`compare` does not start a device or capture new images. It compares the existing `build/vrt/actual/<platform>/` directory, so it is cheap to rerun while investigating a failure:
+`verify` records the rendering inputs that `compare` later checks. The `all` run does not call it as its own step, because `e2e` and `capture` each run it first. `compare` does not start a device or capture new images. It compares the existing `build/vrt/actual/<platform>/` directory, so it is cheap to rerun while investigating a failure:
 
 ```sh
 yarn vrt ios compare
 ```
+
+## Iterating locally
+
+Each specimen is rendered on its own screen, so it costs a deep link, one accessibility fetch that proves the specimen exists, and one cropped screenshot. On the pinned Android emulator a full sweep of 187 specimens takes 133s, about 0.7s per specimen. iOS was last timed at 1.1s per specimen before the loop was cheapened, and `VRT_TIMING=1` below is how to re-measure it. Neither sweep needs the whole manifest, so the working loop is a filtered capture and a partial comparison:
+
+```sh
+yarn vrt ios capture --filter font-size
+yarn vrt ios compare partial
+```
+
+`--filter` takes comma-separated substrings of a capture id, and `--limit <n>` stops after n captures. `--out <dir>` writes images somewhere other than `build/vrt/actual/<platform>` (anywhere outside the repository, or inside it under `build/`), which is how two captures of one selection are compared byte for byte:
+
+```sh
+yarn vrt ios capture --filter baseline --out /tmp/a
+yarn vrt ios capture --filter baseline --out /tmp/b
+diff -r /tmp/a /tmp/b
+```
+
+A filtered capture is a partial capture and says so. The capture stage leaves a `.partial` marker recording the selection it was given, `compare partial` compares exactly the images that marker covers and copies it into the report, and `update` refuses a marked directory. A partial result can therefore be read as what it is and cannot quietly become a reviewed baseline, while the unqualified `compare` still demands the exact set the manifest describes.
+
+`VRT_TIMING=1` records per-command `wall_clock_ms` and `runner_round_trips` to `build/vrt/timings/<platform>.tsv`, which is how the per-specimen cost above was measured and how a regression in the loop itself gets located. It needs `jq`. The shape it shows is worth knowing before reading a log: the first specimen's `open` pays the app launch (about a second), every later `open` is the deep link alone (about 150ms), and the screenshot is the largest steady cost. A step whose command reports no timing at all is written as `n/a`, never as a zero that would flatter the loop.
+
+```sh
+VRT_TIMING=1 yarn vrt ios capture --limit 5
+```
+
+The `e2e` stage proves the deep-link path works, which only matters when something about that path changed. It is not part of investigating a rendering difference, and on iOS it can spend minutes disarming the one-time "Open in app?" confirmation. Run `capture` and `compare`.
+
+### What keeps a cheap capture honest
+
+The loop used to buy its "nothing is still moving" guarantee from `wait stable`, at the price of two more accessibility fetches per specimen. It now proves the specimen once and lets the screenshot's own `--crop-on` resolve the same element on the same screen: a specimen that is present and laid out is proven where its pixels are taken. A capture whose crop cannot resolve is retried (`VRT_CAPTURE_ATTEMPTS`, default 5) before the run fails naming that specimen.
+
+These variables put the removed behavior back, so a cheaper default is shown to render the same bytes rather than asserted to. `VRT_STABLE_QUIET_MS` with `VRT_STABLE_TIMEOUT_MS` restores `wait stable`, and `VRT_SETTLE_MS` inserts a fixed pause before the screenshot. `VRT_ANDROID_STABILIZE=1` restores Android's status-bar and demo-mode stabilization, which is now skipped: every capture is cropped to the specimen's own frame, so the chrome it protects reaches no pixel, and the animations it waits out are already switched off by `scripts/setup-android-vrt-device.sh`. That is how the Android default was earned, not assumed: all 187 captures taken with stabilization skipped and without `wait stable` are byte-identical to the reviewed baselines, not merely inside Android's matching threshold. All of these are investigation switches: CI sets none of them, and setting one is the reviewed policy put back.
 
 ## Baselines
 
@@ -63,7 +96,7 @@ The pointer bump is the reviewable baseline change in the library pull request. 
 
 Before image comparison, the runner derives the exact platform-specific file list from `.agent-device/vrt-captures.txt`. Actual and baseline directories must both contain exactly that set. Missing, unexpected, malformed, and duplicate entries fail before pixel comparison.
 
-This distinguishes an incomplete capture from a rendering change and ensures that adding or removing a manifest entry cannot silently pass.
+This distinguishes an incomplete capture from a rendering change and ensures that adding or removing a manifest entry cannot silently pass. `compare partial` is the one deliberate exception: it checks that every captured image is listed by the manifest and that the reviewed baselines contain each of them, and it labels its report with the selection it covered. It is a narrower question, not a passing suite.
 
 ## Environment matching
 
