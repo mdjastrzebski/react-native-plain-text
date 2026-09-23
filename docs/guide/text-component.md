@@ -28,12 +28,12 @@ tradeoff. The rest of this page covers `Text`.
 ```tsx
 import { use } from 'react';
 import { Text as RnText, unstable_TextAncestorContext, type TextProps } from 'react-native';
-import { PlainText, type PlainTextProps } from 'react-native-plain-text';
+import { PlainText } from 'react-native-plain-text';
 
 export function Text({ children, deopt, ...rest }: TextProps & { deopt?: boolean }) {
   const isNestedText = use(unstable_TextAncestorContext);
   if (!deopt && typeof children === 'string' && !isNestedText) {
-    return <PlainText {...(rest as PlainTextProps)}>{children}</PlainText>;
+    return <PlainText {...rest}>{children}</PlainText>;
   }
 
   return <RnText {...rest}>{children}</RnText>;

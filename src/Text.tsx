@@ -4,7 +4,7 @@ import {
   unstable_TextAncestorContext,
   type TextProps as RNTextProps,
 } from 'react-native';
-import { PlainText, type PlainTextProps } from './PlainText';
+import { PlainText } from './PlainText';
 
 export type TextProps = RNTextProps & {
   /// Always render RN <Text>, even for a plain string. Escape hatch for props
@@ -15,7 +15,7 @@ export type TextProps = RNTextProps & {
 export function Text({ children, deopt, ...rest }: TextProps) {
   const isNestedText = use(unstable_TextAncestorContext);
   if (!deopt && typeof children === 'string' && !isNestedText) {
-    return <PlainText {...(rest as PlainTextProps)}>{children}</PlainText>;
+    return <PlainText {...rest}>{children}</PlainText>;
   }
 
   return <RNText {...rest}>{children}</RNText>;

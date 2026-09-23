@@ -1,50 +1,43 @@
-import { StyleSheet, type AccessibilityProps, type StyleProp, type TextStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type TextProps, type TextStyle } from 'react-native';
 import type { ComponentRef, Ref } from 'react';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 import { normalizeFontVariant } from './utils';
 
-// RN's TextStyle plus a key it has no entry for. Widened, not replaced, so a
-// plain TextStyle stays assignable.
+/** RN's `TextStyle` plus `fontVariationSettings`. Any `TextStyle` is assignable. */
 export type PlainTextStyle = TextStyle & {
   // Upstream attempts to add it (react/react-native#44685, #44667) never merged.
+  /** Variable-font axes in CSS syntax, e.g. `'"wght" 700, "wdth" 87.5'`. */
   fontVariationSettings?: string;
 };
 
-export type PlainTextProps = AccessibilityProps & {
-  children?: string;
-  /// Alias to `children`, to be used for animating text with Animated/Reanimated
+// Props PlainText adds or narrows relative to RN's TextProps.
+export type PlainTextOwnProps = {
+  /** Alias for `children`, for animating text with Animated/Reanimated. */
   text?: string;
+  /** RN's `TextStyle` plus `fontVariationSettings`. */
   style?: StyleProp<PlainTextStyle>;
-  numberOfLines?: number;
-  ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
-  lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
-  /// Android-only, like RN <Text>.
-  textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
-  /// Android-only, like RN <Text>'s prop of the same name. iOS ignores it.
-  /// Only a fallback on Android, used whenever `hyphens` is left unset.
-  android_hyphenationFrequency?: 'none' | 'normal' | 'full';
-  /// Not in RN <Text>. `'none'` (default) keeps the platform's default
-  /// hyphenation behavior; `'auto'` turns on dictionary-based hyphenation.
-  /// On Android, whichever one is set here wins over
-  /// `android_hyphenationFrequency`, even `'none'`; leave `hyphens` unset to
-  /// let `android_hyphenationFrequency` apply instead. `'none'` never strips
-  /// or otherwise touches an inserted soft hyphen (U+00AD) on either
-  /// platform.
+  /**
+   * `'auto'` enables dictionary-based hyphenation; `'none'` (default) keeps the
+   * platform default. On Android, overrides `android_hyphenationFrequency`.
+   */
   hyphens?: 'none' | 'auto';
-  allowFontScaling?: boolean;
-  maxFontSizeMultiplier?: number;
-  /// BCP-47 language tag (e.g. 'de'); picks the hyphenation dictionary and
-  /// locale-sensitive line breaking.
+  /** BCP-47 language tag (e.g. `'pl'`, `'de'`) for hyphenation and line breaking. */
   lang?: string;
-  testID?: string;
-  nativeID?: string;
-  id?: string;
 
-  /// When true, reverts iOS's lineHeight vertical centering to RN <Text>'s
-  /// ascent-clipping behavior (RN#29507) for this instance.
   // SYNC: renamed to the bare lineHeightClippingCompat past this file — see
   // docs/contributing/sync-points.md#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary.
+  /**
+   * Reverts iOS's `lineHeight` vertical centering to RN `<Text>`'s
+   * buggy ascent-clipping behavior (RN#29507).
+   */
   unstable_lineHeightClippingCompat?: boolean;
+};
+
+// RN's own props PlainText doesn't support are accepted but ignored: only keys
+// in the native view config reach the native view.
+export type PlainTextProps = Omit<TextProps, keyof PlainTextOwnProps | 'children'> & PlainTextOwnProps & {
+  /** Text to render. Only a plain string: no nested `<Text>`. */
+  children?: string;
 };
 
 export function mapPlainTextProps({
@@ -61,7 +54,7 @@ export function mapPlainTextProps({
   hyphens,
   lang,
   unstable_lineHeightClippingCompat,
-  ...accessibilityProps
+  ...rest
 }: PlainTextProps): NativeProps {
   const {
     color,
@@ -87,7 +80,7 @@ export function mapPlainTextProps({
   } = StyleSheet.flatten(style) ?? {};
 
   return {
-    ...accessibilityProps,
+    ...rest,
     text: text ?? children,
     color,
     fontSize,
