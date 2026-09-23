@@ -62,6 +62,33 @@ if [[ "$platform" == "ios" ]]; then
   # Every attempt is logged rather than sent to /dev/null. This stage gates the
   # whole job, so a run that exhausts the budget has to say what the simulator
   # actually did on each attempt.
+
+  # Accept the "Open in app?" dialog armed by the cold open. The dialog appears
+  # within a moment, but the app's launch keeps the simulator's main thread busy
+  # enough that a single short alert query can exceed the runner's execution
+  # watchdog and abort (its work is abandoned, and the next command may bounce
+  # with RUNNER_BUSY until it drains). So a miss is polled again rather than read
+  # as "no dialog", with a settle pause between polls, and the accept is trusted
+  # only once it reports the dialog gone. A dialog left standing would swallow
+  # the deep link that the warm open below delivers.
+  dismiss_cold_open_dialog() {
+    local poll
+    for poll in 1 2 3 4 5 6; do
+      if agent_device alert wait 3000; then
+        printf '  confirmation dialog detected (poll %s)\n' "$poll"
+        if agent_device alert accept; then
+          printf '  confirmation dialog accepted (poll %s)\n' "$poll"
+          return 0
+        fi
+        printf '  alert accept exited %s (poll %s)\n' "$?" "$poll"
+      else
+        printf '  confirmation dialog not detected (poll %s)\n' "$poll"
+      fi
+      sleep 2
+    done
+    return 1
+  }
+
   diagnostics_dir="$PROJECT_ROOT/build/vrt/agent-device/$platform/prewarm"
   mkdir -p "$diagnostics_dir"
   armed=0
@@ -72,14 +99,8 @@ if [[ "$platform" == "ios" ]]; then
       agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 30000 ||
         printf 'cold open exited %s\n' "$?"
       printf '=== attempt %s: confirmation dialog\n' "$attempt"
-      # The dialog is armed by a cold open on a simulator that has never accepted
-      # this scheme, so it is either up within a moment or not coming. An unaccepted
-      # dialog surfaces as the wait below failing, not as this one timing out.
-      if agent_device alert wait 1500; then
-        agent_device alert accept || printf 'alert accept exited %s\n' "$?"
-      else
-        printf 'no alert to accept\n'
-      fi
+      dismiss_cold_open_dialog ||
+        printf '  confirmation dialog never confirmed after 6 polls\n'
       printf '=== attempt %s: warm open\n' "$attempt"
       agent_device open "$VRT_APP_ID" "$deep_link" --foreground --timeout 30000 ||
         printf 'warm open exited %s\n' "$?"
