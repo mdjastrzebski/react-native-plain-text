@@ -1,16 +1,10 @@
 name: Visual Tests
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  merge_group:
-    types:
-      - checks_requested
   workflow_dispatch:
+  schedule:
+    # https://elmah.io/tools/cron-parser/#0_2_*_*_*
+    - cron: '0 2 * * *'
 
 permissions:
   contents: read
@@ -19,8 +13,8 @@ env:
   VRT_ENABLED: '1'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   vrt-android:
