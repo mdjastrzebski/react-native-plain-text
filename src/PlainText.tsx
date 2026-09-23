@@ -5,7 +5,8 @@ import { normalizeFontVariant } from './utils';
 
 /** RN's `TextStyle` plus `fontVariationSettings`. Any `TextStyle` is assignable. */
 export type PlainTextStyle = TextStyle & {
-  // Upstream attempts to add it (react/react-native#44685, #44667) never merged.
+  // Upstream added it Android-only in RN 0.88 (facebook/react-native#57804), so
+  // older RN's TextStyle lacks it.
   /** Variable-font axes in CSS syntax, e.g. `'"wght" 700, "wdth" 87.5'`. */
   fontVariationSettings?: string;
 };
@@ -35,10 +36,11 @@ export type PlainTextOwnProps = {
 
 // RN's own props PlainText doesn't support are accepted but ignored: only keys
 // in the native view config reach the native view.
-export type PlainTextProps = Omit<TextProps, keyof PlainTextOwnProps | 'children'> & PlainTextOwnProps & {
-  /** Text to render. Only a plain string: no nested `<Text>`. */
-  children?: string;
-};
+export type PlainTextProps = Omit<TextProps, keyof PlainTextOwnProps | 'children'> &
+  PlainTextOwnProps & {
+    /** Text to render. Only a plain string: no nested `<Text>`. */
+    children?: string;
+  };
 
 export function mapPlainTextProps({
   children,
