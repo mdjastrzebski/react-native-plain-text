@@ -1,9 +1,16 @@
 # `Text` component
 
-`Text` is a drop-in replacement for RN's `<Text>`: a selector component that renders
-`PlainText` for simple strings and falls back to RN `<Text>` for everything else. Swap
-the import and get Plain Text's performance benefits across the app without touching
-any call sites.
+The library offers ways of integrating into your app:
+
+- **`PlainText`** is a high-performance, single-style text component. You use it
+  directly at the call sites where it fits. This gives the best performance: no
+  per-render check, no fallback branch, and no chance of silently landing on RN
+  `<Text>`.
+
+- **`Text`** is a drop-in replacement for RN `<Text>`. It automatically renders
+  `PlainText` for simple strings and falls back to RN `<Text>` for nested ones.
+  Swap the import and get most of Plain Text's performance benefits across the app
+  without touching any call sites.
 
 ```jsx
 import { Text } from 'react-native-plain-text';
@@ -11,12 +18,10 @@ import { Text } from 'react-native-plain-text';
 <Text style={{ fontSize: 16 }}>Hello there 👋</Text>;
 ```
 
-This is the easy adoption path. Using `PlainText` directly, where you can, still gives
-you the best performance: no per-render check, no fallback branch, no possibility of
-silently landing on RN `<Text>`. Reach for `Text` where an existing call site takes
-arbitrary `<Text>` children you don't control, or as a first pass before switching
-individual call sites to `PlainText`. See [Should you use it?](./intro#should-you-use-it)
-for the underlying tradeoff.
+Reach for `Text` where an existing call site takes arbitrary `<Text>` children you
+don't control, or as a first pass before switching individual call sites to
+`PlainText`. See [Should you use it?](./intro#should-you-use-it) for the underlying
+tradeoff. The rest of this page covers `Text`.
 
 ## How it works
 
