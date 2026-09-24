@@ -100,7 +100,49 @@ render. Omit `deopt` rather than setting it to `false`.
 
 ## Using it in your own Text component
 
-You don't need to add a separate `Text` import: apply the same conditional rendering
-(`deopt` included, if you want the same escape hatch) inside an existing centralized Text
-component, such as a design system's, instead. Copy the snippet above into it: it only
-uses the public `PlainText`, which joins text children like `{count} items` itself.
+You don't need to add a separate `Text` import: an existing centralized Text component,
+such as a design system's, can make the same decision. The simplest way is to render
+this library's `Text` in place of RN `<Text>`:
+
+```tsx
+import { Text, type TextProps } from 'react-native-plain-text';
+
+export function AppText({ style, ...rest }: TextProps) {
+  return <Text {...rest} style={[styles.base, style]} />;
+}
+```
+
+To own the RN `<Text>` fallback yourself, use `unstable_mapTextProps`, the same function
+`Text` runs. It returns the native props when `PlainText` can render, or `null` when
+`deopt` is set or the content isn't plain text. Props `PlainText` can't reproduce, such
+as `onPress`, don't make it return `null`: they only warn in development, so pass
+`deopt` for those. It doesn't check nesting, so do that first. Like
+`unstable_NativePlainText`, which renders its result, its props aren't guaranteed
+stable across releases:
+
+```tsx
+import { use } from 'react';
+import { Text as RNText, unstable_TextAncestorContext } from 'react-native';
+import {
+  unstable_mapTextProps as mapTextProps,
+  unstable_NativePlainText as NativePlainText,
+  type TextProps,
+} from 'react-native-plain-text';
+
+export function AppText({ style, ...rest }: TextProps) {
+  const props = { ...rest, style: [styles.base, style] };
+  const isNestedText = use(unstable_TextAncestorContext);
+  const nativeProps = isNestedText ? null : mapTextProps(props);
+  if (nativeProps !== null) {
+    return <NativePlainText {...nativeProps} />;
+  }
+
+  return <RNText {...props} />;
+}
+```
+
+This renders the `NativePlainText` view directly, as `Text` does, skipping the
+`PlainText` JS wrapper. `unstable_mapTextProps` gives the same development warnings
+for props `PlainText` ignores. The warnings for `PlainText`-only props dropped on
+fallback stay in `Text`, and so does passing the `text` prop to RN `<Text>` as
+children.

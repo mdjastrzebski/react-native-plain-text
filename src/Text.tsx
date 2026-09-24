@@ -6,7 +6,7 @@ import {
   type TextProps as RNTextProps,
 } from 'react-native';
 import { mapPlainTextProps, type PlainTextOwnProps, type PlainTextProps } from './PlainText';
-import PlainTextViewNativeComponent from './PlainTextViewNativeComponent';
+import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
 import { joinTextChildren, warnOnPlainTextOnlyProp, warnOnUnsupportedProp } from './utils';
 
 export type TextProps = Omit<RNTextProps, keyof PlainTextOwnProps> &
@@ -22,30 +22,9 @@ export type TextProps = Omit<RNTextProps, keyof PlainTextOwnProps> &
 
 export function Text(props: TextProps) {
   const isNestedText = use(unstable_TextAncestorContext);
-  if (!props.deopt && !isNestedText) {
-    // `text` wins over `children`, as in PlainText.
-    const content = props.text ?? props.children;
-
-    // Hot path
-    if (typeof content === 'string') {
-      if (__DEV__) {
-        warnOnUnsupportedProp(props);
-      }
-
-      const nativeProps = mapPlainTextProps(props as PlainTextProps);
-      return <PlainTextViewNativeComponent {...nativeProps} />;
-    }
-
-    // Slow path
-    const text = joinTextChildren(content);
-    if (text !== undefined) {
-      if (__DEV__) {
-        warnOnUnsupportedProp(props);
-      }
-
-      const nativeProps = mapPlainTextProps({ ...props, text } as PlainTextProps);
-      return <PlainTextViewNativeComponent {...nativeProps} />;
-    }
+  const nativeProps = isNestedText ? null : mapTextProps(props);
+  if (nativeProps !== null) {
+    return <PlainTextViewNativeComponent {...nativeProps} />;
   }
 
   if (__DEV__) {
@@ -62,4 +41,43 @@ export function Text(props: TextProps) {
   // RN <Text> ignores `text`, so it goes in as children.
   const { deopt, text, ...rnTextProps } = props;
   return <RNText {...rnTextProps}>{text ?? props.children}</RNText>;
+}
+
+/**
+ * Maps RN `<Text>` props to `unstable_NativePlainText` props.
+ *
+ * Returns `null` only when `deopt` is set or the content isn't plain text; render RN
+ * `<Text>` then. Props PlainText can't reproduce (`onPress`, `selectable`, …) still
+ * map, with only a dev warning: pass `deopt` for those.
+ *
+ * Doesn't check nesting: skip it inside another `<Text>` (`unstable_TextAncestorContext`).
+ */
+export function mapTextProps(props: TextProps): NativeProps | null {
+  if (props.deopt) {
+    return null;
+  }
+
+  // `text` wins over `children`, as in PlainText.
+  const content = props.text ?? props.children;
+
+  // Hot path
+  if (typeof content === 'string') {
+    if (__DEV__) {
+      warnOnUnsupportedProp(props);
+    }
+
+    return mapPlainTextProps(props as PlainTextProps);
+  }
+
+  // Slow path
+  const text = joinTextChildren(content);
+  if (text === undefined) {
+    return null;
+  }
+
+  if (__DEV__) {
+    warnOnUnsupportedProp(props);
+  }
+
+  return mapPlainTextProps({ ...props, text } as PlainTextProps);
 }

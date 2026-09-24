@@ -1,9 +1,10 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { render, screen } from '@testing-library/react-native';
-import { createRef } from 'react';
+import { createRef, use } from 'react';
 import { Text as RNText, unstable_TextAncestorContext, type HostInstance } from 'react-native';
 import type { PlainTextOwnProps } from '../PlainText';
-import { Text, type TextProps } from '../Text';
+import PlainTextViewNativeComponent from '../PlainTextViewNativeComponent';
+import { mapTextProps, Text, type TextProps } from '../Text';
 
 describe('<Text />', () => {
   it('renders a string child as PlainText', async () => {
@@ -344,5 +345,73 @@ describe('<Text />', () => {
     const badRef = <Text ref={createRef<string>()}>Hello</Text>;
 
     expect([badHyphens, badStyle, badRef]).toHaveLength(3);
+  });
+});
+
+describe('mapTextProps', () => {
+  it('maps a string child to native props', () => {
+    expect(mapTextProps({ children: 'Hello', style: { fontSize: 12, padding: 4 } })).toEqual({
+      text: 'Hello',
+      fontSize: 12,
+      style: { padding: 4 },
+    });
+  });
+
+  it('joins interpolated children', () => {
+    expect(mapTextProps({ children: [3, ' items'] })).toEqual({ text: '3 items' });
+  });
+
+  it('prefers the text prop over children', () => {
+    expect(mapTextProps({ text: 'Hi', children: <RNText>ignored</RNText> })).toEqual({
+      text: 'Hi',
+    });
+  });
+
+  it('returns null for element children', () => {
+    expect(mapTextProps({ children: <RNText>Hello</RNText> })).toBeNull();
+  });
+
+  it('returns null for missing children', () => {
+    expect(mapTextProps({})).toBeNull();
+  });
+
+  it('returns null when deopt is set', () => {
+    expect(mapTextProps({ deopt: true, children: 'Hello' })).toBeNull();
+  });
+
+  function AppText({ bold, ...props }: TextProps & { bold?: boolean }) {
+    const style = [{ fontSize: 14, fontWeight: bold ? 'bold' : undefined } as const, props.style];
+    const isNested = use(unstable_TextAncestorContext);
+    const nativeProps = isNested ? null : mapTextProps({ ...props, style });
+    if (nativeProps !== null) {
+      return <PlainTextViewNativeComponent {...nativeProps} />;
+    }
+
+    return <RNText {...props} style={style} />;
+  }
+
+  it('lets a custom Text render PlainText for a plain string', async () => {
+    await render(<AppText bold>Hello</AppText>);
+
+    expect(screen.toJSON()).toMatchInlineSnapshot(`
+<RNPlainText
+  fontSize={14}
+  fontWeight="bold"
+  text="Hello"
+/>
+`);
+  });
+
+  // The jest preset's RN <Text> mock never provides the ancestor context real RN
+  // <Text> does, so nesting is simulated with the provider.
+  it('lets a custom Text fall back to RN <Text> when nested', async () => {
+    await render(
+      <unstable_TextAncestorContext.Provider value={true}>
+        <AppText bold>world</AppText>
+      </unstable_TextAncestorContext.Provider>
+    );
+
+    expect(screen.root).not.toHaveProp('text');
+    expect(screen.root).toHaveProp('style', [{ fontSize: 14, fontWeight: 'bold' }, undefined]);
   });
 });
