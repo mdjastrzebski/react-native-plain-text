@@ -344,7 +344,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     //
     // EXPENSIVE for custom-styled text (docs/contributing/performance.md): the paint's
     // isSubpixelText/isLinearText push this onto Android's unhinted glyph path.
-    // ~2.5% extra mount cost measured; see docs/contributing/perf-experiments.md.
+    // ~2.5% extra mount cost measured; see docs/contributing/performance.md.
     val rawDesiredWidth =
       if (widthMode != YogaMeasureMode.EXACTLY) {
         ceil(Layout.getDesiredWidth(view.text, view.paint).toDouble()).toInt()

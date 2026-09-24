@@ -60,7 +60,7 @@ import { Text } from 'react-native-plain-text';
 ```
 
 It's a selector component: `PlainText` for simple strings, falling back to RN
-`<Text>` for anything `PlainText` doesn't support (nested text, non-string
+`<Text>` for anything `PlainText` doesn't support (nested text, element
 children). See the
 [`Text` component guide](https://mdjastrzebski.github.io/react-native-plain-text/guide/text-component)
 for how it decides and how to build the same pattern into your own centralized
@@ -70,7 +70,9 @@ Using `PlainText` directly still gives you the best performance.
 
 ## Props and styles
 
-`children` accepts a plain `string` only. No nested `<Text>`, no elements.
+`children` accepts text only: a string, or text-like children such as `{count} items`
+(strings, numbers and bigints; `null` and booleans render nothing). No nested `<Text>`, no
+elements.
 
 Everything below is API-compatible with RN `<Text>`. Most commonly used:
 

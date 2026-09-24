@@ -41,8 +41,11 @@ prefixed names left are the generated ones we implement:
 - **Text-style props (e.g. `fontSize`) are not part of RN `ViewProps`**, so they
   don't reach the native view through `style`. The pattern (see
   `PlainText.tsx`): accept a `TextStyle` `style`, `StyleSheet.flatten`
-  it, destructure the text-style keys out, pass them as explicit codegen props,
-  and forward the remaining layout styles as `style`.
+  it, move the text-style keys listed in `TEXT_STYLE_KEYS` out to top-level
+  codegen props, and forward the remaining layout styles as `style`. A new
+  text-style prop needs a `TEXT_STYLE_KEYS` entry; other props pass through
+  `mapPlainTextProps` untouched. Only keys that hold a value are emitted, since
+  Fabric's prop diff walks every key, `undefined` ones included.
 - **A prop nobody sets must cost a check.** No allocation, no font resolution,
   no extra pass when it is at its default. A prop that is set gets a
   light/medium/heavy rating, and medium or heavy is recorded beside it in the

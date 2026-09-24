@@ -6,7 +6,7 @@
 | ------------------------------ | ---------------------- | ---------------------------------------------------------------------------------- |
 | `allowFontScaling`             | ✅                     |                                                                                    |
 | `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`. Only a fallback for when `hyphens` is unset.       |
-| `children`                     | 🟡                     | `string` only                                                                      |
+| `children`                     | 🟡                     | Text only: a string, number, bigint, or a flat array of them (`{count} items`).    |
 | `ellipsizeMode`                | ✅                     |                                                                                    |
 | `hyphens`                      | ⬆️                     | Not in RN `<Text>`. `'none' \| 'auto'`, default `'none'`. See below.               |
 | `lang`                         | ⬆️                     | Not in RN `<Text>`. BCP-47 tag (e.g. `'de'`) for hyphenation and line breaking.    |

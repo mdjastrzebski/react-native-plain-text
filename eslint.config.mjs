@@ -23,6 +23,20 @@ export default defineConfig([
     },
   },
   {
+    // Allow `const { omitted, ...rest } = props` to strip props.
+    files: ['**/*.ts', '**/*.tsx'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
+  },
+  {
     // The example app uses inline styles on purpose: each demo shows the exact
     // style being exercised right next to the element it applies to.
     files: ['example/**'],

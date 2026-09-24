@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import { render, screen } from '@testing-library/react-native';
 import { createRef } from 'react';
 import { Text as RNText, unstable_TextAncestorContext, type HostInstance } from 'react-native';
@@ -21,6 +21,70 @@ describe('<Text />', () => {
     );
 
     expect(screen.root).not.toHaveProp('text');
+  });
+
+  it('renders interpolated children (an array) as PlainText', async () => {
+    const n = 3;
+    await render(<Text>{n} items</Text>);
+
+    expect(screen.root).toHaveProp('text', '3 items');
+    expect(screen.toJSON()).toMatchInlineSnapshot(`
+<RNPlainText
+  text="3 items"
+/>
+`);
+  });
+
+  it('skips null and boolean children when joining, like RN <Text>', async () => {
+    const isNew = false;
+    await render(
+      <Text>
+        {3} items{null}
+        {isNew && ' (new)'}
+      </Text>
+    );
+
+    expect(screen.root).toHaveProp('text', '3 items');
+  });
+
+  it('renders a number child as PlainText', async () => {
+    await render(<Text>{3}</Text>);
+
+    expect(screen.root).toHaveProp('text', '3');
+  });
+
+  it('renders a bigint child as PlainText', async () => {
+    await render(<Text>{3n}</Text>);
+
+    expect(screen.root).toHaveProp('text', '3');
+  });
+
+  it('joins bigint children with text, like RN <Text>', async () => {
+    await render(<Text>{3n} items</Text>);
+
+    expect(screen.root).toHaveProp('text', '3 items');
+  });
+
+  it('renders children mixing text and an element as RN <Text>', async () => {
+    await render(
+      <Text>
+        Hello <RNText>world</RNText>
+      </Text>
+    );
+
+    expect(screen.root).not.toHaveProp('text');
+  });
+
+  it('renders a template literal child as PlainText', async () => {
+    const n = 3;
+    await render(<Text>{`${n} items`}</Text>);
+
+    expect(screen.root).toHaveProp('text', '3 items');
+    expect(screen.toJSON()).toMatchInlineSnapshot(`
+<RNPlainText
+  text="3 items"
+/>
+`);
   });
 
   it('renders undefined children as RN <Text>', async () => {
@@ -54,21 +118,54 @@ describe('<Text />', () => {
     ['selectable', { selectable: true }],
     ['adjustsFontSizeToFit', { adjustsFontSizeToFit: true }],
     ['dataDetectorType', { dataDetectorType: 'link' }],
+    ['dynamicTypeRamp', { dynamicTypeRamp: 'body' }],
   ] satisfies [string, TextProps][])(
-    'renders as RN <Text> when %s is set, even for a plain string child',
-    async (_, props) => {
+    'still renders PlainText but warns in dev when %s is set',
+    async (name, props) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
       await render(<Text {...props}>Hello</Text>);
 
-      expect(screen.root).not.toHaveProp('text');
+      expect(screen.root).toHaveProp('text', 'Hello');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(`\`${name}\``), expect.any(Object));
+      warn.mockRestore();
     }
   );
+
+  it('does not warn about unsupported props when deopt is set', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await render(
+      <Text deopt onPress={() => {}}>
+        Hello
+      </Text>
+    );
+
+    expect(screen.root).not.toHaveProp('text');
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
 
   it.each([
     ['onPress={undefined}', { onPress: undefined }],
     ['selectable={false}', { selectable: false }],
     ['adjustsFontSizeToFit={false}', { adjustsFontSizeToFit: false }],
-  ] satisfies [string, TextProps][])('still renders PlainText when %s', async (_, props) => {
-    await render(<Text {...props}>Hello</Text>);
+  ] satisfies [string, TextProps][])(
+    'renders PlainText without warning when %s',
+    async (_, props) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await render(<Text {...props}>Hello</Text>);
+
+      expect(screen.root).toHaveProp('text', 'Hello');
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    }
+  );
+
+  it('renders PlainText when deopt is false', async () => {
+    await render(<Text deopt={false}>Hello</Text>);
 
     expect(screen.root).toHaveProp('text', 'Hello');
   });
@@ -128,7 +225,6 @@ describe('<Text />', () => {
   hyphens="auto"
   lang="pl"
   lineHeightClippingCompat={true}
-  style={{}}
   text="Hello"
 />
 `);
@@ -148,6 +244,81 @@ describe('<Text />', () => {
 
     expect(screen.root).toHaveProp('text', 'From prop');
   });
+
+  it('renders the text prop as PlainText when there are no children', async () => {
+    await render(<Text text="Hello" />);
+
+    expect(screen.root).toHaveProp('text', 'Hello');
+  });
+
+  it('passes the text prop to RN <Text> as children on fallback', async () => {
+    await render(<Text deopt text="Hello" />);
+
+    expect(screen.root).not.toHaveProp('text');
+    expect(screen.getByText('Hello')).toBeOnTheScreen();
+  });
+
+  it.each([
+    ['hyphens', { hyphens: 'auto' }],
+    ['lang', { lang: 'pl' }],
+    ['unstable_lineHeightClippingCompat', { unstable_lineHeightClippingCompat: true }],
+    ['style.fontVariationSettings', { style: [{ fontVariationSettings: '"wght" 700' }] }],
+  ] satisfies [string, TextProps][])(
+    'warns in dev when %s is dropped by the RN <Text> fallback',
+    async (name, props) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await render(
+        <Text deopt {...props}>
+          Hello
+        </Text>
+      );
+
+      expect(screen.root).not.toHaveProp('text');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(`\`${name}\``), expect.any(Object));
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('`deopt` is set'),
+        expect.any(Object)
+      );
+      warn.mockRestore();
+    }
+  );
+
+  it('warns about PlainText-only props on automatic fallback too', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await render(
+      <unstable_TextAncestorContext.Provider value={true}>
+        <Text lang="de">Hello</Text>
+      </unstable_TextAncestorContext.Provider>
+    );
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('nested inside another <Text>'),
+      expect.any(Object)
+    );
+    warn.mockRestore();
+  });
+
+  it.each([
+    ['hyphens="none"', { hyphens: 'none' }],
+    ['unstable_lineHeightClippingCompat={false}', { unstable_lineHeightClippingCompat: false }],
+  ] satisfies [string, TextProps][])(
+    'does not warn on fallback when %s (matches RN <Text>)',
+    async (_, props) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await render(
+        <Text deopt {...props}>
+          Hello
+        </Text>
+      );
+
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    }
+  );
 
   it('accepts every PlainText own prop at the type level', async () => {
     const ownProps: PlainTextOwnProps = {

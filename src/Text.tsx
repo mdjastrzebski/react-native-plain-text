@@ -5,38 +5,61 @@ import {
   type HostInstance,
   type TextProps as RNTextProps,
 } from 'react-native';
-import { PlainText, type PlainTextOwnProps } from './PlainText';
+import { mapPlainTextProps, type PlainTextOwnProps, type PlainTextProps } from './PlainText';
+import PlainTextViewNativeComponent from './PlainTextViewNativeComponent';
+import { joinTextChildren, warnOnPlainTextOnlyProp, warnOnUnsupportedProp } from './utils';
 
 export type TextProps = Omit<RNTextProps, keyof PlainTextOwnProps> &
   PlainTextOwnProps & {
-    /** Always render RN <Text>, even for a plain string. Escape hatch for props
-     * PlainText doesn't support or PlainText rendering issues.*/
+    /**
+     * Always render RN `<Text>`, even for a plain string. Escape hatch for props or
+     * rendering PlainText doesn't support.
+     */
     deopt?: boolean;
     /** Host element of whichever component renders: PlainText's or RN `<Text>`'s. */
     ref?: Ref<HostInstance>;
   };
 
-// RN <Text> props that change behavior PlainText can't reproduce. Props that only
-// matter alongside one of these (selectionColor, disabled, suppressHighlighting)
-// aren't listed. Plain property reads: no allocation on the hot path.
-function hasUnsupportedProp(props: RNTextProps): boolean {
-  return (
-    props.onPress != null ||
-    props.onLongPress != null ||
-    props.onPressIn != null ||
-    props.onPressOut != null ||
-    props.onTextLayout != null ||
-    !!props.selectable ||
-    !!props.adjustsFontSizeToFit ||
-    props.dataDetectorType != null
-  );
-}
-
-export function Text({ children, deopt, ...rest }: TextProps) {
+export function Text(props: TextProps) {
   const isNestedText = use(unstable_TextAncestorContext);
-  if (!deopt && typeof children === 'string' && !isNestedText && !hasUnsupportedProp(rest)) {
-    return <PlainText {...rest}>{children}</PlainText>;
+  if (!props.deopt && !isNestedText) {
+    // `text` wins over `children`, as in PlainText.
+    const content = props.text ?? props.children;
+
+    // Hot path
+    if (typeof content === 'string') {
+      if (__DEV__) {
+        warnOnUnsupportedProp(props);
+      }
+
+      const nativeProps = mapPlainTextProps(props as PlainTextProps);
+      return <PlainTextViewNativeComponent {...nativeProps} />;
+    }
+
+    // Slow path
+    const text = joinTextChildren(content);
+    if (text !== undefined) {
+      if (__DEV__) {
+        warnOnUnsupportedProp(props);
+      }
+
+      const nativeProps = mapPlainTextProps({ ...props, text } as PlainTextProps);
+      return <PlainTextViewNativeComponent {...nativeProps} />;
+    }
   }
 
-  return <RNText {...rest}>{children}</RNText>;
+  if (__DEV__) {
+    warnOnPlainTextOnlyProp(
+      props,
+      props.deopt
+        ? '`deopt` is set'
+        : isNestedText
+          ? 'it is nested inside another <Text>'
+          : 'its children are not plain text'
+    );
+  }
+
+  // RN <Text> ignores `text`, so it goes in as children.
+  const { deopt, text, ...rnTextProps } = props;
+  return <RNText {...rnTextProps}>{text ?? props.children}</RNText>;
 }

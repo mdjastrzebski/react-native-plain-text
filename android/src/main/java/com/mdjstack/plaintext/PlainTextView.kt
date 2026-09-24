@@ -466,7 +466,7 @@ class PlainTextView : AppCompatTextView {
     // three set at all attaches it, regardless of value. Its apply() turns both
     // flags on; a plain paint never does. Closes a sub-px width/glyph-position
     // drift against RN's <Text>, only visible once one of these is customized.
-    // See docs/contributing/perf-experiments.md.
+    // See docs/contributing/performance.md.
     val hasCustomStyleSpan =
       fontStyle != ReactConstants.UNSET || fontWeight != ReactConstants.UNSET || fontFamily != null
     paint.isSubpixelText = hasCustomStyleSpan

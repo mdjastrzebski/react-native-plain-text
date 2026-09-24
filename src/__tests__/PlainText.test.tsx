@@ -1,9 +1,14 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import { createRef, type ComponentRef } from 'react';
 import type { TextStyle } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
-import { PlainText, mapPlainTextProps } from '../PlainText';
-import PlainTextViewNativeComponent from '../PlainTextViewNativeComponent';
+import {
+  PlainText,
+  mapPlainTextProps,
+  type PlainTextOwnProps,
+  type PlainTextProps,
+} from '../PlainText';
+import PlainTextViewNativeComponent, { type NativeProps } from '../PlainTextViewNativeComponent';
 
 it('maps PlainText props to native component props', () => {
   const nativeProps = mapPlainTextProps({
@@ -70,12 +75,105 @@ describe('<PlainText />', () => {
     expect(screen.root).toHaveProp('text', 'Hello');
   });
 
+  describe('interpolated children', () => {
+    const n = 3;
+
+    it('joins JSX interpolation (an array) into one string', async () => {
+      const element = <PlainText>{n} items</PlainText>;
+
+      // JSX never concatenates: each `{expr}` and text run is its own child.
+      expect(element.props.children).toEqual([3, ' items']);
+
+      await render(element);
+
+      expect(screen.root).toHaveProp('text', '3 items');
+      expect(screen.toJSON()).toMatchInlineSnapshot(`
+<RNPlainText
+  text="3 items"
+/>
+`);
+    });
+
+    it('renders number and bigint children as text', async () => {
+      await render(<PlainText>{0}</PlainText>);
+      expect(screen.root).toHaveProp('text', '0');
+
+      await render(<PlainText>{3n} items</PlainText>);
+      expect(screen.root).toHaveProp('text', '3 items');
+    });
+
+    it('skips null and boolean children, like RN <Text>', async () => {
+      const isNew = false;
+      await render(
+        <PlainText>
+          {n} items{null}
+          {isNew && ' (new)'}
+        </PlainText>
+      );
+
+      expect(screen.root).toHaveProp('text', '3 items');
+    });
+
+    it('renders nothing and warns in dev for element children', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const children = ['Hello ', <PlainText key="world">world</PlainText>];
+
+      // @ts-expect-error elements aren't text children.
+      await render(<PlainText>{children}</PlainText>);
+
+      expect(screen.root).not.toHaveProp('text');
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Received unsupported value:'),
+        children
+      );
+      warn.mockRestore();
+    });
+
+    it('renders a template literal as a single string', async () => {
+      await render(<PlainText>{`${n} items`}</PlainText>);
+
+      expect(screen.root).toHaveProp('text', '3 items');
+      expect(screen.toJSON()).toMatchInlineSnapshot(`
+<RNPlainText
+  text="3 items"
+/>
+`);
+    });
+  });
+
   it('forwards ref to the underlying native view', async () => {
     const ref = createRef<ComponentRef<typeof PlainTextViewNativeComponent>>();
 
     await render(<PlainText ref={ref}>Hello</PlainText>);
 
     expect(ref.current).not.toBeNull();
+  });
+
+  // Type-level only: `tsc` fails if any of these lines compiles.
+  it('rejects RN <Text> props it cannot honor', () => {
+    const elements = [
+      // @ts-expect-error `onPress` is unsupported.
+      <PlainText onPress={() => {}}>Hello</PlainText>,
+      // @ts-expect-error `selectable` is unsupported.
+      <PlainText selectable>Hello</PlainText>,
+      // @ts-expect-error `selectionColor` only matters with `selectable`.
+      <PlainText selectionColor="red">Hello</PlainText>,
+      // @ts-expect-error `dynamicTypeRamp` is unsupported.
+      <PlainText dynamicTypeRamp="body">Hello</PlainText>,
+    ];
+
+    expect(elements).toHaveLength(4);
+  });
+
+  // Type-level only: a PlainText prop missing from the native spec would be silently dropped.
+  it('forwards every prop to the native view', () => {
+    type Unforwarded = Exclude<
+      keyof PlainTextProps,
+      keyof NativeProps | keyof PlainTextOwnProps | 'children'
+    >;
+    const allForwarded: [Unforwarded] extends [never] ? true : Unforwarded = true;
+
+    expect(allForwarded).toBe(true);
   });
 });
 
@@ -178,8 +276,10 @@ describe('mapPlainTextProps', () => {
       ).toEqual(['small-caps', 'tabular-nums']);
     });
 
-    it('maps a separator-only string to undefined', () => {
-      expect(mapPlainTextProps({ style: { fontVariant: '  ' } }).fontVariant).toBeUndefined();
+    it('omits a separator-only string', () => {
+      expect(mapPlainTextProps({ style: { fontVariant: ' ,, ' } })).not.toHaveProperty(
+        'fontVariant'
+      );
     });
 
     it('passes an array through by reference (no copy)', () => {
@@ -215,7 +315,7 @@ describe('mapPlainTextProps', () => {
     });
 
     it('does not forward verticalAlign through style', () => {
-      expect(mapPlainTextProps({ style: { verticalAlign: 'middle' } }).style).toEqual({});
+      expect(mapPlainTextProps({ style: { verticalAlign: 'middle' } }).style).toBeUndefined();
     });
   });
 
@@ -239,14 +339,13 @@ describe('mapPlainTextProps', () => {
     });
 
     it('leaves width/height unset when the offset is absent', () => {
-      expect(
-        mapPlainTextProps({ style: { textShadowColor: '#000', textShadowRadius: 4 } })
-      ).toMatchObject({
-        textShadowOffsetWidth: undefined,
-        textShadowOffsetHeight: undefined,
-        textShadowColor: '#000',
-        textShadowRadius: 4,
+      const nativeProps = mapPlainTextProps({
+        style: { textShadowColor: '#000', textShadowRadius: 4 },
       });
+
+      expect(nativeProps).toMatchObject({ textShadowColor: '#000', textShadowRadius: 4 });
+      expect(nativeProps).not.toHaveProperty('textShadowOffsetWidth');
+      expect(nativeProps).not.toHaveProperty('textShadowOffsetHeight');
     });
   });
 
@@ -260,10 +359,8 @@ describe('mapPlainTextProps', () => {
       });
     });
 
-    it('leaves letterSpacing undefined when unset', () => {
-      expect(mapPlainTextProps({})).toMatchObject({
-        letterSpacing: undefined,
-      });
+    it('leaves letterSpacing unset when unset', () => {
+      expect(mapPlainTextProps({})).not.toHaveProperty('letterSpacing');
     });
   });
 
@@ -317,8 +414,9 @@ describe('mapPlainTextProps', () => {
       expect(nativeProps.style).toEqual({ padding: 1, margin: 2 });
     });
 
-    it('defaults to an empty style object when no style is given', () => {
-      expect(mapPlainTextProps({}).style).toEqual({});
+    it('omits style when no view style is given', () => {
+      expect(mapPlainTextProps({}).style).toBeUndefined();
+      expect(mapPlainTextProps({ style: { fontSize: 12 } }).style).toBeUndefined();
     });
   });
 
@@ -343,6 +441,20 @@ describe('mapPlainTextProps', () => {
       });
     });
 
+    it('emits only the keys that hold a value', () => {
+      expect(Object.keys(mapPlainTextProps({ children: 'Hi' }))).toEqual(['text']);
+      expect(
+        Object.keys(
+          mapPlainTextProps({ children: 'Hi', style: { color: null, padding: undefined } })
+        )
+      ).toEqual(['text']);
+    });
+
+    it('keeps style keys that only look like prototype members in style', () => {
+      const style = { constructor: 1 } as unknown as TextStyle;
+      expect(mapPlainTextProps({ style }).style).toEqual({ constructor: 1 });
+    });
+
     it('does not leak consumed props into the output', () => {
       const nativeProps = mapPlainTextProps({
         children: 'x',
@@ -352,7 +464,7 @@ describe('mapPlainTextProps', () => {
 
       expect(nativeProps).not.toHaveProperty('children');
       expect(nativeProps).not.toHaveProperty('unstable_lineHeightClippingCompat');
-      expect(nativeProps.style).toEqual({});
+      expect(nativeProps).not.toHaveProperty('style');
     });
   });
 });
