@@ -70,7 +70,8 @@ of why it is still in [todo.md](todo.md).
 | `textTransform`          | medium | Allocates a transformed copy of the string per apply on both platforms; `capitalize` additionally walks word boundaries.                                                      |
 | `writingDirection`       | light  | iOS only: one paragraph-style field. No-op on Android.                                                                                                                        |
 | `hyphens`                | light  | `auto` is one paragraph-style field on iOS and one `hyphenationFrequency` write on Android. `none` (default) is a no-op on both — no text is stripped or rewritten.           |
-| `lang`                   | light  | One attribute on iOS. The Android side is one guarded locale write.                                                                                                           |
+| `lang`                   | medium | One attribute plus one `accessibilityLanguage` write on iOS. On Android, one guarded locale write plus a `LocaleSpan`, so a `SpannableString` in place of a plain string.     |
+| `accessibilityLanguage`  | medium | Android only: a `LocaleSpan`, so a `SpannableString` in place of a plain string. On iOS, one `accessibilityLanguage` write, like RN.                                          |
 | everything else          | light  | One write, or one entry in the font cache key. Includes `android_hyphenationFrequency`: one `hyphenationFrequency` write on Android, ignored on iOS.                          |
 
 On iOS every node already builds one `NSAttributedString` with a paragraph
