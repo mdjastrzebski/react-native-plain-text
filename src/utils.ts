@@ -97,7 +97,7 @@ export function warnOnPlainTextOnlyProp(props: PlainTextOwnProps, reason: string
     warnOnce(
       `Text.plainTextOnlyProp.${plainTextOnlyProp}.${reason}`,
       `PlainText: unified <Text> rendered RN <Text> because ${reason}, ` +
-        `and RN <Text> ignores \`${plainTextOnlyProp}\`. Props:`,
+        `and RN <Text> does not support \`${plainTextOnlyProp}\`. Props:`,
       props
     );
   }
