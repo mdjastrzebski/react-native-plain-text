@@ -17,6 +17,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getMemoryFootprint } from 'react-native-memory-footprint';
 import {
   PlainText,
+  Text as UnifiedText,
   unstable_NativePlainText as NativePlainText,
   type PlainTextStyle,
 } from 'react-native-plain-text';
@@ -39,11 +40,13 @@ const MOUNT_TEXT_STRIDE = 10_000;
 // adjustable via the Props sheet's 'settleMs'.
 const DEFAULT_SETTLE_MS = 5_000;
 
-type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
+type Kind = 'plain' | 'nativePlain' | 'unified' | 'text' | 'nativeText';
 
 const VARIANTS: { kind: Kind; label: string }[] = [
   { kind: 'plain', label: 'PlainText' },
   { kind: 'nativePlain', label: 'NativePlainText' },
+  // The library's unified Text, labelled "Unified Text" to stay distinct from RN <Text>.
+  { kind: 'unified', label: 'Unified Text' },
   { kind: 'text', label: 'Text' },
   { kind: 'nativeText', label: 'NativeText' },
 ];
@@ -538,6 +541,16 @@ function renderItems(kind: Kind, applied: Applied, offset: number, count: number
       <PlainText key={n} style={style} {...extra}>
         {label(n)}
       </PlainText>
+    ));
+  }
+
+  if (kind === 'unified') {
+    // rnStyle: UnifiedText takes RN's TextProps. The cast is type-only, so
+    // fontVariationSettings still reaches PlainText at runtime.
+    return Array.from({ length: count }, (_, n) => (
+      <UnifiedText key={n} style={rnStyle} {...extra}>
+        {label(n)}
+      </UnifiedText>
     ));
   }
 

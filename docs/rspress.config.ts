@@ -44,6 +44,7 @@ export default defineConfig({
           items: [
             { text: 'Introduction', link: '/guide/intro' },
             { text: 'Installation', link: '/guide/installation' },
+            { text: 'Text component', link: '/guide/text-component' },
             { text: 'Props and styles', link: '/guide/props-and-styles' },
             { text: 'Recipes', link: '/guide/recipes' },
             { text: 'Performance', link: '/guide/performance' },

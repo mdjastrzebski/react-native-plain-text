@@ -24,8 +24,9 @@ For most apps, React Native's `<Text>` is a reasonable choice. Two reasons to pi
    and [animated text](./recipes#animating-text).
 
 You can mix it with `<Text>` in the same screen and only use it where it earns
-its place. A [unified `Text` component](./installation#unified-text-component) uses
-conditional rendering to pick between the two for you.
+its place. The [`Text` component](./text-component) is an easy adoption path: a
+drop-in replacement for RN `<Text>` that picks `PlainText` for you where it can.
+Using `PlainText` directly gives you the best performance.
 
 ## License
 

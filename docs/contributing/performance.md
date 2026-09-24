@@ -216,10 +216,12 @@ interaction-only.
 | `requestLayout` scoping + batched prop application | Android  | mount half 488 → 307 ms (interaction 687 → ~505 ms)                     |
 | `shouldNewRevisionDirtyMeasurement` override       | both     | ancestor re-render of 1000 mounted items: ~165 → 68 ms commit (Pixel 3) |
 | Skip the second layout when the text fits          | iOS      | commit 64.5 → 59 ms (iPhone 16, Large)                                  |
+| Emit only the native props that hold a value       | JS       | ~5 ms per 5000 items, mount ~1%, no-op update ~5% (iPhone 16)           |
 
-Each of these moved one half or the other, never both, which is why the
-`interaction`/`commit` split is worth keeping: the first two and the last are
-commit-side, the `requestLayout`/batching work is mount-side.
+Each native change moved one half or the other, never both, which is why the
+`interaction`/`commit` split is worth keeping: the first two and the iOS
+second-layout skip are commit-side, the `requestLayout`/batching work is
+mount-side. The JS mapper row has no split, only whole-scenario timings.
 
 ## Implemented
 
@@ -407,7 +409,13 @@ at all.
 A correctness fix, not an optimization, with a real accepted cost.
 `applyTypeface()` sets `paint.isSubpixelText`/`isLinearText` to match RN's
 `CustomStyleSpan` whenever `fontFamily`/`fontWeight`/`fontStyle` is set at
-all. Root cause in [perf-experiments.md](perf-experiments.md).
+all. RN attaches that span (a `MetricAffectingSpan`) whenever any of the
+three is set, regardless of value (`TextLayoutManager.kt`), and its `apply()`
+turns both flags on. They shift each glyph's advance by a sub-pixel amount, so
+without them custom-styled rows drifted ~0.3-2dp in width against RN's
+`<Text>` while default-styled rows matched exactly. Typeface identity,
+`fontWeightAdjustment`, and the other paint properties were each ruled out on
+device first.
 
 Real-device (avg of 5, release): mounting 1000 OpenSans nodes moved
 `interaction` from 610ms to 625ms, ~2.5%. The cost is Android's unhinted
@@ -501,6 +509,23 @@ iPhone 16, physical device, mount 1000 at Large, single runs:
 that a cheaper proxy could not profitably replace is worth 5.5 ms to skip
 outright when it is provably unnecessary. The saving comes from not running the
 second layout at all, not from computing the wrap result more cheaply.
+
+### Emit only the native props that hold a value (`src/PlainText.tsx`)
+
+`mapPlainTextProps` used to return a fixed object of ~30 keys, one per text
+style and text prop, most of them `undefined` on a typical node, plus a `style`
+object even when there was no view style. Fabric's prop diff walks every key of
+both the old and new props, `undefined` ones included, so each node paid for the
+full key set on mount and on every re-render.
+
+The mapper now reuses `rest` as the native props and makes one `for...in` pass
+over the keys the flattened style actually sets, dispatching each through a
+null-prototype lookup table. It adds a key only when it holds a value, and adds
+`style` only when a view style remains.
+
+Measured on iPhone 16, 5000 components: about 5 ms off both mount (~1%) and a
+no-op update (~5%). Small on mount, where native work dominates, but it applies
+to every re-render of a mounted list.
 
 ### Skip measurement invalidation on structural clones (both platforms)
 
@@ -611,6 +636,10 @@ Measured at ~33 ms per 1000 views (`PlainText` 218 ms vs `NativePlainText`
 committing one extra composite fiber per item, which no amount of trimming
 `StyleSheet.flatten` or the rest/spread removes. For scale, RN's own `<Text>`
 wrapper costs ~50 ms over `NativeText`, ours is already cheaper.
+
+What trimming _could_ reach was the size of the props object the wrapper hands
+Fabric, not the fiber. That part landed, see
+[Emit only the native props that hold a value](#emit-only-the-native-props-that-hold-a-value-srcplaintexttsx).
 
 ### Caching measurement results
 

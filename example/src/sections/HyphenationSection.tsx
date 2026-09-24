@@ -10,12 +10,7 @@ export function HyphenationSection({ showText }: { showText: boolean }) {
   return (
     <Section title="Hyphenation">
       <Subsection title='"hyphens" prop' footer='"hyphens" prop is PlainText-only'>
-        <TextItem
-          label='"none"'
-          showText={showText}
-          style={styles.hyphenationRow}
-          hyphens="none"
-        >
+        <TextItem label='"none"' showText={showText} style={styles.hyphenationRow} hyphens="none">
           {SPECIMEN}
         </TextItem>
         <TextItem
