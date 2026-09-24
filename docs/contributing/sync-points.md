@@ -44,6 +44,9 @@ most props only touch a few.
 - `textTransform`
 - `hyphens`
 - `lang`
+- `accessibilityLanguage` (re-declared from `ViewProps`, since RN core's Android view config omits it; the generated
+  `std::optional` field shadows `ViewProps`' own `std::string` — see
+  [Set 18](#set-18--the-lang-and-accessibilitylanguage-fallback))
 - `numberOfLines`
 - `ellipsizeMode`
 - `lineBreakStrategyIOS` (iOS-only — no Android setter body, no Android entry in
@@ -107,6 +110,7 @@ iOS-only: touches `measurementInputsEqual`, `ios/PlainTextShadowNode.mm`, `RNPla
 Android-only: touches `measurementInputsEqual`, `PlainTextMeasurementsManager.cpp`, `PlainTextViewManager.kt`
 `measure()`. No `ios/PlainTextShadowNode.mm` or `RNPlainText.mm` entry.
 
+- `accessibilityLanguage` (its `LocaleSpan` is a `MetricAffectingSpan`, overriding `lang`'s locale)
 - `includeFontPadding`
 - `textBreakStrategy`
 - `android_hyphenationFrequency`
@@ -204,6 +208,7 @@ agree on. Two flavors, both three-way:
   - `fontVariationSettings`
   - `letterSpacing`
   - `lang`
+  - `accessibilityLanguage`
 
 **Files, per prop above, all three must agree on what "absent" resolves to:**
 
@@ -635,6 +640,31 @@ When the unified `Text` falls back to RN `<Text>` (`deopt`, nested text, non-str
 **Contract:** every `PlainTextOwnProps` key RN `<Text>` drops is checked in `findPlainTextOnlyProp`.
 
 **Failure mode:** a new `PlainTextOwnProps` key missing from the warning is dropped on fallback with no message.
+
+---
+
+## Set 18 — The `lang` and `accessibilityLanguage` fallback
+
+**Props:** `lang`, `accessibilityLanguage` — two props that resolve down to one screen-reader language.
+
+`accessibilityLanguage` wins when set; otherwise `lang` applies; an empty string counts as unset for both. This is
+resolved natively rather than in JS (see [performance.md](performance.md#prop-cost-policy)), so each platform has its
+own copy. iOS writes the result to `accessibilityLanguage` on both the component view and its `UILabel`, after
+`RCTViewComponentView`'s own write of the raw prop. Android has no such property, so TalkBack reads it from a
+`LocaleSpan` over the whole text, which also overrides `lang`'s `textLocales` for glyph selection and hyphenation, making
+`accessibilityLanguage` a measured input on Android ([Set 2](#set-2--a-prop-that-affects-measured-size)).
+
+**Files:**
+
+- `ios/PlainTextProps.h` / `.mm` → `accessibilityLanguageFromProps` — the iOS resolution
+- `ios/RNPlainText.mm` → `updateProps` — applies it after `super`
+- `PlainTextView.kt` → `resolveLocaleSpanTag` (called from `applyText`) — the Android resolution, must match
+  `accessibilityLanguageFromProps` output-for-output
+- `android/src/test/java/com/mdjstack/plaintext/PlainTextViewLocaleSpanTest.kt` — pins the Android side of the contract;
+  doesn't run against iOS, so it can't catch the two drifting apart on its own
+
+**Failure mode:** with both props set, or one set to an empty string, VoiceOver and TalkBack speak the text in different
+languages — nothing throws.
 
 ---
 

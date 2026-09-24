@@ -238,6 +238,13 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setLang(lang)
   }
 
+  // A base view prop re-declared in our codegen spec, since RN core's Android view
+  // config omits it. See PlainTextViewNativeComponent.ts.
+  @ReactProp(name = "accessibilityLanguage")
+  override fun setAccessibilityLanguage(view: PlainTextView?, accessibilityLanguage: String?) {
+    view?.setAccessibilityLanguage(accessibilityLanguage)
+  }
+
   // Unread: no experiment is currently using it. See docs/contributing/perf-experiments.md.
   @ReactProp(name = "experiment", defaultBoolean = false)
   override fun setExperiment(view: PlainTextView?, experiment: Boolean) {
@@ -297,9 +304,11 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view.setLineHeight(props.getFloatOr("lineHeight", 0f))
     // hyphens and lang both move soft line breaks, so the wrapped height depends
     // on them. hyphens feeds the same resolution as android_hyphenationFrequency
-    // below (see PlainTextView.kt).
+    // below (see PlainTextView.kt). accessibilityLanguage too: its LocaleSpan
+    // overrides lang's locale for glyph selection and hyphenation.
     view.setHyphens(props?.getString("hyphens"))
     view.setLang(props?.getString("lang"))
+    view.setAccessibilityLanguage(props?.getString("accessibilityLanguage"))
     // Transforms the measured string itself (case changes can change width), so it
     // must be applied before setPlainText below.
     view.setTextTransform(props?.getString("textTransform"))
