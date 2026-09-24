@@ -115,6 +115,6 @@ function findPlainTextOnlyProp(props: PlainTextOwnProps): string | undefined {
 
   const flatStyle = StyleSheet.flatten(props.style) as PlainTextStyle | undefined;
   if (flatStyle?.fontVariationSettings != null) return 'style.fontVariationSettings';
-  
+
   return undefined;
 }

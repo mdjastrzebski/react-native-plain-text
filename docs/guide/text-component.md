@@ -25,39 +25,32 @@ tradeoff. The rest of this page covers `Text`.
 
 ## How it works
 
-`Text` is equivalent to this, minus the development warnings described below:
+In outline, `Text` does this (simplified, without the development warnings
+described below):
 
 ```tsx
-import { use } from 'react';
-import {
-  Text as RNText,
-  unstable_TextAncestorContext,
-  type TextProps as RNTextProps,
-} from 'react-native';
-import { PlainText, type PlainTextOwnProps, type PlainTextProps } from 'react-native-plain-text';
-
-export type TextProps = Omit<RNTextProps, keyof PlainTextOwnProps> &
-  PlainTextOwnProps & { deopt?: boolean };
-
 export function Text({ deopt, text, children, ...rest }: TextProps) {
+  // 1. Is this <Text> nested inside another <Text>?
   const isNestedText = use(unstable_TextAncestorContext);
+
+  // 2. Is the content plain text? `text` wins over `children`.
   const content = text ?? children;
+  const isTextContent = isPlainText(content);
 
-  // PlainText takes text children: a string, or a flat array of strings, numbers,
-  // bigints, null and booleans (`{count} items`). Anything else goes to RN <Text>.
-  const isTextContent = Array.isArray(content)
-    ? content.every((child) => child === null || typeof child !== 'object')
-    : content != null && typeof content !== 'object';
-
+  // 3. Render PlainText when possible...
   if (!deopt && !isNestedText && isTextContent) {
-    return (
-      <PlainText {...(rest as PlainTextProps)}>{content as PlainTextProps['children']}</PlainText>
-    );
+    return <PlainText {...rest}>{content}</PlainText>;
   }
 
+  // 4. ...and fall back to RN <Text> otherwise.
   return <RNText {...rest}>{content}</RNText>;
 }
 ```
+
+The real implementation,
+[`src/Text.tsx`](https://github.com/mdjastrzebski/react-native-plain-text/blob/main/src/Text.tsx),
+makes the same decision but is tuned for speed: it checks for a plain string
+first and renders the native view directly, skipping the `PlainText` wrapper.
 
 `Text` renders `PlainText` only when all of these hold:
 
@@ -65,7 +58,8 @@ export function Text({ deopt, text, children, ...rest }: TextProps) {
 - The content is text: the `text` prop if set, otherwise `children`. That's a
   string, a number (or `bigint`), or a mix like `{count} items` (which JSX passes
   as `[count, ' items']`). Anything containing an element (nested `<Text>`, an
-  icon) or no children at all falls back to RN `<Text>`.
+  icon), no children at all, or a lone boolean (`{flag && label}` with `flag`
+  false) falls back to RN `<Text>`.
 - It isn't itself nested inside another `<Text>` — RN's `unstable_TextAncestorContext`
   is `true` for descendants of a `<Text>`, and `PlainText` doesn't support nested
   `<Text>` composition. Falling back keeps that nesting working.
