@@ -37,11 +37,11 @@ export interface NativeProps extends ViewProps {
   fontVariationSettings?: string;
 
   // Points, 0 means unset.
-  // Cost: medium. Forces iOS's attributed-string path and an Android line-height span.
+  // Cost: medium. An Android line-height span; two paragraph-style fields on iOS.
   lineHeight?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
 
   // Points. null keeps unset distinct from an explicit 0 in generated C++.
-  // Cost: medium. Forces iOS's attributed-string path, plus one paint write on Android.
+  // Cost: light. One attribute on iOS, one paint write on Android.
   letterSpacing?: CodegenTypes.WithDefault<CodegenTypes.Float, null>;
 
   textAlign?: CodegenTypes.WithDefault<'auto' | 'left' | 'right' | 'center' | 'justify', 'auto'>;
@@ -49,14 +49,14 @@ export interface NativeProps extends ViewProps {
   verticalAlign?: string;
 
   // iOS only, no-op on Android, matching RN <Text>'s writingDirection style (iOS-only there too).
-  // Cost: medium. Forces iOS's attributed-string path.
+  // Cost: light. One paragraph-style field.
   writingDirection?: CodegenTypes.WithDefault<'auto' | 'ltr' | 'rtl', 'auto'>;
 
   // Free string: 'underline line-through' has a space, which codegen enums can't represent.
-  // Cost: medium. Forces iOS's attributed-string path and two Android paint flags.
+  // Cost: light. One or two attributes on iOS, two Android paint flags.
   textDecorationLine?: string;
 
-  // Cost: medium. Forces the iOS attributed-string path; the Android side is one paint write.
+  // Cost: medium. An NSShadow per content build on iOS; the Android side is one paint write.
   textShadowColor?: ColorValue;
   textShadowOffsetWidth?: CodegenTypes.WithDefault<CodegenTypes.Float, null>;
   textShadowOffsetHeight?: CodegenTypes.WithDefault<CodegenTypes.Float, null>;
@@ -76,12 +76,12 @@ export interface NativeProps extends ViewProps {
   // over android_hyphenationFrequency, which only applies as a fallback when
   // this prop is left unset (PlainTextView.kt).
   //
-  // Cost: medium. 'auto' forces iOS's attributed-string path and turns on
+  // Cost: light. 'auto' is one paragraph-style field on iOS and turns on
   // Android's dictionary hyphenator.
   hyphens?: CodegenTypes.WithDefault<'none' | 'auto', 'none'>;
   // BCP-47 language tag (e.g. 'de') for hyphenation/line-breaking. Empty means unset.
   //
-  // Cost: medium. Forces iOS's attributed-string path.
+  // Cost: light. One attribute on iOS, one guarded locale write on Android.
   lang?: string;
 
   // 0 means unlimited. Caps rendered lines and the shadow node's measured intrinsic height.

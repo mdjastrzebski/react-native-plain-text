@@ -362,7 +362,7 @@ Fabric's props diff never fires, and every derived value is stale until somethin
 
 **Files:**
 
-- `ios/RNPlainText.mm`:204 → `traitCollectionDidChange` — fires on a Dynamic Type change
+- `ios/RNPlainText.mm`:219 → `traitCollectionDidChange` — fires on a Dynamic Type change
 - `android/src/main/java/com/mdjstack/plaintext/PlainTextView.kt`:242 → `onConfigurationChanged` — fires on a font scale
   change, if the Activity declares it¹
 
@@ -416,8 +416,8 @@ today.
 
 **Files:**
 
-- `ios/RNPlainText.mm`:108 → `applyContentFromProps` — fully determines the label's state (font, color, alignment,
-  `text`/`attributedText`, `verticalTextShift`); must mirror the attribute set `PlainTextShadowNode::measureContent`
+- `ios/RNPlainText.mm`:109 → `applyContentFromProps` — fully determines the label's state (font, color, alignment,
+  `attributedText`, `verticalTextShift`); must mirror the attribute set `PlainTextShadowNode::measureContent`
   reads (see [Set 2](#set-2--a-prop-that-affects-measured-size))
 - `ios/RNPlainText.mm` → `_forceApplyProps` — set in `-initWithFrame:`, checked and cleared on the first `-updateProps`;
   forces content/`numberOfLines`/`lineBreakMode` to apply unconditionally on first mount regardless of the diff
@@ -435,7 +435,7 @@ plain diff is already correct — real prop differences apply normally, and a co
 shows the right thing.
 
 **This is why there is no "reset every `_label` property to its default" routine, and why a new prop doesn't need one.**
-`applyContentFromProps` fully determines the label's state (font, color, alignment, `text`/`attributedText`,
+`applyContentFromProps` fully determines the label's state (font, color, alignment, `attributedText`,
 `verticalTextShift`), and the forced apply on first mount runs it before anything is on screen, so a fresh view needs no
 separate seeding. Two earlier, rejected versions of this fix show why that's the right place to stop:
 
@@ -451,14 +451,14 @@ separate seeding. Two earlier, rejected versions of this fix show why that's the
   this document exists to avoid. If a `_label` property is ever set outside `applyContentFromProps`/`updateProps`, that
   reasoning breaks and it needs its own handling.
 
-**One property inside `applyContentFromProps` needs its own explicit handling: `attributedText`.** Text content is
-carried on either `.text` (plain path) or `.attributedText` (letterSpacing, lineHeight, underline/strikethrough), only
-one set per call. Apple documents that setting `.text` also clears `.attributedText`, but a real repro (recycled from an
-instance with `letterSpacing` into one without) showed the old kerning surviving. The plain path now sets
-`_label.attributedText = nil` explicitly before `.text`. A future rewrite of `applyContentFromProps` must keep doing
-this — the failure is invisible until something is recycled from the attributed path into the plain one.
+**Text content has one backing store: `attributedText`.** An earlier `applyContentFromProps` carried text on either
+`.text` (plain path) or `.attributedText`, and a real repro (recycled from an instance with `letterSpacing` into one
+without) showed the old kerning surviving a `.text` write, despite Apple documenting that `.text` clears
+`.attributedText`. It needed an explicit `_label.attributedText = nil` first. The plain path has since been removed for
+speed ([performance.md](performance.md#always-use-the-attributed-string-path-on-ios-iosrnplaintextmm)), so every apply
+now replaces the whole attributed string. A future rewrite that reintroduces `.text` must bring the reset back.
 
-Android likely doesn't share this specific hazard: `PlainTextView.applyText()` has the same plain-vs-spanned duality
+Android likely doesn't share this specific hazard: `PlainTextView.applyText()` has a plain-vs-spanned duality
 (`setText(value)` vs. a `SpannableString` carrying the `lineHeight` span), but both branches go through the single
 `setText()` entry point, so there's no second backing store for a stale span to hide in. It has no recycling reset of
 any kind either: `PlainTextView`/`PlainTextViewManager` reset nothing on reuse, where RN's own `ReactTextViewManager`
