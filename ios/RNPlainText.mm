@@ -236,7 +236,7 @@ using namespace plaintext;
     const auto &oldViewProps = *std::static_pointer_cast<RNPlainTextProps const>(_props);
     const auto &newViewProps = *std::static_pointer_cast<RNPlainTextProps const>(props);
 
-    // These all feed applyContentFromProps since they may share an attributed string
+    // These all feed applyContentFromProps since they all go into its one attributed string
     // (ellipsizeMode/lineBreakStrategyIOS via its paragraph style).
     if (_forceApplyProps ||
         oldViewProps.text != newViewProps.text ||

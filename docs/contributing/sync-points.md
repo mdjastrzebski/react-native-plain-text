@@ -362,7 +362,7 @@ Fabric's props diff never fires, and every derived value is stale until somethin
 
 **Files:**
 
-- `ios/RNPlainText.mm`:204 → `traitCollectionDidChange` — fires on a Dynamic Type change
+- `ios/RNPlainText.mm`:219 → `traitCollectionDidChange` — fires on a Dynamic Type change
 - `android/src/main/java/com/mdjstack/plaintext/PlainTextView.kt`:242 → `onConfigurationChanged` — fires on a font scale
   change, if the Activity declares it¹
 
@@ -416,7 +416,7 @@ today.
 
 **Files:**
 
-- `ios/RNPlainText.mm`:108 → `applyContentFromProps` — fully determines the label's state (font, color, alignment,
+- `ios/RNPlainText.mm`:109 → `applyContentFromProps` — fully determines the label's state (font, color, alignment,
   `attributedText`, `verticalTextShift`); must mirror the attribute set `PlainTextShadowNode::measureContent`
   reads (see [Set 2](#set-2--a-prop-that-affects-measured-size))
 - `ios/RNPlainText.mm` → `_forceApplyProps` — set in `-initWithFrame:`, checked and cleared on the first `-updateProps`;
