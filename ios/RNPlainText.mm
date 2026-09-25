@@ -336,15 +336,14 @@ using namespace plaintext;
     [super updateProps:props oldProps:oldProps];
 
     // After super: RCTViewComponentView writes the raw accessibilityLanguage prop
-    // (nil when unset), which would otherwise clobber the lang fallback. Set on
-    // _label too, since it is the element VoiceOver lands on unless `accessible`
-    // makes this view one.
+    // (nil when unset), which would otherwise clobber the lang fallback. Only this
+    // view needs it: RCTViewComponentView's isAccessibilityElement defers to
+    // contentView (_label, YES by default), so VoiceOver focuses this view and
+    // never descends into _label.
     // SYNC: PlainTextView.kt's resolveLocaleSpanTag is the Android counterpart. See
     // docs/contributing/sync-points.md#set-19--the-lang-and-accessibilitylanguage-fallback.
     if (accessibilityLanguageChanged) {
-        NSString *accessibilityLanguage = accessibilityLanguageFromProps(newViewProps);
-        self.accessibilityElement.accessibilityLanguage = accessibilityLanguage;
-        _label.accessibilityLanguage = accessibilityLanguage;
+        self.accessibilityElement.accessibilityLanguage = accessibilityLanguageFromProps(newViewProps);
     }
 }
 

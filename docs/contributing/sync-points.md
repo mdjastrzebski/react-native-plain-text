@@ -707,8 +707,9 @@ pins the Android side, but on iOS they only show up on-device, in the example ap
 
 `accessibilityLanguage` wins when set; otherwise `lang` applies; an empty string counts as unset for both. This is
 resolved natively rather than in JS (see [performance.md](performance.md#prop-cost-policy)), so each platform has its
-own copy. iOS writes the result to `accessibilityLanguage` on both the component view and its `UILabel`, after
-`RCTViewComponentView`'s own write of the raw prop. Android has no such property, so TalkBack reads it from a
+own copy. iOS writes the result to the component view's `accessibilityLanguage`, after
+`RCTViewComponentView`'s own write of the raw prop. The `UILabel` doesn't need it: VoiceOver focuses the component view,
+whose `isAccessibilityElement` defers to its `contentView`, and never descends into the label. Android has no such property, so TalkBack reads it from a
 `LocaleSpan` over the whole text, which also overrides `lang`'s `textLocales` for glyph selection and hyphenation, making
 `accessibilityLanguage` a measured input on Android ([Set 2](#set-2--a-prop-that-affects-measured-size)).
 
