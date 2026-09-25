@@ -102,7 +102,7 @@ using namespace plaintext;
   return self;
 }
 
-// Once lineHeight, letterSpacing, a decoration, writingDirection or hyphenation is set, text/font/color/alignment must go through an NSAttributedString since UILabel has no plain properties for them.
+// Always one NSAttributedString, even when no prop needs an attribute: a single attributedText write mounts faster than UILabel's separate text/font/textColor/textAlignment setters (see docs/contributing/performance.md#always-use-the-attributed-string-path-on-ios-iosrnplaintextmm).
 // SYNC: PlainTextShadowNode::measureContent must mirror every attribute set here (font excepted, both go through resolveFont) or measured size won't match drawn text.
 // See docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size
 // and docs/contributing/sync-points.md#set-10--recycled-view-state-ios.
@@ -125,24 +125,11 @@ using namespace plaintext;
         hasUnderline = textDecorationHasUnderline(textDecorationLine);
         hasLineThrough = textDecorationHasLineThrough(textDecorationLine);
     }
-    BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
     BOOL hasWritingDirection = props.writingDirection != RNPlainTextWritingDirection::Auto;
-    // Only "auto" needs a paragraph style; "none" (the default) is a no-op.
+    // Only "auto" turns hyphenation on; "none" (the default) is a no-op.
     BOOL hasHyphenation = props.hyphens == RNPlainTextHyphens::Auto;
     BOOL hasLang = props.lang.has_value();
-
-    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasWritingDirection && !hasHyphenation && !hasLang) {
-        // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
-        _label.attributedText = nil;
-        _label.font = font;
-        _label.textColor = color;
-        _label.textAlignment = alignment;
-        _label.text = text;
-        _label.verticalTextShift = 0;
-        _label.verticalAlignment = resolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
-        return;
-    }
 
     NSMutableDictionary<NSAttributedStringKey, id> *attributes = [NSMutableDictionary dictionary];
     attributes[NSFontAttributeName] = font;
