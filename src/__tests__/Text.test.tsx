@@ -104,13 +104,13 @@ describe('<Text />', () => {
     expect(screen.root).not.toHaveProp('text');
   });
 
-  it('renders as RN <Text> when deopt is set, even for a plain string child', async () => {
-    await render(<Text deopt>Hello</Text>);
+  it('renders as RN <Text> in fallback mode, even for a plain string child', async () => {
+    await render(<Text mode="fallback">Hello</Text>);
 
     expect(screen.root).not.toHaveProp('text');
   });
 
-  it.each([
+  const unsupportedProps = [
     ['onPress', { onPress: () => {} }],
     ['onLongPress', { onLongPress: () => {} }],
     ['onPressIn', { onPressIn: () => {} }],
@@ -120,12 +120,44 @@ describe('<Text />', () => {
     ['adjustsFontSizeToFit', { adjustsFontSizeToFit: true }],
     ['dataDetectorType', { dataDetectorType: 'link' }],
     ['dynamicTypeRamp', { dynamicTypeRamp: 'body' }],
-  ] satisfies [string, TextProps][])(
-    'still renders PlainText but warns in dev when %s is set',
-    async (name, props) => {
+  ] satisfies [string, TextProps][];
+
+  it.each(unsupportedProps)(
+    'renders RN <Text> without warning when %s is set (default compat mode)',
+    async (_, props) => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       await render(<Text {...props}>Hello</Text>);
+
+      expect(screen.root).not.toHaveProp('text');
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    }
+  );
+
+  it.each(unsupportedProps)(
+    'renders RN <Text> in compat mode when %s is set with interpolated children',
+    async (_, props) => {
+      await render(
+        <Text mode="compat" {...props}>
+          {3} items
+        </Text>
+      );
+
+      expect(screen.root).not.toHaveProp('text');
+    }
+  );
+
+  it.each(unsupportedProps)(
+    'still renders PlainText but warns in dev when %s is set in fast mode',
+    async (name, props) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await render(
+        <Text mode="fast" {...props}>
+          Hello
+        </Text>
+      );
 
       expect(screen.root).toHaveProp('text', 'Hello');
       expect(warn).toHaveBeenCalledTimes(1);
@@ -134,11 +166,11 @@ describe('<Text />', () => {
     }
   );
 
-  it('does not warn about unsupported props when deopt is set', async () => {
+  it('does not warn about unsupported props in fallback mode', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     await render(
-      <Text deopt onPress={() => {}}>
+      <Text mode="fallback" onPress={() => {}}>
         Hello
       </Text>
     );
@@ -165,16 +197,25 @@ describe('<Text />', () => {
     }
   );
 
-  it('renders PlainText when deopt is false', async () => {
-    await render(<Text deopt={false}>Hello</Text>);
+  it.each(['compat', 'fast'] as const)('renders PlainText in %s mode', async (mode) => {
+    await render(<Text mode={mode}>Hello</Text>);
 
     expect(screen.root).toHaveProp('text', 'Hello');
   });
 
-  it('does not forward deopt to the rendered element', async () => {
-    await render(<Text deopt testID="deopted" />);
+  it.each(['compat', 'fast'] as const)(
+    'does not forward mode to PlainText in %s mode',
+    async (mode) => {
+      await render(<Text mode={mode}>Hello</Text>);
 
-    expect(screen.getByTestId('deopted')).not.toHaveProp('deopt');
+      expect(screen.root).not.toHaveProp('mode');
+    }
+  );
+
+  it('does not forward mode to RN <Text>', async () => {
+    await render(<Text mode="fallback" testID="fallback" />);
+
+    expect(screen.getByTestId('fallback')).not.toHaveProp('mode');
   });
 
   it('forwards ref to the PlainText host element', async () => {
@@ -191,7 +232,7 @@ describe('<Text />', () => {
     const ref = createRef<HostInstance>();
 
     await render(
-      <Text ref={ref} deopt>
+      <Text ref={ref} mode="fallback">
         Hello
       </Text>
     );
@@ -253,7 +294,7 @@ describe('<Text />', () => {
   });
 
   it('passes the text prop to RN <Text> as children on fallback', async () => {
-    await render(<Text deopt text="Hello" />);
+    await render(<Text mode="fallback" text="Hello" />);
 
     expect(screen.root).not.toHaveProp('text');
     expect(screen.getByText('Hello')).toBeOnTheScreen();
@@ -270,7 +311,7 @@ describe('<Text />', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       await render(
-        <Text deopt {...props}>
+        <Text mode="fallback" {...props}>
           Hello
         </Text>
       );
@@ -279,7 +320,7 @@ describe('<Text />', () => {
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn).toHaveBeenCalledWith(expect.stringContaining(`\`${name}\``), expect.any(Object));
       expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('`deopt` is set'),
+        expect.stringContaining('`mode="fallback"` is set'),
         expect.any(Object)
       );
       warn.mockRestore();
@@ -302,6 +343,24 @@ describe('<Text />', () => {
     warn.mockRestore();
   });
 
+  it('names the unsupported prop when compat mode drops a PlainText-only prop', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await render(
+      <Text selectable lang="da">
+        Hello
+      </Text>
+    );
+
+    expect(screen.root).not.toHaveProp('text');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('`selectable` is set'),
+      expect.any(Object)
+    );
+    warn.mockRestore();
+  });
+
   it.each([
     ['hyphens="none"', { hyphens: 'none' }],
     ['unstable_lineHeightClippingCompat={false}', { unstable_lineHeightClippingCompat: false }],
@@ -311,7 +370,7 @@ describe('<Text />', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       await render(
-        <Text deopt {...props}>
+        <Text mode="fallback" {...props}>
           Hello
         </Text>
       );
@@ -375,8 +434,22 @@ describe('mapTextProps', () => {
     expect(mapTextProps({})).toBeNull();
   });
 
-  it('returns null when deopt is set', () => {
-    expect(mapTextProps({ deopt: true, children: 'Hello' })).toBeNull();
+  it('returns null in fallback mode', () => {
+    expect(mapTextProps({ mode: 'fallback', children: 'Hello' })).toBeNull();
+  });
+
+  it('returns null for an unsupported prop in compat mode', () => {
+    expect(mapTextProps({ onPress: () => {}, children: 'Hello' })).toBeNull();
+  });
+
+  it('maps an unsupported prop in fast mode, without the mode prop', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(mapTextProps({ mode: 'fast', selectable: true, children: 'Hello' })).toEqual({
+      text: 'Hello',
+      selectable: true,
+    });
+    warn.mockRestore();
   });
 
   function AppText({ bold, ...props }: TextProps & { bold?: boolean }) {
