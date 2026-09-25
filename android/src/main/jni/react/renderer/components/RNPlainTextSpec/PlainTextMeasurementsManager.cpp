@@ -70,6 +70,10 @@ folly::dynamic serializeProps(const RNPlainTextProps &props) {
   if (props.lang.has_value()) {
     serializedProps["lang"] = props.lang.value();
   }
+  // The codegen field (optional), not ViewProps' same-named std::string it shadows.
+  if (props.accessibilityLanguage.has_value()) {
+    serializedProps["accessibilityLanguage"] = props.accessibilityLanguage.value();
+  }
   if (props.numberOfLines != 0) {
     serializedProps["numberOfLines"] = props.numberOfLines;
   }

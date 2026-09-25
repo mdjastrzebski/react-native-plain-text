@@ -2,24 +2,25 @@
 
 ## Supported props
 
-| Prop                           | RN `<Text>` compatible | Notes                                                                              |
-| ------------------------------ | ---------------------- | ---------------------------------------------------------------------------------- |
-| `allowFontScaling`             | ✅                     |                                                                                    |
-| `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`. Only a fallback for when `hyphens` is unset.       |
-| `children`                     | 🟡                     | Text only: a string, number, bigint, or a flat array of them (`{count} items`).    |
-| `ellipsizeMode`                | ✅                     |                                                                                    |
-| `hyphens`                      | ⬆️                     | Not in RN `<Text>`. `'none' \| 'auto'`, default `'none'`. See below.               |
-| `lang`                         | ⬆️                     | Not in RN `<Text>`. BCP-47 tag (e.g. `'de'`) for hyphenation and line breaking.    |
-| `lineBreakStrategyIOS`         | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
-| `maxFontSizeMultiplier`        | ✅                     |                                                                                    |
-| `nativeID`                     | ✅                     |                                                                                    |
-| `id`                           | ✅                     |                                                                                    |
-| `numberOfLines`                | ✅                     |                                                                                    |
-| `onLayout`                     | ✅                     |                                                                                    |
-| `testID`                       | ✅                     |                                                                                    |
-| `text`                         | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
-| `textBreakStrategy`            | ✅                     | Android-only, like RN `<Text>`                                                     |
-| Accessibility props            | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
+| Prop                           | RN `<Text>` compatible | Notes                                                                                                                                         |
+| ------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowFontScaling`             | ✅                     |                                                                                                                                               |
+| `android_hyphenationFrequency` | ✅                     | Android-only, like RN `<Text>`. Only a fallback for when `hyphens` is unset.                                                                  |
+| `children`                     | 🟡                     | Text only: a string, number, bigint, or a flat array of them (`{count} items`).                                                               |
+| `ellipsizeMode`                | ✅                     |                                                                                                                                               |
+| `hyphens`                      | ⬆️                     | Not in RN `<Text>`. `'none' \| 'auto'`, default `'none'`. See below.                                                                          |
+| `lang`                         | ⬆️                     | Not in RN `<Text>`. BCP-47 tag (e.g. `'de'`) for hyphenation, line breaking and, unless `accessibilityLanguage` is set, screen-reader speech. |
+| `lineBreakStrategyIOS`         | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                                                                                 |
+| `maxFontSizeMultiplier`        | ✅                     |                                                                                                                                               |
+| `nativeID`                     | ✅                     |                                                                                                                                               |
+| `id`                           | ✅                     |                                                                                                                                               |
+| `numberOfLines`                | ✅                     |                                                                                                                                               |
+| `onLayout`                     | ✅                     |                                                                                                                                               |
+| `testID`                       | ✅                     |                                                                                                                                               |
+| `text`                         | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).                                                              |
+| `textBreakStrategy`            | ✅                     | Android-only, like RN `<Text>`                                                                                                                |
+| Accessibility props            | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc                                                            |
+| `accessibilityLanguage`        | ⬆️                     | iOS-only in RN; PlainText applies it on Android too, as a `LocaleSpan`.                                                                       |
 
 RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
 

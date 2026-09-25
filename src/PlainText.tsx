@@ -28,7 +28,10 @@ export type PlainTextOwnProps = {
    * platform default. On Android, overrides `android_hyphenationFrequency`.
    */
   hyphens?: 'none' | 'auto';
-  /** BCP-47 language tag (e.g. `'pl'`, `'de'`) for hyphenation and line breaking. */
+  /**
+   * BCP-47 language tag (e.g. `'pl'`, `'de'`) for hyphenation and line breaking.
+   * Also the screen-reader language unless `accessibilityLanguage` is set.
+   */
   lang?: string;
 
   // SYNC: renamed to the bare lineHeightClippingCompat past this file — see
