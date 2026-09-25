@@ -66,18 +66,19 @@ export function warnOnUnsupportedProp(props: TextProps): void {
     warnOnce(
       `Text.unsupportedProp.${propName}`,
       `PlainText: unified <Text> rendered <PlainText>, which ignores \`${propName}\`. ` +
-        `Pass \`deopt\` to render RN <Text> instead. Props:`,
+        `Remove \`mode="fast"\` to render RN <Text> instead. Props:`,
       props
     );
   }
 }
 
-// RN <Text> props that change behavior PlainText can't reproduce. Props that only
+// RN <Text> props that change behavior PlainText can't reproduce. The unified Text
+// falls back to RN <Text> for them in `compat` mode and warns in `fast` mode. Props that only
 // matter alongside one of these (selectionColor, disabled, suppressHighlighting,
 // minimumFontScale, pressRetentionOffset) aren't listed.
 // SYNC: every RN <Text> prop missing from NativeProps belongs here — see
 // docs/contributing/sync-points.md#set-16--rn-text-props-plaintext-cant-honor.
-function findUnsupportedProp(props: TextProps): string | undefined {
+export function findUnsupportedProp(props: TextProps): string | undefined {
   if (props.onPress != null) return 'onPress';
   if (props.onLongPress != null) return 'onLongPress';
   if (props.onPressIn != null) return 'onPressIn';

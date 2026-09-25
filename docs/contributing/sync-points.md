@@ -604,19 +604,19 @@ them.
 
 `PlainTextProps` is an allowlist, so `PlainText` rejects these at the type level; a type test in
 `src/__tests__/PlainText.test.tsx` fails if the allowlist names a prop `NativeProps` lacks. The unified `Text` accepts
-every RN `<Text>` prop, so it warns in `__DEV__` instead, and that warning has to list them by hand: types don't exist
-at runtime.
+every RN `<Text>` prop, so it detects them at runtime instead: in the default `compat` mode it falls back to RN `<Text>`,
+in `fast` mode it warns in `__DEV__`. That check has to list them by hand: types don't exist at runtime.
 
 **Files:**
 
 - `src/PlainTextViewNativeComponent.ts` → `NativeProps` — what reaches the native view
-- `src/utils.ts` → `findUnsupportedProp` — the `Text` warning
+- `src/utils.ts` → `findUnsupportedProp` — the `Text` compat fallback and `fast`-mode warning
 
 **Contract:** every `TextProps` key missing from `NativeProps` is checked in `findUnsupportedProp`, except the ones that
-only matter alongside another. Adding one of these props to the spec means removing it from the warning.
+only matter alongside another. Adding one of these props to the spec means removing it from the check.
 
-**Failure mode:** a prop missing from the warning is dropped by `Text` with no message. A prop the spec gains but the
-warning still lists warns about something that now works.
+**Failure mode:** a prop missing from the check is dropped by `Text` with no message, even in `compat` mode. A prop the
+spec gains but the check still lists needlessly falls back to RN `<Text>`, or warns about something that now works.
 
 ---
 
@@ -624,7 +624,8 @@ warning still lists warns about something that now works.
 
 **Props:** every `PlainTextOwnProps` key except `text`, which `Text` passes to RN `<Text>` as children.
 
-When the unified `Text` falls back to RN `<Text>` (`deopt`, nested text, non-string children), these props are lost.
+When the unified `Text` falls back to RN `<Text>` (`mode="fallback"`, an unsupported prop in `compat` mode, nested
+text, non-string children), these props are lost.
 `Text` warns in `__DEV__` when one is set.
 
 **Files:**
