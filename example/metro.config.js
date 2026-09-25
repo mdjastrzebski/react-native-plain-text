@@ -16,4 +16,6 @@ const config = withMetroConfig(getDefaultConfig(__dirname), {
   conditions: ['react-native-plain-text-source'],
 });
 
+config.cacheVersion = `vrt-${process.env.VRT_ENABLED ?? '0'}`;
+
 module.exports = config;

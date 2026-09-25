@@ -5,7 +5,7 @@ const pkg = require('../package.json');
 const root = path.resolve(__dirname, '..');
 
 module.exports = function (api) {
-  api.cache(true);
+  api.cache.using(() => process.env.VRT_ENABLED ?? '0');
 
   const config = getConfig(
     {
@@ -25,6 +25,10 @@ module.exports = function (api) {
    */
   return {
     ...config,
+    plugins: [
+      ...(config.plugins ?? []),
+      ['transform-inline-environment-variables', { include: ['VRT_ENABLED'] }],
+    ],
     overrides: config.overrides?.map((override) => {
       if (typeof override.include !== 'string') return override;
 

@@ -1,0 +1,317 @@
+name: Visual Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    # https://elmah.io/tools/cron-parser/#0_2_*_*_*
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+env:
+  VRT_ENABLED: '1'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  vrt-android:
+    runs-on: ubuntu-24.04
+    # A cold run is ~30 minutes, and the e2e stage carries its own retry budget.
+    timeout-minutes: 75
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/.android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
+      # Changing this invalidates every cached artifact below, which is what the
+      # key records alongside the app fingerprint.
+      VRT_TOOLCHAIN: api36-emulator15917651
+      # The APK travels with the Gradle outputs that produced it, so a run whose
+      # fingerprint merely shares the toolchain prefix can rebuild incrementally
+      # instead of from scratch.
+      VRT_BUILD_CACHE_PATHS: |
+        build/vrt/apps/android
+        example/android/.gradle
+        example/android/build
+        example/android/app/build
+      VRT_REPORT_PATHS: |
+        build/vrt/report
+        build/vrt/actual
+        build/vrt/environment
+        build/vrt/devices
+        build/vrt/emulator
+        build/vrt/agent-device
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      # The baselines commit recorded by this repository is the only baseline
+      # source. Never pass --remote: that would resolve the submodule to whatever
+      # its branch tip happens to be, so the same commit could pass one day and
+      # fail the next. Baseline changes arrive as an explicit pointer bump.
+      - name: Checkout pinned VRT baselines
+        run: git submodule update --init baselines
+
+      # The same function that `yarn vrt android install` uses to reject a stale
+      # artifact. Hashing the file list here as well would let the two definitions
+      # drift, and a cache hit whose artifact then failed that check could not be
+      # fixed from the branch.
+      - name: Compute VRT app fingerprint
+        id: fingerprint
+        run: printf 'fingerprint=%s\n' "$(./scripts/vrt-app-state.sh fingerprint android)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # setup-gradle owns the Gradle User Home cache. The project build cache
+      # below is separate and contains generated outputs, including the APK.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Generate Android project
+        run: yarn example expo prebuild --platform android --no-install
+
+      - name: Restore Android build
+        id: android-build-cache
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.VRT_BUILD_CACHE_PATHS }}
+          key: vrt-android-build-v4-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-${{ env.VRT_TOOLCHAIN }}-${{ steps.fingerprint.outputs.fingerprint }}
+          restore-keys: |
+            vrt-android-build-v4-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-${{ env.VRT_TOOLCHAIN }}-
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install Android SDK command-line tools
+        run: |
+          archive="$RUNNER_TEMP/command-line-tools.zip"
+          extracted="$RUNNER_TEMP/command-line-tools"
+          tools_root="$ANDROID_HOME/cmdline-tools"
+
+          curl --fail --location --silent --show-error \
+            'https://dl.google.com/android/repository/commandlinetools-linux-15859902_latest.zip' \
+            --output "$archive"
+          echo '4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583  '"$archive" \
+            | sha256sum --check --status
+          mkdir -p "$extracted" "$tools_root"
+          unzip -q "$archive" -d "$extracted"
+          mv "$extracted/cmdline-tools" "$tools_root/latest"
+          "$tools_root/latest/bin/avdmanager" list device \
+            | grep -Eq 'id: [0-9]+ or "pixel_9"'
+
+      - name: Start Android VRT emulator
+        # android-emulator-runner v2.38.0. All rendering inputs are deliberately
+        # inlined here so the workflow has no separate configuration parser.
+        # The build stays in this step because the Expo release build is driven by
+        # the booted AVD; every stage announces itself so the log still shows where
+        # the time went.
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          target: google_apis_playstore
+          arch: x86_64
+          profile: pixel_9
+          cores: 4
+          ram-size: 2048M
+          heap-size: 512M
+          disk-size: 6G
+          avd-name: plaintext_vrt_api36_pixel9
+          force-avd-creation: true
+          emulator-boot-timeout: 600
+          emulator-port: 5554
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
+            -no-boot-anim -no-metrics -skin 1080x2400
+            -prop qemu.vrt.density=420 -prop qemu.vrt.font_scale=1 -wipe-data
+          disable-animations: true
+          disable-spellchecker: true
+          disable-linux-hw-accel: false
+          enable-hw-keyboard: true
+          emulator-build: 15917651
+          channel: stable
+          # This action runs `script:` one line at a time through `sh`, so it cannot hold a
+          # bash function or `set -o pipefail`. The orchestration lives in a real bash file.
+          script: ANDROID_BUILD_CACHE_HIT='${{ steps.android-build-cache.outputs.cache-hit }}' ./scripts/run-vrt-android-ci.sh
+
+      # Saved even when a later stage failed: a capture flake must not throw away a
+      # freshly built app. The gate keeps a run that died before producing the APK
+      # from publishing a cache that restores as a hit with no artifact in it.
+      - name: Check Android VRT build artifact
+        id: android-artifact
+        if: ${{ !cancelled() && steps.android-build-cache.outputs.cache-hit != 'true' }}
+        run: |
+          if [ -f build/vrt/apps/android/app-release.apk ] &&
+            [ -f build/vrt/apps/android/build-input.sha256 ]; then
+            printf 'present=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'present=false\n' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save Android build
+        if: ${{ !cancelled() && steps.android-artifact.outputs.present == 'true' }}
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.VRT_BUILD_CACHE_PATHS }}
+          key: ${{ steps.android-build-cache.outputs.cache-primary-key }}
+
+      - name: Upload Android VRT results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-android-${{ github.run_attempt }}
+          # Not build/vrt/apps: the cached APK does not belong in the report.
+          path: ${{ env.VRT_REPORT_PATHS }}
+          if-no-files-found: ignore
+          retention-days: 7
+
+  vrt-ios:
+    runs-on: macos-26
+    # A cold run is ~36 minutes on this runner, ~24 of them xcodebuild.
+    timeout-minutes: 90
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+      IOS_SIMULATOR_NAME: PlainText VRT iOS 26.5
+      IOS_RUNTIME_ID: com.apple.CoreSimulator.SimRuntime.iOS-26-5
+      IOS_DEVICE_TYPE_ID: com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro
+      VRT_TOOLCHAIN: ios26.5-23F77-xcode26.5-17F42-iphone16pro
+      VRT_BUILD_CACHE_PATHS: build/vrt/apps/ios
+      VRT_REPORT_PATHS: |
+        build/vrt/report
+        build/vrt/actual
+        build/vrt/environment
+        build/vrt/devices
+        build/vrt/agent-device
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      # The baselines commit recorded by this repository is the only baseline
+      # source. Never pass --remote: that would resolve the submodule to whatever
+      # its branch tip happens to be, so the same commit could pass one day and
+      # fail the next. Baseline changes arrive as an explicit pointer bump.
+      - name: Checkout pinned VRT baselines
+        run: git submodule update --init baselines
+
+      # See the Android job: the cache key and the artifact staleness check are the
+      # same function, on purpose.
+      - name: Compute VRT app fingerprint
+        id: fingerprint
+        run: printf 'fingerprint=%s\n' "$(./scripts/vrt-app-state.sh fingerprint ios)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Verify Apple toolchain
+        run: |
+          test "$(xcodebuild -version | awk 'NR == 1 { print $2 }')" = 26.5
+          test "$(xcodebuild -version | awk 'NR == 2 { print $3 }')" = 17F42
+          runtime_build="$(xcrun simctl list runtimes --json \
+            | jq -r --arg runtime "$IOS_RUNTIME_ID" \
+              '.runtimes[] | select(.identifier == $runtime) | .buildversion')"
+          test "$runtime_build" = 23F77
+
+      - name: Generate iOS project
+        run: yarn example expo prebuild --platform ios --no-install
+
+      - name: Restore CocoaPods
+        id: cocoapods-cache
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            example/ios/Pods
+            example/ios/Podfile.lock
+            ~/Library/Caches/CocoaPods
+          # Committed inputs only. The generated Podfile and Podfile.properties.json
+          # are derived from these, and hashing them would let the key move without
+          # anything in the pull request moving.
+          key: ios-vrt-pods-v2-${{ runner.os }}-${{ runner.arch }}-xcode26.5-${{ hashFiles('yarn.lock', 'package.json', 'example/package.json', 'example/app.json', 'example/plugins/**', '*.podspec') }}
+          restore-keys: |
+            ios-vrt-pods-v2-${{ runner.os }}-${{ runner.arch }}-xcode26.5-
+
+      - name: Install CocoaPods
+        working-directory: example/ios
+        run: pod install
+
+      - name: Save CocoaPods
+        if: steps.cocoapods-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            example/ios/Pods
+            example/ios/Podfile.lock
+            ~/Library/Caches/CocoaPods
+          key: ${{ steps.cocoapods-cache.outputs.cache-primary-key }}
+
+      - name: Create iOS VRT simulator
+        run: VRT_RESET_DEVICE=1 yarn vrt ios setup
+
+      - name: Restore iOS build
+        id: ios-build-cache
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.VRT_BUILD_CACHE_PATHS }}
+          key: vrt-ios-build-v4-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-${{ env.VRT_TOOLCHAIN }}-${{ steps.fingerprint.outputs.fingerprint }}
+          restore-keys: |
+            vrt-ios-build-v4-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-${{ env.VRT_TOOLCHAIN }}-
+
+      - name: Build iOS VRT app
+        if: steps.ios-build-cache.outputs.cache-hit != 'true'
+        run: yarn vrt ios build
+
+      # See the Android job: saving survives a failing capture, but never publishes
+      # a cache that would restore as a hit with no app inside it.
+      - name: Check iOS VRT build artifact
+        id: ios-artifact
+        if: ${{ !cancelled() && steps.ios-build-cache.outputs.cache-hit != 'true' }}
+        run: |
+          if [ -d build/vrt/apps/ios/PlainTextExample.app ] &&
+            [ -f build/vrt/apps/ios/build-input.sha256 ]; then
+            printf 'present=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'present=false\n' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save iOS build
+        if: ${{ !cancelled() && steps.ios-artifact.outputs.present == 'true' }}
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.VRT_BUILD_CACHE_PATHS }}
+          key: ${{ steps.ios-build-cache.outputs.cache-primary-key }}
+
+      - name: Run iOS VRT
+        run: |
+          yarn vrt ios install
+          yarn vrt ios e2e
+          yarn vrt ios capture
+          yarn vrt ios compare
+
+      - name: Upload iOS VRT results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrt-ios-${{ github.run_attempt }}
+          # Not build/vrt/apps: the cached app bundle does not belong in the report.
+          path: ${{ env.VRT_REPORT_PATHS }}
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop iOS VRT simulator
+        if: always()
+        run: |
+          if [ -f build/vrt/devices/ios-udid ]; then
+            xcrun simctl shutdown "$(cat build/vrt/devices/ios-udid)"
+          fi

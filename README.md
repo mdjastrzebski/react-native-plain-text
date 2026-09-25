@@ -129,6 +129,107 @@ Self-measured from the example app. See
 [Performance](https://mdjastrzebski.github.io/react-native-plain-text/guide/performance)
 for the method and the per-device numbers behind these percentages.
 
+## Visual regression testing
+
+The example app has a dedicated visual regression testing (VRT) screen. Set
+`VRT_ENABLED=1` while building the release app to include it. A deep link can
+then select an individual specimen by its `testID`.
+
+The VRT command configures an already-running Android VRT emulator, or creates
+the configured iOS simulator, builds the Release app through the example
+workspace's Expo commands, installs it, verifies cold and warm deep links with
+agent-device, and captures every applicable specimen:
+
+```sh
+yarn vrt android
+yarn vrt ios
+```
+
+Android setup creates and boots the `plaintext_vrt_api36_pixel9` AVD when it is
+missing or stopped. It uses the pinned emulator and system-image versions and
+the same hardware and launch parameters as CI. The emulator window is visible
+locally. Set `ANDROID_HEADLESS=1` to run it without a window, as CI does.
+Individual stages can be rerun without repeating the entire pipeline:
+
+```sh
+yarn vrt android setup
+yarn vrt android build
+yarn vrt android install
+yarn vrt android verify
+yarn vrt android e2e
+yarn vrt android capture
+```
+
+The `e2e` stage always runs `verify` first. Verification is read-only and fails
+before launching the app if the pinned SDK, emulator or simulator, device
+hardware profile, locale, display, font scale, appearance, rotation, or
+animation settings do not match the VRT profile. Its observed values are saved
+under `build/vrt/environment/`.
+
+Expo's Release output is copied to a stable location before installation and
+testing:
+
+```text
+build/vrt/apps/android/app-release.apk
+build/vrt/apps/ios/PlainTextExample.app
+```
+
+Each copied app records a fingerprint of its native and JavaScript build inputs.
+The install, E2E, and capture stages stop with a rebuild or reinstall command if
+the artifact or installed app no longer matches the source tree.
+
+### iOS
+
+Build and install the VRT app on the configured simulator:
+
+```sh
+yarn vrt ios setup
+yarn vrt ios build
+yarn vrt ios install
+```
+
+Verify the installation:
+
+```sh
+xcrun simctl get_app_container \
+  "$(cat build/vrt/devices/ios-udid)" plaintext.example app
+```
+
+Open a specimen using its deep link:
+
+```sh
+xcrun simctl openurl \
+  "$(cat build/vrt/devices/ios-udid)" \
+  'exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48'
+```
+
+### Android
+
+Configure the running VRT emulator, then build and install the VRT app:
+
+```sh
+yarn vrt android setup
+yarn vrt android build
+yarn vrt android install
+```
+
+Stop the app, then open a specimen using its deep link:
+
+```sh
+android_serial="$(cat build/vrt/devices/android-serial)"
+adb -s "$android_serial" shell 'am force-stop plaintext.example'
+
+adb -s "$android_serial" shell 'am start -W \
+  -a android.intent.action.VIEW \
+  -c android.intent.category.BROWSABLE \
+  -d "exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48" \
+  -p plaintext.example'
+```
+
+Release builds use the direct app URL above. Do not use the
+`/expo-development-client/?url=...` URL, which is for development-client
+builds.
+
 ## Contributing
 
 - [Development workflow](CONTRIBUTING.md#development-workflow)
