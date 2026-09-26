@@ -66,6 +66,23 @@ Things Plain Text does that RN `<Text>` does not:
 - [`hyphens`](#hyphens) and [`lang`](#lang): cross-platform hyphenation
   control. RN `<Text>` has none on iOS.
 
+## Differences from RN Text
+
+Known differences that apply to all text, on top of the per-prop notes below:
+
+- **iOS wraps slightly earlier.** `UILabel` needs a bit more horizontal space
+  than RN `<Text>`'s TextKit layout, so near a width limit a word can move to
+  the next line where RN `<Text>` keeps it. The box gets the same width, only
+  the wrap point differs. Inherent to `UILabel`.
+- **iOS wraps at a plain hyphen.** `"text-size"` can split as `"text-"` /
+  `"size"`, which RN `<Text>` doesn't do. Use a non-breaking hyphen (`U+2011`,
+  `‑`) where that split is unwanted.
+- **iOS ignores trailing spaces on the last line of multi-line text** when
+  sizing the box. RN `<Text>` counts them, so its box is wider by their width.
+  Single-line text and Android are unaffected.
+- **Single style only.** No nested `<Text>`, press handling or selection. See
+  [Not supported](#not-supported).
+
 ## How to read the reference
 
 Each entry below lists the prop's type, its default, and its **cost**: the
@@ -78,8 +95,10 @@ only a comparison, whatever its rating.
 - **heavy**: scales with text length or defeats a cache. No prop is heavy
   today.
 
-Unless an entry says otherwise, a prop behaves like its RN `<Text>`
-counterpart on both platforms.
+Where a prop behaves differently from RN `<Text>`, its entry has an
+**RN `<Text>`:** note. No note means no known difference. Differences that
+affect all text, whatever the props, are listed under
+[Differences from RN Text](#differences-from-rn-text).
 
 ## Props reference
 
@@ -118,10 +137,11 @@ which JSX produces for `{count} items`. The array is joined into one string.
 | --------------------------------------------- | ----------- | ----- |
 | `PlainTextChild \| readonly PlainTextChild[]` | `undefined` | light |
 
-Nested `<Text>` and other elements are not supported. Development builds warn
-once and render nothing for them. Use the [`Text` component](./text-component)
-if you need automatic fallback to RN `<Text>`. A plain string is the fastest
-path. An array is joined in JS on every render.
+A plain string is the fastest path. An array is joined in JS on every render.
+
+- **RN `<Text>`:** also accepts nested `<Text>` and inline elements. Plain Text
+  doesn't: development builds warn once and render nothing for them. Use the
+  [`Text` component](./text-component) for automatic fallback to RN `<Text>`.
 
 ### `ellipsizeMode`
 
@@ -142,10 +162,11 @@ without an ellipsis (`'clip'`). Has an effect only together with
 _Not in RN `<Text>`._
 
 Hyphenation control. `'auto'` turns on dictionary-based hyphenation. `'none'`
-leaves the platform default, which inserts no automatic hyphens. Neither value
-touches soft hyphens (`U+00AD`) already in the text, which break the line
-wherever the platform allows them to. Pair with [`lang`](#lang) to pick the
-dictionary.
+leaves the platform default, which inserts no automatic hyphens. Pair with
+[`lang`](#lang) to pick the dictionary.
+
+Neither value touches soft hyphens (`U+00AD`) already in the text. iOS breaks
+lines at them, Android doesn't, whatever `hyphens` is set to.
 
 | Type               | Default  | Cost  |
 | ------------------ | -------- | ----- |
@@ -329,6 +350,12 @@ The font needs to carry the feature, otherwise it has no effect.
   ignored. Resolving the feature-carrying font is cached per variant list.
 - **Android:** passed as `font-feature-settings` on the paint, rebuilt on every
   update.
+- **RN `<Text>`:** on the New Architecture, RN drops the ligature and
+  contextual values (`common-ligatures`, `discretionary-ligatures`,
+  `historical-ligatures`, `contextual` and their `no-` forms) on both
+  platforms. Plain Text applies them. On Android, RN also ignores
+  `fontVariant` unless `fontFamily`, `fontWeight` or `fontStyle` is set as
+  well. Plain Text applies it on its own.
 
 ### `fontVariationSettings`
 
@@ -406,13 +433,13 @@ Unset uses the font's natural line height. Scaled with the font when
 | ------ | ----------- | ------ |
 | number | `undefined` | medium |
 
-- **iOS:** fixes RN `<Text>`'s clipping bug
-  ([RN#29507](https://github.com/facebook/react-native/issues/29507)). In RN
-  `<Text>`, a `lineHeight` below the font's natural height clips only the top
-  of the first line, and a larger one pushes the text down. Plain Text shifts
-  the drawn text so it stays centered and clips evenly. Set
+- **iOS:** costs two paragraph-style fields.
+- **RN `<Text>`:** on iOS, a `lineHeight` below the font's natural height
+  clips only the top of the first line in RN, and a larger one pushes the text
+  down ([RN#29507](https://github.com/facebook/react-native/issues/29507)).
+  Plain Text shifts the drawn text so it stays centered and clips evenly. Set
   [`unstable_lineHeightClippingCompat`](#unstable_lineheightclippingcompat) to
-  get RN's behavior back. Costs two paragraph-style fields.
+  get RN's behavior back.
 - **Android:** wraps the text in a `SpannableString` with a line-height span
   instead of passing a plain string, the reason for the medium rating.
 
@@ -451,9 +478,9 @@ Draws a line under or through the text.
 The line takes the text color. `textDecorationColor` and
 `textDecorationStyle` are [not supported yet](#planned).
 
-- **iOS:** the underline sits at the font's own underline position. RN
-  `<Text>` draws it about one line thickness higher, so underlines sit slightly
-  lower than in RN `<Text>`.
+- **RN `<Text>`:** on iOS, RN draws the underline about one line thickness
+  above the font's own underline position. Plain Text uses the font's
+  position, so underlines sit slightly lower than in RN `<Text>`.
 
 ### `textShadowColor`
 
@@ -507,6 +534,11 @@ Allocates a transformed copy of the string on every update, on both platforms.
 `'capitalize'` also walks word boundaries. For static text, transforming the
 string yourself once is cheaper.
 
+- **RN `<Text>`:** on iOS, RN's `'capitalize'` also lowercases the rest of each
+  word ([RN#34117](https://github.com/facebook/react-native/issues/34117)), so
+  `'iPhone'` becomes `'Iphone'`. Plain Text only uppercases the first letter,
+  as CSS and Android do.
+
 ### `verticalAlign`
 
 _RN `<Text>` supports this on Android only. Plain Text supports it on both platforms._
@@ -536,8 +568,9 @@ which side the text aligns to.
 Every other key, such as `width`, `margin`, `padding`, `backgroundColor`,
 `borderRadius` or `opacity`, is applied to the view as on any RN `View`.
 
-- **Android:** `overflow: 'hidden'` doesn't clip text to the border box yet.
-  Only visible with a `borderRadius` and text reaching the corners.
+- **RN `<Text>`:** on Android, RN clips text to the border box with
+  `overflow: 'hidden'`. Plain Text doesn't yet. Only visible with a
+  `borderRadius` and text reaching the corners.
 
 ## Planned
 
