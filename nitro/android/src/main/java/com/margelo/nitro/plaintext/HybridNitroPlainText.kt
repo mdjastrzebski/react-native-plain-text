@@ -28,8 +28,8 @@ import kotlin.math.floor
 // Nitro Views port of PlainTextView.kt, kept to the same shape for a fair benchmark:
 // setters only record values, afterUpdate() applies them once per prop transaction.
 //
-// Unlike PlainText there is no custom shadow node, so nothing measures the text:
-// the view is only as big as its style makes it.
+// Sized by cpp/NitroPlainTextShadowNode, which must mirror every size-affecting
+// prop applied here.
 @DoNotStrip
 @Keep
 class HybridNitroPlainText(context: ThemedReactContext) : HybridNitroPlainTextSpec() {

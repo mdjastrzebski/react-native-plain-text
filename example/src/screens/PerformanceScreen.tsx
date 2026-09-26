@@ -55,7 +55,7 @@ type Kind =
 const VARIANTS: { kind: Kind; label: string }[] = [
   { kind: 'plain', label: 'PlainText' },
   { kind: 'nativePlain', label: 'NativePlainText' },
-  // TEMPORARY, see nitro/README.md: no intrinsic size, so rows get nitroRowHeight().
+  // TEMPORARY Nitro Views port, see nitro/README.md.
   { kind: 'nitroPlain', label: 'NitroPlainText' },
   { kind: 'nativeNitroPlain', label: 'NativeNitroPlainText' },
   // The library's unified Text, labelled "Unified Text" to stay distinct from RN <Text>.
@@ -587,18 +587,6 @@ function renderItems(kind: Kind, applied: Applied, offset: number, count: number
   ));
 }
 
-// TEMPORARY: Nitro Views have no custom shadow node, so nothing measures the text
-// and a row without an explicit height collapses to zero. Estimate one from the
-// config instead: close to a single measured line, but `wrapping` content clips
-// to `numberOfLines` (or one) lines. Layout `height` still wins when set.
-function nitroRowHeight(applied: Applied) {
-  const { textStyle, props } = applied;
-  const lineHeight = textStyle.lineHeight ?? Math.ceil((textStyle.fontSize ?? 14) * 1.2);
-  const lines =
-    typeof props.numberOfLines === 'number' && props.numberOfLines > 0 ? props.numberOfLines : 1;
-  return lineHeight * lines;
-}
-
 function renderNitroItems(
   kind: 'nitroPlain' | 'nativeNitroPlain',
   applied: Applied,
@@ -607,10 +595,9 @@ function renderNitroItems(
 ) {
   const { textStyle, viewStyle, props } = applied;
   const extra = props as object;
-  const rowStyle = { height: nitroRowHeight(applied) };
 
   if (kind === 'nitroPlain') {
-    const style = [styles.listItem, rowStyle, textStyle, viewStyle];
+    const style = [styles.listItem, textStyle, viewStyle];
     return Array.from({ length: count }, (_, n) => (
       <NitroPlainText key={n} style={style} {...extra}>
         {label(n)}
@@ -632,7 +619,7 @@ function renderNitroItems(
   if (color != null) nativeTextStyle.color = processColor(color);
   if (textShadowColor != null) nativeTextStyle.textShadowColor = processColor(textShadowColor);
   if (fontWeight != null) nativeTextStyle.fontWeight = String(fontWeight);
-  const style = [styles.listItem, rowStyle, viewStyle];
+  const style = [styles.listItem, viewStyle];
   return Array.from({ length: count }, (_, n) => (
     <NativeNitroPlainText
       key={n}

@@ -6,8 +6,8 @@ import UIKit
 // benchmark: one UILabel, one attributedText write per prop transaction
 // (afterUpdate), fonts cached per family/weight/style/size.
 //
-// Unlike RNPlainText there is no custom shadow node, so nothing measures the
-// text: the view is only as big as its style makes it.
+// Sized by cpp/NitroPlainTextShadowNode, which must mirror every size-affecting
+// prop applied here.
 final class HybridNitroPlainText: HybridNitroPlainTextSpec {
   let view: UILabel = {
     let label = UILabel()
