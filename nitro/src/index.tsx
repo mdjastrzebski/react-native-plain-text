@@ -18,9 +18,6 @@ export type { NativeProps as NativeNitroPlainTextProps };
 /**
  * The bare Nitro host component, props in native shape (colors pre-processed with
  * `processColor`). Counterpart of `unstable_NativePlainText`.
- *
- * No intrinsic size: Nitro Views have no custom shadow node to measure text, so give
- * it an explicit height (or flex).
  */
 export const NativeNitroPlainText = getHostComponent<NativeProps, NitroPlainTextMethods>(
   'NitroPlainText',
@@ -83,9 +80,6 @@ const TEXT_STYLE_KEYS: Record<string, number | undefined> = Object.assign(Object
 /**
  * Temporary Nitro Views port of `PlainText`, for benchmarking. Supports a subset of
  * PlainText's props, see `specs/NitroPlainText.nitro.ts`.
- *
- * No intrinsic size: Nitro Views have no custom shadow node to measure text, so give
- * it an explicit height (or flex).
  */
 export function NitroPlainText(props: NitroPlainTextProps) {
   return <NativeNitroPlainText {...mapNitroPlainTextProps(props)} />;
