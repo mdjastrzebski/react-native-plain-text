@@ -9,7 +9,8 @@ import com.margelo.nitro.plaintext.views.HybridNitroPlainTextManager
 
 class NitroPlainTextPackage : BaseReactPackage() {
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
-    return listOf(HybridNitroPlainTextManager())
+    // The measure-only manager is looked up by name from C++, see NitroPlainTextMeasureManager.
+    return listOf(HybridNitroPlainTextManager(), NitroPlainTextMeasureManager())
   }
 
   override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? = null

@@ -23,9 +23,8 @@ public:
 
 #ifndef __APPLE__
 private:
-  // Android only (iOS measures without it). Shared with <Text>, and its measure
-  // cache, through the ContextContainer, like RN's BaseParagraphComponentDescriptor.
-  const std::shared_ptr<const react::TextLayoutManager> textLayoutManager_;
+  // Android only: iOS measures in-process.
+  const std::shared_ptr<const NitroPlainTextMeasurementsManager> measurementsManager_;
 #endif
 };
 
