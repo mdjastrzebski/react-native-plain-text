@@ -1,5 +1,6 @@
 #include "NitroPlainTextShadowNode.hpp"
 
+#ifndef __APPLE__
 #include <cmath>
 #include <string>
 
@@ -8,17 +9,36 @@
 #include <react/renderer/attributedstring/ParagraphAttributes.h>
 #include <react/renderer/attributedstring/TextAttributes.h>
 #include <react/renderer/textlayoutmanager/TextLayoutContext.h>
+#endif
 
 namespace margelo::nitro::plaintext::views {
 
 using namespace facebook;
 
+bool measurementInputsEqual(const HybridNitroPlainTextProps& a, const HybridNitroPlainTextProps& b) {
+  return a.text.value == b.text.value && a.fontSize.value == b.fontSize.value &&
+      a.fontFamily.value == b.fontFamily.value && a.fontWeight.value == b.fontWeight.value &&
+      a.fontStyle.value == b.fontStyle.value && a.lineHeight.value == b.lineHeight.value &&
+      a.letterSpacing.value == b.letterSpacing.value &&
+      a.textTransform.value == b.textTransform.value && a.hyphens.value == b.hyphens.value &&
+      a.lang.value == b.lang.value && a.numberOfLines.value == b.numberOfLines.value &&
+      a.ellipsizeMode.value == b.ellipsizeMode.value &&
+      a.allowFontScaling.value == b.allowFontScaling.value &&
+      a.maxFontSizeMultiplier.value == b.maxFontSizeMultiplier.value;
+}
+
 react::ShadowNodeTraits NitroPlainTextShadowNode::BaseTraits() {
   auto traits = ConcreteViewShadowNode::BaseTraits();
   traits.set(react::ShadowNodeTraits::Trait::LeafYogaNode);
   traits.set(react::ShadowNodeTraits::Trait::MeasurableYogaNode);
+#ifdef __APPLE__
+  traits.set(react::ShadowNodeTraits::Trait::BaselineYogaNode);
+#endif
   return traits;
 }
+
+// iOS measureContent/baseline live in ios/NitroPlainTextShadowNode+iOS.mm.
+#ifndef __APPLE__
 
 void NitroPlainTextShadowNode::setTextLayoutManager(
     std::shared_ptr<const react::TextLayoutManager> textLayoutManager) {
@@ -78,7 +98,7 @@ react::EllipsizeMode toEllipsizeMode(NitroEllipsizeMode mode) {
 
 } // namespace
 
-// SYNC: every size-affecting prop the native views apply (ios/HybridNitroPlainText.swift,
+// Android. SYNC: every size-affecting prop the native views apply (ios/HybridNitroPlainText.swift,
 // android/.../HybridNitroPlainText.kt) must be mirrored here, or the measured box
 // won't match the drawn text.
 react::Size NitroPlainTextShadowNode::measureContent(const react::LayoutContext& layoutContext,
@@ -151,5 +171,8 @@ react::Size NitroPlainTextShadowNode::measureContent(const react::LayoutContext&
                                                  paragraphAttributes, textLayoutContext, layoutConstraints);
   return layoutConstraints.clamp(measurement.size);
 }
+
+
+#endif // !__APPLE__
 
 } // namespace margelo::nitro::plaintext::views

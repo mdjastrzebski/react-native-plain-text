@@ -15,17 +15,17 @@ Pod::Spec.new do |s|
 
   s.source_files = [
     "ios/**/*.{swift,h,m,mm}",
-    # Measuring shadow node + component descriptor, shared with Android.
+    # Measuring shadow node + component descriptor (iOS measuring is in ios/).
     "cpp/**/*.{hpp,cpp}",
   ]
-  s.private_header_files = "cpp/**/*.hpp"
+  # Pure ObjC, so Swift (HybridNitroPlainText.swift) sees it through the umbrella.
+  s.public_header_files = "ios/NitroPlainTextFont.h"
+  s.private_header_files = ["cpp/**/*.hpp", "ios/NitroPlainTextFontResolution.h"]
 
   load "nitrogen/generated/ios/NitroPlainText+autolinking.rb"
   add_nitrogen_files(s)
 
   s.dependency "React-jsi"
   s.dependency "React-callinvoker"
-  # RN's TextLayoutManager, used to measure text.
-  s.dependency "React-FabricComponents"
   install_modules_dependencies(s)
 end

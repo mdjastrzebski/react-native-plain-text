@@ -4,14 +4,16 @@ import UIKit
 
 // Nitro Views port of ios/RNPlainText.mm, kept to the same shape for a fair
 // benchmark: one UILabel, one attributedText write per prop transaction
-// (afterUpdate), fonts cached per family/weight/style/size.
+// (afterUpdate), fonts from a port of PlainText's resolver (NitroPlainTextFont).
 //
-// Sized by cpp/NitroPlainTextShadowNode, which must mirror every size-affecting
-// prop applied here.
+// SYNC: sized by ios/NitroPlainTextShadowNode+iOS.mm, which must mirror every
+// size-affecting attribute set here, as PlainTextShadowNode.mm mirrors RNPlainText.mm.
 final class HybridNitroPlainText: HybridNitroPlainTextSpec {
-  let view: UILabel = {
-    let label = UILabel()
+  let view: NitroPlainTextLabel = {
+    let label = NitroPlainTextLabel()
     label.numberOfLines = 0
+    // Always set explicitly: UILabel's own default wraps earlier than measureContent's.
+    label.lineBreakStrategy = []
     return label
   }()
 
@@ -42,13 +44,23 @@ final class HybridNitroPlainText: HybridNitroPlainTextSpec {
   }
 
   private func applyContent() {
-    let font = resolveFont()
+    let fontSizeMultiplier = NitroPlainTextFont.fontSizeMultiplier(
+      withAllowFontScaling: allowFontScaling ?? true,
+      maxFontSizeMultiplier: CGFloat(maxFontSizeMultiplier ?? 0)
+    )
+    let font = NitroPlainTextFont.font(
+      withFamily: fontFamily,
+      weight: fontWeight,
+      style: fontStyle,
+      size: CGFloat(fontSize ?? 14),
+      multiplier: fontSizeMultiplier
+    )
 
     var string = text ?? ""
     switch textTransform {
     case .uppercase: string = string.uppercased()
     case .lowercase: string = string.lowercased()
-    case .capitalize: string = string.capitalized
+    case .capitalize: string = NitroPlainTextFont.capitalizedString(string)
     default: break
     }
 
@@ -70,11 +82,15 @@ final class HybridNitroPlainText: HybridNitroPlainTextSpec {
       }
     }
 
+    // Mirrors RN <Text>: drawn whenever textShadowOffset was provided; unset
+    // radius/color fall back to NSShadow's own defaults.
     if textShadowOffsetWidth != nil || textShadowOffsetHeight != nil {
       let shadow = NSShadow()
       shadow.shadowOffset = CGSize(width: textShadowOffsetWidth ?? 0, height: textShadowOffsetHeight ?? 0)
       shadow.shadowBlurRadius = textShadowRadius ?? 0
-      shadow.shadowColor = textShadowColor.map(uiColor) ?? UIColor.black.withAlphaComponent(1.0 / 3.0)
+      if let textShadowColor {
+        shadow.shadowColor = uiColor(textShadowColor)
+      }
       attributes[.shadow] = shadow
     }
 
@@ -84,24 +100,30 @@ final class HybridNitroPlainText: HybridNitroPlainTextSpec {
 
     let paragraph = NSMutableParagraphStyle()
     paragraph.alignment = textAlignment
+    // The paragraph style overrides the label's own lineBreakMode/lineBreakStrategy.
+    paragraph.lineBreakMode = lineBreakMode
+    paragraph.lineBreakStrategy = []
+    if hyphens == .auto {
+      paragraph.usesDefaultHyphenation = true
+    }
+
+    // RNPlainText.mm's centering of a pinned lineHeight (RN#46884's algorithm).
+    var verticalTextShift: CGFloat = 0
     if let lineHeight, lineHeight > 0 {
       let scaled = CGFloat(lineHeight) * fontSizeMultiplier
       paragraph.minimumLineHeight = scaled
       paragraph.maximumLineHeight = scaled
-      // Centers glyphs in the pinned line, as RN <Text> does.
-      attributes[.baselineOffset] = (scaled - font.lineHeight) / 2
-    }
-    if hyphens == .auto {
-      if #available(iOS 15.0, *) {
-        paragraph.usesDefaultHyphenation = true
+      if scaled >= font.lineHeight {
+        verticalTextShift = (scaled - font.lineHeight) / 2
       } else {
-        paragraph.hyphenationFactor = 1
+        let textHeight = font.ascender + abs(font.descender)
+        verticalTextShift = (scaled - textHeight) / 2
       }
     }
+    view.verticalTextShift = verticalTextShift
     attributes[.paragraphStyle] = paragraph
 
     view.attributedText = NSAttributedString(string: string, attributes: attributes)
-    // Set after attributedText, which would otherwise reset them from the paragraph style.
     view.numberOfLines = Int(numberOfLines ?? 0)
     view.lineBreakMode = lineBreakMode
   }
@@ -117,8 +139,6 @@ final class HybridNitroPlainText: HybridNitroPlainTextSpec {
   }
 
   private var lineBreakMode: NSLineBreakMode {
-    // Wrapping only when unlimited lines, like RN <Text>.
-    if (numberOfLines ?? 0) <= 0 { return .byWordWrapping }
     switch ellipsizeMode {
     case .head: return .byTruncatingHead
     case .middle: return .byTruncatingMiddle
@@ -126,73 +146,28 @@ final class HybridNitroPlainText: HybridNitroPlainTextSpec {
     default: return .byTruncatingTail
     }
   }
+}
 
-  // Mirrors RN's RCTEffectiveFontSizeMultiplierFromTextAttributes.
-  private var fontSizeMultiplier: CGFloat {
-    if allowFontScaling == false { return 1 }
-    let multiplier = UIFontMetrics.default.scaledValue(for: 1)
-    if let max = maxFontSizeMultiplier, max >= 1 {
-      return min(multiplier, CGFloat(max))
-    }
-    return multiplier
-  }
-
-  private func resolveFont() -> UIFont {
-    let size = CGFloat(fontSize ?? 14) * fontSizeMultiplier
-    let key = FontKey(family: fontFamily, weight: fontWeight, style: fontStyle, size: size)
-    if let cached = HybridNitroPlainText.fontCache[key] {
-      return cached
-    }
-
-    let weight = HybridNitroPlainText.uiFontWeight(fontWeight)
-    var font: UIFont
-    if let family = fontFamily, !family.isEmpty {
-      // An exact PostScript/font name first, then the family with the weight trait.
-      if fontWeight == nil, fontStyle == nil, let named = UIFont(name: family, size: size) {
-        font = named
-      } else {
-        let descriptor = UIFontDescriptor(fontAttributes: [
-          .family: family,
-          .traits: [UIFontDescriptor.TraitKey.weight: weight],
-        ])
-        font = UIFont(descriptor: descriptor, size: size)
+// RNPlainTextLabel (ios/RNPlainText.mm), minus textAlignVertical (not in the spec):
+// top-aligned, with the whole drawn block shifted to center a pinned lineHeight.
+final class NitroPlainTextLabel: UILabel {
+  var verticalTextShift: CGFloat = 0 {
+    didSet {
+      // UILabel won't redraw for an isEqual attributedText, see RNPlainText.mm.
+      if verticalTextShift != oldValue {
+        setNeedsDisplay()
       }
-    } else {
-      font = UIFont.systemFont(ofSize: size, weight: weight)
     }
-
-    if fontStyle == "italic",
-      let italic = font.fontDescriptor.withSymbolicTraits(font.fontDescriptor.symbolicTraits.union(.traitItalic))
-    {
-      font = UIFont(descriptor: italic, size: size)
-    }
-
-    HybridNitroPlainText.fontCache[key] = font
-    return font
   }
 
-  private struct FontKey: Hashable {
-    let family: String?
-    let weight: String?
-    let style: String?
-    let size: CGFloat
+  override func textRect(forBounds bounds: CGRect, limitedToNumberOfLines numberOfLines: Int) -> CGRect {
+    var rect = super.textRect(forBounds: bounds, limitedToNumberOfLines: numberOfLines)
+    rect.origin.y = bounds.origin.y - verticalTextShift
+    return rect
   }
 
-  // Main thread only: Nitro applies view props on the main thread.
-  nonisolated(unsafe) private static var fontCache: [FontKey: UIFont] = [:]
-
-  private static func uiFontWeight(_ weight: String?) -> UIFont.Weight {
-    switch weight {
-    case "100", "ultralight": return .ultraLight
-    case "200", "thin": return .thin
-    case "300", "light": return .light
-    case "500", "medium": return .medium
-    case "600", "semibold": return .semibold
-    case "700", "bold": return .bold
-    case "800", "heavy": return .heavy
-    case "900", "black": return .black
-    default: return .regular
-    }
+  override func drawText(in rect: CGRect) {
+    super.drawText(in: textRect(forBounds: rect, limitedToNumberOfLines: numberOfLines))
   }
 }
 
