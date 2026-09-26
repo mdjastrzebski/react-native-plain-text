@@ -6,7 +6,6 @@
 #include "NitroPlainTextShadowNode.hpp"
 
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
-#include <react/renderer/textlayoutmanager/TextLayoutManager.h>
 
 namespace margelo::nitro::plaintext::views {
 
@@ -22,10 +21,12 @@ public:
 
   void adopt(react::ShadowNode& shadowNode) const override;
 
+#ifndef __APPLE__
 private:
-  // Shared with <Text> (and its measure cache) through the ContextContainer,
-  // like RN's BaseParagraphComponentDescriptor.
+  // Android only (iOS measures without it). Shared with <Text>, and its measure
+  // cache, through the ContextContainer, like RN's BaseParagraphComponentDescriptor.
   const std::shared_ptr<const react::TextLayoutManager> textLayoutManager_;
+#endif
 };
 
 } // namespace margelo::nitro::plaintext::views
