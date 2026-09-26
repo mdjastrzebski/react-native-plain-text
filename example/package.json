@@ -26,6 +26,7 @@
     "react-native-memory-footprint": "^0.1.0",
     "react-native-mmkv": "^4.3.2",
     "react-native-nitro-modules": "0.35.9",
+    "react-native-plain-text-nitro": "workspace:*",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
