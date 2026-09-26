@@ -1,22 +1,15 @@
 #include "NitroPlainTextComponentDescriptor.hpp"
 
-#include <react/utils/ContextContainer.h>
-
 namespace margelo::nitro::plaintext::views {
 
 using namespace facebook;
-
-#ifndef __APPLE__
-// Same key RN's BaseParagraphComponentDescriptor uses, so the instance is shared.
-static constexpr const char* const kTextLayoutManagerKey = "TextLayoutManager";
-#endif
 
 NitroPlainTextComponentDescriptor::NitroPlainTextComponentDescriptor(
     const react::ComponentDescriptorParameters& parameters)
     : ConcreteComponentDescriptor(parameters, react::RawPropsParser(/* enableJsiParser */ true))
 #ifndef __APPLE__
       ,
-      textLayoutManager_(react::getManagerByName<react::TextLayoutManager>(contextContainer_, kTextLayoutManagerKey))
+      measurementsManager_(std::make_shared<const NitroPlainTextMeasurementsManager>(contextContainer_))
 #endif
 {
 }
@@ -44,7 +37,7 @@ void NitroPlainTextComponentDescriptor::adopt(react::ShadowNode& shadowNode) con
 #endif
 
 #ifndef __APPLE__
-  concreteShadowNode.setTextLayoutManager(textLayoutManager_);
+  concreteShadowNode.setMeasurementsManager(measurementsManager_);
 #endif
 }
 

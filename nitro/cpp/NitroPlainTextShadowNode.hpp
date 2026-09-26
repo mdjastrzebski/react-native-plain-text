@@ -9,8 +9,10 @@
 // - iOS (ios/NitroPlainTextShadowNode+iOS.mm): PlainText's own algorithm, ported
 //   from ios/PlainTextShadowNode.mm, with fonts from the same resolver the mounted
 //   view uses (ios/NitroPlainTextFontResolution.h).
-// - Android (NitroPlainTextShadowNode.cpp): RN's TextLayoutManager, the one <Text>
-//   uses.
+// - Android (NitroPlainTextShadowNode.cpp): PlainText's own algorithm too, ported
+//   from PlainTextMeasurementsManager/PlainTextViewManager.measure(): a JNI hop
+//   (android/src/main/cpp/NitroPlainTextMeasurementsManager) into Kotlin
+//   (NitroPlainTextMeasureManager.kt), measuring an off-screen NitroPlainTextView.
 
 #pragma once
 
@@ -22,7 +24,7 @@
 #include <react/renderer/core/ShadowNodeFragment.h>
 
 #ifndef __APPLE__
-#include <react/renderer/textlayoutmanager/TextLayoutManager.h>
+#include "NitroPlainTextMeasurementsManager.h"
 #endif
 
 namespace margelo::nitro::plaintext::views {
@@ -54,10 +56,10 @@ public:
   react::Size measureContent(const react::LayoutContext& layoutContext,
                              const react::LayoutConstraints& layoutConstraints) const override;
 
-#ifdef __APPLE__
   react::Float baseline(const react::LayoutContext& layoutContext, react::Size size) const override;
-#else
-  void setTextLayoutManager(std::shared_ptr<const react::TextLayoutManager> textLayoutManager);
+
+#ifndef __APPLE__
+  void setMeasurementsManager(const std::shared_ptr<const NitroPlainTextMeasurementsManager>& measurementsManager);
 #endif
 
 protected:
@@ -67,7 +69,7 @@ protected:
 
 private:
 #ifndef __APPLE__
-  std::shared_ptr<const react::TextLayoutManager> textLayoutManager_;
+  std::shared_ptr<const NitroPlainTextMeasurementsManager> measurementsManager_;
 #endif
   bool measurementDirty_{true};
 };

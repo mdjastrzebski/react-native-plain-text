@@ -20,29 +20,36 @@ collapse to zero height. `cpp/` replaces it with a measuring one; the swap itsel
 follows [react-native-nitro-text](https://github.com/patrickkabwe/react-native-nitro-text):
 
 - `NitroPlainTextShadowNode`: same name, props and state as the generated node,
-  plus the leaf/measurable (and on iOS, baseline) Yoga traits, `measureContent`,
+  plus the leaf/measurable/baseline Yoga traits, `measureContent`,
   and PlainText's "only re-measure when a size-affecting prop changed" check
   (`measurementInputsEqual`, ported from `cpp/PlainTextMeasurementHelpers.cpp`).
-- `NitroPlainTextComponentDescriptor`: creates those nodes, and on Android keeps
-  the generated descriptor's props-into-state step.
+- `NitroPlainTextComponentDescriptor`: creates those nodes, and on Android hands
+  them the measurements manager and keeps the generated descriptor's
+  props-into-state step.
 - Registration swap: RN's provider registry keeps the first provider registered
   per component. iOS overrides the generated component class's
   `+componentDescriptorProvider` in a category (`ios/NitroPlainTextShadowOverride.mm`);
   Android registers the custom provider in `JNI_OnLoad` just before the generated
   `registerAllNatives()` (`android/src/main/cpp/cpp-adapter.cpp`).
 
-What `measureContent` does differs per platform:
+Both platforms port PlainText's own measuring:
 
-- **iOS: PlainText's own algorithm.** `ios/NitroPlainTextShadowNode+iOS.mm` ports
+- **iOS.** `ios/NitroPlainTextShadowNode+iOS.mm` ports
   `ios/PlainTextShadowNode.mm`'s `measureContent` and `baseline`. Fonts come from
   `ios/NitroPlainTextFont.mm`, a port of `ios/PlainTextFont.mm` (same face
   selection and caches, minus `fontVariant`/`fontVariationSettings`), which the
   Swift view also calls, so measured and drawn fonts agree. The Swift view mirrors
   `RNPlainText.mm`'s rendering (paragraph style, line-break strategy, the
   `verticalTextShift` lineHeight centering).
-- **Android: RN's `TextLayoutManager`**, the one `<Text>` uses, shared through the
-  `ContextContainer`. So Android Nitro rows pay `<Text>`'s measuring cost, not
-  PlainText's (`PlainTextMeasurementsManager`), and compare accordingly.
+- **Android.** `android/src/main/cpp/NitroPlainTextMeasurementsManager`
+  ports `PlainTextMeasurementsManager`: it serializes the size-affecting props and
+  calls `FabricUIManager.measure(...)` over JNI. Nitro's generated view manager is
+  final and can't measure, so the call is routed by name to a measure-only
+  `NitroPlainTextMeasureManager.kt`, a port of `PlainTextViewManager.measure()`
+  (reused off-screen view, `Layout.getDesiredWidth`, the `clip` line-bottom fix,
+  the `__baseline` query). `NitroPlainTextView.kt` ports `PlainTextView.kt` and is
+  both the mounted view and the off-screen measuring view, so measured and drawn
+  text go through the same setters.
 
 Measurement and drawing are separate code paths, so every size-affecting prop has
 to be handled in `measureContent`, `measurementInputsEqual` and the native view.
@@ -53,7 +60,6 @@ to be handled in `measureContent`, `measurementInputsEqual` and the native view.
   `fontVariant`, `fontVariationSettings`, `textAlignVertical`, `writingDirection`,
   `includeFontPadding`, `android_hyphenationFrequency`, `textBreakStrategy`,
   `lineBreakStrategyIOS`, `ref`, and `PlatformColor` colors.
-- No baseline on Android: `alignItems: 'baseline'` falls back to the bottom edge.
 - No reaction to OS text-size changes while mounted.
 
 ## Regenerating bindings

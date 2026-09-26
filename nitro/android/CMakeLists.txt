@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(${PACKAGE_NAME} SHARED
   src/main/cpp/cpp-adapter.cpp
+  src/main/cpp/NitroPlainTextMeasurementsManager.cpp
   ../cpp/NitroPlainTextShadowNode.cpp
   ../cpp/NitroPlainTextComponentDescriptor.cpp
 )
@@ -17,6 +18,7 @@ include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/NitroPlainText+autolin
 # The measuring shadow node (../cpp) includes the generated view header by bare name,
 # as the iOS pod's header map allows.
 include_directories(
+  "src/main/cpp"
   "../cpp"
   "../nitrogen/generated/shared/c++/views"
 )
