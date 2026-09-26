@@ -1,0 +1,24 @@
+{
+  "name": "react-native-plain-text-nitro",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Temporary Nitro Views port of PlainText, for benchmarking against the Fabric one",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "react-native": "./src/index.tsx",
+  "source": "./src/index.tsx",
+  "scripts": {
+    "specs": "nitrogen --logLevel=\"debug\""
+  },
+  "devDependencies": {
+    "nitrogen": "0.35.9",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-nitro-modules": "0.35.9"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-nitro-modules": "*"
+  }
+}
