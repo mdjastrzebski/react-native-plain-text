@@ -19,6 +19,8 @@ android_sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 adb="$android_sdk_root/platform-tools/adb"
 [[ -x "$adb" ]] || fail "adb not found at $adb."
 
+"$SCRIPT_DIR/ensure-android-vrt-sdk.sh"
+
 avd_config="${ANDROID_AVD_HOME:-${ANDROID_USER_HOME:-${HOME}/.android}/avd}/$ANDROID_AVD_NAME.avd/config.ini"
 avd_matches_config() {
   [[ -f "$avd_config" ]] &&
