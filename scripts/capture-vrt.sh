@@ -14,7 +14,7 @@ fail() {
 }
 
 usage() {
-  printf 'Usage: %s <android|ios> [--filter <substring>[,...]] [--limit <n>] [--out <dir>]\n' \
+  printf 'Usage: %s <android|ios> [--filter <substring>[,...]] [--limit <n>]\n' \
     "${0##*/}" >&2
 }
 
@@ -29,7 +29,6 @@ shift || true
 
 filter="${VRT_CAPTURE_FILTER:-}"
 limit="${VRT_CAPTURE_LIMIT:-}"
-out_dir="${VRT_ACTUAL_DIR:-}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --filter)
@@ -40,11 +39,6 @@ while [[ $# -gt 0 ]]; do
     --limit)
       [[ $# -ge 2 ]] || fail "--limit needs a number."
       limit="$2"
-      shift 2
-      ;;
-    --out)
-      [[ $# -ge 2 ]] || fail "--out needs a directory."
-      out_dir="$2"
       shift 2
       ;;
     -h | --help)
@@ -72,43 +66,20 @@ case "$platform" in
 esac
 target="$(vrt_target "$platform")"
 
-if [[ -n "$out_dir" ]]; then
-  [[ "$out_dir" == /* ]] || out_dir="$PROJECT_ROOT/$out_dir"
-  # This stage replaces its output directory outright, so the target has to be a
-  # plain leaf below an existing parent: never a traversal, and inside the
-  # repository only under .vrt/, where nothing reviewed lives.
-  out_leaf="${out_dir##*/}"
-  if [[ ! "$out_leaf" =~ ^[A-Za-z0-9._-]*[A-Za-z0-9][A-Za-z0-9._-]*$ || "$out_leaf" == "." || "$out_leaf" == ".." ]]; then
-    fail "--out must name a plain directory, not '$out_dir'."
-  fi
-  [[ -d "${out_dir%/*}" ]] || fail "--out parent '${out_dir%/*}' does not exist."
-  case "$out_dir/" in
-    "$PROJECT_ROOT/.vrt/"*) ;;
-    "$PROJECT_ROOT/"*) fail \
-      "--out inside the repository must live under .vrt/, not '$out_dir'." ;;
-  esac
-  actual_dir="$out_dir"
-else
-  actual_dir="$PROJECT_ROOT/.vrt/actual/$target"
-fi
+actual_dir="$PROJECT_ROOT/.vrt/actual/$target"
 
-# Investigation knobs, all off by default. The capture loop used to buy its
-# "nothing is still moving" guarantee from `wait stable`, which costs two more
-# accessibility-tree fetches per specimen; these switches put that guarantee back
-# so a reviewer can prove the cheaper default renders the same bytes.
+# Investigation knobs, off by default. They restore the `wait stable` guarantee
+# (two more accessibility fetches per specimen) to prove the cheaper default
+# renders the same bytes.
 settle_ms="${VRT_SETTLE_MS:-0}"
 stable_quiet_ms="${VRT_STABLE_QUIET_MS:-0}"
 stable_timeout_ms="${VRT_STABLE_TIMEOUT_MS:-5000}"
 capture_attempts="${VRT_CAPTURE_ATTEMPTS:-5}"
-# Android stabilizes the status bar and demo-mode chrome before a screenshot.
-# Every capture is cropped to the specimen's own frame, so that chrome never
-# reaches a pixel, and the animations stabilization guards are already switched
-# off (scripts/setup-android-vrt-device.sh). VRT_ANDROID_STABILIZE=1 restores it.
+# Android's pre-screenshot chrome stabilization is off: captures are cropped to
+# the specimen, and setup-android-vrt-device.sh already disables animations.
 android_stabilize="${VRT_ANDROID_STABILIZE:-0}"
 timing="${VRT_TIMING:-0}"
-# Compare each capture with its baseline as soon as it is taken, so failures show
-# up during the run instead of only at the compare stage. VRT_LIVE_COMPARE=0
-# turns it off.
+# Report each capture's verdict as it is taken, not only at the compare stage.
 live_compare="${VRT_LIVE_COMPARE:-1}"
 live_diff_dir="$PROJECT_ROOT/.vrt/live-diff/$target"
 case "$platform" in
@@ -125,7 +96,6 @@ timings_file="$timings_dir/$target.tsv"
 
 "$SCRIPT_DIR/vrt-app-state.sh" verify-installed "$platform"
 [[ -x "$agent_device_bin" ]] || fail "agent-device is not installed. Run 'yarn'."
-# The scenario list is derived from the VRT groups on every run, never kept by hand.
 scenario_list="$("$SCRIPT_DIR/list-vrt-scenarios.sh" "$platform")"
 case "$platform" in
   android)
@@ -140,11 +110,9 @@ case "$platform" in
     ;;
 esac
 
-# Each suite runs at its own system text size; switch the device to this one's.
 "$SCRIPT_DIR/apply-vrt-text-size.sh" "$platform"
-# Refresh the metadata that comparison binds to these captures. Keeping this in
-# the capture stage makes a standalone capture as trustworthy as the full VRT
-# workflow, without making the cheap compare stage require a running device.
+# Refreshed here so a standalone capture is as trustworthy as a full run, while
+# compare stays runnable without a device.
 "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform" >/dev/null
 
 if [[ "$timing" == "1" ]]; then
@@ -157,11 +125,8 @@ agent_device() {
   AGENT_DEVICE_SESSION="$session_name" "$agent_device_bin" "$@" "${target_args[@]}"
 }
 
-# The response carries the daemon-side clock under `data.cost` for the commands that
-# measure themselves (`wait`, `screenshot`), and under `data.startup` for `open`,
-# whose cost is the app round trip rather than a runner interaction. Reading both
-# keeps one column comparable across steps; a step whose command reports neither is
-# recorded as n/a rather than as a zero that would quietly flatter the loop.
+# `wait` and `screenshot` report daemon-side cost under `data.cost`; `open`
+# reports `data.startup`. A step with neither is n/a, not a flattering zero.
 step_metrics() {
   jq -r '
     [ (.data.cost.wallClockMs // .cost.wallClockMs
@@ -172,9 +137,8 @@ step_metrics() {
   ' "$1" 2>/dev/null
 }
 
-# One device round trip per call, measured on demand. The split is the point: this
-# is what separates opening the deep link from the accessibility fetches, instead
-# of blaming the loop as a whole.
+# One measured device round trip, so deep-link opens and accessibility fetches
+# are timed separately.
 step() {
   local label="$1"
   shift
@@ -205,8 +169,7 @@ close_session() {
 }
 trap close_session EXIT
 
-# A filtered capture is a partial capture: it must never be mistaken for a
-# complete one, because only a complete set may become a baseline.
+# A filtered capture is marked partial: only a complete set may become a baseline.
 partial_marker="$actual_dir/.partial"
 requested_selection="all"
 if [[ -n "$filter" || -n "$limit" ]]; then
@@ -225,14 +188,7 @@ capture_selected() {
   return 1
 }
 
-# `--out` targets are outside the repository by design, and del-cli guards against
-# deleting outside the working directory unless told the target is deliberate. The
-# leaf, parent, and repository checks above are that instruction.
-if [[ "$actual_dir" == "$PROJECT_ROOT/.vrt/actual/$target" ]]; then
-  yarn del-cli "$actual_dir"
-else
-  yarn del-cli --force "$actual_dir"
-fi
+yarn del-cli "$actual_dir"
 mkdir -p "$actual_dir"
 if [[ "$live_compare" == "1" ]]; then
   yarn del-cli "$live_diff_dir"
@@ -262,10 +218,8 @@ while read -r capture_id; do
   step open open "$VRT_APP_ID" "$deep_link" --foreground
   session_open=1
 
-  # One accessibility fetch proves the specimen exists. The `wait stable` that
-  # used to follow it is gone: the crop below resolves the very same selector on
-  # the same screen, so a specimen that is present and laid out is proven where
-  # it is used rather than twice more before it.
+  # One accessibility fetch proves the specimen exists. No `wait stable`: the crop
+  # below resolves the same selector on the same screen.
   step wait wait "id=\"$capture_id\"" 15000
   if [[ "$stable_quiet_ms" != "0" ]]; then
     step stable wait stable "$stable_quiet_ms" "$stable_timeout_ms"

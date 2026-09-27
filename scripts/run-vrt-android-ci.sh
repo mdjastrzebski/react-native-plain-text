@@ -5,10 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Runs inside ReactiveCircus/android-emulator-runner, which boots the pinned AVD and
-# hands it over through ANDROID_SERIAL/EMULATOR_PORT. That action executes the workflow's
-# `script:` one line at a time under `sh`, so every bash idiom (a function, `set -o
-# pipefail`) has to live in a real bash file like this one rather than inline in YAML.
+# Runs inside ReactiveCircus/android-emulator-runner, which boots the AVD and runs
+# the workflow's `script:` line by line under `sh`, so bash has to live here.
 
 run_stage() {
   printf '\n::group::yarn vrt android %s (started %s)\n' "$1" "$(date -u +%H:%M:%SZ)"

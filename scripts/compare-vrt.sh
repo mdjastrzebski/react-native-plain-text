@@ -45,9 +45,9 @@ cd "$PROJECT_ROOT"
 [[ -f "$current_environment" ]] || fail \
   "Environment metadata not found. Run '$vrt_command verify' first."
 
-# Both marker checks run before this stage replaces anything. A mis-typed partial
-# comparison keeps the report of the complete run it should have been, and a
-# partial capture never reaches the point where it could overwrite a baseline.
+# Both marker checks run before anything is replaced, so a mistyped partial
+# compare keeps the complete run's report and a partial capture never becomes a
+# baseline.
 if [[ "$mode" == "partial" && ! -f "$partial_marker" ]]; then
   fail "'$actual_dir' is not marked partial. Run '$vrt_command compare' for a complete capture set."
 fi
@@ -58,8 +58,7 @@ fi
 yarn del-cli "$report_dir"
 mkdir -p "$report_dir"
 
-# The scenario list is derived from the VRT groups on every run, the same list the
-# capture stage walked, so the two can never disagree about what belongs.
+# The same derived list the capture stage walked, so the two can't disagree.
 scenario_list="$("$SCRIPT_DIR/list-vrt-scenarios.sh" "$platform")"
 if ! awk '
   $0 !~ /^vrt-[a-z0-9-]+$/ {
@@ -77,10 +76,8 @@ fi
 # Image files are the IDs without their `vrt-` prefix, as capture-vrt.sh names them.
 sed 's/^vrt-//; s/$/.png/' "$scenario_list" | LC_ALL=C sort > "$scenario_images"
 
-# What this run compares: every scenario for a complete capture, or exactly
-# the images a filtered capture produced for a partial one. A partial run is only
-# ever an investigation, and the marker that records its filter is what keeps it
-# out of the reviewed baselines.
+# Every scenario for a complete capture, or exactly the images a filtered one
+# produced. Its marker keeps a partial run out of the baselines.
 if [[ "$mode" == "partial" ]]; then
   find "$actual_dir" -type f -name '*.png' -exec basename {} \; | LC_ALL=C sort > "$expected_list"
   [[ -s "$expected_list" ]] || fail "Partial capture set in $actual_dir holds no images."
@@ -170,16 +167,13 @@ normalize_environment() {
   local output="$2"
 
   if [[ "$platform" == "android" ]]; then
-    # CI renders the same AVD on x86_64 while Apple Silicon development hosts
-    # use arm64. The rendering policy deliberately shares one baseline and
-    # handles the small rasterization delta with Android's matching threshold.
-    # The adb serial is recorded too, but it names an emulator port rather than
-    # a rendering input, so it stays out of the equality check.
+    # x86_64 CI and arm64 Macs share one baseline; the matching threshold absorbs
+    # the rasterization delta. The adb serial names a port, not a rendering input.
     sed -E '/^android_(architecture|system_image|serial)=/d' "$input" > "$output"
   else
-    # The simulator runtime renders the pixels and stays enforced. Xcode only
-    # has to share its major version, which verify-vrt-environment.sh enforces,
-    # so the exact version and build are recorded but not compared.
+    # The simulator runtime renders the pixels, so it is compared. Xcode's major
+    # version is enforced by verify-vrt-environment.sh; the exact version and build
+    # are recorded only.
     sed -E '/^ios_xcode_(version|build)=/d' "$input" > "$output"
   fi
 }
@@ -225,8 +219,7 @@ else
   comparison_status=$?
 fi
 
-# reg-cli only writes its results to files, so summarize them here to spare
-# opening the report when everything passed.
+# reg-cli only writes results to files; summarize them so a pass needs no report.
 if [[ -f "$json_file" ]]; then
   node -e '
     const result = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));

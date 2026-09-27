@@ -2,8 +2,7 @@ import type { ReactNode } from 'react';
 import { Platform, StyleSheet, type TextStyle } from 'react-native';
 import type { PlainTextStyle } from 'react-native-plain-text';
 import { COLOR, VARIABLE } from '../theme';
-// A suite is a set of scenarios captured under its own device settings, with its
-// own baselines. Everything runs in 'default' unless it needs something else.
+// A suite has its own device settings and baselines. Groups default to 'default'.
 export const VRT_SUITES = ['default', 'font-scale'] as const;
 export type VrtSuite = (typeof VRT_SUITES)[number];
 export type VrtGroup = {

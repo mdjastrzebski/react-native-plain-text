@@ -7,6 +7,12 @@
 
 # VSCode
 .vscode/
+
+# Editor temp files
+*~
+*.swp
+*.swo
+.#*
 jsconfig.json
 
 # Xcode

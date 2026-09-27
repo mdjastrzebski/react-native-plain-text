@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
-// Compares one fresh capture with its reviewed baseline and prints a one-line
-// verdict, so a capture run reports failures as they happen. It mirrors
-// reg-cli's per-image rule (same img-diff-js call, same options) but is only an
-// early signal: the compare stage stays the authoritative result.
+// Prints a one-line verdict for one capture against its baseline, with reg-cli's
+// per-image rule. An early signal only; the compare stage decides.
 //
 // Usage: vrt-live-compare.js <actual.png> <baseline.png> <diff.png> <matchingThreshold> <thresholdPixel>
 

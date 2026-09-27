@@ -20,24 +20,13 @@ hash_command() {
   fi
 }
 
-# Files whose bytes reach the compiled app, per platform. Everything here is a
-# source file git knows about: tracked files plus untracked ones that are not
-# ignored, so a new file counts before it is committed but local debris
-# (`.DS_Store`, editor temp files, build and Kotlin daemon output) does not.
-# Generated trees (`example/android`, `example/ios`, Podfile.lock) are derived
-# from these plus the toolchain, and CI records the toolchain in the cache key
-# instead of hashing generated files whose contents nobody reviewed. Test
-# sources are excluded because nothing imports them into the bundle.
+# Tracked source files whose bytes reach the compiled app. Generated trees
+# (`example/android`, `example/ios`, Podfile.lock) are left out; CI records the
+# toolchain in the cache key instead. Tests are excluded: nothing bundles them.
 #
-# This lists and hashes about 90 files in ~1.1s, nearly all of it in `shasum`
-# process spawns. https://github.com/mdjastrzebski/fs-fingerprint does the same
-# job (content plus path, metadata ignored, sorted) in about 30ms and could take
-# `VRT_ENABLED` as a content input, at the cost of a Node step and a dependency
-# whose version then silently defines the CI cache key. Measured both: the swap
-# buys about a second per stage, so this stays a shell function until the input
-# set is big enough to care. expo-fingerprint is the wrong tool here: it walks the
-# generated native projects, which is the input removed from this hash because it
-# moves without anything reviewed moving.
+# Takes ~1.1s. https://github.com/mdjastrzebski/fs-fingerprint takes ~30ms but
+# adds a Node step and a dependency whose version defines the CI cache key.
+# expo-fingerprint is wrong here: it hashes the generated native projects.
 app_build_inputs() {
   local platform="$1"
   local input
@@ -108,10 +97,8 @@ verify_artifact() {
     "The $platform VRT Release artifact is stale. Run 'yarn vrt $platform build', then reinstall it."
 }
 
-# `fingerprint` is also the CI cache key for the built app (see
-# .github/workflows/vrt.yml). Cache hit and this staleness check are then
-# the same function, so a cached artifact can never be restored for one commit and
-# called stale by the next.
+# `fingerprint` is also the CI cache key (.github/workflows/vrt.yml), so a cache
+# hit and this staleness check can never disagree.
 case "${1:-}" in
   fingerprint) calculate_fingerprint "$platform" ;;
   write-artifact)

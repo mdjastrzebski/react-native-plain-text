@@ -49,9 +49,9 @@ export ANDROID_AVD_NAME="${ANDROID_AVD_NAME:-plaintext_vrt_api36_pixel9}"
 export ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-36}"
 export ANDROID_SYSTEM_IMAGE_TARGET="${ANDROID_SYSTEM_IMAGE_TARGET:-google_apis}"
 # sdkmanager (and android-emulator-runner in CI) only installs the newest
-# revision, so when Google publishes a new one the Android VRT fails until this
-# is bumped. Keep VRT_TOOLCHAIN in .github/workflows/vrt.yml in step, and see
-# "Bumping the Android system image" in docs/contributing/visual-regression-testing.md.
+# revision, so a new Google release breaks Android VRT until this and
+# VRT_TOOLCHAIN in .github/workflows/vrt.yml are bumped. See
+# docs/contributing/visual-regression-testing.md.
 export ANDROID_SYSTEM_IMAGE_REVISION="${ANDROID_SYSTEM_IMAGE_REVISION:-7}"
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) default_android_architecture="arm64-v8a" ;;
@@ -96,7 +96,6 @@ export IOS_LANGUAGE="${IOS_LANGUAGE:-en}"
 export IOS_LOCALE="${IOS_LOCALE:-en_US}"
 export IOS_CONTENT_SIZE="${IOS_CONTENT_SIZE:-$suite_ios_content_size}"
 unset suite_android_font_scale suite_ios_content_size
-# Screenshots are requested at the pinned device's scale (iPhone 16 Pro is @3x).
-# Baselines were captured at this density, so changing it invalidates every iOS
-# image rather than rescaling it.
+# Screenshots use the device's scale (iPhone 16 Pro is @3x). Changing it
+# invalidates every iOS baseline rather than rescaling it.
 export IOS_VRT_PIXEL_DENSITY="${IOS_VRT_PIXEL_DENSITY:-3}"

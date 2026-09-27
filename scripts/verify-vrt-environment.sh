@@ -15,9 +15,8 @@ fail() {
 
 environment_mismatches=()
 
-# Records the observed value either way and collects mismatches: a device that is
-# being brought onto the VRT profile should report everything that is wrong in one
-# run, not one failure per attempt.
+# Records the observed value and collects mismatches, so one run reports
+# everything that is wrong.
 expect() {
   local name="$1"
   local expected="$2"

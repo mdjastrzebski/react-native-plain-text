@@ -13,10 +13,9 @@ fail() {
   exit 1
 }
 
-# Puts the booted VRT device at VRT_SUITE's system text size, so the suites can
-# run one after another without a full setup in between. When the size changes,
-# the app is stopped: the example's MainActivity handles fontScale changes itself,
-# and a running app keeps the text size it started with on either platform.
+# Puts the booted device at VRT_SUITE's text size. When the size changes the
+# app is stopped: a running app keeps the size it started with (the example's
+# MainActivity handles fontScale changes itself).
 platform="${1:-}"
 case "$platform" in
   android)

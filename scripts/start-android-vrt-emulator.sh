@@ -70,9 +70,8 @@ avd_root="${ANDROID_AVD_HOME:-${ANDROID_USER_HOME:-${HOME}/.android}/avd}"
 avd_config="$avd_root/$ANDROID_AVD_NAME.avd/config.ini"
 expected_image_path="system-images/android-$ANDROID_API_LEVEL/$ANDROID_SYSTEM_IMAGE_TARGET/$ANDROID_SYSTEM_IMAGE_ARCHITECTURE/"
 
-# An AVD left over from an older VRT configuration is recreated, but only when a
-# person at a terminal agrees: it may hold state someone wants to keep. CI and
-# other non-interactive runs still fail with the reason.
+# An AVD from an older VRT configuration is recreated only if a person at a
+# terminal agrees, since it may hold state they want. CI fails with the reason.
 recreate_avd() {
   local reason="$1"
   local answer=""

@@ -13,9 +13,8 @@ fail() {
   exit 1
 }
 
-# Writes the platform's scenario IDs in VRT_SUITE, derived from
-# example/src/vrt/groups.tsx, and prints the file's path. The list is regenerated
-# on every call, so it can never lag behind the groups.
+# Writes the platform's scenario IDs for VRT_SUITE, derived from
+# example/src/vrt/groups.tsx on every call, and prints the file's path.
 platform="${1:-}"
 case "$platform" in android | ios) ;; *) fail "Platform must be 'android' or 'ios'." ;; esac
 

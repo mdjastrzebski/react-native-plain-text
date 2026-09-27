@@ -14,10 +14,8 @@ type Combination = {
   maxFontSizeMultiplier?: number;
 };
 
-// A row with several PlainTexts sharing one `alignItems: "baseline"` line,
-// which a Combination's single string/style can't express: a price beside
-// its VAT note, a heading beside its badge. `label` still names the row, but
-// there is no single `style`/`text` to spread onto one PlainText.
+// Several PlainTexts on one `alignItems: "baseline"` row, which a
+// Combination's single text/style can't express.
 type BaselineCombination = {
   kind: 'baseline';
   label: string;
@@ -26,29 +24,20 @@ type BaselineCombination = {
 
 export type ExampleItem = Combination | BaselineCombination;
 
-// A group preserves the original fixture ordering for stable VRT screenshots.
 type ExampleGroup = {
   title: string;
   items: ExampleItem[];
 };
 
-// Fixed, hand-written lists (never generated, never shuffled) so two runs of
-// the app render byte-identical rows and screenshots diff cleanly.
+// Hand-written and never shuffled, so runs render byte-identical rows.
 //
-// Every color comes from `COLOR`, and a row that sets a tinted background takes
-// its text color from the same pigment (`…Ink` where the palette has one), so a
-// tinted row sits at the page's lightness instead of putting arbitrary black type
-// on a colored box. Only the rgba row spells values out, and those are the
-// palette's own hexes with an alpha.
+// Colors come only from `COLOR`; a tinted row takes its text color from the same
+// pigment (`…Ink` where one exists). Only the rgba row spells out hexes: palette
+// values with an alpha.
 //
-// The groups below are shapes that show up in real UIs, ordered by how often the
-// shape is reached for: headings and body text first, then the controls, then the
-// narrower cases. So a reader who stops scrolling a third of the way down has
-// still seen the shapes their own app is mostly made of, and a regression in the
-// rows that matter most is the first thing on the screen rather than the last.
+// Groups are ordered by how common the shape is in real UIs, so the rows that
+// matter most come first.
 export const EXAMPLE_GROUPS: ExampleGroup[] = [
-  // Display type: the biggest thing on a screen, the title inside a card, and the
-  // tracked cap-height label that separates two groups of rows.
   {
     title: 'Headings',
     items: [
@@ -75,10 +64,7 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
       },
     ],
   },
-  // Running text, where the wrap points and the leading are the whole point:
-  // whether it runs to its natural end or gets clamped after a line or two, which
-  // is the same prose with a truncation rule on top rather than a different kind
-  // of row.
+  // Running text: wrap points and leading, natural or clamped.
   {
     title: 'Body Copy',
     items: [
@@ -139,10 +125,7 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
       },
     ],
   },
-  // Set small and quiet next to something else that carries the meaning: the line
-  // under a list row's title, the caption, the timestamp. Small type is where a wrong
-  // measurement is hardest to see and easiest to ship, so they sit together, high
-  // on the page, rather than being scattered through the sections they support.
+  // Small type, where a wrong measurement is hardest to see, so it sits high up.
   {
     title: 'Labels',
     items: [
@@ -170,8 +153,7 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
       },
     ],
   },
-  // Tappable labels. These are the rows most likely to be centered inside a fixed
-  // box, so a measurement that comes back a point wide is visible immediately.
+  // Often centered in a fixed box, where a measurement 1pt off shows immediately.
   {
     title: 'Buttons and Links',
     items: [
@@ -225,9 +207,8 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
       },
     ],
   },
-  // Monospace, which measures unlike every other row here: no proportional widths
-  // to collapse, hard line breaks the code block has to keep, and a path with no
-  // spaces in it to break at.
+  // Monospace: no proportional widths, hard line breaks to keep, and a path with
+  // no spaces to break at.
   {
     title: 'Code',
     items: [
@@ -286,9 +267,6 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
         text: '98.4%',
         style: { fontSize: 40, fontWeight: '300', color: COLOR.ink, letterSpacing: -1.5 },
       },
-      // A price and its tax note sharing one line, set at different sizes:
-      // needs `alignItems: "baseline"` on the row to sit together the way a
-      // real price tag does, rather than lining up on the row's own edges.
       {
         kind: 'baseline',
         label: 'price-with-vat-note',
@@ -297,9 +275,7 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
           { text: ' incl. VAT', style: { fontSize: 13, color: COLOR.muted, marginLeft: 6 } },
         ],
       },
-      // Three siblings, not two: baseline alignment is a property of the
-      // whole row, not just a pair, so a fix that only special-cases the
-      // first/last child would still show a gap here.
+      // Three siblings: catches a fix that only special-cases the first/last child.
       {
         kind: 'baseline',
         label: 'stat-with-unit-and-delta',
@@ -309,10 +285,8 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
           { text: ' +2.1 today', style: { fontSize: 13, color: COLOR.moss, marginLeft: 8 } },
         ],
       },
-      // Same font size on both sides, so a size-only fix could pass the two
-      // rows above and still fail this one: the first span pins a lineHeight
-      // far taller than its own font, which only shifts where its baseline
-      // lands if the extra leading above it is accounted for too.
+      // Same font size on both sides, but the first span's tall lineHeight moves its
+      // baseline: catches a size-only fix.
       {
         kind: 'baseline',
         label: 'total-with-pinned-line-height',
@@ -335,8 +309,7 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
       },
     ],
   },
-  // Short strings inside a shape: the padding and the radius are doing as much work
-  // as the type, and each one shrink-wraps to its own text.
+  // Padding and radius matter as much as the type; each shrink-wraps its text.
   {
     title: 'Badges',
     items: [
@@ -384,11 +357,8 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
           borderRadius: 22,
         },
       },
-      // A heading beside a badge: different size and weight, plus a badge
-      // with its own padding and border radius. Yoga folds a baseline
-      // child's own padding into where its box sits before aligning, so this
-      // also exercises that the offset survives padding, not just a bare
-      // span of text.
+      // Yoga folds a baseline child's padding into its position before aligning;
+      // checks the offset survives the badge's padding.
       {
         kind: 'baseline',
         label: 'heading-with-badge',
@@ -412,7 +382,6 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
       },
     ],
   },
-  // What the app says when something went wrong, went right, or is empty.
   {
     title: 'Status and Feedback',
     items: [

@@ -36,7 +36,7 @@ function VrtScenarios({ testID }: { testID: string | null }) {
   let visibleScenarios =
     testID == null ? scenarios : scenarios.filter((scenario) => scenario.testID === testID);
   if (__DEV__ && testID == null) {
-    // only for development purposes; a requested specimen is always honored
+    // Dev only; a requested testID is always honored.
     visibleScenarios = scenarios[0] ? [scenarios[0]] : scenarios;
   }
 

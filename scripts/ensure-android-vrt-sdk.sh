@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
-# Checks the Android SDK packages that render VRT pixels (the emulator and the
-# system image) against the pinned versions. When one is missing or different,
-# a person at a terminal is offered an sdkmanager install; CI and other
-# non-interactive runs fail with the reason instead.
+# Checks the pinned emulator and system image. A person at a terminal is offered
+# an sdkmanager install; CI and other non-interactive runs fail with the reason.
 
 set -euo pipefail
 
@@ -66,8 +64,8 @@ read -r answer < /dev/tty || true
 # sdkmanager may ask to accept licenses, so it reads from the terminal.
 "$sdkmanager" "${packages[@]}" < /dev/tty >&2
 
-# sdkmanager installs the newest package on its channel, which is not always the
-# pinned one. Say so plainly rather than let a later stage report a mismatch.
+# sdkmanager installs the newest package on its channel, not necessarily the
+# pinned one. Say so here rather than as a later mismatch.
 [[ "$(property "$emulator_properties" Pkg.Revision)" == "$ANDROID_EMULATOR_VERSION" &&
   "$(property "$emulator_properties" Pkg.BuildId)" == "$ANDROID_EMULATOR_BUILD" ]] || fail \
   "sdkmanager did not install Android emulator $ANDROID_EMULATOR_VERSION ($ANDROID_EMULATOR_BUILD). It may only be offered on another channel (--channel=1 beta, --channel=3 canary)."

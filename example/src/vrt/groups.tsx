@@ -43,9 +43,8 @@ import {
   vrtStyles,
 } from './utils';
 
-// Mirrors TextItem in the example app's Specimen.tsx: the row shrink-wraps the
-// text unless containerStyle stretches it, so a specimen renders at the width
-// it has in the example app.
+// Mirrors TextItem in the example app's Specimen.tsx: shrink-wraps the text
+// unless containerStyle stretches it.
 function VrtText({
   testID,
   containerStyle,
@@ -119,8 +118,7 @@ export const groups: VrtGroup[] = [
             style={{
               fontSize,
             }}
-            // A waterfall: one line per size, clipped at the column edge rather
-            // than wrapped, so the sizes stay comparable down the column.
+            // Clip rather than wrap so the sizes stay comparable down the column.
             numberOfLines={1}
             ellipsizeMode="clip"
           >
@@ -641,11 +639,9 @@ export const groups: VrtGroup[] = [
     ),
   },
   {
-    // Captured only by the font-scale suite, at a system text size above 1.2x
-    // (Android 1.3, iOS 1.353), so the three rows render at three sizes. Body
-    // size on purpose: Android 14+ scales fonts non-linearly, and at 1.3 a 26sp
-    // row only grows to ~27.6dp (1.06x), under the 1.2x cap. 14sp still gets the
-    // full ~1.34x (18.8dp), so the capped row lands visibly between the others.
+    // Font-scale suite only (Android 1.3, iOS 1.353x), so the three rows differ.
+    // Body size on purpose: Android 14+ scales non-linearly, so at 1.3 a 26sp row
+    // grows only ~1.06x (under the 1.2x cap), while 14sp gets ~1.34x.
     suite: 'font-scale',
     children: (
       <>
