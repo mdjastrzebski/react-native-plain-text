@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Text, View, type AccessibilityProps, type StyleProp, type ViewStyle } from 'react-native';
 import { PlainText, type PlainTextProps } from 'react-native-plain-text';
 import { COLOR } from '../theme';
-import { RANDOM_USE_CASES, USE_CASE_GROUPS, type UseCaseItem } from './useCases';
+import { USE_CASE_GROUPS, type UseCaseItem } from './useCases';
 import {
   SHORT_ROW_SIZE,
   styles,
@@ -1143,7 +1143,7 @@ export const groups: VrtGroup[] = [
   {
     children: (
       <>
-        {[...USE_CASE_GROUPS.flatMap(({ items }) => items), ...RANDOM_USE_CASES].map((item) => (
+        {USE_CASE_GROUPS.flatMap(({ items }) => items).map((item) => (
           <VrtUseCase key={item.label} item={item} testID={`vrt-use-cases-${item.label}`} />
         ))}
       </>
