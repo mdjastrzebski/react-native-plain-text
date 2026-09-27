@@ -181,9 +181,15 @@ To bump:
    `all` ends with a compare that fails on the environment. That is expected;
    the captures are in place for `update`. Or dispatch the workflow on the
    branch (`-f platform=android`). Its compare fails the same way, but the
-   uploaded `vrt-android-*` artifact holds `.vrt/actual/` and
-   `.vrt/environment/` for both suites. Unzip it at the repo root and run
-   `yarn vrt android update`.
+   uploaded `vrt-android-*` artifact holds `actual/` and `environment/` for
+   both suites. Every uploaded path is under `.vrt/`, so the zip is rooted there
+   and has no `.vrt/` prefix. Unzip it into `.vrt/`, not the repo root, and run
+   `yarn vrt android update`:
+
+   ```sh
+   unzip vrt-android-1.zip -d .vrt
+   yarn vrt android update
+   ```
 
 4. Review the image diff in `tests/vrt/android/` and
    `tests/vrt/android-font-scale/`. Beyond `environment.txt`, any changed image
