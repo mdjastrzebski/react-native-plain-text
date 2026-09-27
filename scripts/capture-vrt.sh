@@ -58,7 +58,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-manifest="$PROJECT_ROOT/.agent-device/vrt-captures.txt"
 session_name="plaintext-vrt-capture-$platform"
 session_open=0
 step_capture_id=unknown
@@ -125,7 +124,8 @@ timings_file="$timings_dir/$platform.tsv"
 
 "$SCRIPT_DIR/vrt-app-state.sh" verify-installed "$platform"
 [[ -x "$agent_device_bin" ]] || fail "agent-device is not installed. Run 'yarn'."
-[[ -f "$manifest" ]] || fail "Capture manifest not found at $manifest."
+# The capture set is derived from the VRT groups on every run, never kept by hand.
+capture_list="$("$SCRIPT_DIR/list-vrt-captures.sh" "$platform")"
 case "$platform" in
   android)
     target_file="$PROJECT_ROOT/.vrt/devices/android-serial"
@@ -240,10 +240,7 @@ fi
 
 selected=0
 captured=0
-while read -r capture_platform capture_id extra; do
-  [[ -z "$capture_platform" || "$capture_platform" == "#"* ]] && continue
-  [[ -z "$extra" ]] || fail "Invalid capture manifest line for '$capture_id'."
-  [[ "$capture_platform" == "all" || "$capture_platform" == "$platform" ]] || continue
+while read -r capture_id; do
   capture_selected "$capture_id" || continue
   if [[ -n "$limit" && "$selected" -ge "$limit" ]]; then
     break
@@ -308,7 +305,7 @@ while read -r capture_platform capture_id extra; do
       "$live_matching_threshold" \
       "$VRT_THRESHOLD_PIXEL" || true
   fi
-done < "$manifest"
+done < "$capture_list"
 
 [[ "$captured" -gt 0 ]] || fail \
   "No capture matched the selection ($requested_selection) on $platform."

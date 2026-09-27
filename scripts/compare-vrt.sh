@@ -15,14 +15,13 @@ fail() {
 
 platform="${1:-}"
 mode="${2:-compare}"
-manifest=".agent-device/vrt-captures.txt"
 actual_dir=".vrt/actual/$platform"
 baseline_dir="baselines/$platform"
 current_environment=".vrt/environment/$platform.txt"
 baseline_environment="$baseline_dir/environment.txt"
 report_dir=".vrt/report/$platform"
 expected_list="$report_dir/expected-images.txt"
-manifest_list="$report_dir/manifest-images.txt"
+capture_images="$report_dir/capture-images.txt"
 partial_marker="$actual_dir/.partial"
 partial_note="$report_dir/partial-selection.txt"
 
@@ -38,7 +37,6 @@ esac
 
 cd "$PROJECT_ROOT"
 
-[[ -f "$manifest" ]] || fail "Capture manifest not found at $manifest."
 [[ -d "$actual_dir" ]] || fail "Actual images not found. Run 'yarn vrt $platform capture' first."
 [[ -f "$current_environment" ]] || fail \
   "Environment metadata not found. Run 'yarn vrt $platform verify' first."
@@ -63,60 +61,42 @@ fi
 yarn del-cli "$report_dir"
 mkdir -p "$report_dir"
 
-if ! awk -v target="$platform" '
-  /^[[:space:]]*($|#)/ { next }
-  NF != 2 {
-    printf "Invalid capture manifest line %d: expected a platform and capture ID.\n", NR > "/dev/stderr"
+# The capture set is derived from the VRT groups on every run, the same list the
+# capture stage walked, so the two can never disagree about what belongs.
+capture_list="$("$SCRIPT_DIR/list-vrt-captures.sh" "$platform")"
+if ! awk '
+  $0 !~ /^vrt-capture-[a-z0-9-]+$/ {
+    printf "Invalid capture ID: %s.\n", $0 > "/dev/stderr"
     invalid = 1
-    next
   }
-  $1 != "all" && $1 != "android" && $1 != "ios" {
-    printf "Invalid capture platform on line %d: %s.\n", NR, $1 > "/dev/stderr"
+  seen[$0]++ == 1 {
+    printf "Duplicate capture ID: %s.\n", $0 > "/dev/stderr"
     invalid = 1
-    next
   }
-  $2 !~ /^vrt-capture-[a-z0-9-]+$/ {
-    printf "Invalid capture ID on line %d: %s.\n", NR, $2 > "/dev/stderr"
-    invalid = 1
-    next
-  }
-  $1 == "all" || $1 == target {
-    if (seen[$2]++) {
-      printf "Duplicate %s capture ID on line %d: %s.\n", target, NR, $2 > "/dev/stderr"
-      invalid = 1
-    }
-    print $2 ".png"
-    selected++
-  }
-  END {
-    if (!selected) {
-      printf "No captures selected for %s.\n", target > "/dev/stderr"
-      invalid = 1
-    }
-    exit invalid
-  }
-' "$manifest" | LC_ALL=C sort > "$manifest_list"; then
-  fail "Capture manifest validation failed."
+  { print $0 ".png" }
+  END { exit invalid }
+' "$capture_list" | LC_ALL=C sort > "$capture_images"; then
+  fail "The $platform capture list is invalid."
 fi
 
-# What this run compares: the whole manifest for a complete capture, or exactly
+# What this run compares: the whole capture set for a complete capture, or exactly
 # the images a filtered capture produced for a partial one. A partial run is only
 # ever an investigation, and the marker that records its filter is what keeps it
 # out of the reviewed baselines.
 if [[ "$mode" == "partial" ]]; then
   find "$actual_dir" -type f -name '*.png' -exec basename {} \; | LC_ALL=C sort > "$expected_list"
   [[ -s "$expected_list" ]] || fail "Partial capture set in $actual_dir holds no images."
-  comm -13 "$manifest_list" "$expected_list" > "$report_dir/captured-not-in-manifest.txt"
-  if [[ -s "$report_dir/captured-not-in-manifest.txt" ]]; then
-    printf 'Captured images that %s does not list:\n' "$manifest" >&2
-    sed 's/^/  /' "$report_dir/captured-not-in-manifest.txt" >&2
-    fail "Partial capture set does not come from $manifest."
+  comm -13 "$capture_images" "$expected_list" > "$report_dir/captured-not-in-capture-set.txt"
+  if [[ -s "$report_dir/captured-not-in-capture-set.txt" ]]; then
+    printf 'Captured images that are not in the %s capture set:\n' "$platform" >&2
+    sed 's/^/  /' "$report_dir/captured-not-in-capture-set.txt" >&2
+    fail "Partial capture set does not come from the VRT groups."
   fi
   cp -a "$partial_marker" "$partial_note"
   printf 'Partial comparison of %s captures. This is not a full-suite pass.\n' \
     "$(wc -l < "$expected_list" | tr -d ' ')" >&2
 else
-  cp -a "$manifest_list" "$expected_list"
+  cp -a "$capture_images" "$expected_list"
 fi
 
 validate_image_set() {
@@ -157,7 +137,7 @@ if [[ "$mode" == "partial" ]]; then
     "Partial capture set does not match the images it claims."
 else
   validate_image_set "$actual_dir" actual || fail \
-    "Actual capture set does not match $manifest."
+    "Actual capture set does not match the VRT groups."
 fi
 
 if [[ "$mode" == "update" ]]; then
@@ -181,7 +161,7 @@ if [[ "$mode" == "partial" ]]; then
     "Reviewed baselines do not contain the partial capture set."
 else
   validate_image_set "$baseline_dir" baseline || fail \
-    "Reviewed baseline set does not match $manifest."
+    "Reviewed baseline set does not match the VRT groups."
 fi
 
 normalized_baseline_environment="$report_dir/normalized-baseline-environment.txt"

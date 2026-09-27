@@ -1,6 +1,6 @@
 # Visual regression testing
 
-The visual regression suite renders each entry in `.agent-device/vrt-captures.txt` by itself, captures the specimen bounds, and compares the resulting PNG with a reviewed baseline from the pinned `baselines` submodule.
+The visual regression suite renders each specimen in `example/src/vrt/groups.tsx` by itself, captures the specimen bounds, and compares the resulting PNG with a reviewed baseline from the pinned `baselines` submodule.
 
 ## Commands
 
@@ -25,7 +25,7 @@ yarn vrt ios compare
 
 ## Iterating locally
 
-Each specimen is rendered on its own screen, so it costs a deep link, one accessibility fetch that proves the specimen exists, and one cropped screenshot. On the pinned Android emulator a full sweep of 187 specimens takes 133s, about 0.7s per specimen. iOS was last timed at 1.1s per specimen before the loop was cheapened, and `VRT_TIMING=1` below is how to re-measure it. Neither sweep needs the whole manifest, so the working loop is a filtered capture and a partial comparison:
+Each specimen is rendered on its own screen, so it costs a deep link, one accessibility fetch that proves the specimen exists, and one cropped screenshot. On the pinned Android emulator a full sweep of 187 specimens takes 133s, about 0.7s per specimen. iOS was last timed at 1.1s per specimen before the loop was cheapened, and `VRT_TIMING=1` below is how to re-measure it. Neither sweep needs the whole capture set, so the working loop is a filtered capture and a partial comparison:
 
 ```sh
 yarn vrt ios capture --filter font-size
@@ -40,7 +40,7 @@ yarn vrt ios capture --filter baseline --out /tmp/b
 diff -r /tmp/a /tmp/b
 ```
 
-A filtered capture is a partial capture and says so. The capture stage leaves a `.partial` marker recording the selection it was given, `compare partial` compares exactly the images that marker covers and copies it into the report, and `update` refuses a marked directory. A partial result can therefore be read as what it is and cannot quietly become a reviewed baseline, while the unqualified `compare` still demands the exact set the manifest describes.
+A filtered capture is a partial capture and says so. The capture stage leaves a `.partial` marker recording the selection it was given, `compare partial` compares exactly the images that marker covers and copies it into the report, and `update` refuses a marked directory. A partial result can therefore be read as what it is and cannot quietly become a reviewed baseline, while the unqualified `compare` still demands the exact capture set.
 
 `VRT_TIMING=1` records per-command `wall_clock_ms` and `runner_round_trips` to `.vrt/timings/<platform>.tsv`, which is how the per-specimen cost above was measured and how a regression in the loop itself gets located. It needs `jq`. The shape it shows is worth knowing before reading a log: the first specimen's `open` pays the app launch (about a second), every later `open` is the deep link alone (about 150ms), and the screenshot is the largest steady cost. A step whose command reports no timing at all is written as `n/a`, never as a zero that would flatter the loop.
 
@@ -94,9 +94,11 @@ The pointer bump is the reviewable baseline change in the library pull request. 
 
 ## Capture-set validation
 
-Before image comparison, the runner derives the exact platform-specific file list from `.agent-device/vrt-captures.txt`. Actual and baseline directories must both contain exactly that set. Missing, unexpected, malformed, and duplicate entries fail before pixel comparison.
+The capture set is not kept by hand. `scripts/list-vrt-captures.sh <platform>` derives it on every capture and compare run from the specimens `groups.tsx` renders on that platform, minus the known gaps in `scripts/vrt-captures/captures.ts`. It loads the groups through Jest, which is what can stub React Native outside the app, and writes `.vrt/captures/<platform>.txt`. A new specimen is therefore captured, and needs a reviewed baseline, the moment it is added; keeping one out of the comparison means naming it in `UNCAPTURED_SPECIMENS`, which is the one reviewable place a coverage gap lives.
 
-This distinguishes an incomplete capture from a rendering change and ensures that adding or removing a manifest entry cannot silently pass. `compare partial` is the one deliberate exception: it checks that every captured image is listed by the manifest and that the reviewed baselines contain each of them, and it labels its report with the selection it covered. It is a narrower question, not a passing suite.
+Before image comparison, actual and baseline directories must both contain exactly that set. Missing, unexpected, malformed, and duplicate entries fail before pixel comparison, and `yarn test` checks the same ID rules plus that every known gap still names a rendered specimen.
+
+This distinguishes an incomplete capture from a rendering change and ensures that adding or removing a specimen cannot silently pass. `compare partial` is the one deliberate exception: it checks that every captured image belongs to the capture set and that the reviewed baselines contain each of them, and it labels its report with the selection it covered. It is a narrower question, not a passing suite.
 
 ## Environment matching
 
