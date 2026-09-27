@@ -7,7 +7,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 usage() {
   printf 'Usage: yarn vrt <android|ios> [all|setup|build|install|verify|e2e|capture|compare|update] [options]\n'
-  printf '       yarn vrt <android|ios> capture [--filter <substring>[,...]] [--limit <n>] [--out <dir>]\n'
+  printf '       yarn vrt <android|ios> capture [--filter <substring>[,...]] [--limit <n>]\n'
   printf '       yarn vrt <android|ios> compare partial\n'
   printf 'capture, compare and update run every suite in turn; VRT_SUITE=<suite> runs one.\n'
 }
