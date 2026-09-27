@@ -46,6 +46,17 @@ using namespace plaintext;
     [self setNeedsDisplay];
 }
 
+// Same as verticalTextShift: a recycled view whose text and font are unchanged
+// would otherwise keep drawing at the previous alignment.
+- (void)setVerticalAlignment:(RNPlainTextTextAlignVertical)verticalAlignment
+{
+    if (_verticalAlignment == verticalAlignment) {
+        return;
+    }
+    _verticalAlignment = verticalAlignment;
+    [self setNeedsDisplay];
+}
+
 - (CGRect)textRectForBounds:(CGRect)bounds limitedToNumberOfLines:(NSInteger)numberOfLines
 {
     // super's rect is top-anchored at bounds.origin.y and never centered, so the
