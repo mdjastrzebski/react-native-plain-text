@@ -30,10 +30,7 @@ Run from the repo root:
 | `yarn test`                                 | Jest (`yarn test path -t "name"` for one case)         |
 | `yarn test:cpp`                             | C++ unit tests in `tests/cpp/`, no framework           |
 | `yarn test:android`                         | Kotlin unit tests in `android/src/test/` (Robolectric) |
-| `yarn vrt android` / `yarn vrt ios`         | Build, install, capture, and compare the VRT suite     |
-| `yarn vrt <platform> <stage>`               | Run a VRT stage such as `setup`, `verify`, or `e2e`    |
-| `yarn vrt <platform> update`                | Replace that platform's reviewed VRT baselines         |
-| `yarn vrt <platform> capture --filter x`    | Capture a subset, then `compare partial` (fast loop)   |
+| `yarn vrt android` / `yarn vrt ios`         | Visual regression tests on emulator/simulator          |
 | `yarn example ios` / `yarn example android` | Build & run the example app                            |
 | `yarn example start`                        | Metro only (no native rebuild)                         |
 | `yarn prepare`                              | Build the shippable library into `lib/`                |

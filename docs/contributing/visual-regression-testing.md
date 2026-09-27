@@ -1,121 +1,114 @@
 # Visual regression testing
 
-The visual regression suite renders each specimen in `example/src/vrt/groups.tsx` by itself, captures the specimen bounds, and compares the resulting PNG with a reviewed baseline from the pinned `baselines` submodule.
+The VRT suite renders each specimen from `example/src/vrt/groups.tsx` on its own
+screen in a Release build of the example app, screenshots it cropped to the
+specimen's bounds, and compares the PNG with a reviewed baseline.
 
-## Commands
+## Setup
 
-Run the full platform workflow with:
-
-```sh
-yarn vrt android
-yarn vrt ios
-```
-
-The workflow is split into independently runnable stages:
-
-```text
-setup -> build -> install -> verify -> e2e -> capture -> compare
-```
-
-`verify` records the rendering inputs that `compare` later checks. The `all` run does not call it as its own step, because `e2e` and `capture` each run it first. `compare` does not start a device or capture new images. It compares the existing `.vrt/actual/<platform>/` directory, so it is cheap to rerun while investigating a failure:
-
-```sh
-yarn vrt ios compare
-```
-
-## Iterating locally
-
-Each specimen is rendered on its own screen, so it costs a deep link, one accessibility fetch that proves the specimen exists, and one cropped screenshot. On the pinned Android emulator a full sweep of 187 specimens takes 133s, about 0.7s per specimen. iOS was last timed at 1.1s per specimen before the loop was cheapened, and `VRT_TIMING=1` below is how to re-measure it. Neither sweep needs every scenario, so the working loop is a filtered capture and a partial comparison:
-
-```sh
-yarn vrt ios capture --filter font-size
-yarn vrt ios compare partial
-```
-
-`--filter` takes comma-separated substrings of a capture id, and `--limit <n>` stops after n captures. `--out <dir>` writes images somewhere other than `.vrt/actual/<platform>` (anywhere outside the repository, or inside it under `.vrt/`), which is how two captures of one selection are compared byte for byte:
-
-```sh
-yarn vrt ios capture --filter baseline --out /tmp/a
-yarn vrt ios capture --filter baseline --out /tmp/b
-diff -r /tmp/a /tmp/b
-```
-
-A filtered capture is a partial capture and says so. The capture stage leaves a `.partial` marker recording the selection it was given, `compare partial` compares exactly the images that marker covers and copies it into the report, and `update` refuses a marked directory. A partial result can therefore be read as what it is and cannot quietly become a reviewed baseline, while the unqualified `compare` still demands an image for every scenario.
-
-`VRT_TIMING=1` records per-command `wall_clock_ms` and `runner_round_trips` to `.vrt/timings/<platform>.tsv`, which is how the per-specimen cost above was measured and how a regression in the loop itself gets located. It needs `jq`. The shape it shows is worth knowing before reading a log: the first specimen's `open` pays the app launch (about a second), every later `open` is the deep link alone (about 150ms), and the screenshot is the largest steady cost. A step whose command reports no timing at all is written as `n/a`, never as a zero that would flatter the loop.
-
-```sh
-VRT_TIMING=1 yarn vrt ios capture --limit 5
-```
-
-The `e2e` stage proves the deep-link path works, which only matters when something about that path changed. It is not part of investigating a rendering difference, and on iOS it can spend minutes disarming the one-time "Open in app?" confirmation. Run `capture` and `compare`.
-
-### What keeps a cheap capture honest
-
-The loop used to buy its "nothing is still moving" guarantee from `wait stable`, at the price of two more accessibility fetches per specimen. It now proves the specimen once and lets the screenshot's own `--crop-on` resolve the same element on the same screen: a specimen that is present and laid out is proven where its pixels are taken. A capture whose crop cannot resolve is retried (`VRT_CAPTURE_ATTEMPTS`, default 5) before the run fails naming that specimen.
-
-These variables put the removed behavior back, so a cheaper default is shown to render the same bytes rather than asserted to. `VRT_STABLE_QUIET_MS` with `VRT_STABLE_TIMEOUT_MS` restores `wait stable`, and `VRT_SETTLE_MS` inserts a fixed pause before the screenshot. `VRT_ANDROID_STABILIZE=1` restores Android's status-bar and demo-mode stabilization, which is now skipped: every capture is cropped to the specimen's own frame, so the chrome it protects reaches no pixel, and the animations it waits out are already switched off by `scripts/setup-android-vrt-device.sh`. That is how the Android default was earned, not assumed: all 187 captures taken with stabilization skipped and without `wait stable` are byte-identical to the reviewed baselines, not merely inside Android's matching threshold. All of these are investigation switches: CI sets none of them, and setting one is the reviewed policy put back.
-
-## Baselines
-
-Reviewed images live in the `baselines` submodule: [react-native-plain-text-artifactory](https://github.com/troZee/react-native-plain-text-artifactory) checked out at the commit this repository pins. `baselines/android/` and `baselines/ios/` hold one PNG per scenario, and each directory also contains `environment.txt`, which records the rendering environment that produced those images.
-
-An image is named after its scenario's test ID, so `vrt-features-font-size-48` is captured as `vrt-features-font-size-48.png`. Test IDs used to start with `vrt-capture-`, and baselines recorded before the rename still use that name (`vrt-capture-features-font-size-48.png`). Every baseline lookup falls back to it, so the existing baselines keep comparing without being renamed, and the next `yarn vrt <platform> update` rewrites that platform's baselines under the current names. A baseline directory holding both names for one image fails comparison rather than choosing one.
-
-The submodule is empty after a plain `git clone`, and no VRT stage fetches it for you:
+Baselines live in the `baselines` submodule, which is empty after a plain clone.
+No VRT stage fetches it for you:
 
 ```sh
 git submodule update --init baselines
 ```
 
-### Pinning
+Android needs `ANDROID_HOME` (or `ANDROID_SDK_ROOT`). iOS needs Xcode 26 and the
+iOS 26.5 simulator runtime.
 
-This repository records exactly one commit of the baselines repository, and that commit is the only baseline source. CI checks it out with `git submodule update --init baselines` and never with `--remote`, so the same application commit always compares against the same images. A run cannot pass one day and fail the next because the baselines repository happened to move.
+## Commands
 
-Comparison scripts only read the checked out tree. Neither `compare` nor `update` runs `git submodule update`, `git checkout`, or any other command that changes Git state, so a result always describes the pinned commit rather than whatever was current when the script started.
+```sh
+yarn vrt android            # full pipeline
+yarn vrt ios
+yarn vrt <platform> <stage> # setup | build | install | verify | e2e | capture | compare | update
+```
 
-### Updating
+Stages run in the order
+`setup -> build -> install -> verify -> e2e -> capture -> compare`, and each can
+be rerun on its own.
 
-A missing or incomplete baseline is an error. Normal comparison never creates or changes baselines. After reviewing a complete capture, replace one platform's baseline explicitly:
+- `setup` creates and boots the pinned Android AVD or iOS simulator. Set
+  `ANDROID_HEADLESS=1` to run the emulator without a window, as CI does.
+- `build` produces a Release app with `VRT_ENABLED=1` and copies it to
+  `node_modules/.cache/vrt/apps/<platform>/`, along with a fingerprint of its
+  source inputs. `install` and `capture` refuse a stale app and name the command
+  to rerun.
+- `verify` fails if the device does not match the pinned profile (runtime,
+  device type, density, locale, font scale, appearance, and so on). It writes
+  the observed values to `.vrt/environment/<platform>.txt`. `e2e` and `capture`
+  run it first.
+- `e2e` checks that cold and warm deep links work. It only matters when the
+  deep-link path changes.
+- `compare` only reads existing captures, so it is cheap to rerun.
+
+## Local loop
+
+Capture a subset and compare just those images:
+
+```sh
+yarn vrt ios capture --filter font-size   # comma-separated substrings, or --limit <n>
+yarn vrt ios compare partial
+```
+
+A filtered capture is marked partial. `compare` without `partial` still demands
+every scenario, and `update` refuses a partial capture.
+
+To open one specimen by hand, deep link to its test ID:
+
+```sh
+xcrun simctl openurl "$(cat .vrt/devices/ios-udid)" \
+  'exp+react-native-plain-text-example://vrt?testID=vrt-features-font-size-48'
+
+adb -s "$(cat .vrt/devices/android-serial)" shell am start -W \
+  -a android.intent.action.VIEW -p plaintext.example \
+  -d 'exp+react-native-plain-text-example://vrt?testID=vrt-features-font-size-48'
+```
+
+## Scenarios
+
+Every specimen in `groups.tsx` is a scenario, named after its `vrt-…` test ID.
+Adding a specimen means it gets captured and needs a baseline. To leave one out,
+list it in `SKIPPED_SCENARIOS` in `scripts/vrt-scenarios/scenarios.ts`.
+`yarn test` checks that IDs are well formed and unique, and that every skipped
+entry still names a rendered specimen.
+
+## What compare enforces
+
+- **Exact image set.** Actual and baseline directories must hold exactly one
+  PNG per scenario. Missing or extra images fail before any pixel comparison.
+- **Same environment.** The current `environment.txt` must match the one stored
+  with the baselines. Android ignores CPU architecture, so x86_64 CI and arm64
+  Macs share baselines. iOS ignores the exact Xcode version but not the
+  simulator runtime.
+- **Pixels.** `reg-cli` allows zero changed pixels. Android uses a matching
+  threshold of `0.02` to absorb emulator rasterization noise, iOS uses `0`.
+  Defaults live in `scripts/vrt-config.sh`.
+
+The report (actual, expected, and diff images, plus HTML and JSON) is written to
+`.vrt/report/<platform>/`. CI uploads it even when the comparison fails.
+
+## Updating baselines
+
+`compare` never writes baselines. After reviewing a complete capture:
 
 ```sh
 yarn vrt ios update
-```
-
-Review every changed PNG and `environment.txt` before committing them. The update command requires a complete actual capture set and verified environment metadata. It refuses to turn a partial capture into a baseline.
-
-`update` rewrites the checked out `baselines/<platform>/` directory and stops there. Review, commit, and merge those images in the baselines repository, then record the resulting commit here:
-
-```sh
-git -C baselines add --all && git -C baselines commit -m 'Reviewed iOS baselines'
-# push and merge the baselines pull request, then:
+git -C baselines add --all && git -C baselines commit -m 'Update iOS baselines'
+# push and merge in the baselines repository, then:
 git add baselines
 ```
 
-The pointer bump is the reviewable baseline change in the library pull request. The image diff itself is reviewed in the baselines repository pull request, and the two should cross-reference each other.
+The submodule is pinned. CI never uses `--remote` and no script moves the
+pointer, so a commit always compares against the same images. A baseline change
+is a pointer bump in this repo, and the image diff is reviewed in the
+[baselines repository](https://github.com/troZee/react-native-plain-text-artifactory).
 
-## Capture-set validation
+Older baselines may still use the `vrt-capture-<name>.png` naming. Compare
+accepts it, and the next `update` rewrites them under the current names.
 
-A scenario is one specimen to capture and compare, identified by its `vrt-…` test ID, which the deep link opens and the screenshot crops to. The scenario list is not kept by hand. `scripts/list-vrt-scenarios.sh <platform>` derives it on every capture and compare run from the specimens `groups.tsx` renders on that platform, minus the skipped ones in `scripts/vrt-scenarios/scenarios.ts`. It loads the groups through Jest, which is what can stub React Native outside the app, and writes `.vrt/scenarios/<platform>.txt`. A new specimen is therefore captured, and needs a reviewed baseline, the moment it is added; keeping one out of the comparison means naming it in `SKIPPED_SCENARIOS`, which is the one reviewable place a coverage gap lives.
+## CI
 
-Before image comparison, actual and baseline directories must both contain exactly one image per scenario. Missing, unexpected, malformed, and duplicate entries fail before pixel comparison, and `yarn test` checks the same ID rules plus that every skipped scenario still names a rendered specimen.
-
-This distinguishes an incomplete capture from a rendering change and ensures that adding or removing a specimen cannot silently pass. `compare partial` is the one deliberate exception: it checks that every captured image belongs to a scenario and that the reviewed baselines contain each of them, and it labels its report with the selection it covered. It is a narrower question, not a passing suite.
-
-## Environment matching
-
-`yarn vrt <platform> verify` writes the current rendering inputs to `.vrt/environment/<platform>.txt`. Baseline updates store a copy beside the reviewed images. Comparison requires their enforced rendering inputs to match.
-
-This prevents comparisons across different simulator runtimes, device types, densities, font scales, locales, or other verified rendering inputs. Android's CPU architecture, architecture-specific system-image path, and adb serial are recorded but excluded from the equality check. CI renders the same AVD on x86_64 while Apple Silicon development hosts use arm64, so the two environments deliberately share a baseline. Android's matching threshold handles the small rasterization difference. iOS enforces the simulator runtime build, which is what renders the pixels, but only the major version of Xcode: the exact Xcode version and build are recorded and left out of the check, so a local Xcode 26.6 compares against baselines made with CI's pinned 26.5. CI itself still pins the exact Xcode. When any enforced input differs, use the environment that produced the reviewed baseline or intentionally review and update the whole platform baseline. Every mismatch is reported in one run, and the environment file records the observed values even when they do not match.
-
-## Pixel comparison and reports
-
-`reg-cli` performs the image comparison, with `--enableAntialias` on so antialiased edges do not count as changes and `--extendedErrors` on so every differing image is named. Android uses a matching threshold of `0.02` to absorb very small emulator rasterization differences. iOS uses `0`. Both platforms use a changed-pixel allowance of `0`, so any pixel beyond the matching threshold fails the suite. The defaults live in `scripts/vrt-config.sh` and can be overridden for investigation without changing the reviewed policy.
-
-Comparison writes a self-contained report under `.vrt/report/<platform>/`. It includes actual, expected, and diff images, the HTML report, the JSON result, capture-set diagnostics, and both environment files. CI uploads the captures, the report, the environment files, the device metadata, and the device logs even when comparison fails. The built app under `node_modules/.cache/vrt/apps/` is cached, not uploaded.
-
-## Build fingerprint
-
-`scripts/vrt-app-state.sh fingerprint <platform>` hashes the tracked sources whose bytes reach the compiled app, per platform: the library's `src`, `cpp`, and platform tree, plus the example's bundle entry, its configs, sources, and assets. Generated trees (`example/android`, `example/ios`, `Podfile.lock`) are derived from those and are not hashed, so the value moves only when something a person changed moves it.
-
-The same value is written beside each built app and checked before install, e2e, and capture; comparison reads only the already-captured images, so it does not recheck the app. CI uses the value as the cache key for that app. Cache hit and staleness check are therefore the same function: a cached app can never restore for one commit and be called stale by the next.
+`.github/workflows/visual-test.yml` runs nightly and on manual dispatch, on a
+Pixel 9 API 36 emulator and an iPhone 16 Pro iOS 26.5 simulator. Built apps are
+cached by their source fingerprint.
