@@ -250,7 +250,13 @@ while read -r capture_platform capture_id extra; do
   fi
   selected=$((selected + 1))
 
-  printf 'Capturing %s\n' "$capture_id"
+  # With live comparison the verdict is the capture's only line. At a terminal a
+  # pending line stands in for it until the verdict overwrites it.
+  if [[ "$live_compare" != "1" ]]; then
+    printf 'Capturing %s\n' "$capture_id"
+  elif [[ -t 1 ]]; then
+    printf '⏳ %s' "$capture_id"
+  fi
   step_capture_id="$capture_id"
   deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
   step open open "$VRT_APP_ID" "$deep_link" --foreground
@@ -294,6 +300,7 @@ while read -r capture_platform capture_id extra; do
   done
   captured=$((captured + 1))
   if [[ "$live_compare" == "1" ]]; then
+    [[ -t 1 ]] && printf '\r\033[K'
     node "$SCRIPT_DIR/vrt-live-compare.js" \
       "$actual_dir/$capture_id.png" \
       "$PROJECT_ROOT/baselines/$platform/$capture_id.png" \

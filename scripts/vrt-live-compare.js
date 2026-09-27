@@ -19,11 +19,11 @@ const regCliDir = path.dirname(require.resolve('reg-cli/package.json'));
 const { imgDiff } = require(require.resolve('img-diff-js', { paths: [regCliDir] }));
 
 if (!fs.existsSync(baseline)) {
-  console.log(`  🆕 ${name}: no baseline`);
+  console.log(`🆕 ${name}: no baseline`);
   process.exit(0);
 }
 if (fs.readFileSync(actual).equals(fs.readFileSync(baseline))) {
-  console.log(`  ✅ ${name}`);
+  console.log(`✅ ${name}`);
   process.exit(0);
 }
 
@@ -37,12 +37,12 @@ imgDiff({
 }).then(
   ({ diffCount }) => {
     if (diffCount <= Number(thresholdPixel)) {
-      console.log(`  ✅ ${name}`);
+      console.log(`✅ ${name}`);
     } else {
-      console.log(`  ❌ ${name}: ${diffCount} px differ (${path.relative(process.cwd(), diff)})`);
+      console.log(`❌ ${name}: ${diffCount} px differ (${path.relative(process.cwd(), diff)})`);
     }
   },
   (error) => {
-    console.log(`  ⚠️  ${name}: comparison failed (${error.message})`);
+    console.log(`⚠️  ${name}: comparison failed (${error.message})`);
   }
 );
