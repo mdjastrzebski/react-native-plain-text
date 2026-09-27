@@ -130,15 +130,21 @@ capture_suites() {
 
 # Compares every suite even after one fails, so a run reports all of them.
 compare_suites() {
-  local mode="${1:-compare}" suite failed=()
+  local mode="${1:-compare}" suite compared=0 failed=()
   for suite in "${suites[@]}"; do
     if [[ "$mode" == "partial" && "${#suites[@]}" -gt 1 &&
       ! -f ".vrt/actual/$(suite_target "$suite")/.partial" ]]; then
       continue
     fi
+    compared=$((compared + 1))
     announce_suite "$suite"
     (export VRT_SUITE="$suite"; run_compare "$mode") || failed+=("$suite")
   done
+  if [[ "$compared" -eq 0 ]]; then
+    printf 'Error: no %s suite has a partial capture to compare. Run a filtered capture first.\n' \
+      "$platform" >&2
+    return 1
+  fi
   if [[ "${#failed[@]}" -gt 0 ]]; then
     printf 'Error: %s VRT failed in: %s.\n' "$platform" "${failed[*]}" >&2
     return 1

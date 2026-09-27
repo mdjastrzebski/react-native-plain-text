@@ -146,3 +146,46 @@ gh workflow run vrt.yml --ref <branch> -f platform=ios
 ```
 
 `platform` is `all` (the default), `android`, or `ios`.
+
+### Bumping the Android system image
+
+The Android emulator build is pinned by URL, but the system image is not:
+`sdkmanager`, and `android-emulator-runner` which calls it in CI, only installs
+the newest revision on the channel. The pin in `scripts/vrt-config.sh`
+(`ANDROID_SYSTEM_IMAGE_REVISION`) is therefore a check, not an install
+instruction. The day Google publishes a new revision, every fresh install gets
+it, `verify` fails with `android_system_image_revision` mismatched, and the
+nightly Android job stays red until someone bumps the pin.
+
+The x86_64 image (CI) and the arm64-v8a image (Apple silicon) are separate
+packages. They usually move together, but check both in
+`https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml`
+before bumping.
+
+To bump:
+
+1. Set `ANDROID_SYSTEM_IMAGE_REVISION` in `scripts/vrt-config.sh` to the new
+   revision.
+2. Change the `rN` in the Android job's `VRT_TOOLCHAIN` in
+   `.github/workflows/vrt.yml` to match, so no build cached against the old
+   image is restored.
+3. Re-baseline both Android suites. The revision is recorded in each
+   `environment.txt`, so `compare` rejects the old baselines even when no pixel
+   moved. Either run locally:
+
+   ```sh
+   yarn vrt android all
+   yarn vrt android update
+   ```
+
+   `all` ends with a compare that fails on the environment. That is expected;
+   the captures are in place for `update`. Or dispatch the workflow on the
+   branch (`-f platform=android`). Its compare fails the same way, but the
+   uploaded `vrt-android-*` artifact holds `.vrt/actual/` and
+   `.vrt/environment/` for both suites. Unzip it at the repo root and run
+   `yarn vrt android update`.
+
+4. Review the image diff in `tests/vrt/android/` and
+   `tests/vrt/android-font-scale/`. Beyond `environment.txt`, any changed image
+   is a rendering change in the new image and needs the same scrutiny as one
+   caused by code.

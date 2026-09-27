@@ -48,6 +48,10 @@ export VRT_THRESHOLD_PIXEL="${VRT_THRESHOLD_PIXEL:-0}"
 export ANDROID_AVD_NAME="${ANDROID_AVD_NAME:-plaintext_vrt_api36_pixel9}"
 export ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-36}"
 export ANDROID_SYSTEM_IMAGE_TARGET="${ANDROID_SYSTEM_IMAGE_TARGET:-google_apis}"
+# sdkmanager (and android-emulator-runner in CI) only installs the newest
+# revision, so when Google publishes a new one the Android VRT fails until this
+# is bumped. Keep VRT_TOOLCHAIN in .github/workflows/vrt.yml in step, and see
+# "Bumping the Android system image" in docs/contributing/visual-regression-testing.md.
 export ANDROID_SYSTEM_IMAGE_REVISION="${ANDROID_SYSTEM_IMAGE_REVISION:-7}"
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) default_android_architecture="arm64-v8a" ;;

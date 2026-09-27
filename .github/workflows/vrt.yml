@@ -39,8 +39,10 @@ jobs:
       ANDROID_HOME: ${{ github.workspace }}/.android-sdk
       ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
       # Changing this invalidates every cached artifact below, which is what the
-      # key records alongside the app fingerprint.
-      VRT_TOOLCHAIN: api36-emulator15917651
+      # key records alongside the app fingerprint. `r7` is
+      # ANDROID_SYSTEM_IMAGE_REVISION in scripts/vrt-config.sh: the action below
+      # cannot pin it, so bump both together (docs/contributing/visual-regression-testing.md).
+      VRT_TOOLCHAIN: api36-google_apis-r7-emulator15917651
       # The APK travels with the Gradle outputs that produced it, so a run whose
       # fingerprint merely shares the toolchain prefix can rebuild incrementally
       # instead of from scratch.
