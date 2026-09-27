@@ -83,7 +83,7 @@ export IOS_VERSION="${IOS_VERSION:-26.5}"
 export IOS_RUNTIME_BUILD="${IOS_RUNTIME_BUILD:-23F77}"
 # Pixels come from the simulator runtime pinned above, not from Xcode, so any
 # Xcode of this major version is accepted locally. CI still pins the exact
-# Xcode in .github/workflows/visual-test.yml.
+# Xcode in .github/workflows/vrt.yml.
 export IOS_XCODE_MAJOR="${IOS_XCODE_MAJOR:-26}"
 export IOS_SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-PlainText VRT iOS ${IOS_VERSION}}"
 export IOS_RUNTIME_ID="${IOS_RUNTIME_ID:-com.apple.CoreSimulator.SimRuntime.iOS-${IOS_VERSION//./-}}"

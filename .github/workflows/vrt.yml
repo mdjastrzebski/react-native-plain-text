@@ -1,7 +1,16 @@
-name: Visual Tests
+name: Visual Regression Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to run
+        type: choice
+        options:
+          - all
+          - android
+          - ios
+        default: all
   schedule:
     # https://elmah.io/tools/cron-parser/#0_2_*_*_*
     - cron: '0 2 * * *'
@@ -18,6 +27,8 @@ concurrency:
 
 jobs:
   vrt-android:
+    # Scheduled runs have no inputs, so an empty platform means both.
+    if: ${{ inputs.platform != 'ios' }}
     runs-on: ubuntu-24.04
     # A cold run is ~30 minutes, and the e2e stage carries its own retry budget.
     timeout-minutes: 75
@@ -173,6 +184,7 @@ jobs:
           retention-days: 7
 
   vrt-ios:
+    if: ${{ inputs.platform != 'android' }}
     runs-on: macos-26
     # A cold run is ~36 minutes on this runner, ~24 of them xcodebuild.
     timeout-minutes: 90

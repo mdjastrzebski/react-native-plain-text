@@ -106,7 +106,7 @@ verify_artifact() {
 }
 
 # `fingerprint` is also the CI cache key for the built app (see
-# .github/workflows/visual-test.yml). Cache hit and this staleness check are then
+# .github/workflows/vrt.yml). Cache hit and this staleness check are then
 # the same function, so a cached artifact can never be restored for one commit and
 # called stale by the next.
 case "${1:-}" in

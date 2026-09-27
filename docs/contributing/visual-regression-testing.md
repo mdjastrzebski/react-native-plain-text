@@ -134,7 +134,15 @@ that caused them, where the image diff gets reviewed alongside the code.
 
 ## CI
 
-`.github/workflows/visual-test.yml` runs nightly and on manual dispatch, on a
+`.github/workflows/vrt.yml` runs nightly and on manual dispatch, on a
 Pixel 9 API 36 emulator and an iPhone 16 Pro iOS 26.5 simulator. Each job runs
-both suites on the same device. Built apps are
-cached by their source fingerprint.
+both suites on the same device. Built apps are cached by their source
+fingerprint.
+
+To run it by hand, use Actions → Visual Regression Tests → Run workflow, or:
+
+```sh
+gh workflow run vrt.yml --ref <branch> -f platform=ios
+```
+
+`platform` is `all` (the default), `android`, or `ios`.
