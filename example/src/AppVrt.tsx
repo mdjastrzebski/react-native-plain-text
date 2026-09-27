@@ -33,11 +33,11 @@ export default function AppVrt() {
 function VrtScenarios({ testID }: { testID: string | null }) {
   const scenarios = getVrtScenarios(Platform.OS);
 
-  let visibleScenarios =
-    testID == null ? scenarios : scenarios.filter((scenario) => scenario.testID === testID);
+  // Release renders nothing without a testID, so a lost deep link fails the
+  // capture's `wait` instead of cropping a specimen from the full list.
+  let visibleScenarios = scenarios.filter((scenario) => scenario.testID === testID);
   if (__DEV__ && testID == null) {
-    // Dev only; a requested testID is always honored.
-    visibleScenarios = scenarios[0] ? [scenarios[0]] : scenarios;
+    visibleScenarios = scenarios.slice(0, 1);
   }
 
   return (
