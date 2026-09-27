@@ -118,8 +118,10 @@ case "$platform" in
       "$("${device_adb[@]}" shell wm size | tr -d '\r' | awk -F ': ' '/Physical size|Override size/ { value = $2 } END { print value }')"
     expect android_density "$ANDROID_DENSITY" \
       "$("${device_adb[@]}" shell wm density | tr -d '\r' | awk -F ': ' '/Physical density|Override density/ { value = $2 } END { print value }')"
-    expect android_font_scale "$ANDROID_FONT_SCALE" \
-      "$("${device_adb[@]}" shell settings get system font_scale | tr -d '\r')"
+    font_scale="$("${device_adb[@]}" shell settings get system font_scale | tr -d '\r')"
+    # Recorded as configured when equal, so '1.0' and '1' keep one environment.
+    android_font_scale_is "$font_scale" "$ANDROID_FONT_SCALE" && font_scale="$ANDROID_FONT_SCALE"
+    expect android_font_scale "$ANDROID_FONT_SCALE" "$font_scale"
     expect android_locale "$ANDROID_LOCALE" \
       "$("${device_adb[@]}" shell settings get system system_locales | tr -d '\r')"
     expect android_timezone "$ANDROID_TIMEZONE" \

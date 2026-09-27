@@ -71,6 +71,11 @@ export ANDROID_HARDWARE_KEYBOARD="${ANDROID_HARDWARE_KEYBOARD:-yes}"
 export ANDROID_RESOLUTION="${ANDROID_RESOLUTION:-1080x2400}"
 export ANDROID_DENSITY="${ANDROID_DENSITY:-420}"
 export ANDROID_FONT_SCALE="${ANDROID_FONT_SCALE:-$suite_android_font_scale}"
+# Android formats the stored scale itself, so the '1' set here can read back as
+# '1.0'. Compare the numbers, not the strings.
+android_font_scale_is() {
+  awk -v actual="$1" -v expected="$2" 'BEGIN { exit !(actual != "" && actual + 0 == expected + 0) }'
+}
 export ANDROID_LOCALE="${ANDROID_LOCALE:-en-US}"
 export ANDROID_TIMEZONE="${ANDROID_TIMEZONE:-UTC}"
 

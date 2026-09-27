@@ -27,7 +27,7 @@ case "$platform" in
     [[ -f "$serial_file" ]] || fail "Run 'yarn vrt android setup' first."
     device_adb=("$android_sdk_root/platform-tools/adb" -s "$(<"$serial_file")")
     current="$("${device_adb[@]}" shell settings get system font_scale | tr -d '\r')"
-    [[ "$current" == "$ANDROID_FONT_SCALE" ]] && exit 0
+    android_font_scale_is "$current" "$ANDROID_FONT_SCALE" && exit 0
     "${device_adb[@]}" shell settings put system font_scale "$ANDROID_FONT_SCALE"
     "${device_adb[@]}" shell am force-stop "$VRT_APP_ID"
     printf 'Android font scale: %s -> %s\n' "$current" "$ANDROID_FONT_SCALE"

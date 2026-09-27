@@ -46,10 +46,6 @@ export const styles = StyleSheet.create({
   wrapProbe: {
     fontSize: 18,
   },
-  a11yRow: {
-    fontSize: 15,
-    color: COLOR.inkSoft,
-  },
 });
 export const SPECIMEN = 'Quick brown fox';
 export const PARAGRAPH = 'The quick brown fox jumps over the lazy dog.';
@@ -446,6 +442,11 @@ export const vrtStyles = StyleSheet.create({
   },
   scenario: {
     alignSelf: 'stretch',
+  },
+  // Same as the example app's row in Specimen.tsx.
+  row: {
+    alignSelf: 'flex-start',
+    alignItems: 'flex-start',
   },
   base: {
     fontSize: 20,

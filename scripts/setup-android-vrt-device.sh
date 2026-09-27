@@ -135,7 +135,7 @@ actual_timezone="$("${device_adb[@]}" shell getprop persist.sys.timezone | tr -d
   "Android resolution is '$actual_resolution', expected '$ANDROID_RESOLUTION'."
 [[ "$actual_density" == "$ANDROID_DENSITY" ]] || fail \
   "Android density is '$actual_density', expected '$ANDROID_DENSITY'."
-[[ "$actual_font_scale" == "$ANDROID_FONT_SCALE" ]] || fail \
+android_font_scale_is "$actual_font_scale" "$ANDROID_FONT_SCALE" || fail \
   "Android font scale is '$actual_font_scale', expected '$ANDROID_FONT_SCALE'."
 [[ "$actual_locale" == "$ANDROID_LOCALE" ]] || fail \
   "Android locale is '$actual_locale', expected '$ANDROID_LOCALE'."
