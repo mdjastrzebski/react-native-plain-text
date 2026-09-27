@@ -57,3 +57,27 @@ export IOS_LOCALE="${IOS_LOCALE:-en_US}"
 # Baselines were captured at this density, so changing it invalidates every iOS
 # image rather than rescaling it.
 export IOS_VRT_PIXEL_DENSITY="${IOS_VRT_PIXEL_DENSITY:-3}"
+
+# Image files are named after the scenario's test ID without this prefix, which
+# every test ID carries. Baselines recorded before that change still carry it,
+# so every baseline lookup tries the plain name first and falls back to the
+# prefixed one. `yarn vrt <platform> update` rewrites a platform's baselines
+# under the plain names, after which the fallback is dead for that platform.
+VRT_LEGACY_IMAGE_PREFIX="vrt-capture-"
+
+# vrt_image_name <test ID>: the image file name for a scenario.
+vrt_image_name() {
+  printf '%s.png\n' "${1#"$VRT_LEGACY_IMAGE_PREFIX"}"
+}
+
+# vrt_baseline_path <directory> <image>: the baseline file for a plain image
+# name, falling back to its legacy prefixed name. Fails when neither exists.
+vrt_baseline_path() {
+  if [[ -f "$1/$2" ]]; then
+    printf '%s\n' "$1/$2"
+  elif [[ -f "$1/$VRT_LEGACY_IMAGE_PREFIX$2" ]]; then
+    printf '%s\n' "$1/$VRT_LEGACY_IMAGE_PREFIX$2"
+  else
+    return 1
+  fi
+}

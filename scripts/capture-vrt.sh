@@ -271,9 +271,10 @@ while read -r capture_id; do
     step settle wait "$settle_ms"
   fi
 
+  image="$(vrt_image_name "$capture_id")"
   screenshot_command=(
     screenshot
-    "$actual_dir/$capture_id.png"
+    "$actual_dir/$image"
     --crop-on "id=\"$capture_id\""
   )
   if [[ "$platform" == "ios" ]]; then
@@ -298,10 +299,13 @@ while read -r capture_id; do
   captured=$((captured + 1))
   if [[ "$live_compare" == "1" ]]; then
     [[ -t 1 ]] && printf '\r\033[K'
+    # A missing baseline keeps the plain path, which the live compare reports.
+    baseline="$(vrt_baseline_path "$PROJECT_ROOT/baselines/$platform" "$image")" ||
+      baseline="$PROJECT_ROOT/baselines/$platform/$image"
     node "$SCRIPT_DIR/vrt-live-compare.js" \
-      "$actual_dir/$capture_id.png" \
-      "$PROJECT_ROOT/baselines/$platform/$capture_id.png" \
-      "$live_diff_dir/$capture_id.png" \
+      "$actual_dir/$image" \
+      "$baseline" \
+      "$live_diff_dir/$image" \
       "$live_matching_threshold" \
       "$VRT_THRESHOLD_PIXEL" || true
   fi

@@ -58,7 +58,9 @@ These variables put the removed behavior back, so a cheaper default is shown to 
 
 ## Baselines
 
-Reviewed images live in the `baselines` submodule: [react-native-plain-text-artifactory](https://github.com/troZee/react-native-plain-text-artifactory) checked out at the commit this repository pins. `baselines/android/` and `baselines/ios/` hold one PNG per capture id, and each directory also contains `environment.txt`, which records the rendering environment that produced those images.
+Reviewed images live in the `baselines` submodule: [react-native-plain-text-artifactory](https://github.com/troZee/react-native-plain-text-artifactory) checked out at the commit this repository pins. `baselines/android/` and `baselines/ios/` hold one PNG per scenario, and each directory also contains `environment.txt`, which records the rendering environment that produced those images.
+
+An image is named after its scenario's test ID without the `vrt-capture-` prefix every test ID carries, so `vrt-capture-features-font-size-48` is captured as `features-font-size-48.png`. Baselines recorded before that change still use the prefixed name, and every baseline lookup falls back to it, so the existing baselines keep comparing without being renamed. The next `yarn vrt <platform> update` rewrites that platform's baselines under the plain names. A baseline directory holding both names for one image fails comparison rather than choosing one.
 
 The submodule is empty after a plain `git clone`, and no VRT stage fetches it for you:
 
@@ -94,7 +96,7 @@ The pointer bump is the reviewable baseline change in the library pull request. 
 
 ## Capture-set validation
 
-A scenario is one specimen to capture and compare, identified by its `vrt-capture-…` test ID, which is also its image's file name. The scenario list is not kept by hand. `scripts/list-vrt-scenarios.sh <platform>` derives it on every capture and compare run from the specimens `groups.tsx` renders on that platform, minus the skipped ones in `scripts/vrt-scenarios/scenarios.ts`. It loads the groups through Jest, which is what can stub React Native outside the app, and writes `.vrt/scenarios/<platform>.txt`. A new specimen is therefore captured, and needs a reviewed baseline, the moment it is added; keeping one out of the comparison means naming it in `SKIPPED_SCENARIOS`, which is the one reviewable place a coverage gap lives.
+A scenario is one specimen to capture and compare, identified by its `vrt-capture-…` test ID, which the deep link opens and the screenshot crops to. The scenario list is not kept by hand. `scripts/list-vrt-scenarios.sh <platform>` derives it on every capture and compare run from the specimens `groups.tsx` renders on that platform, minus the skipped ones in `scripts/vrt-scenarios/scenarios.ts`. It loads the groups through Jest, which is what can stub React Native outside the app, and writes `.vrt/scenarios/<platform>.txt`. A new specimen is therefore captured, and needs a reviewed baseline, the moment it is added; keeping one out of the comparison means naming it in `SKIPPED_SCENARIOS`, which is the one reviewable place a coverage gap lives.
 
 Before image comparison, actual and baseline directories must both contain exactly one image per scenario. Missing, unexpected, malformed, and duplicate entries fail before pixel comparison, and `yarn test` checks the same ID rules plus that every skipped scenario still names a rendered specimen.
 

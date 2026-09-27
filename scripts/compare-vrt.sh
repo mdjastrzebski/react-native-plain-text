@@ -73,11 +73,13 @@ if ! awk '
     printf "Duplicate capture ID: %s.\n", $0 > "/dev/stderr"
     invalid = 1
   }
-  { print $0 ".png" }
   END { exit invalid }
-' "$scenario_list" | LC_ALL=C sort > "$scenario_images"; then
+' "$scenario_list"; then
   fail "The $platform scenario list is invalid."
 fi
+while IFS= read -r capture_id; do
+  vrt_image_name "$capture_id"
+done < "$scenario_list" | LC_ALL=C sort > "$scenario_images"
 
 # What this run compares: every scenario for a complete capture, or exactly
 # the images a filtered capture produced for a partial one. A partial run is only
@@ -103,12 +105,29 @@ validate_image_set() {
   local directory="$1"
   local label="$2"
   local allow_unexpected="${3:-0}"
+  local legacy_names="${4:-0}"
   local image_list="$report_dir/$label-images.txt"
   local missing_list="$report_dir/$label-missing.txt"
   local unexpected_list="$report_dir/$label-unexpected.txt"
+  local ambiguous_list="$report_dir/$label-ambiguous.txt"
 
   [[ -d "$directory" ]] || fail "$label image directory not found at $directory."
-  find "$directory" -type f -name '*.png' -exec basename {} \; | LC_ALL=C sort > "$image_list"
+  if [[ "$legacy_names" == "1" ]]; then
+    # Baselines may still use the legacy prefixed names (see vrt-config.sh), so
+    # both spellings count as the plain one. Holding both spellings of one image
+    # would leave the lookup's first choice as the silent winner, so it fails.
+    find "$directory" -type f -name '*.png' -exec basename {} \; |
+      sed "s/^$VRT_LEGACY_IMAGE_PREFIX//" | LC_ALL=C sort > "$image_list"
+    uniq -d "$image_list" > "$ambiguous_list"
+    if [[ -s "$ambiguous_list" ]]; then
+      printf '%s images in %s under both the plain and the %s name:\n' \
+        "$label" "$directory" "$VRT_LEGACY_IMAGE_PREFIX" >&2
+      sed 's/^/  /' "$ambiguous_list" >&2
+      return 1
+    fi
+  else
+    find "$directory" -type f -name '*.png' -exec basename {} \; | LC_ALL=C sort > "$image_list"
+  fi
   comm -23 "$expected_list" "$image_list" > "$missing_list"
   comm -13 "$expected_list" "$image_list" > "$unexpected_list"
 
@@ -157,10 +176,10 @@ fi
 [[ -f "$baseline_environment" ]] || fail \
   "Baseline environment metadata not found at $baseline_environment."
 if [[ "$mode" == "partial" ]]; then
-  validate_image_set "$baseline_dir" baseline 1 || fail \
+  validate_image_set "$baseline_dir" baseline 1 1 || fail \
     "Reviewed baselines do not contain the partial capture set."
 else
-  validate_image_set "$baseline_dir" baseline || fail \
+  validate_image_set "$baseline_dir" baseline 0 1 || fail \
     "Reviewed baseline set does not match the VRT groups."
 fi
 
@@ -207,7 +226,7 @@ mkdir -p "$report_actual_dir" "$report_expected_dir" "$diff_dir"
 
 while IFS= read -r image; do
   cp -a "$actual_dir/$image" "$report_actual_dir/$image"
-  cp -a "$baseline_dir/$image" "$report_expected_dir/$image"
+  cp -a "$(vrt_baseline_path "$baseline_dir" "$image")" "$report_expected_dir/$image"
 done < "$expected_list"
 cp -a "$current_environment" "$report_dir/current-environment.txt"
 cp -a "$baseline_environment" "$report_dir/baseline-environment.txt"
