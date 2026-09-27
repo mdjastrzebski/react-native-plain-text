@@ -68,17 +68,57 @@ grep -Eq "id: [0-9]+ or \"$ANDROID_DEVICE_TYPE\"" <<< "$device_catalog" || fail 
 
 avd_root="${ANDROID_AVD_HOME:-${ANDROID_USER_HOME:-${HOME}/.android}/avd}"
 avd_config="$avd_root/$ANDROID_AVD_NAME.avd/config.ini"
+expected_image_path="system-images/android-$ANDROID_API_LEVEL/$ANDROID_SYSTEM_IMAGE_TARGET/$ANDROID_SYSTEM_IMAGE_ARCHITECTURE/"
+
+# An AVD left over from an older VRT configuration is recreated, but only when a
+# person at a terminal agrees: it may hold state someone wants to keep. CI and
+# other non-interactive runs still fail with the reason.
+recreate_avd() {
+  local reason="$1"
+  local answer=""
+  if [[ -n "${CI:-}" ]] || ! { : < /dev/tty; } 2>/dev/null; then
+    fail "$reason Delete it and run setup again."
+  fi
+  printf '%s\nDelete and recreate AVD %s? [y/N] ' "$reason" "$ANDROID_AVD_NAME" >&2
+  read -r answer < /dev/tty || true
+  [[ "$answer" == [yY] || "$answer" == [yY][eE][sS] ]] || fail "$reason Delete it and run setup again."
+
+  local candidate candidate_name
+  while read -r candidate; do
+    candidate_name="$("$adb" -s "$candidate" emu avd name 2>/dev/null | sed -n '1p' | tr -d '\r')"
+    if [[ "$candidate_name" == "$ANDROID_AVD_NAME" ]]; then
+      printf 'Stopping %s.\n' "$candidate" >&2
+      "$adb" -s "$candidate" emu kill >/dev/null 2>&1 || true
+      local stop_deadline=$((SECONDS + 60))
+      while "$adb" -s "$candidate" get-state >/dev/null 2>&1; do
+        ((SECONDS < stop_deadline)) || fail "Emulator $candidate did not stop."
+        sleep 1
+      done
+    fi
+  done < <("$adb" devices | awk '$1 ~ /^emulator-/ { print $1 }')
+
+  printf 'Deleting AVD %s.\n' "$ANDROID_AVD_NAME" >&2
+  "$avdmanager" delete avd --name "$ANDROID_AVD_NAME" >&2
+}
+
+if [[ -f "$avd_config" ]]; then
+  if [[ "$(property "$avd_config" image.sysdir.1)" != "$expected_image_path" ]]; then
+    recreate_avd "AVD '$ANDROID_AVD_NAME' does not use '$system_image'."
+  elif [[ "$(property "$avd_config" hw.device.name)" != "$ANDROID_DEVICE_TYPE" ]]; then
+    recreate_avd "AVD '$ANDROID_AVD_NAME' does not use the '$ANDROID_DEVICE_TYPE' profile."
+  fi
+fi
+
 if [[ ! -f "$avd_config" ]]; then
-  printf 'Creating Android VRT AVD %s.\n' "$ANDROID_AVD_NAME"
+  printf 'Creating Android VRT AVD %s.\n' "$ANDROID_AVD_NAME" >&2
   printf 'no\n' | "$avdmanager" create avd \
     --force \
     --name "$ANDROID_AVD_NAME" \
     --package "$system_image" \
-    --device "$ANDROID_DEVICE_TYPE"
+    --device "$ANDROID_DEVICE_TYPE" >&2
 fi
 [[ -f "$avd_config" ]] || fail "AVD creation did not produce $avd_config."
 
-expected_image_path="system-images/android-$ANDROID_API_LEVEL/$ANDROID_SYSTEM_IMAGE_TARGET/$ANDROID_SYSTEM_IMAGE_ARCHITECTURE/"
 [[ "$(property "$avd_config" image.sysdir.1)" == "$expected_image_path" ]] || fail \
   "AVD '$ANDROID_AVD_NAME' does not use '$system_image'. Delete it and run setup again."
 [[ "$(property "$avd_config" hw.device.name)" == "$ANDROID_DEVICE_TYPE" ]] || fail \
@@ -103,7 +143,7 @@ fi
 log_dir="$PROJECT_ROOT/build/vrt/emulator"
 mkdir -p "$log_dir"
 log_file="$log_dir/android.log"
-printf 'Starting Android VRT AVD %s as %s.\n' "$ANDROID_AVD_NAME" "$serial"
+printf 'Starting Android VRT AVD %s as %s.\n' "$ANDROID_AVD_NAME" "$serial" >&2
 emulator_args=(
   -avd "$ANDROID_AVD_NAME"
   -port "$ANDROID_EMULATOR_PORT"
@@ -131,6 +171,7 @@ cleanup_failed_launch() {
 }
 trap cleanup_failed_launch EXIT
 
+printf 'Waiting for boot (up to %ss). Log: %s\n' "$ANDROID_BOOT_TIMEOUT_SECONDS" "$log_file" >&2
 deadline=$((SECONDS + ANDROID_BOOT_TIMEOUT_SECONDS))
 while ((SECONDS < deadline)); do
   if "$adb" -s "$serial" get-state >/dev/null 2>&1 && \

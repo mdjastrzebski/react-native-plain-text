@@ -19,8 +19,17 @@ android_sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 adb="$android_sdk_root/platform-tools/adb"
 [[ -x "$adb" ]] || fail "adb not found at $adb."
 
+avd_config="${ANDROID_AVD_HOME:-${ANDROID_USER_HOME:-${HOME}/.android}/avd}/$ANDROID_AVD_NAME.avd/config.ini"
+avd_matches_config() {
+  [[ -f "$avd_config" ]] &&
+    grep -qxF "image.sysdir.1=system-images/android-$ANDROID_API_LEVEL/$ANDROID_SYSTEM_IMAGE_TARGET/$ANDROID_SYSTEM_IMAGE_ARCHITECTURE/" "$avd_config" &&
+    grep -qxF "hw.device.name=$ANDROID_DEVICE_TYPE" "$avd_config"
+}
+
 serial="${ANDROID_SERIAL:-}"
-if [[ -z "$serial" ]]; then
+# A running AVD built for an older configuration is left to the start script,
+# which offers to recreate it.
+if [[ -z "$serial" ]] && avd_matches_config; then
   while read -r candidate; do
     candidate_name="$($adb -s "$candidate" emu avd name 2>/dev/null | sed -n '1p' | tr -d '\r')"
     if [[ "$candidate_name" == "$ANDROID_AVD_NAME" ]]; then
