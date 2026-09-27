@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { PlainText, type PlainTextProps } from 'react-native-plain-text';
 import { COLOR } from '../theme';
-import { USE_CASE_GROUPS, type UseCaseItem } from './useCases';
+import { EXAMPLE_GROUPS, type ExampleItem } from './examples';
 import {
   SHORT_ROW_SIZE,
   styles,
@@ -43,60 +43,30 @@ import {
   vrtStyles,
 } from './utils';
 
-type VrtTextProps = PlainTextProps & {
-  label?: string;
-  showText: boolean;
-  containerStyle?: PlainTextProps['style'];
-};
-
-function VrtText({
-  testID,
-  label: _label,
-  showText: _showText,
-  containerStyle,
-  style,
-  ...props
-}: VrtTextProps) {
-  return (
-    <PlainText
-      {...props}
-      testID={`${testID}-text`}
-      style={[vrtStyles.base, containerStyle, style]}
-    />
-  );
+function VrtText({ testID, style, ...props }: PlainTextProps) {
+  return <PlainText {...props} testID={`${testID}-text`} style={[vrtStyles.base, style]} />;
 }
 
 function VrtBox({
   testID,
-  label: _label,
-  showText: _showText,
-  overlay: _overlay,
-  containerStyle,
+  style,
   children,
 }: {
   testID: string;
-  label?: string;
-  showText: boolean;
-  overlay: ReactNode;
-  containerStyle?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle>;
   children: ReactNode;
 }) {
   return (
-    <View testID={`${testID}-box`} style={containerStyle}>
+    <View testID={`${testID}-box`} style={style}>
       {children}
     </View>
   );
 }
 
-function VrtUseCase({ item, testID }: { item: UseCaseItem; testID: string }) {
+function VrtExample({ item, testID }: { item: ExampleItem; testID: string }) {
   if (item.kind === 'baseline') {
     return (
-      <VrtBox
-        testID={testID}
-        showText={false}
-        overlay={null}
-        containerStyle={[styles.baselineRow, vrtStyles.wideRow]}
-      >
+      <VrtBox testID={testID} style={[styles.baselineRow, vrtStyles.wideRow]}>
         {item.parts.map((part, index) => (
           <PlainText key={index} style={[vrtStyles.base, part.style]}>
             {part.text}
@@ -106,15 +76,18 @@ function VrtUseCase({ item, testID }: { item: UseCaseItem; testID: string }) {
     );
   }
 
+  const { text, style, numberOfLines, ellipsizeMode, allowFontScaling, maxFontSizeMultiplier } =
+    item;
   return (
     <VrtText
-      {...item}
       testID={testID}
-      showText={false}
-      style={[{ color: COLOR.ink }, item.style]}
-      containerStyle={item.style.width === '100%' ? vrtStyles.wideRow : undefined}
+      numberOfLines={numberOfLines}
+      ellipsizeMode={ellipsizeMode}
+      allowFontScaling={allowFontScaling}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
+      style={[style.width === '100%' && vrtStyles.wideRow, { color: COLOR.ink }, style]}
     >
-      {item.text}
+      {text}
     </VrtText>
   );
 }
@@ -129,8 +102,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-font-size-${fontSize}`}
             key={fontSize}
-            label={`${fontSize}pt`}
-            showText={false}
             style={{
               fontSize,
             }}
@@ -148,9 +119,7 @@ export const groups: VrtGroup[] = [
   {
     children: (
       <>
-        <VrtText testID="vrt-features-emoji-mixed" label="mixed" showText={false}>
-          {EMOJI_SPECIMEN}
-        </VrtText>
+        <VrtText testID="vrt-features-emoji-mixed">{EMOJI_SPECIMEN}</VrtText>
       </>
     ),
   },
@@ -161,8 +130,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-font-family-${testIDSlug(label)}`}
             key={label}
-            label={label}
-            showText={false}
             style={style}
           >
             {style.fontFamily}
@@ -176,8 +143,6 @@ export const groups: VrtGroup[] = [
       <>
         <VrtText
           testID="vrt-features-color-indigo"
-          label="Indigo"
-          showText={false}
           style={{
             fontSize: SHORT_ROW_SIZE,
             color: COLOR.indigo,
@@ -187,8 +152,6 @@ export const groups: VrtGroup[] = [
         </VrtText>
         <VrtText
           testID="vrt-features-color-inverse"
-          label="inverse"
-          showText={false}
           style={{
             fontSize: SHORT_ROW_SIZE,
             color: COLOR.paper,
@@ -207,8 +170,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-font-weight-${fontWeight}`}
             key={fontWeight}
-            label={fontWeight}
-            showText={false}
             style={{
               fontSize: SHORT_ROW_SIZE,
               fontWeight,
@@ -225,8 +186,6 @@ export const groups: VrtGroup[] = [
       <>
         <VrtText
           testID="vrt-features-font-style-italic"
-          label="italic"
-          showText={false}
           style={{
             fontSize: SHORT_ROW_SIZE,
             fontStyle: 'italic',
@@ -236,8 +195,6 @@ export const groups: VrtGroup[] = [
         </VrtText>
         <VrtText
           testID="vrt-features-font-style-bold-italic"
-          label="bold italic"
-          showText={false}
           style={{
             fontSize: SHORT_ROW_SIZE,
             fontWeight: 'bold',
@@ -256,15 +213,15 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-text-align-${textAlign}`}
             key={textAlign}
-            label={textAlign}
-            showText={false}
             style={[
-              styles.body,
-              {
-                textAlign,
-              },
+              vrtStyles.wideRow,
+              [
+                styles.body,
+                {
+                  textAlign,
+                },
+              ],
             ]}
-            containerStyle={vrtStyles.wideRow}
           >
             {/* Justify only shows itself on text long enough to stretch more
               than one line to the full measure. */}
@@ -282,16 +239,16 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-writing-direction-${writingDirection}`}
             key={writingDirection}
-            label={writingDirection}
-            showText={false}
             style={[
-              styles.body,
-              {
-                textAlign: 'auto',
-                writingDirection,
-              },
+              vrtStyles.wideRow,
+              [
+                styles.body,
+                {
+                  textAlign: 'auto',
+                  writingDirection,
+                },
+              ],
             ]}
-            containerStyle={vrtStyles.wideRow}
           >
             {PARAGRAPH}
           </VrtText>
@@ -302,40 +259,14 @@ export const groups: VrtGroup[] = [
   {
     children: (
       <>
-        <VrtBox
-          testID="vrt-features-baseline-alignment"
-          label="H / g / x, ruled at the baseline"
-          showText={false}
-          containerStyle={styles.baselineRow}
-          overlay={
-            <View style={styles.baselineRow}>
-              {BASELINE_ALIGNMENT_GLYPHS.map(({ text, fontSize }, index) => (
-                <Text
-                  key={text}
-                  style={[
-                    {
-                      fontSize,
-                      marginLeft: index === 0 ? 0 : 10,
-                    },
-                    styles.overlayInline,
-                  ]}
-                >
-                  {text}
-                </Text>
-              ))}
-            </View>
-          }
-        >
+        <VrtBox testID="vrt-features-baseline-alignment" style={styles.baselineRow}>
           {BASELINE_ALIGNMENT_GLYPHS.map(({ text, fontSize }, index) => (
             <PlainText
               key={text}
-              style={[
-                {
-                  fontSize,
-                  marginLeft: index === 0 ? 0 : 10,
-                },
-                false,
-              ]}
+              style={{
+                fontSize,
+                marginLeft: index === 0 ? 0 : 10,
+              }}
             >
               {text}
             </PlainText>
@@ -348,13 +279,7 @@ export const groups: VrtGroup[] = [
   {
     children: (
       <>
-        <VrtText
-          testID="vrt-features-multiline-wrap"
-          label="wrap"
-          showText={false}
-          style={styles.body}
-          containerStyle={vrtStyles.wideRow}
-        >
+        <VrtText testID="vrt-features-multiline-wrap" style={[vrtStyles.wideRow, styles.body]}>
           {PARAGRAPH_LONG}
         </VrtText>
       </>
@@ -367,11 +292,8 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-number-of-lines-${numberOfLines}`}
             key={numberOfLines}
-            label={`${numberOfLines} line${numberOfLines === 1 ? '' : 's'}`}
-            showText={false}
             numberOfLines={numberOfLines}
-            style={styles.body}
-            containerStyle={vrtStyles.wideRow}
+            style={[vrtStyles.wideRow, styles.body]}
           >
             {PARAGRAPH_LONG}
           </VrtText>
@@ -382,41 +304,35 @@ export const groups: VrtGroup[] = [
   {
     children: (
       <>
-        <VrtText
-          testID="vrt-features-padding-none"
-          label="none"
-          showText={false}
-          style={styles.body}
-          containerStyle={vrtStyles.wideRow}
-        >
+        <VrtText testID="vrt-features-padding-none" style={[vrtStyles.wideRow, styles.body]}>
           {PARAGRAPH}
         </VrtText>
         <VrtText
           testID="vrt-features-padding-vertical-16"
-          label="vertical 16"
-          showText={false}
           style={[
-            styles.body,
-            {
-              paddingVertical: 16,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              {
+                paddingVertical: 16,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH}
         </VrtText>
         <VrtText
           testID="vrt-features-padding-top-28-bottom-4"
-          label="top 28 bottom 4"
-          showText={false}
           style={[
-            styles.body,
-            {
-              paddingTop: 28,
-              paddingBottom: 4,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              {
+                paddingTop: 28,
+                paddingBottom: 4,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH}
         </VrtText>
@@ -425,15 +341,15 @@ export const groups: VrtGroup[] = [
           overflowing last line. */}
         <VrtText
           testID="vrt-features-padding-all-20-wrapped"
-          label="all 20, wrapped"
-          showText={false}
           style={[
-            styles.body,
-            {
-              padding: 20,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              {
+                padding: 20,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH_LONG}
         </VrtText>
@@ -445,32 +361,32 @@ export const groups: VrtGroup[] = [
       <>
         <VrtText
           testID="vrt-features-borders-all-2"
-          label="all 2"
-          showText={false}
           style={[
-            styles.body,
-            styles.bordered,
-            {
-              borderWidth: 2,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              styles.bordered,
+              {
+                borderWidth: 2,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH}
         </VrtText>
         <VrtText
           testID="vrt-features-borders-radius-12"
-          label="radius 12"
-          showText={false}
           style={[
-            styles.body,
-            styles.bordered,
-            {
-              borderWidth: 2,
-              borderRadius: 12,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              styles.bordered,
+              {
+                borderWidth: 2,
+                borderRadius: 12,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH}
         </VrtText>
@@ -478,48 +394,48 @@ export const groups: VrtGroup[] = [
           comes from `bordered`, so the side widths are the only difference. */}
         <VrtText
           testID="vrt-features-borders-left-6"
-          label="left 6"
-          showText={false}
           style={[
-            styles.body,
-            styles.bordered,
-            {
-              borderLeftWidth: 6,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              styles.bordered,
+              {
+                borderLeftWidth: 6,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH}
         </VrtText>
         <VrtText
           testID="vrt-features-borders-dashed"
-          label="dashed"
-          showText={false}
           style={[
-            styles.body,
-            styles.bordered,
-            {
-              borderWidth: 2,
-              borderStyle: 'dashed',
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              styles.bordered,
+              {
+                borderWidth: 2,
+                borderStyle: 'dashed',
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH}
         </VrtText>
         <VrtText
           testID="vrt-features-borders-all-4-padding-12"
-          label="all 4 + padding 12"
-          showText={false}
           style={[
-            styles.body,
-            styles.bordered,
-            {
-              borderWidth: 4,
-              padding: 12,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              styles.bordered,
+              {
+                borderWidth: 4,
+                padding: 12,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH_LONG}
         </VrtText>
@@ -533,13 +449,13 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-line-height-${lineHeight}`}
             key={lineHeight}
-            label={`${lineHeight} / 18`}
-            showText={false}
-            style={{
-              fontSize: 18,
-              lineHeight,
-            }}
-            containerStyle={vrtStyles.wideRow}
+            style={[
+              vrtStyles.wideRow,
+              {
+                fontSize: 18,
+                lineHeight,
+              },
+            ]}
           >
             {PARAGRAPH_LONG}
           </VrtText>
@@ -557,16 +473,16 @@ export const groups: VrtGroup[] = [
             <VrtText
               testID={`vrt-features-line-height-clipping-${testIDSlug(font.label)}`}
               key={font.label}
-              label={`${lineHeight} / ${fontSize}`}
-              showText={false}
               style={[
-                font.style,
-                {
-                  fontSize,
-                  lineHeight,
-                },
+                [vrtStyles.wideRow, styles.clippingRow],
+                [
+                  font.style,
+                  {
+                    fontSize,
+                    lineHeight,
+                  },
+                ],
               ]}
-              containerStyle={[vrtStyles.wideRow, styles.clippingRow]}
             >
               {font.label}
             </VrtText>
@@ -582,8 +498,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-letter-spacing-${letterSpacing < 0 ? `negative-${Math.abs(letterSpacing)}` : letterSpacing}`}
             key={letterSpacing}
-            label={`${letterSpacing > 0 ? '+' : ''}${letterSpacing}`}
-            showText={false}
             style={{
               fontSize: SHORT_ROW_SIZE,
               letterSpacing,
@@ -602,12 +516,9 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-ellipsize-mode-${ellipsizeMode}`}
             key={ellipsizeMode}
-            label={ellipsizeMode}
-            showText={false}
             numberOfLines={1}
             ellipsizeMode={ellipsizeMode}
-            style={styles.body}
-            containerStyle={vrtStyles.wideRow}
+            style={[vrtStyles.wideRow, styles.body]}
           >
             {PARAGRAPH_LONG}
           </VrtText>
@@ -623,8 +534,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-line-break-strategy-${s}`}
             key={s}
-            label={s}
-            showText={false}
             lineBreakStrategyIOS={s}
             style={[
               styles.body,
@@ -640,8 +549,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-line-break-strategy-${s === 'none' ? 'korean-none' : s}`}
             key={s}
-            label={s}
-            showText={false}
             lineBreakStrategyIOS={s}
             style={[
               styles.body,
@@ -664,8 +571,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-text-break-strategy-${testIDSlug(textBreakStrategy)}`}
             key={textBreakStrategy}
-            label={textBreakStrategy}
-            showText={false}
             textBreakStrategy={textBreakStrategy}
             style={[
               styles.body,
@@ -687,8 +592,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-text-decoration-line-${testIDSlug(textDecorationLine)}`}
             key={textDecorationLine}
-            label={textDecorationLine}
-            showText={false}
             style={{
               fontSize: SHORT_ROW_SIZE,
               textDecorationLine,
@@ -707,8 +610,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-text-transform-${textTransform}`}
             key={textTransform}
-            label={textTransform}
-            showText={false}
             style={{
               fontSize: SHORT_ROW_SIZE,
               textTransform,
@@ -720,8 +621,6 @@ export const groups: VrtGroup[] = [
         {/* capitalize's two gotchas: a digit-led word and a contraction. */}
         <VrtText
           testID="vrt-features-text-transform-capitalize-digit-led-word"
-          label="capitalize, digit-led word"
-          showText={false}
           style={{
             fontSize: SHORT_ROW_SIZE,
             textTransform: 'capitalize',
@@ -731,8 +630,6 @@ export const groups: VrtGroup[] = [
         </VrtText>
         <VrtText
           testID="vrt-features-text-transform-capitalize-contraction"
-          label="capitalize, contraction"
-          showText={false}
           style={{
             fontSize: SHORT_ROW_SIZE,
             textTransform: 'capitalize',
@@ -754,8 +651,6 @@ export const groups: VrtGroup[] = [
       <>
         <VrtText
           testID="vrt-features-font-scaling-default"
-          label="default"
-          showText={false}
           style={{
             fontSize: FONT_SCALING_SIZE,
           }}
@@ -764,8 +659,6 @@ export const groups: VrtGroup[] = [
         </VrtText>
         <VrtText
           testID="vrt-features-font-scaling-disabled"
-          label="disabled"
-          showText={false}
           style={{
             fontSize: FONT_SCALING_SIZE,
           }}
@@ -775,8 +668,6 @@ export const groups: VrtGroup[] = [
         </VrtText>
         <VrtText
           testID="vrt-features-font-scaling-max-1-2x"
-          label="max 1.2x"
-          showText={false}
           style={{
             fontSize: FONT_SCALING_SIZE,
           }}
@@ -791,12 +682,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         {/* Baseline to compare every row below against. */}
-        <VrtText
-          testID="vrt-features-font-variant-system-default"
-          label="default"
-          showText={false}
-          style={fontVariantRow}
-        >
+        <VrtText testID="vrt-features-font-variant-system-default" style={fontVariantRow}>
           {FONT_VARIANT_SPECIMEN}
         </VrtText>
         {/* Figure spacing first: the pair of values people actually reach for.
@@ -810,8 +696,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-font-variant-tabular-nums-${digits}`}
             key={`tabular-${digits}`}
-            label="tabular-nums"
-            showText={false}
             style={{
               ...fontVariantRow,
               fontVariant: ['tabular-nums'],
@@ -824,8 +708,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-font-variant-proportional-nums-${digits}`}
             key={`proportional-${digits}`}
-            label="proportional-nums"
-            showText={false}
             style={{
               ...fontVariantRow,
               fontVariant: ['proportional-nums'],
@@ -839,8 +721,6 @@ export const groups: VrtGroup[] = [
           baseline: that platform stays on the system font throughout. */}
         <VrtText
           testID="vrt-features-font-variant-feature-font-default"
-          label="default"
-          showText={false}
           style={fontVariantFeatureRow}
         >
           {FONT_VARIANT_SPECIMEN}
@@ -849,8 +729,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-font-variant-${testIDSlug(label)}`}
             key={label}
-            label={label}
-            showText={false}
             style={{
               ...fontVariantFeatureRow,
               fontVariant,
@@ -869,8 +747,6 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-font-variation-settings-${testIDSlug(label)}`}
             key={label}
-            label={label}
-            showText={false}
             style={{
               ...variableFontRow,
               fontVariationSettings,
@@ -889,15 +765,15 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-vertical-align-${verticalAlign}`}
             key={verticalAlign}
-            label={`verticalAlign: ${verticalAlign}`}
-            showText={false}
-            style={{
-              width: '100%',
-              height: 72,
-              fontSize: SHORT_ROW_SIZE,
-              verticalAlign,
-            }}
-            containerStyle={vrtStyles.wideRow}
+            style={[
+              vrtStyles.wideRow,
+              {
+                width: '100%',
+                height: 72,
+                fontSize: SHORT_ROW_SIZE,
+                verticalAlign,
+              },
+            ]}
           >
             {SPECIMEN}
           </VrtText>
@@ -909,15 +785,15 @@ export const groups: VrtGroup[] = [
           <VrtText
             testID={`vrt-features-text-align-vertical-${textAlignVertical}`}
             key={textAlignVertical}
-            label={`textAlignVertical: ${textAlignVertical}`}
-            showText={false}
-            style={{
-              width: '100%',
-              height: 72,
-              fontSize: SHORT_ROW_SIZE,
-              textAlignVertical,
-            }}
-            containerStyle={vrtStyles.wideRow}
+            style={[
+              vrtStyles.wideRow,
+              {
+                width: '100%',
+                height: 72,
+                fontSize: SHORT_ROW_SIZE,
+                textAlignVertical,
+              },
+            ]}
           >
             {SPECIMEN}
           </VrtText>
@@ -927,16 +803,16 @@ export const groups: VrtGroup[] = [
           bottom" row above despite asking textAlignVertical for the opposite. */}
         <VrtText
           testID="vrt-features-vertical-align-overrides-text-align-vertical"
-          label="both set: textAlignVertical top, verticalAlign bottom"
-          showText={false}
-          style={{
-            width: '100%',
-            height: 72,
-            fontSize: SHORT_ROW_SIZE,
-            textAlignVertical: 'top',
-            verticalAlign: 'bottom',
-          }}
-          containerStyle={vrtStyles.wideRow}
+          style={[
+            vrtStyles.wideRow,
+            {
+              width: '100%',
+              height: 72,
+              fontSize: SHORT_ROW_SIZE,
+              textAlignVertical: 'top',
+              verticalAlign: 'bottom',
+            },
+          ]}
         >
           {SPECIMEN}
         </VrtText>
@@ -948,61 +824,31 @@ export const groups: VrtGroup[] = [
       <>
         {/* Control. Nothing to detect: if this one disagrees, the harness is
           wrong, not the wrap logic. */}
-        <VrtText
-          testID="vrt-features-wrap-detection-control"
-          label="control"
-          showText={false}
-          style={styles.wrapProbe}
-        >
+        <VrtText testID="vrt-features-wrap-detection-control" style={styles.wrapProbe}>
           {'One short line   '}
         </VrtText>
         {/* Hard breaks, nothing wraps → hug the longest line. */}
-        <VrtText
-          testID="vrt-features-wrap-detection-hard-breaks"
-          label="hard breaks"
-          showText={false}
-          style={styles.wrapProbe}
-        >
+        <VrtText testID="vrt-features-wrap-detection-hard-breaks" style={styles.wrapProbe}>
           {'Short\nthis line is longest   '}
         </VrtText>
         {/* Same with more paragraphs, and with the longest one in the middle:
           the width comes from a max over paragraphs, so order shouldn't
           matter. */}
-        <VrtText
-          testID="vrt-features-wrap-detection-longest-in-middle"
-          label="longest in middle"
-          showText={false}
-          style={styles.wrapProbe}
-        >
+        <VrtText testID="vrt-features-wrap-detection-longest-in-middle" style={styles.wrapProbe}>
           {'A\nBB\nthis line is longest  \nCCC'}
         </VrtText>
         {/* Same paragraphs, longest one last: the width comes from a max over
           paragraphs, so where it sits shouldn't matter. */}
-        <VrtText
-          testID="vrt-features-wrap-detection-longest-last"
-          label="longest last"
-          showText={false}
-          style={styles.wrapProbe}
-        >
+        <VrtText testID="vrt-features-wrap-detection-longest-last" style={styles.wrapProbe}>
           {'A\nBB\nCCC\nthis line is longest  '}
         </VrtText>
         {/* No hard break, too long to fit → full constraint width. */}
-        <VrtText
-          testID="vrt-features-wrap-detection-soft-wrap-only"
-          label="soft wrap only"
-          showText={false}
-          style={styles.wrapProbe}
-        >
+        <VrtText testID="vrt-features-wrap-detection-soft-wrap-only" style={styles.wrapProbe}>
           {'No breaks here, but this sentence is long enough that it has to ' +
             'wrap onto several lines.'}
         </VrtText>
         {/* Both a hard break and a soft wrap → full constraint width. */}
-        <VrtText
-          testID="vrt-features-wrap-detection-break-then-wrap"
-          label="break then wrap"
-          showText={false}
-          style={styles.wrapProbe}
-        >
+        <VrtText testID="vrt-features-wrap-detection-break-then-wrap" style={styles.wrapProbe}>
           {'Break then wrap:\nthis second line is long enough that it also ' + 'has to wrap.'}
         </VrtText>
       </>
@@ -1014,30 +860,30 @@ export const groups: VrtGroup[] = [
       <>
         <VrtText
           testID="vrt-features-font-padding-default-padding-4"
-          label="default, padding 4"
-          showText={false}
           style={[
-            styles.body,
-            {
-              padding: 4,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              {
+                padding: 4,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH}
         </VrtText>
         <VrtText
           testID="vrt-features-font-padding-disabled-padding-4"
-          label="includeFontPadding false, padding 4"
-          showText={false}
           style={[
-            styles.body,
-            {
-              padding: 4,
-              includeFontPadding: false,
-            },
+            vrtStyles.wideRow,
+            [
+              styles.body,
+              {
+                padding: 4,
+                includeFontPadding: false,
+              },
+            ],
           ]}
-          containerStyle={vrtStyles.wideRow}
         >
           {PARAGRAPH}
         </VrtText>
@@ -1047,8 +893,8 @@ export const groups: VrtGroup[] = [
   {
     children: (
       <>
-        {USE_CASE_GROUPS.flatMap(({ items }) => items).map((item) => (
-          <VrtUseCase key={item.label} item={item} testID={`vrt-examples-${item.label}`} />
+        {EXAMPLE_GROUPS.flatMap(({ items }) => items).map((item) => (
+          <VrtExample key={item.label} item={item} testID={`vrt-examples-${item.label}`} />
         ))}
       </>
     ),

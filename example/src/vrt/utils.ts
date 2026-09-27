@@ -20,14 +20,6 @@ export function testIDSlug(value: string) {
 }
 export const SHORT_ROW_SIZE = 26;
 export const styles = StyleSheet.create({
-  overlayInline: {
-    backgroundColor: COLOR.wash,
-    color: COLOR.scarlet,
-  },
-  compareTextInline: {
-    color: COLOR.cobalt,
-    backgroundColor: COLOR.wash,
-  },
   baselineRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -165,52 +157,11 @@ export const TEXT_DECORATION_LINES = [
   'line-through',
   'underline line-through',
 ] as const;
-export const TEXT_SHADOWS: {
-  label: string;
-  style: TextStyle;
-}[] = [
-  {
-    label: 'offset only',
-    style: {
-      textShadowOffset: {
-        width: 2,
-        height: 2,
-      },
-    },
-  },
-  {
-    label: 'blurred',
-    style: {
-      textShadowOffset: {
-        width: 1,
-        height: 1,
-      },
-      textShadowRadius: 4,
-    },
-  },
-  {
-    label: 'colored',
-    style: {
-      textShadowOffset: {
-        width: 2,
-        height: 2,
-      },
-      textShadowRadius: 2,
-      textShadowColor: COLOR.indigo,
-    },
-  },
-  {
-    label: 'radius only (no iOS shadow)',
-    style: {
-      textShadowRadius: 4,
-    },
-  },
-];
 export const TEXT_TRANSFORMS = ['none', 'lowercase', 'uppercase', 'capitalize'] as const;
 export const TEXT_TRANSFORM_SPECIMEN = 'Quick BROWN fox';
 export const TEXT_TRANSFORM_ORDINAL_SPECIMEN = '3rd place winner';
 export const TEXT_TRANSFORM_CONTRACTION_SPECIMEN = "it's a trap, don't panic";
-export const FONT_VARIANT_FEATURE_FAMILY = Platform.select({
+const FONT_VARIANT_FEATURE_FAMILY = Platform.select({
   ios: 'Baskerville',
   default: undefined,
 });
@@ -281,13 +232,13 @@ export const FONT_VARIATION_SETTINGS: {
   },
 ];
 export const FONT_WEIGHTS = ['normal', 'bold', '100', '300', '500', '700', '900'] as const;
-export type FontFamilyRow = {
+type FontFamilyRow = {
   label: string;
   style: TextStyle & {
     fontFamily: string;
   };
 };
-export const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
+const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
   ios: [
     {
       label: 'System',
@@ -454,7 +405,7 @@ export const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
     },
   ],
 });
-export const CUSTOM_FONT_ROWS: FontFamilyRow[] = [
+const CUSTOM_FONT_ROWS: FontFamilyRow[] = [
   {
     label: 'expo-font alias',
     style: {
@@ -477,7 +428,7 @@ export const CUSTOM_FONT_ROWS: FontFamilyRow[] = [
     },
   },
 ];
-export const UNRESOLVABLE_FONT_ROW: FontFamilyRow = {
+const UNRESOLVABLE_FONT_ROW: FontFamilyRow = {
   label: 'Unresolvable name',
   style: {
     fontSize: 26,
@@ -493,7 +444,7 @@ export const vrtStyles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  example: {
+  scenario: {
     alignSelf: 'stretch',
   },
   base: {

@@ -1,4 +1,4 @@
-import { getVrtExamples } from '../../example/src/vrt/examples';
+import { getVrtScenarios } from '../../example/src/vrt/scenarios';
 import type { VrtSuite } from '../../example/src/vrt/utils';
 
 export { VRT_SUITES, type VrtSuite } from '../../example/src/vrt/utils';
@@ -10,7 +10,7 @@ export type VrtPlatform = (typeof VRT_PLATFORMS)[number];
 // requires exactly these images on both sides. To leave a specimen out, remove
 // it from groups.tsx.
 export function getVrtScenarioIDs(platform: VrtPlatform, suite: VrtSuite): string[] {
-  return getVrtExamples(platform)
-    .filter((example) => example.suite === suite)
+  return getVrtScenarios(platform)
+    .filter((scenario) => scenario.suite === suite)
     .map(({ testID }) => testID);
 }

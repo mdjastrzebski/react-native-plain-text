@@ -21,7 +21,7 @@ case "$platform" in
     android_serial="$(<"$serial_file")"
 
     VRT_ENABLED=1 ANDROID_SERIAL="$android_serial" \
-      yarn android:release --device "$ANDROID_AVD_NAME" --no-bundler
+      yarn example android:release --device "$ANDROID_AVD_NAME" --no-bundler
 
     source_apk="$PROJECT_ROOT/example/android/app/build/outputs/apk/release/app-release.apk"
     target_apk="$PROJECT_ROOT/node_modules/.cache/vrt/apps/android/app-release.apk"
@@ -36,17 +36,12 @@ case "$platform" in
     target_app="$PROJECT_ROOT/node_modules/.cache/vrt/apps/ios/PlainTextExample.app"
     yarn del-cli "$expo_output" "$target_app"
 
-    VRT_ENABLED=1 yarn ios:release --device generic --no-bundler --output "$expo_output"
+    VRT_ENABLED=1 yarn example ios:release --device generic --no-bundler --output "$expo_output"
 
-    mapfile_command="mapfile"
-    if ! command -v "$mapfile_command" >/dev/null 2>&1; then
-      # macOS ships Bash 3, which has no mapfile.
-      ios_apps=()
-      while IFS= read -r app; do ios_apps+=("$app"); done \
-        < <(find "$expo_output" -type d -name '*.app' -prune)
-    else
-      mapfile -t ios_apps < <(find "$expo_output" -type d -name '*.app' -prune)
-    fi
+    # A read loop rather than mapfile: macOS ships Bash 3, which has no mapfile.
+    ios_apps=()
+    while IFS= read -r app; do ios_apps+=("$app"); done \
+      < <(find "$expo_output" -type d -name '*.app' -prune)
     [[ "${#ios_apps[@]}" -eq 1 ]] || fail \
       "Expected one iOS app under $expo_output, found ${#ios_apps[@]}."
     mkdir -p "$(dirname "$target_app")"

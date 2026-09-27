@@ -16,16 +16,15 @@ export function loadVrtScenarios(platform: VrtPlatform, suite: VrtSuite) {
     StyleSheet: {
       create: <T>(styles: T) => styles,
     },
-    Text: 'Text',
     View: 'View',
   }));
 
   const { getVrtScenarioIDs } = require('./scenarios') as typeof import('./scenarios');
-  const { getVrtExamples } =
-    require('../../example/src/vrt/examples') as typeof import('../../example/src/vrt/examples');
+  const { getVrtScenarios } =
+    require('../../example/src/vrt/scenarios') as typeof import('../../example/src/vrt/scenarios');
 
   return {
     scenarioIDs: getVrtScenarioIDs(platform, suite),
-    renderedIDs: getVrtExamples(platform).map(({ testID }) => testID),
+    renderedIDs: getVrtScenarios(platform).map(({ testID }) => testID),
   };
 }

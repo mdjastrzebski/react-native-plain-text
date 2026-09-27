@@ -7,7 +7,7 @@ import {
 import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { screenStyles } from './components/Specimen';
-import { getVrtExamples } from './vrt/examples';
+import { getVrtScenarios } from './vrt/scenarios';
 import { useVrtDeepLink } from './vrt/useVrtDeepLink';
 import { vrtStyles } from './vrt/utils';
 
@@ -23,21 +23,21 @@ export default function AppVrt() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView testID="vrt-safe-area" style={vrtStyles.screen}>
-        <VrtExamples testID={testID} />
+      <SafeAreaView style={vrtStyles.screen}>
+        <VrtScenarios testID={testID} />
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
 
-function VrtExamples({ testID }: { testID: string | null }) {
-  const examples = getVrtExamples(Platform.OS);
+function VrtScenarios({ testID }: { testID: string | null }) {
+  const scenarios = getVrtScenarios(Platform.OS);
 
-  let visibleExamples =
-    testID == null ? examples : examples.filter((example) => example.testID === testID);
+  let visibleScenarios =
+    testID == null ? scenarios : scenarios.filter((scenario) => scenario.testID === testID);
   if (__DEV__ && testID == null) {
     // only for development purposes; a requested specimen is always honored
-    visibleExamples = examples[0] ? [examples[0]] : examples;
+    visibleScenarios = scenarios[0] ? [scenarios[0]] : scenarios;
   }
 
   return (
@@ -46,12 +46,12 @@ function VrtExamples({ testID }: { testID: string | null }) {
       style={screenStyles.scroll}
       contentContainerStyle={screenStyles.container}
     >
-      {visibleExamples.map(({ testID: exampleTestID, specimen }) => (
+      {visibleScenarios.map(({ testID: scenarioTestID, specimen }) => (
         <View
-          key={exampleTestID}
-          testID={exampleTestID}
+          key={scenarioTestID}
+          testID={scenarioTestID}
           collapsable={false}
-          style={vrtStyles.example}
+          style={vrtStyles.scenario}
         >
           {specimen}
         </View>
