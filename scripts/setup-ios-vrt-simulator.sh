@@ -17,6 +17,13 @@ case "$VRT_RESET_DEVICE" in
   0 | 1) ;;
   *) fail "VRT_RESET_DEVICE must be '0' or '1'." ;;
 esac
+# 1 starts the boot and returns; a later run without it waits for the boot and
+# finishes the setup. CI uses this to boot while CocoaPods and the build run.
+VRT_BOOT_ONLY="${VRT_BOOT_ONLY:-0}"
+case "$VRT_BOOT_ONLY" in
+  0 | 1) ;;
+  *) fail "VRT_BOOT_ONLY must be '0' or '1'." ;;
+esac
 
 actual_xcode_version="$(xcrun xcodebuild -version | awk 'NR == 1 { print $2 }')"
 [[ "${actual_xcode_version%%.*}" == "$IOS_XCODE_MAJOR" ]] || fail \
@@ -41,21 +48,41 @@ actual_device_type="$(jq -r '.deviceTypeIdentifier' <<< "$device_json")"
   "Simulator '$simulator_udid' uses '$actual_device_type', expected '$IOS_DEVICE_TYPE_ID'."
 
 state="$(jq -r '.state' <<< "$device_json")"
-if [[ "$state" == "Booted" ]]; then
-  xcrun simctl shutdown "$simulator_udid"
-fi
 if [[ "$VRT_RESET_DEVICE" == "1" ]]; then
+  if [[ "$state" != "Shutdown" ]]; then
+    xcrun simctl shutdown "$simulator_udid"
+  fi
   xcrun simctl erase "$simulator_udid"
+  state=Shutdown
 fi
 
-xcrun simctl boot "$simulator_udid"
+# Each boot costs 1.5-2 minutes on CI.
+if [[ "$state" != "Booted" && "$state" != "Booting" ]]; then
+  xcrun simctl boot "$simulator_udid"
+fi
+if [[ "$VRT_BOOT_ONLY" == "1" ]]; then
+  printf 'iOS VRT simulator is booting: %s (%s).\n' "$IOS_SIMULATOR_NAME" "$simulator_udid"
+  exit 0
+fi
 xcrun simctl bootstatus "$simulator_udid" -b
-xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLanguages -array "$IOS_LANGUAGE"
-xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLocale -string "$IOS_LOCALE"
-# Restart after changing language and locale so applications inherit them.
-xcrun simctl shutdown "$simulator_udid"
-xcrun simctl boot "$simulator_udid"
-xcrun simctl bootstatus "$simulator_udid" -b
+
+# Same reads as verify-vrt-environment.sh. Seeding the preferences before the
+# first boot does not work: first-boot setup replaces them with the host's.
+locale_matches() {
+  [[ "$(xcrun simctl spawn "$simulator_udid" defaults read NSGlobalDomain AppleLocale 2>/dev/null)" == "$IOS_LOCALE" ]] &&
+    [[ "$(xcrun simctl spawn "$simulator_udid" defaults read NSGlobalDomain AppleLanguages 2>/dev/null |
+      sed -n '2s/[[:space:]"",]//gp')" == "$IOS_LANGUAGE" ]]
+}
+
+if ! locale_matches; then
+  printf 'Setting simulator language %s and locale %s, then restarting.\n' "$IOS_LANGUAGE" "$IOS_LOCALE"
+  xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLanguages -array "$IOS_LANGUAGE"
+  xcrun simctl spawn "$simulator_udid" defaults write NSGlobalDomain AppleLocale -string "$IOS_LOCALE"
+  # Restart after changing language and locale so applications inherit them.
+  xcrun simctl shutdown "$simulator_udid"
+  xcrun simctl boot "$simulator_udid"
+  xcrun simctl bootstatus "$simulator_udid" -b
+fi
 xcrun simctl ui "$simulator_udid" appearance light
 xcrun simctl ui "$simulator_udid" content_size "$IOS_CONTENT_SIZE"
 xcrun simctl status_bar "$simulator_udid" override --time 9:41 --batteryLevel 100 --batteryState charged --cellularBars 4 --wifiBars 3
