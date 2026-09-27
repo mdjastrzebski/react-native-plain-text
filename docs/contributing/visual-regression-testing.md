@@ -2,16 +2,10 @@
 
 The VRT suite renders each specimen from `example/src/vrt/groups.tsx` on its own
 screen in a Release build of the example app, screenshots it cropped to the
-specimen's bounds, and compares the PNG with a reviewed baseline.
+specimen's bounds, and compares the PNG with a reviewed baseline in
+`tests/vrt/<platform>/`.
 
 ## Setup
-
-Baselines live in the `baselines` submodule, which is empty after a plain clone.
-No VRT stage fetches it for you:
-
-```sh
-git submodule update --init baselines
-```
 
 Android needs `ANDROID_HOME` (or `ANDROID_SDK_ROOT`). iOS needs Xcode 26 and the
 iOS 26.5 simulator runtime.
@@ -90,22 +84,18 @@ The report (actual, expected, and diff images, plus HTML and JSON) is written to
 
 ## Updating baselines
 
-`compare` never writes baselines. After reviewing a complete capture:
+Baselines are the committed PNGs in `tests/vrt/android/` and `tests/vrt/ios/`,
+one per scenario, plus the `environment.txt` they were captured in. `compare`
+never writes them. After reviewing a complete capture:
 
 ```sh
 yarn vrt ios update
-git -C baselines add --all && git -C baselines commit -m 'Update iOS baselines'
-# push and merge in the baselines repository, then:
-git add baselines
+git add tests/vrt/ios
 ```
 
-The submodule is pinned. CI never uses `--remote` and no script moves the
-pointer, so a commit always compares against the same images. A baseline change
-is a pointer bump in this repo, and the image diff is reviewed in the
-[baselines repository](https://github.com/troZee/react-native-plain-text-artifactory).
-
-Older baselines may still use the `vrt-capture-<name>.png` naming. Compare
-accepts it, and the next `update` rewrites them under the current names.
+`update` replaces the whole platform directory, so check `git status` shows
+only the images you expect. Commit them in the same pull request as the change
+that caused them, where the image diff gets reviewed alongside the code.
 
 ## CI
 

@@ -16,7 +16,7 @@ fail() {
 platform="${1:-}"
 mode="${2:-compare}"
 actual_dir=".vrt/actual/$platform"
-baseline_dir="baselines/$platform"
+baseline_dir="tests/vrt/$platform"
 current_environment=".vrt/environment/$platform.txt"
 baseline_environment="$baseline_dir/environment.txt"
 report_dir=".vrt/report/$platform"
@@ -50,13 +50,6 @@ fi
 if [[ "$mode" == "update" && -f "$partial_marker" ]]; then
   fail "Refusing to turn a partial capture into reviewed baselines. Run a complete 'yarn vrt $platform capture' first."
 fi
-
-# Baselines live in the `baselines` submodule, at the commit this repository
-# pins. This script only reads that working tree: it never runs `git submodule
-# update` or touches any other Git state, so a comparison always reflects the
-# reviewed commit instead of whatever the baseline branch tip happens to be.
-[[ -e baselines/.git ]] || fail \
-  "The baselines submodule is not checked out. Run 'git submodule update --init baselines' to materialize the pinned commit."
 
 yarn del-cli "$report_dir"
 mkdir -p "$report_dir"
@@ -103,29 +96,12 @@ validate_image_set() {
   local directory="$1"
   local label="$2"
   local allow_unexpected="${3:-0}"
-  local legacy_names="${4:-0}"
   local image_list="$report_dir/$label-images.txt"
   local missing_list="$report_dir/$label-missing.txt"
   local unexpected_list="$report_dir/$label-unexpected.txt"
-  local ambiguous_list="$report_dir/$label-ambiguous.txt"
 
   [[ -d "$directory" ]] || fail "$label image directory not found at $directory."
-  if [[ "$legacy_names" == "1" ]]; then
-    # Baselines may still use the legacy names (see vrt-config.sh), so both
-    # spellings count as the current one. Holding both spellings of one image
-    # would leave the lookup's first choice as the silent winner, so it fails.
-    find "$directory" -type f -name '*.png' -exec basename {} \; |
-      vrt_current_image_names | LC_ALL=C sort > "$image_list"
-    uniq -d "$image_list" > "$ambiguous_list"
-    if [[ -s "$ambiguous_list" ]]; then
-      printf '%s images in %s under both their current and their legacy vrt-capture- name:\n' \
-        "$label" "$directory" >&2
-      sed 's/^/  /' "$ambiguous_list" >&2
-      return 1
-    fi
-  else
-    find "$directory" -type f -name '*.png' -exec basename {} \; | LC_ALL=C sort > "$image_list"
-  fi
+  find "$directory" -type f -name '*.png' -exec basename {} \; | LC_ALL=C sort > "$image_list"
   comm -23 "$expected_list" "$image_list" > "$missing_list"
   comm -13 "$expected_list" "$image_list" > "$unexpected_list"
 
@@ -165,7 +141,7 @@ if [[ "$mode" == "update" ]]; then
   done < "$expected_list"
   cp -a "$current_environment" "$baseline_environment"
   printf 'Updated reviewed %s baselines in %s.\n' "$platform" "$baseline_dir"
-  printf 'Commit and merge them in the baselines repository, then record the new submodule commit with "git add baselines".\n'
+  printf 'Review the image diff, then commit %s with your change.\n' "$baseline_dir"
   exit 0
 fi
 
@@ -174,10 +150,10 @@ fi
 [[ -f "$baseline_environment" ]] || fail \
   "Baseline environment metadata not found at $baseline_environment."
 if [[ "$mode" == "partial" ]]; then
-  validate_image_set "$baseline_dir" baseline 1 1 || fail \
+  validate_image_set "$baseline_dir" baseline 1 || fail \
     "Reviewed baselines do not contain the partial capture set."
 else
-  validate_image_set "$baseline_dir" baseline 0 1 || fail \
+  validate_image_set "$baseline_dir" baseline || fail \
     "Reviewed baseline set does not match the VRT groups."
 fi
 
@@ -224,7 +200,7 @@ mkdir -p "$report_actual_dir" "$report_expected_dir" "$diff_dir"
 
 while IFS= read -r image; do
   cp -a "$actual_dir/$image" "$report_actual_dir/$image"
-  cp -a "$(vrt_baseline_path "$baseline_dir" "$image")" "$report_expected_dir/$image"
+  cp -a "$baseline_dir/$image" "$report_expected_dir/$image"
 done < "$expected_list"
 cp -a "$current_environment" "$report_dir/current-environment.txt"
 cp -a "$baseline_environment" "$report_dir/baseline-environment.txt"

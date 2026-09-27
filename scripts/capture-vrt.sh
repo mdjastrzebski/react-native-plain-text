@@ -299,12 +299,9 @@ while read -r capture_id; do
   captured=$((captured + 1))
   if [[ "$live_compare" == "1" ]]; then
     [[ -t 1 ]] && printf '\r\033[K'
-    # A missing baseline keeps the plain path, which the live compare reports.
-    baseline="$(vrt_baseline_path "$PROJECT_ROOT/baselines/$platform" "$image")" ||
-      baseline="$PROJECT_ROOT/baselines/$platform/$image"
     node "$SCRIPT_DIR/vrt-live-compare.js" \
       "$actual_dir/$image" \
-      "$baseline" \
+      "$PROJECT_ROOT/tests/vrt/$platform/$image" \
       "$live_diff_dir/$image" \
       "$live_matching_threshold" \
       "$VRT_THRESHOLD_PIXEL" || true
