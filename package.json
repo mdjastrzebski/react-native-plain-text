@@ -159,6 +159,9 @@
         "<%- project.sourceCondition -%>"
       ]
     },
+    "moduleNameMapper": {
+      "^react-native-plain-text$": "<rootDir>/src/index"
+    },
     "modulePathIgnorePatterns": [
       "<rootDir>/example/node_modules",
       "<rootDir>/lib/",
