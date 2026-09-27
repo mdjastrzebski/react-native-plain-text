@@ -45,13 +45,22 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
     attributes[NSKernAttributeName] = @(props.letterSpacing.value());
   }
 
+  // Language picks the hyphenation dictionary and locale-sensitive breaking.
+  if (props.lang.has_value()) {
+    NSString *lang = [NSString stringWithUTF8String:props.lang.value().c_str()];
+    if (lang != nil) {
+      attributes[NSLanguageIdentifierAttributeName] = lang;
+    }
+  }
+
   // The per-line height used to cap numberOfLines: the pinned lineHeight when
   // set, otherwise the font's natural line height.
   Float perLineHeight = static_cast<Float>(font.lineHeight);
   bool hasLineHeight = props.lineHeight > 0;
   bool hasLineBreakStrategy = props.lineBreakStrategyIOS != RNPlainTextLineBreakStrategyIOS::None;
+  NSMutableParagraphStyle *paragraphStyle = nil;
   if (hasLineHeight || hasLineBreakStrategy) {
-    NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
+    paragraphStyle = [NSMutableParagraphStyle new];
     if (hasLineHeight) {
       // Scaled by the same multiplier as the font (mirrors RNPlainText.mm).
       CGFloat lineHeight = props.lineHeight * fontSizeMultiplier;
@@ -63,6 +72,17 @@ Size PlainTextShadowNode::measureContent(const LayoutContext &layoutContext, con
       // Affects wrapping, so must match RNPlainText.mm's rendered value.
       paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
     }
+  }
+
+  // Only "auto" changes line breaking; "none" (the default) is a no-op.
+  if (props.hyphens == RNPlainTextHyphens::Auto) {
+    if (paragraphStyle == nil) {
+      paragraphStyle = [NSMutableParagraphStyle new];
+    }
+    paragraphStyle.usesDefaultHyphenation = YES;
+  }
+
+  if (paragraphStyle != nil) {
     attributes[NSParagraphStyleAttributeName] = paragraphStyle;
   }
 

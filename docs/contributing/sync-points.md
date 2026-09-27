@@ -42,6 +42,8 @@ most props only touch a few.
 - `textShadowOffsetHeight`
 - `textShadowRadius`
 - `textTransform`
+- `hyphens`
+- `lang`
 - `numberOfLines`
 - `ellipsizeMode`
 - `lineBreakStrategyIOS` (iOS-only — no Android setter body, no Android entry in
@@ -91,6 +93,8 @@ Common: touch all five files below.
 - `lineHeight`
 - `letterSpacing`
 - `textTransform`
+- `hyphens`
+- `lang`
 - `numberOfLines`
 - `allowFontScaling`
 - `maxFontSizeMultiplier`
@@ -182,6 +186,7 @@ agree on. Two flavors, both three-way:
   - `fontSize` (`14.0`)
   - `lineHeight` (`0.0`)
   - `textTransform` (`None`)
+  - `hyphens` (`None`)
   - `numberOfLines` (`0`)
   - `allowFontScaling` (`true`)
   - `maxFontSizeMultiplier` (`0.0`)
@@ -198,6 +203,7 @@ agree on. Two flavors, both three-way:
   - `fontVariant`
   - `fontVariationSettings`
   - `letterSpacing`
+  - `lang`
 
 **Files, per prop above, all three must agree on what "absent" resolves to:**
 
@@ -356,7 +362,7 @@ Fabric's props diff never fires, and every derived value is stale until somethin
 
 **Files:**
 
-- `ios/RNPlainText.mm`:204 → `traitCollectionDidChange` — fires on a Dynamic Type change
+- `ios/RNPlainText.mm`:219 → `traitCollectionDidChange` — fires on a Dynamic Type change
 - `android/src/main/java/com/mdjstack/plaintext/PlainTextView.kt`:242 → `onConfigurationChanged` — fires on a font scale
   change, if the Activity declares it¹
 
@@ -399,9 +405,10 @@ Only the invalidation logic is genuinely shared, in `cpp/PlainTextMeasurementHel
 **Props:** every prop `applyContentFromProps` applies to `_label` — text (`text`, `textTransform`), font (`fontFamily`,
 `fontSize`, `fontWeight`, `fontStyle`, `fontVariant`, `fontVariationSettings`, `allowFontScaling`,
 `maxFontSizeMultiplier`), color (`color`), alignment (`textAlign`, `textAlignVertical`, `verticalAlign`,
-`writingDirection`), `letterSpacing`, `lineHeight`, `textDecorationLine`, `numberOfLines`, `ellipsizeMode`,
-`lineBreakStrategyIOS`, plus the shadow props (`textShadowColor`, `textShadowOffsetWidth`, `textShadowOffsetHeight`,
-`textShadowRadius`) — i.e. Set 2's list plus every draw-only prop from [Set 1](#set-1--any-prop-the-four-layer-flow).
+`writingDirection`), `letterSpacing`, `lineHeight`, `textDecorationLine`, `hyphens`, `lang`, `numberOfLines`,
+`ellipsizeMode`, `lineBreakStrategyIOS`, plus the shadow props (`textShadowColor`, `textShadowOffsetWidth`,
+`textShadowOffsetHeight`, `textShadowRadius`) — i.e. Set 2's list plus every draw-only prop from
+[Set 1](#set-1--any-prop-the-four-layer-flow).
 
 Fabric recycles component views by type. iOS does it unconditionally through `RCTComponentViewRegistry`; Android only if
 a view manager opts in via `setupViewRecycling()`, which `PlainTextViewManager` never calls — so this set is iOS-only
@@ -409,8 +416,8 @@ today.
 
 **Files:**
 
-- `ios/RNPlainText.mm`:108 → `applyContentFromProps` — fully determines the label's state (font, color, alignment,
-  `text`/`attributedText`, `verticalTextShift`); must mirror the attribute set `PlainTextShadowNode::measureContent`
+- `ios/RNPlainText.mm`:109 → `applyContentFromProps` — fully determines the label's state (font, color, alignment,
+  `attributedText`, `verticalTextShift`); must mirror the attribute set `PlainTextShadowNode::measureContent`
   reads (see [Set 2](#set-2--a-prop-that-affects-measured-size))
 - `ios/RNPlainText.mm` → `_forceApplyProps` — set in `-initWithFrame:`, checked and cleared on the first `-updateProps`;
   forces content/`numberOfLines`/`lineBreakMode` to apply unconditionally on first mount regardless of the diff
@@ -428,7 +435,7 @@ plain diff is already correct — real prop differences apply normally, and a co
 shows the right thing.
 
 **This is why there is no "reset every `_label` property to its default" routine, and why a new prop doesn't need one.**
-`applyContentFromProps` fully determines the label's state (font, color, alignment, `text`/`attributedText`,
+`applyContentFromProps` fully determines the label's state (font, color, alignment, `attributedText`,
 `verticalTextShift`), and the forced apply on first mount runs it before anything is on screen, so a fresh view needs no
 separate seeding. Two earlier, rejected versions of this fix show why that's the right place to stop:
 
@@ -444,14 +451,14 @@ separate seeding. Two earlier, rejected versions of this fix show why that's the
   this document exists to avoid. If a `_label` property is ever set outside `applyContentFromProps`/`updateProps`, that
   reasoning breaks and it needs its own handling.
 
-**One property inside `applyContentFromProps` needs its own explicit handling: `attributedText`.** Text content is
-carried on either `.text` (plain path) or `.attributedText` (letterSpacing, lineHeight, underline/strikethrough), only
-one set per call. Apple documents that setting `.text` also clears `.attributedText`, but a real repro (recycled from an
-instance with `letterSpacing` into one without) showed the old kerning surviving. The plain path now sets
-`_label.attributedText = nil` explicitly before `.text`. A future rewrite of `applyContentFromProps` must keep doing
-this — the failure is invisible until something is recycled from the attributed path into the plain one.
+**Text content has one backing store: `attributedText`.** An earlier `applyContentFromProps` carried text on either
+`.text` (plain path) or `.attributedText`, and a real repro (recycled from an instance with `letterSpacing` into one
+without) showed the old kerning surviving a `.text` write, despite Apple documenting that `.text` clears
+`.attributedText`. It needed an explicit `_label.attributedText = nil` first. The plain path has since been removed for
+speed ([performance.md](performance.md#always-use-the-attributed-string-path-on-ios-iosrnplaintextmm)), so every apply
+now replaces the whole attributed string. A future rewrite that reintroduces `.text` must bring the reset back.
 
-Android likely doesn't share this specific hazard: `PlainTextView.applyText()` has the same plain-vs-spanned duality
+Android likely doesn't share this specific hazard: `PlainTextView.applyText()` has a plain-vs-spanned duality
 (`setText(value)` vs. a `SpannableString` carrying the `lineHeight` span), but both branches go through the single
 `setText()` entry point, so there's no second backing store for a stale span to hide in. It has no recycling reset of
 any kind either: `PlainTextView`/`PlainTextViewManager` reset nothing on reuse, where RN's own `ReactTextViewManager`
@@ -585,6 +592,49 @@ serialized props.
 
 **Failure mode:** a mismatch doesn't fail loudly — `measure()` never takes the baseline branch, and `baseline()`
 silently gets back the measured height packed into the wrong slot instead of `TextView.getBaseline()`.
+
+---
+
+## Set 16 — RN `<Text>` props PlainText can't honor
+
+**Props:** every RN `TextProps` key missing from `NativeProps`: `onPress`, `onLongPress`, `onPressIn`, `onPressOut`,
+`onTextLayout`, `selectable`, `adjustsFontSizeToFit`, `dataDetectorType`, `dynamicTypeRamp`, plus `selectionColor`,
+`disabled`, `suppressHighlighting`, `minimumFontScale` and `pressRetentionOffset`, which only matter alongside one of
+them.
+
+`PlainTextProps` is an allowlist, so `PlainText` rejects these at the type level; a type test in
+`src/__tests__/PlainText.test.tsx` fails if the allowlist names a prop `NativeProps` lacks. The unified `Text` accepts
+every RN `<Text>` prop, so it warns in `__DEV__` instead, and that warning has to list them by hand: types don't exist
+at runtime.
+
+**Files:**
+
+- `src/PlainTextViewNativeComponent.ts` → `NativeProps` — what reaches the native view
+- `src/utils.ts` → `findUnsupportedProp` — the `Text` warning
+
+**Contract:** every `TextProps` key missing from `NativeProps` is checked in `findUnsupportedProp`, except the ones that
+only matter alongside another. Adding one of these props to the spec means removing it from the warning.
+
+**Failure mode:** a prop missing from the warning is dropped by `Text` with no message. A prop the spec gains but the
+warning still lists warns about something that now works.
+
+---
+
+## Set 17 — PlainText props RN `<Text>` drops
+
+**Props:** every `PlainTextOwnProps` key except `text`, which `Text` passes to RN `<Text>` as children.
+
+When the unified `Text` falls back to RN `<Text>` (`deopt`, nested text, non-string children), these props are lost.
+`Text` warns in `__DEV__` when one is set.
+
+**Files:**
+
+- `src/PlainText.tsx` → `PlainTextOwnProps` — the props `PlainText` adds
+- `src/utils.ts` → `findPlainTextOnlyProp` — the `Text` warning
+
+**Contract:** every `PlainTextOwnProps` key RN `<Text>` drops is checked in `findPlainTextOnlyProp`.
+
+**Failure mode:** a new `PlainTextOwnProps` key missing from the warning is dropped on fallback with no message.
 
 ---
 

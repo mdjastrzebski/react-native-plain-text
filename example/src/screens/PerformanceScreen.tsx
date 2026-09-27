@@ -17,6 +17,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getMemoryFootprint } from 'react-native-memory-footprint';
 import {
   PlainText,
+  Text as UnifiedText,
   unstable_NativePlainText as NativePlainText,
   type PlainTextStyle,
 } from 'react-native-plain-text';
@@ -39,11 +40,13 @@ const MOUNT_TEXT_STRIDE = 10_000;
 // adjustable via the Props sheet's 'settleMs'.
 const DEFAULT_SETTLE_MS = 5_000;
 
-type Kind = 'plain' | 'nativePlain' | 'text' | 'nativeText';
+type Kind = 'plain' | 'nativePlain' | 'unified' | 'text' | 'nativeText';
 
 const VARIANTS: { kind: Kind; label: string }[] = [
   { kind: 'plain', label: 'PlainText' },
   { kind: 'nativePlain', label: 'NativePlainText' },
+  // The library's unified Text, labelled "Unified Text" to stay distinct from RN <Text>.
+  { kind: 'unified', label: 'Unified Text' },
   { kind: 'text', label: 'Text' },
   { kind: 'nativeText', label: 'NativeText' },
 ];
@@ -541,6 +544,16 @@ function renderItems(kind: Kind, applied: Applied, offset: number, count: number
     ));
   }
 
+  if (kind === 'unified') {
+    // rnStyle: UnifiedText takes RN's TextProps. The cast is type-only, so
+    // fontVariationSettings still reaches PlainText at runtime.
+    return Array.from({ length: count }, (_, n) => (
+      <UnifiedText key={n} style={rnStyle} {...extra}>
+        {label(n)}
+      </UnifiedText>
+    ));
+  }
+
   if (kind === 'text') {
     return Array.from({ length: count }, (_, n) => (
       <Text key={n} style={rnStyle} {...extra}>
@@ -863,6 +876,39 @@ const ATTRIBUTES: AttrDef[] = [
       { label: 'center', value: 'center' },
       { label: 'bottom', value: 'bottom' },
     ],
+  },
+  {
+    // A plain prop, not a style key, hence `target: 'prop'`.
+    key: 'hyphens',
+    section: 'Text',
+    fp: 'hy',
+    target: 'prop',
+    options: [
+      { label: '(none)' },
+      { label: 'none', value: 'none' },
+      { label: 'auto', value: 'auto' },
+    ],
+  },
+  {
+    // RN <Text> compat, priced separately from hyphens above.
+    key: 'android_hyphenationFrequency',
+    section: 'Text',
+    fp: 'ahf',
+    target: 'prop',
+    options: [
+      { label: '(none)' },
+      { label: 'none', value: 'none' },
+      { label: 'normal', value: 'normal' },
+      { label: 'full', value: 'full' },
+    ],
+  },
+  {
+    // 'de' pairs with hyphens="auto" above.
+    key: 'lang',
+    section: 'Text',
+    fp: 'lang',
+    target: 'prop',
+    options: [{ label: '(none)' }, { label: 'en', value: 'en' }, { label: 'de', value: 'de' }],
   },
   {
     key: 'numberOfLines',

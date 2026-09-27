@@ -64,6 +64,12 @@ folly::dynamic serializeProps(const RNPlainTextProps &props) {
   if (props.textTransform != RNPlainTextTextTransform::None) {
     serializedProps["textTransform"] = toString(props.textTransform);
   }
+  if (props.hyphens != RNPlainTextHyphens::None) {
+    serializedProps["hyphens"] = toString(props.hyphens);
+  }
+  if (props.lang.has_value()) {
+    serializedProps["lang"] = props.lang.value();
+  }
   if (props.numberOfLines != 0) {
     serializedProps["numberOfLines"] = props.numberOfLines;
   }

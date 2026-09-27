@@ -46,6 +46,17 @@ using namespace plaintext;
     [self setNeedsDisplay];
 }
 
+// Same as verticalTextShift: a recycled view whose text and font are unchanged
+// would otherwise keep drawing at the previous alignment.
+- (void)setVerticalAlignment:(RNPlainTextTextAlignVertical)verticalAlignment
+{
+    if (_verticalAlignment == verticalAlignment) {
+        return;
+    }
+    _verticalAlignment = verticalAlignment;
+    [self setNeedsDisplay];
+}
+
 - (CGRect)textRectForBounds:(CGRect)bounds limitedToNumberOfLines:(NSInteger)numberOfLines
 {
     // super's rect is top-anchored at bounds.origin.y and never centered, so the
@@ -102,7 +113,7 @@ using namespace plaintext;
   return self;
 }
 
-// Once lineHeight or letterSpacing is set, text/font/color/alignment must go through an NSAttributedString since UILabel has no plain properties for them.
+// Always one NSAttributedString, even when no prop needs an attribute: a single attributedText write mounts faster than UILabel's separate text/font/textColor/textAlignment setters (see docs/contributing/performance.md#always-use-the-attributed-string-path-on-ios-iosrnplaintextmm).
 // SYNC: PlainTextShadowNode::measureContent must mirror every attribute set here (font excepted, both go through resolveFont) or measured size won't match drawn text.
 // See docs/contributing/sync-points.md#set-2--a-prop-that-affects-measured-size
 // and docs/contributing/sync-points.md#set-10--recycled-view-state-ios.
@@ -125,21 +136,11 @@ using namespace plaintext;
         hasUnderline = textDecorationHasUnderline(textDecorationLine);
         hasLineThrough = textDecorationHasLineThrough(textDecorationLine);
     }
-    BOOL hasTextDecoration = hasUnderline || hasLineThrough;
     BOOL hasTextShadow = props.textShadowOffsetWidth.has_value() || props.textShadowOffsetHeight.has_value();
     BOOL hasWritingDirection = props.writingDirection != RNPlainTextWritingDirection::Auto;
-
-    if (!hasLineHeight && !hasLetterSpacing && !hasTextDecoration && !hasTextShadow && !hasWritingDirection) {
-        // Explicitly nil attributedText: a view recycled from an attributed instance kept the old kerning/spacing even after .text and every prop were correct, so setting .text alone isn't enough.
-        _label.attributedText = nil;
-        _label.font = font;
-        _label.textColor = color;
-        _label.textAlignment = alignment;
-        _label.text = text;
-        _label.verticalTextShift = 0;
-        _label.verticalAlignment = resolveVerticalAlign(props.textAlignVertical, props.verticalAlign);
-        return;
-    }
+    // Only "auto" turns hyphenation on; "none" (the default) is a no-op.
+    BOOL hasHyphenation = props.hyphens == RNPlainTextHyphens::Auto;
+    BOOL hasLang = props.lang.has_value();
 
     NSMutableDictionary<NSAttributedStringKey, id> *attributes = [NSMutableDictionary dictionary];
     attributes[NSFontAttributeName] = font;
@@ -171,6 +172,13 @@ using namespace plaintext;
         attributes[NSShadowAttributeName] = shadow;
     }
 
+    if (hasLang) {
+        NSString *lang = [NSString stringWithUTF8String:props.lang.value().c_str()];
+        if (lang != nil) {
+            attributes[NSLanguageIdentifierAttributeName] = lang;
+        }
+    }
+
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     // UILabel resolves NSTextAlignmentNatural from the app's own layout direction, not
     // this paragraph's baseWritingDirection below, so an explicit writingDirection would
@@ -186,6 +194,10 @@ using namespace plaintext;
     paragraphStyle.lineBreakMode = lineBreakModeFromProp(props.ellipsizeMode);
     paragraphStyle.lineBreakStrategy = lineBreakStrategyFromProp(props.lineBreakStrategyIOS);
     paragraphStyle.baseWritingDirection = writingDirectionFromProp(props.writingDirection);
+
+    if (hasHyphenation) {
+        paragraphStyle.usesDefaultHyphenation = YES;
+    }
 
     CGFloat verticalTextShift = 0;
     if (hasLineHeight) {
@@ -235,7 +247,7 @@ using namespace plaintext;
     const auto &oldViewProps = *std::static_pointer_cast<RNPlainTextProps const>(_props);
     const auto &newViewProps = *std::static_pointer_cast<RNPlainTextProps const>(props);
 
-    // These all feed applyContentFromProps since they may share an attributed string
+    // These all feed applyContentFromProps since they all go into its one attributed string
     // (ellipsizeMode/lineBreakStrategyIOS via its paragraph style).
     if (_forceApplyProps ||
         oldViewProps.text != newViewProps.text ||
@@ -258,6 +270,8 @@ using namespace plaintext;
         oldViewProps.textShadowOffsetHeight != newViewProps.textShadowOffsetHeight ||
         oldViewProps.textShadowRadius != newViewProps.textShadowRadius ||
         oldViewProps.textTransform != newViewProps.textTransform ||
+        oldViewProps.hyphens != newViewProps.hyphens ||
+        oldViewProps.lang != newViewProps.lang ||
         oldViewProps.ellipsizeMode != newViewProps.ellipsizeMode ||
         oldViewProps.lineBreakStrategyIOS != newViewProps.lineBreakStrategyIOS ||
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||

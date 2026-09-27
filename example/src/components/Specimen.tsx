@@ -94,6 +94,31 @@ export function Section({
   );
 }
 
+// Groups rows under a named prop within a Section, e.g. splitting Hyphenation's
+// `hyphens` rows from its `android_hyphenationFrequency` rows. Notes about the
+// subsection's own prop go in its `footer`; notes spanning every prop in the
+// Section stay in the Section's own `footer`.
+export function Subsection({
+  title,
+  footer,
+  children,
+}: {
+  title: string;
+  footer?: string;
+  children: ReactNode;
+}) {
+  return (
+    <View style={styles.subsection}>
+      <View style={styles.subsectionHeaderRow}>
+        <PlainText style={styles.subsectionHeader}>{title.toUpperCase()}</PlainText>
+        <View style={styles.subsectionRule} />
+      </View>
+      {children}
+      {footer != null && <PlainText style={styles.sectionFooter}>{footer}</PlainText>}
+    </View>
+  );
+}
+
 export function TextItem({
   label,
   style,
@@ -104,16 +129,18 @@ export function TextItem({
   lineBreakStrategyIOS,
   textBreakStrategy,
   android_hyphenationFrequency,
+  hyphens,
   allowFontScaling,
   maxFontSizeMultiplier,
+  lang,
   accessibilityProps,
   children,
 }: {
   // Caption above the specimen. Omitted by composite use-case rows, which have
   // no single value to show here.
   label?: string;
-  // PlainTextStyle, not TextStyle: Font Variation Settings rows carry
-  // fontVariationSettings, which RN's TextStyle has no key for.
+  // PlainTextStyle, not TextStyle: the fontVariationSettings row uses a key RN
+  // has no style entry for. The overlay below casts it away.
   style?: StyleProp<PlainTextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   showText: boolean;
@@ -122,8 +149,12 @@ export function TextItem({
   lineBreakStrategyIOS?: 'none' | 'standard' | 'hangul-word' | 'push-out';
   textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
   android_hyphenationFrequency?: 'none' | 'normal' | 'full';
+  // PlainText-only prop; RN <Text> has no equivalent, so it isn't forwarded
+  // to the comparison overlay below.
+  hyphens?: 'none' | 'auto';
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
+  lang?: string;
   // Forwarded to both PlainText and the comparison Text so both expose the same
   // accessibility surface.
   accessibilityProps?: AccessibilityProps & { testID?: string };
@@ -148,9 +179,11 @@ export function TextItem({
             lineBreakStrategyIOS={lineBreakStrategyIOS}
             textBreakStrategy={textBreakStrategy}
             android_hyphenationFrequency={android_hyphenationFrequency}
+            hyphens={hyphens}
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             unstable_lineHeightClippingCompat={compatOn}
+            lang={lang}
             {...accessibilityProps}
           >
             {children}
@@ -345,6 +378,27 @@ const styles = StyleSheet.create({
   },
   // Fills whatever the header label leaves, out to the margin.
   sectionRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: COLOR.line,
+  },
+  // 0, same reasoning as `section`: each row supplies its own RUN_OFF spacing.
+  subsection: {
+    gap: 0,
+  },
+  subsectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  subsectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: COLOR.ink,
+  },
+  subsectionRule: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
     backgroundColor: COLOR.line,
