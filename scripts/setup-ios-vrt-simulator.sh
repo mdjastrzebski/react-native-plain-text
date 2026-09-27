@@ -19,11 +19,8 @@ case "$VRT_RESET_DEVICE" in
 esac
 
 actual_xcode_version="$(xcrun xcodebuild -version | awk 'NR == 1 { print $2 }')"
-actual_xcode_build="$(xcrun xcodebuild -version | awk 'NR == 2 { print $3 }')"
-[[ "$actual_xcode_version" == "$IOS_XCODE_VERSION" ]] || fail \
-  "Xcode $IOS_XCODE_VERSION is required, but version $actual_xcode_version is selected."
-[[ "$actual_xcode_build" == "$IOS_XCODE_BUILD" ]] || fail \
-  "Xcode build $IOS_XCODE_BUILD is required, but build $actual_xcode_build is selected."
+[[ "${actual_xcode_version%%.*}" == "$IOS_XCODE_MAJOR" ]] || fail \
+  "Xcode $IOS_XCODE_MAJOR.x is required, but version $actual_xcode_version is selected."
 
 runtime_build="$(xcrun simctl list runtimes --json | jq -r --arg id "$IOS_RUNTIME_ID" '.runtimes[] | select(.identifier == $id) | .buildversion')"
 [[ "$runtime_build" == "$IOS_RUNTIME_BUILD" ]] || fail \

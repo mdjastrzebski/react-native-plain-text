@@ -199,7 +199,10 @@ normalize_environment() {
     # a rendering input, so it stays out of the equality check.
     sed -E '/^android_(architecture|system_image|serial)=/d' "$input" > "$output"
   else
-    cp -a "$input" "$output"
+    # The simulator runtime renders the pixels and stays enforced. Xcode only
+    # has to share its major version, which verify-vrt-environment.sh enforces,
+    # so the exact version and build are recorded but not compared.
+    sed -E '/^ios_xcode_(version|build)=/d' "$input" > "$output"
   fi
 }
 

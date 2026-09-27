@@ -142,11 +142,15 @@ case "$platform" in
     [[ -f "$udid_file" ]] || fail "Run 'yarn vrt ios setup' first."
     ios_udid="$(<"$udid_file")"
 
+    # Only the major version is enforced. The exact version and build are still
+    # recorded, and compare-vrt.sh leaves them out of its equality check.
     xcode_output="$(xcrun xcodebuild -version)"
-    expect ios_xcode_version "$IOS_XCODE_VERSION" \
-      "$(awk 'NR == 1 { print $2 }' <<< "$xcode_output")"
-    expect ios_xcode_build "$IOS_XCODE_BUILD" \
-      "$(awk 'NR == 2 { print $3 }' <<< "$xcode_output")"
+    xcode_version="$(awk 'NR == 1 { print $2 }' <<< "$xcode_output")"
+    if [[ "${xcode_version%%.*}" != "$IOS_XCODE_MAJOR" ]]; then
+      environment_mismatches+=("ios_xcode_version must be $IOS_XCODE_MAJOR.x, but is '${xcode_version:-missing}'")
+    fi
+    printf 'ios_xcode_version=%s\n' "$xcode_version"
+    printf 'ios_xcode_build=%s\n' "$(awk 'NR == 2 { print $3 }' <<< "$xcode_output")"
 
     runtimes_json="$(xcrun simctl list runtimes --json)"
     devices_json="$(xcrun simctl list devices --json)"
