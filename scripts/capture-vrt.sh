@@ -106,6 +106,15 @@ capture_attempts="${VRT_CAPTURE_ATTEMPTS:-5}"
 # off (scripts/setup-android-vrt-device.sh). VRT_ANDROID_STABILIZE=1 restores it.
 android_stabilize="${VRT_ANDROID_STABILIZE:-0}"
 timing="${VRT_TIMING:-0}"
+# Compare each capture with its baseline as soon as it is taken, so failures show
+# up during the run instead of only at the compare stage. VRT_LIVE_COMPARE=0
+# turns it off.
+live_compare="${VRT_LIVE_COMPARE:-1}"
+live_diff_dir="$PROJECT_ROOT/build/vrt/live-diff/$platform"
+case "$platform" in
+  android) live_matching_threshold="$ANDROID_VRT_MATCHING_THRESHOLD" ;;
+  *) live_matching_threshold="$IOS_VRT_MATCHING_THRESHOLD" ;;
+esac
 timings_dir="$PROJECT_ROOT/build/vrt/timings"
 timings_file="$timings_dir/$platform.tsv"
 
@@ -222,6 +231,9 @@ else
   yarn del-cli --force "$actual_dir"
 fi
 mkdir -p "$actual_dir"
+if [[ "$live_compare" == "1" ]]; then
+  yarn del-cli "$live_diff_dir"
+fi
 if [[ "$requested_selection" != "all" ]]; then
   printf '%s\n' "$requested_selection" > "$partial_marker"
 fi
@@ -281,6 +293,14 @@ while read -r capture_platform capture_id extra; do
     sleep 0.2
   done
   captured=$((captured + 1))
+  if [[ "$live_compare" == "1" ]]; then
+    node "$SCRIPT_DIR/vrt-live-compare.js" \
+      "$actual_dir/$capture_id.png" \
+      "$PROJECT_ROOT/baselines/$platform/$capture_id.png" \
+      "$live_diff_dir/$capture_id.png" \
+      "$live_matching_threshold" \
+      "$VRT_THRESHOLD_PIXEL" || true
+  fi
 done < "$manifest"
 
 [[ "$captured" -gt 0 ]] || fail \

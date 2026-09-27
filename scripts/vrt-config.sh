@@ -15,8 +15,8 @@ export VRT_THRESHOLD_PIXEL="${VRT_THRESHOLD_PIXEL:-0}"
 
 export ANDROID_AVD_NAME="${ANDROID_AVD_NAME:-plaintext_vrt_api36_pixel9}"
 export ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-36}"
-export ANDROID_SYSTEM_IMAGE_TARGET="${ANDROID_SYSTEM_IMAGE_TARGET:-default}"
-export ANDROID_SYSTEM_IMAGE_REVISION="${ANDROID_SYSTEM_IMAGE_REVISION:-2}"
+export ANDROID_SYSTEM_IMAGE_TARGET="${ANDROID_SYSTEM_IMAGE_TARGET:-google_apis}"
+export ANDROID_SYSTEM_IMAGE_REVISION="${ANDROID_SYSTEM_IMAGE_REVISION:-7}"
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) default_android_architecture="arm64-v8a" ;;
   Darwin-x86_64 | Linux-x86_64) default_android_architecture="x86_64" ;;
