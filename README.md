@@ -157,14 +157,14 @@ The `e2e` stage always runs `verify` first. Verification is read-only and fails
 before launching the app if the pinned SDK, emulator or simulator, device
 hardware profile, locale, display, font scale, appearance, rotation, or
 animation settings do not match the VRT profile. Its observed values are saved
-under `build/vrt/environment/`.
+under `.vrt/environment/`.
 
 Expo's Release output is copied to a stable location before installation and
 testing:
 
 ```text
-build/vrt/apps/android/app-release.apk
-build/vrt/apps/ios/PlainTextExample.app
+node_modules/.cache/vrt/apps/android/app-release.apk
+node_modules/.cache/vrt/apps/ios/PlainTextExample.app
 ```
 
 Each copied app records a fingerprint of its native and JavaScript build inputs.
@@ -185,14 +185,14 @@ Verify the installation:
 
 ```sh
 xcrun simctl get_app_container \
-  "$(cat build/vrt/devices/ios-udid)" plaintext.example app
+  "$(cat .vrt/devices/ios-udid)" plaintext.example app
 ```
 
 Open a specimen using its deep link:
 
 ```sh
 xcrun simctl openurl \
-  "$(cat build/vrt/devices/ios-udid)" \
+  "$(cat .vrt/devices/ios-udid)" \
   'exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48'
 ```
 
@@ -209,7 +209,7 @@ yarn vrt android install
 Stop the app, then open a specimen using its deep link:
 
 ```sh
-android_serial="$(cat build/vrt/devices/android-serial)"
+android_serial="$(cat .vrt/devices/android-serial)"
 adb -s "$android_serial" shell 'am force-stop plaintext.example'
 
 adb -s "$android_serial" shell 'am start -W \

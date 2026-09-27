@@ -16,7 +16,7 @@ fail() {
 platform="${1:-}"
 case "$platform" in
   android)
-    serial_file="$PROJECT_ROOT/build/vrt/devices/android-serial"
+    serial_file="$PROJECT_ROOT/.vrt/devices/android-serial"
     [[ -f "$serial_file" ]] || fail "Run 'yarn vrt android setup' first."
     android_serial="$(<"$serial_file")"
 
@@ -24,7 +24,7 @@ case "$platform" in
       yarn android:release --device "$ANDROID_AVD_NAME" --no-bundler
 
     source_apk="$PROJECT_ROOT/example/android/app/build/outputs/apk/release/app-release.apk"
-    target_apk="$PROJECT_ROOT/build/vrt/apps/android/app-release.apk"
+    target_apk="$PROJECT_ROOT/node_modules/.cache/vrt/apps/android/app-release.apk"
     [[ -f "$source_apk" ]] || fail "Expo did not produce $source_apk."
     mkdir -p "$(dirname "$target_apk")"
     cp -a "$source_apk" "$target_apk"
@@ -32,8 +32,8 @@ case "$platform" in
     printf 'Android Release artifact: %s\n' "$target_apk"
     ;;
   ios)
-    expo_output="$PROJECT_ROOT/build/vrt/expo-ios"
-    target_app="$PROJECT_ROOT/build/vrt/apps/ios/PlainTextExample.app"
+    expo_output="$PROJECT_ROOT/node_modules/.cache/vrt/expo-ios"
+    target_app="$PROJECT_ROOT/node_modules/.cache/vrt/apps/ios/PlainTextExample.app"
     yarn del-cli "$expo_output" "$target_app"
 
     VRT_ENABLED=1 yarn ios:release --device generic --no-bundler --output "$expo_output"

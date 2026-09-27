@@ -38,7 +38,7 @@
     "example": "yarn workspace react-native-plain-text-example",
     "android:release": "yarn example android:release",
     "docs": "yarn workspace react-native-plain-text-docs",
-    "clean": "del-cli lib tests/cpp/build",
+    "clean": "del-cli lib tests/cpp/build .vrt",
     "prepare": "bob build",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",

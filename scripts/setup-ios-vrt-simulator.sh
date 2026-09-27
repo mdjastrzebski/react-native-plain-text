@@ -70,6 +70,6 @@ actual_content_size="$(xcrun simctl ui "$simulator_udid" content_size)"
 [[ "$actual_content_size" == "large" ]] || fail \
   "iOS content size is '$actual_content_size', expected 'large'."
 
-mkdir -p "$PROJECT_ROOT/build/vrt/devices"
-printf '%s\n' "$simulator_udid" > "$PROJECT_ROOT/build/vrt/devices/ios-udid"
+mkdir -p "$PROJECT_ROOT/.vrt/devices"
+printf '%s\n' "$simulator_udid" > "$PROJECT_ROOT/.vrt/devices/ios-udid"
 printf 'iOS VRT simulator is ready: %s (%s).\n' "$IOS_SIMULATOR_NAME" "$simulator_udid"

@@ -51,7 +51,7 @@ summarize_mismatches() {
 }
 
 platform="${1:-}"
-metadata_dir="$PROJECT_ROOT/build/vrt/environment"
+metadata_dir="$PROJECT_ROOT/.vrt/environment"
 mkdir -p "$metadata_dir"
 
 [[ -x "$PROJECT_ROOT/node_modules/.bin/agent-device" ]] || fail \
@@ -65,7 +65,7 @@ case "$platform" in
     [[ -n "$android_sdk_root" ]] || fail \
       "ANDROID_HOME or ANDROID_SDK_ROOT must identify the Android SDK."
     adb="$android_sdk_root/platform-tools/adb"
-    serial_file="$PROJECT_ROOT/build/vrt/devices/android-serial"
+    serial_file="$PROJECT_ROOT/.vrt/devices/android-serial"
     emulator_properties="$android_sdk_root/emulator/source.properties"
     system_image_properties="$android_sdk_root/system-images/android-$ANDROID_API_LEVEL/$ANDROID_SYSTEM_IMAGE_TARGET/$ANDROID_SYSTEM_IMAGE_ARCHITECTURE/source.properties"
     [[ -x "$adb" ]] || fail "adb not found at $adb."
@@ -138,7 +138,7 @@ case "$platform" in
       "$("${device_adb[@]}" shell cmd uimode night 2>/dev/null | tr -d '\r' | awk -F ': ' '/Night mode/ { print $2 }')"
     ;;
   ios)
-    udid_file="$PROJECT_ROOT/build/vrt/devices/ios-udid"
+    udid_file="$PROJECT_ROOT/.vrt/devices/ios-udid"
     [[ -f "$udid_file" ]] || fail "Run 'yarn vrt ios setup' first."
     ios_udid="$(<"$udid_file")"
 

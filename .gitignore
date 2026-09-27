@@ -88,3 +88,6 @@ android/generated
 
 # React Native Nitro Modules
 nitrogen/
+
+# Visual regression test results (the built apps are cached in node_modules/.cache/vrt)
+.vrt/

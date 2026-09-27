@@ -25,12 +25,12 @@ agent_device_bin="$PROJECT_ROOT/node_modules/.bin/agent-device"
 
 case "$platform" in
   android)
-    target_file="$PROJECT_ROOT/build/vrt/devices/android-serial"
+    target_file="$PROJECT_ROOT/.vrt/devices/android-serial"
     [[ -f "$target_file" ]] || fail "Run 'yarn vrt android setup' first."
     target_args=(--serial "$(<"$target_file")")
     ;;
   ios)
-    target_file="$PROJECT_ROOT/build/vrt/devices/ios-udid"
+    target_file="$PROJECT_ROOT/.vrt/devices/ios-udid"
     [[ -f "$target_file" ]] || fail "Run 'yarn vrt ios setup' first."
     target_args=(--udid "$(<"$target_file")")
     ;;
@@ -89,7 +89,7 @@ if [[ "$platform" == "ios" ]]; then
     return 1
   }
 
-  diagnostics_dir="$PROJECT_ROOT/build/vrt/agent-device/$platform/prewarm"
+  diagnostics_dir="$PROJECT_ROOT/.vrt/agent-device/$platform/prewarm"
   mkdir -p "$diagnostics_dir"
   armed=0
   for attempt in 1 2 3; do
@@ -117,7 +117,7 @@ if [[ "$platform" == "ios" ]]; then
   agent_device close >/dev/null
 fi
 agent_device settings clear-app-state "$VRT_APP_ID"
-mkdir -p "$PROJECT_ROOT/build/vrt/report"
+mkdir -p "$PROJECT_ROOT/.vrt/report"
 # The cold deep-link launch stays intermittently slow even once the confirmation
 # dialog is disarmed, so keep a retry budget. Without --fail-fast a cold failure
 # still lets the independent warm test run, so a flake never hides its result.
@@ -127,7 +127,7 @@ agent_device test \
   --env "VRT_APP_ID=$VRT_APP_ID" \
   --env "VRT_DEEP_LINK=$deep_link" \
   --env "VRT_CAPTURE_ID=$capture_id" \
-  --artifacts-dir "$PROJECT_ROOT/build/vrt/agent-device/$platform" \
-  --report-junit "$PROJECT_ROOT/build/vrt/report/$platform-e2e.xml" \
+  --artifacts-dir "$PROJECT_ROOT/.vrt/agent-device/$platform" \
+  --report-junit "$PROJECT_ROOT/.vrt/report/$platform-e2e.xml" \
   --timeout 180000 \
   --retries 2

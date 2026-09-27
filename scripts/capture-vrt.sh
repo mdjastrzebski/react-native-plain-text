@@ -76,20 +76,20 @@ if [[ -n "$out_dir" ]]; then
   [[ "$out_dir" == /* ]] || out_dir="$PROJECT_ROOT/$out_dir"
   # This stage replaces its output directory outright, so the target has to be a
   # plain leaf below an existing parent: never a traversal, and inside the
-  # repository only under build/, where nothing reviewed lives.
+  # repository only under .vrt/, where nothing reviewed lives.
   out_leaf="${out_dir##*/}"
   if [[ ! "$out_leaf" =~ ^[A-Za-z0-9._-]*[A-Za-z0-9][A-Za-z0-9._-]*$ || "$out_leaf" == "." || "$out_leaf" == ".." ]]; then
     fail "--out must name a plain directory, not '$out_dir'."
   fi
   [[ -d "${out_dir%/*}" ]] || fail "--out parent '${out_dir%/*}' does not exist."
   case "$out_dir/" in
-    "$PROJECT_ROOT/build/"*) ;;
+    "$PROJECT_ROOT/.vrt/"*) ;;
     "$PROJECT_ROOT/"*) fail \
-      "--out inside the repository must live under build/, not '$out_dir'." ;;
+      "--out inside the repository must live under .vrt/, not '$out_dir'." ;;
   esac
   actual_dir="$out_dir"
 else
-  actual_dir="$PROJECT_ROOT/build/vrt/actual/$platform"
+  actual_dir="$PROJECT_ROOT/.vrt/actual/$platform"
 fi
 
 # Investigation knobs, all off by default. The capture loop used to buy its
@@ -110,12 +110,12 @@ timing="${VRT_TIMING:-0}"
 # up during the run instead of only at the compare stage. VRT_LIVE_COMPARE=0
 # turns it off.
 live_compare="${VRT_LIVE_COMPARE:-1}"
-live_diff_dir="$PROJECT_ROOT/build/vrt/live-diff/$platform"
+live_diff_dir="$PROJECT_ROOT/.vrt/live-diff/$platform"
 case "$platform" in
   android) live_matching_threshold="$ANDROID_VRT_MATCHING_THRESHOLD" ;;
   *) live_matching_threshold="$IOS_VRT_MATCHING_THRESHOLD" ;;
 esac
-timings_dir="$PROJECT_ROOT/build/vrt/timings"
+timings_dir="$PROJECT_ROOT/.vrt/timings"
 timings_file="$timings_dir/$platform.tsv"
 
 [[ "$limit" =~ ^[1-9][0-9]*$ || -z "$limit" ]] || fail "--limit must be a positive integer."
@@ -128,12 +128,12 @@ timings_file="$timings_dir/$platform.tsv"
 [[ -f "$manifest" ]] || fail "Capture manifest not found at $manifest."
 case "$platform" in
   android)
-    target_file="$PROJECT_ROOT/build/vrt/devices/android-serial"
+    target_file="$PROJECT_ROOT/.vrt/devices/android-serial"
     [[ -f "$target_file" ]] || fail "Run 'yarn vrt android setup' first."
     target_args=(--platform android --serial "$(<"$target_file")")
     ;;
   ios)
-    target_file="$PROJECT_ROOT/build/vrt/devices/ios-udid"
+    target_file="$PROJECT_ROOT/.vrt/devices/ios-udid"
     [[ -f "$target_file" ]] || fail "Run 'yarn vrt ios setup' first."
     target_args=(--platform ios --udid "$(<"$target_file")")
     ;;
@@ -225,7 +225,7 @@ capture_selected() {
 # `--out` targets are outside the repository by design, and del-cli guards against
 # deleting outside the working directory unless told the target is deliberate. The
 # leaf, parent, and repository checks above are that instruction.
-if [[ "$actual_dir" == "$PROJECT_ROOT/build/vrt/actual/$platform" ]]; then
+if [[ "$actual_dir" == "$PROJECT_ROOT/.vrt/actual/$platform" ]]; then
   yarn del-cli "$actual_dir"
 else
   yarn del-cli --force "$actual_dir"

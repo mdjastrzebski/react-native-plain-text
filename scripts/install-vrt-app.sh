@@ -16,8 +16,8 @@ fail() {
 platform="${1:-}"
 case "$platform" in
   android)
-    serial_file="$PROJECT_ROOT/build/vrt/devices/android-serial"
-    apk="$PROJECT_ROOT/build/vrt/apps/android/app-release.apk"
+    serial_file="$PROJECT_ROOT/.vrt/devices/android-serial"
+    apk="$PROJECT_ROOT/node_modules/.cache/vrt/apps/android/app-release.apk"
     [[ -f "$serial_file" ]] || fail "Run 'yarn vrt android setup' first."
     [[ -f "$apk" ]] || fail "Run 'yarn vrt android build' first."
     "$SCRIPT_DIR/vrt-app-state.sh" verify-artifact android
@@ -31,8 +31,8 @@ case "$platform" in
     "$adb" -s "$android_serial" shell pm path "$VRT_APP_ID" >/dev/null
     ;;
   ios)
-    udid_file="$PROJECT_ROOT/build/vrt/devices/ios-udid"
-    app="$PROJECT_ROOT/build/vrt/apps/ios/PlainTextExample.app"
+    udid_file="$PROJECT_ROOT/.vrt/devices/ios-udid"
+    app="$PROJECT_ROOT/node_modules/.cache/vrt/apps/ios/PlainTextExample.app"
     [[ -f "$udid_file" ]] || fail "Run 'yarn vrt ios setup' first."
     [[ -d "$app" ]] || fail "Run 'yarn vrt ios build' first."
     "$SCRIPT_DIR/vrt-app-state.sh" verify-artifact ios

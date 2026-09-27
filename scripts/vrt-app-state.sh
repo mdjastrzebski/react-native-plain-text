@@ -93,8 +93,8 @@ calculate_fingerprint() {
 platform="${2:-}"
 case "$platform" in android | ios) ;; *) fail "Platform must be 'android' or 'ios'." ;; esac
 
-artifact_fingerprint="$PROJECT_ROOT/build/vrt/apps/$platform/build-input.sha256"
-installed_fingerprint="$PROJECT_ROOT/build/vrt/devices/$platform-installed-build.sha256"
+artifact_fingerprint="$PROJECT_ROOT/node_modules/.cache/vrt/apps/$platform/build-input.sha256"
+installed_fingerprint="$PROJECT_ROOT/.vrt/devices/$platform-installed-build.sha256"
 
 verify_artifact() {
   [[ -f "$artifact_fingerprint" ]] || fail \

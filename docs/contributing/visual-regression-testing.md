@@ -17,7 +17,7 @@ The workflow is split into independently runnable stages:
 setup -> build -> install -> verify -> e2e -> capture -> compare
 ```
 
-`verify` records the rendering inputs that `compare` later checks. The `all` run does not call it as its own step, because `e2e` and `capture` each run it first. `compare` does not start a device or capture new images. It compares the existing `build/vrt/actual/<platform>/` directory, so it is cheap to rerun while investigating a failure:
+`verify` records the rendering inputs that `compare` later checks. The `all` run does not call it as its own step, because `e2e` and `capture` each run it first. `compare` does not start a device or capture new images. It compares the existing `.vrt/actual/<platform>/` directory, so it is cheap to rerun while investigating a failure:
 
 ```sh
 yarn vrt ios compare
@@ -32,7 +32,7 @@ yarn vrt ios capture --filter font-size
 yarn vrt ios compare partial
 ```
 
-`--filter` takes comma-separated substrings of a capture id, and `--limit <n>` stops after n captures. `--out <dir>` writes images somewhere other than `build/vrt/actual/<platform>` (anywhere outside the repository, or inside it under `build/`), which is how two captures of one selection are compared byte for byte:
+`--filter` takes comma-separated substrings of a capture id, and `--limit <n>` stops after n captures. `--out <dir>` writes images somewhere other than `.vrt/actual/<platform>` (anywhere outside the repository, or inside it under `.vrt/`), which is how two captures of one selection are compared byte for byte:
 
 ```sh
 yarn vrt ios capture --filter baseline --out /tmp/a
@@ -42,7 +42,7 @@ diff -r /tmp/a /tmp/b
 
 A filtered capture is a partial capture and says so. The capture stage leaves a `.partial` marker recording the selection it was given, `compare partial` compares exactly the images that marker covers and copies it into the report, and `update` refuses a marked directory. A partial result can therefore be read as what it is and cannot quietly become a reviewed baseline, while the unqualified `compare` still demands the exact set the manifest describes.
 
-`VRT_TIMING=1` records per-command `wall_clock_ms` and `runner_round_trips` to `build/vrt/timings/<platform>.tsv`, which is how the per-specimen cost above was measured and how a regression in the loop itself gets located. It needs `jq`. The shape it shows is worth knowing before reading a log: the first specimen's `open` pays the app launch (about a second), every later `open` is the deep link alone (about 150ms), and the screenshot is the largest steady cost. A step whose command reports no timing at all is written as `n/a`, never as a zero that would flatter the loop.
+`VRT_TIMING=1` records per-command `wall_clock_ms` and `runner_round_trips` to `.vrt/timings/<platform>.tsv`, which is how the per-specimen cost above was measured and how a regression in the loop itself gets located. It needs `jq`. The shape it shows is worth knowing before reading a log: the first specimen's `open` pays the app launch (about a second), every later `open` is the deep link alone (about 150ms), and the screenshot is the largest steady cost. A step whose command reports no timing at all is written as `n/a`, never as a zero that would flatter the loop.
 
 ```sh
 VRT_TIMING=1 yarn vrt ios capture --limit 5
@@ -100,7 +100,7 @@ This distinguishes an incomplete capture from a rendering change and ensures tha
 
 ## Environment matching
 
-`yarn vrt <platform> verify` writes the current rendering inputs to `build/vrt/environment/<platform>.txt`. Baseline updates store a copy beside the reviewed images. Comparison requires their enforced rendering inputs to match.
+`yarn vrt <platform> verify` writes the current rendering inputs to `.vrt/environment/<platform>.txt`. Baseline updates store a copy beside the reviewed images. Comparison requires their enforced rendering inputs to match.
 
 This prevents comparisons across different simulator runtimes, device types, densities, font scales, locales, or other verified rendering inputs. Android's CPU architecture, architecture-specific system-image path, and adb serial are recorded but excluded from the equality check. CI renders the same AVD on x86_64 while Apple Silicon development hosts use arm64, so the two environments deliberately share a baseline. Android's matching threshold handles the small rasterization difference. iOS enforces the simulator runtime build, which is what renders the pixels, but only the major version of Xcode: the exact Xcode version and build are recorded and left out of the check, so a local Xcode 26.6 compares against baselines made with CI's pinned 26.5. CI itself still pins the exact Xcode. When any enforced input differs, use the environment that produced the reviewed baseline or intentionally review and update the whole platform baseline. Every mismatch is reported in one run, and the environment file records the observed values even when they do not match.
 
@@ -108,7 +108,7 @@ This prevents comparisons across different simulator runtimes, device types, den
 
 `reg-cli` performs the image comparison, with `--enableAntialias` on so antialiased edges do not count as changes and `--extendedErrors` on so every differing image is named. Android uses a matching threshold of `0.02` to absorb very small emulator rasterization differences. iOS uses `0`. Both platforms use a changed-pixel allowance of `0`, so any pixel beyond the matching threshold fails the suite. The defaults live in `scripts/vrt-config.sh` and can be overridden for investigation without changing the reviewed policy.
 
-Comparison writes a self-contained report under `build/vrt/report/<platform>/`. It includes actual, expected, and diff images, the HTML report, the JSON result, capture-set diagnostics, and both environment files. CI uploads the captures, the report, the environment files, the device metadata, and the device logs even when comparison fails. The built app under `build/vrt/apps/` is cached, not uploaded.
+Comparison writes a self-contained report under `.vrt/report/<platform>/`. It includes actual, expected, and diff images, the HTML report, the JSON result, capture-set diagnostics, and both environment files. CI uploads the captures, the report, the environment files, the device metadata, and the device logs even when comparison fails. The built app under `node_modules/.cache/vrt/apps/` is cached, not uploaded.
 
 ## Build fingerprint
 

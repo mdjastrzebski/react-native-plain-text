@@ -140,7 +140,7 @@ if "$adb" -s "$serial" get-state >/dev/null 2>&1; then
   exit 0
 fi
 
-log_dir="$PROJECT_ROOT/build/vrt/emulator"
+log_dir="$PROJECT_ROOT/.vrt/emulator"
 mkdir -p "$log_dir"
 log_file="$log_dir/android.log"
 printf 'Starting Android VRT AVD %s as %s.\n' "$ANDROID_AVD_NAME" "$serial" >&2

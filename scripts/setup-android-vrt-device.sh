@@ -137,6 +137,6 @@ actual_timezone="$("${device_adb[@]}" shell getprop persist.sys.timezone | tr -d
 [[ "$actual_timezone" == "$ANDROID_TIMEZONE" ]] || fail \
   "Android timezone is '$actual_timezone', expected '$ANDROID_TIMEZONE'."
 
-mkdir -p "$PROJECT_ROOT/build/vrt/devices"
-printf '%s\n' "$serial" > "$PROJECT_ROOT/build/vrt/devices/android-serial"
+mkdir -p "$PROJECT_ROOT/.vrt/devices"
+printf '%s\n' "$serial" > "$PROJECT_ROOT/.vrt/devices/android-serial"
 printf 'Android VRT device is ready: %s (%s).\n' "$actual_avd_name" "$serial"

@@ -31,17 +31,17 @@ jobs:
       # fingerprint merely shares the toolchain prefix can rebuild incrementally
       # instead of from scratch.
       VRT_BUILD_CACHE_PATHS: |
-        build/vrt/apps/android
+        node_modules/.cache/vrt/apps/android
         example/android/.gradle
         example/android/build
         example/android/app/build
       VRT_REPORT_PATHS: |
-        build/vrt/report
-        build/vrt/actual
-        build/vrt/environment
-        build/vrt/devices
-        build/vrt/emulator
-        build/vrt/agent-device
+        .vrt/report
+        .vrt/actual
+        .vrt/environment
+        .vrt/devices
+        .vrt/emulator
+        .vrt/agent-device
 
     steps:
       - name: Checkout
@@ -153,8 +153,8 @@ jobs:
         id: android-artifact
         if: ${{ !cancelled() && steps.android-build-cache.outputs.cache-hit != 'true' }}
         run: |
-          if [ -f build/vrt/apps/android/app-release.apk ] &&
-            [ -f build/vrt/apps/android/build-input.sha256 ]; then
+          if [ -f node_modules/.cache/vrt/apps/android/app-release.apk ] &&
+            [ -f node_modules/.cache/vrt/apps/android/build-input.sha256 ]; then
             printf 'present=true\n' >> "$GITHUB_OUTPUT"
           else
             printf 'present=false\n' >> "$GITHUB_OUTPUT"
@@ -172,9 +172,11 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: vrt-android-${{ github.run_attempt }}
-          # Not build/vrt/apps: the cached APK does not belong in the report.
+          # Not node_modules/.cache/vrt/apps: the cached APK does not belong in the report.
           path: ${{ env.VRT_REPORT_PATHS }}
           if-no-files-found: ignore
+          # Everything lives under .vrt/, which the action skips by default.
+          include-hidden-files: true
           retention-days: 7
 
   vrt-ios:
@@ -187,13 +189,13 @@ jobs:
       IOS_RUNTIME_ID: com.apple.CoreSimulator.SimRuntime.iOS-26-5
       IOS_DEVICE_TYPE_ID: com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro
       VRT_TOOLCHAIN: ios26.5-23F77-xcode26.5-17F42-iphone16pro
-      VRT_BUILD_CACHE_PATHS: build/vrt/apps/ios
+      VRT_BUILD_CACHE_PATHS: node_modules/.cache/vrt/apps/ios
       VRT_REPORT_PATHS: |
-        build/vrt/report
-        build/vrt/actual
-        build/vrt/environment
-        build/vrt/devices
-        build/vrt/agent-device
+        .vrt/report
+        .vrt/actual
+        .vrt/environment
+        .vrt/devices
+        .vrt/agent-device
 
     steps:
       - name: Checkout
@@ -278,8 +280,8 @@ jobs:
         id: ios-artifact
         if: ${{ !cancelled() && steps.ios-build-cache.outputs.cache-hit != 'true' }}
         run: |
-          if [ -d build/vrt/apps/ios/PlainTextExample.app ] &&
-            [ -f build/vrt/apps/ios/build-input.sha256 ]; then
+          if [ -d node_modules/.cache/vrt/apps/ios/PlainTextExample.app ] &&
+            [ -f node_modules/.cache/vrt/apps/ios/build-input.sha256 ]; then
             printf 'present=true\n' >> "$GITHUB_OUTPUT"
           else
             printf 'present=false\n' >> "$GITHUB_OUTPUT"
@@ -304,14 +306,16 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: vrt-ios-${{ github.run_attempt }}
-          # Not build/vrt/apps: the cached app bundle does not belong in the report.
+          # Not node_modules/.cache/vrt/apps: the cached app bundle does not belong in the report.
           path: ${{ env.VRT_REPORT_PATHS }}
           if-no-files-found: ignore
+          # Everything lives under .vrt/, which the action skips by default.
+          include-hidden-files: true
           retention-days: 7
 
       - name: Stop iOS VRT simulator
         if: always()
         run: |
-          if [ -f build/vrt/devices/ios-udid ]; then
-            xcrun simctl shutdown "$(cat build/vrt/devices/ios-udid)"
+          if [ -f .vrt/devices/ios-udid ]; then
+            xcrun simctl shutdown "$(cat .vrt/devices/ios-udid)"
           fi
