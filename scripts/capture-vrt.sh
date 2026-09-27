@@ -70,6 +70,7 @@ case "$platform" in
     fail "Platform must be 'android' or 'ios'."
     ;;
 esac
+target="$(vrt_target "$platform")"
 
 if [[ -n "$out_dir" ]]; then
   [[ "$out_dir" == /* ]] || out_dir="$PROJECT_ROOT/$out_dir"
@@ -88,7 +89,7 @@ if [[ -n "$out_dir" ]]; then
   esac
   actual_dir="$out_dir"
 else
-  actual_dir="$PROJECT_ROOT/.vrt/actual/$platform"
+  actual_dir="$PROJECT_ROOT/.vrt/actual/$target"
 fi
 
 # Investigation knobs, all off by default. The capture loop used to buy its
@@ -109,13 +110,13 @@ timing="${VRT_TIMING:-0}"
 # up during the run instead of only at the compare stage. VRT_LIVE_COMPARE=0
 # turns it off.
 live_compare="${VRT_LIVE_COMPARE:-1}"
-live_diff_dir="$PROJECT_ROOT/.vrt/live-diff/$platform"
+live_diff_dir="$PROJECT_ROOT/.vrt/live-diff/$target"
 case "$platform" in
   android) live_matching_threshold="$ANDROID_VRT_MATCHING_THRESHOLD" ;;
   *) live_matching_threshold="$IOS_VRT_MATCHING_THRESHOLD" ;;
 esac
 timings_dir="$PROJECT_ROOT/.vrt/timings"
-timings_file="$timings_dir/$platform.tsv"
+timings_file="$timings_dir/$target.tsv"
 
 [[ "$limit" =~ ^[1-9][0-9]*$ || -z "$limit" ]] || fail "--limit must be a positive integer."
 [[ "$settle_ms" =~ ^[0-9]+$ ]] || fail "VRT_SETTLE_MS must be a non-negative integer."
@@ -139,6 +140,8 @@ case "$platform" in
     ;;
 esac
 
+# Each suite runs at its own system text size; switch the device to this one's.
+"$SCRIPT_DIR/apply-vrt-text-size.sh" "$platform"
 # Refresh the metadata that comparison binds to these captures. Keeping this in
 # the capture stage makes a standalone capture as trustworthy as the full VRT
 # workflow, without making the cheap compare stage require a running device.
@@ -225,7 +228,7 @@ capture_selected() {
 # `--out` targets are outside the repository by design, and del-cli guards against
 # deleting outside the working directory unless told the target is deliberate. The
 # leaf, parent, and repository checks above are that instruction.
-if [[ "$actual_dir" == "$PROJECT_ROOT/.vrt/actual/$platform" ]]; then
+if [[ "$actual_dir" == "$PROJECT_ROOT/.vrt/actual/$target" ]]; then
   yarn del-cli "$actual_dir"
 else
   yarn del-cli --force "$actual_dir"
@@ -302,7 +305,7 @@ while read -r capture_id; do
     [[ -t 1 ]] && printf '\r\033[K'
     node "$SCRIPT_DIR/vrt-live-compare.js" \
       "$actual_dir/$image" \
-      "$PROJECT_ROOT/tests/vrt/$platform/$image" \
+      "$PROJECT_ROOT/tests/vrt/$target/$image" \
       "$live_diff_dir/$image" \
       "$live_matching_threshold" \
       "$VRT_THRESHOLD_PIXEL" || true

@@ -57,7 +57,7 @@ xcrun simctl shutdown "$simulator_udid"
 xcrun simctl boot "$simulator_udid"
 xcrun simctl bootstatus "$simulator_udid" -b
 xcrun simctl ui "$simulator_udid" appearance light
-xcrun simctl ui "$simulator_udid" content_size large
+xcrun simctl ui "$simulator_udid" content_size "$IOS_CONTENT_SIZE"
 xcrun simctl status_bar "$simulator_udid" override --time 9:41 --batteryLevel 100 --batteryState charged --cellularBars 4 --wifiBars 3
 
 actual_locale="$(xcrun simctl spawn "$simulator_udid" defaults read NSGlobalDomain AppleLocale)"
@@ -67,8 +67,8 @@ actual_content_size="$(xcrun simctl ui "$simulator_udid" content_size)"
   "iOS locale is '$actual_locale', expected '$IOS_LOCALE'."
 [[ "$actual_appearance" == "light" ]] || fail \
   "iOS appearance is '$actual_appearance', expected 'light'."
-[[ "$actual_content_size" == "large" ]] || fail \
-  "iOS content size is '$actual_content_size', expected 'large'."
+[[ "$actual_content_size" == "$IOS_CONTENT_SIZE" ]] || fail \
+  "iOS content size is '$actual_content_size', expected '$IOS_CONTENT_SIZE'."
 
 mkdir -p "$PROJECT_ROOT/.vrt/devices"
 printf '%s\n' "$simulator_udid" > "$PROJECT_ROOT/.vrt/devices/ios-udid"

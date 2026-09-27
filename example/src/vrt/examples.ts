@@ -4,7 +4,7 @@ import { groups } from './groups';
 export function getVrtExamples(platform: string) {
   return groups
     .filter((group) => group.platform == null || group.platform === platform)
-    .flatMap(({ children }) => {
+    .flatMap(({ children, suite = 'default' }) => {
       const sectionChildren = isValidElement<{ children?: ReactNode }>(children)
         ? children.props.children
         : children;
@@ -19,6 +19,7 @@ export function getVrtExamples(platform: string) {
 
         return {
           testID: specimen.props.testID,
+          suite,
           specimen,
         };
       });

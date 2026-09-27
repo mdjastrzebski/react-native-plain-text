@@ -6,6 +6,38 @@ export VRT_APP_SCHEME="${VRT_APP_SCHEME:-exp+react-native-plain-text-example}"
 # iOS ONLY
 export VRT_RESET_DEVICE="${VRT_RESET_DEVICE:-0}"
 
+# The suite picks which scenarios run (the `suite` of their groups in
+# example/src/vrt/groups.tsx) and the system text size they are captured at.
+# Each suite keeps its own captures, reports and baselines.
+#   default     all other scenarios, at the platform's default text size
+#   font-scale  the font-scaling scenarios, at a large but common text size:
+#               Android's 1.3 and iOS's largest non-accessibility size (1.353x)
+export VRT_SUITE="${VRT_SUITE:-default}"
+case "$VRT_SUITE" in
+  default)
+    suite_android_font_scale=1
+    suite_ios_content_size=large
+    ;;
+  font-scale)
+    suite_android_font_scale=1.3
+    suite_ios_content_size=extra-extra-extra-large
+    ;;
+  *)
+    printf "Error: VRT_SUITE must be 'default' or 'font-scale', not '%s'.\n" "$VRT_SUITE" >&2
+    exit 1
+    ;;
+esac
+
+# The name a platform's captures, reports and baselines use in this suite:
+# `android` in the default suite, `android-font-scale` in the font-scale one.
+vrt_target() {
+  if [[ "$VRT_SUITE" == "default" ]]; then
+    printf '%s' "$1"
+  else
+    printf '%s-%s' "$1" "$VRT_SUITE"
+  fi
+}
+
 # Pixel-level comparison policy. matchingThreshold controls how different a
 # pixel must be to count as changed. thresholdPixel controls how many changed
 # pixels the suite permits after that classification.
@@ -38,7 +70,7 @@ export ANDROID_DISK_SIZE="${ANDROID_DISK_SIZE:-6G}"
 export ANDROID_HARDWARE_KEYBOARD="${ANDROID_HARDWARE_KEYBOARD:-yes}"
 export ANDROID_RESOLUTION="${ANDROID_RESOLUTION:-1080x2400}"
 export ANDROID_DENSITY="${ANDROID_DENSITY:-420}"
-export ANDROID_FONT_SCALE="${ANDROID_FONT_SCALE:-1}"
+export ANDROID_FONT_SCALE="${ANDROID_FONT_SCALE:-$suite_android_font_scale}"
 export ANDROID_LOCALE="${ANDROID_LOCALE:-en-US}"
 export ANDROID_TIMEZONE="${ANDROID_TIMEZONE:-UTC}"
 
@@ -53,6 +85,8 @@ export IOS_RUNTIME_ID="${IOS_RUNTIME_ID:-com.apple.CoreSimulator.SimRuntime.iOS-
 export IOS_DEVICE_TYPE_ID="${IOS_DEVICE_TYPE_ID:-com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro}"
 export IOS_LANGUAGE="${IOS_LANGUAGE:-en}"
 export IOS_LOCALE="${IOS_LOCALE:-en_US}"
+export IOS_CONTENT_SIZE="${IOS_CONTENT_SIZE:-$suite_ios_content_size}"
+unset suite_android_font_scale suite_ios_content_size
 # Screenshots are requested at the pinned device's scale (iPhone 16 Pro is @3x).
 # Baselines were captured at this density, so changing it invalidates every iOS
 # image rather than rescaling it.

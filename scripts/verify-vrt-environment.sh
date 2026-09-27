@@ -54,9 +54,11 @@ platform="${1:-}"
 metadata_dir="$PROJECT_ROOT/.vrt/environment"
 mkdir -p "$metadata_dir"
 
+metadata_file="$metadata_dir/$(vrt_target "$platform").txt"
+
 [[ -x "$PROJECT_ROOT/node_modules/.bin/agent-device" ]] || fail \
   "agent-device is not installed. Run 'yarn'."
-: > "$metadata_dir/$platform.txt"
+: > "$metadata_file"
 
 {
 case "$platform" in
@@ -167,11 +169,11 @@ case "$platform" in
     expect ios_language "$IOS_LANGUAGE" \
       "$(xcrun simctl spawn "$ios_udid" defaults read NSGlobalDomain AppleLanguages | sed -n '2s/[[:space:]"",]//gp')"
     expect ios_appearance light "$(xcrun simctl ui "$ios_udid" appearance)"
-    expect ios_content_size large "$(xcrun simctl ui "$ios_udid" content_size)"
+    expect ios_content_size "$IOS_CONTENT_SIZE" "$(xcrun simctl ui "$ios_udid" content_size)"
     ;;
   *) fail "Platform must be 'android' or 'ios'." ;;
 esac
 summarize_mismatches
-} | tee -a "$metadata_dir/$platform.txt"
+} | tee -a "$metadata_file"
 
-printf 'VRT environment verified: %s\n' "$metadata_dir/$platform.txt"
+printf 'VRT environment verified: %s\n' "$metadata_file"

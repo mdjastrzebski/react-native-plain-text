@@ -30,7 +30,8 @@ be rerun on its own.
   to rerun.
 - `verify` fails if the device does not match the pinned profile (runtime,
   device type, density, locale, font scale, appearance, and so on). It writes
-  the observed values to `.vrt/environment/<platform>.txt`. `e2e` and `capture`
+  the observed values to `.vrt/environment/<platform>.txt` (see
+  [Suites](#suites) for the other suite's paths). `e2e` and `capture`
   run it first.
 - `e2e` checks that cold and warm deep links work. It only matters when the
   deep-link path changes.
@@ -69,6 +70,38 @@ list: to leave a specimen out, remove it from `groups.tsx` (and its baseline
 PNG), or give its group a `platform` to render it on one platform only.
 `yarn test` checks that IDs are well formed and unique.
 
+## Suites
+
+A suite is a set of scenarios captured under its own device settings, with its
+own captures, reports, and baselines. A group in `groups.tsx` joins one with
+`suite`, and everything else is in `default`:
+
+| Suite        | Scenarios                                                 | Text size                                             | Baselines                          |
+| ------------ | --------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------- |
+| `default`    | every group without a `suite`                             | Android `font_scale` 1, iOS content size `large` (1x) | `tests/vrt/<platform>/`            |
+| `font-scale` | the font-scaling group (`allowFontScaling`, the 1.2x cap) | Android 1.3, iOS `extra-extra-extra-large` (1.353x)   | `tests/vrt/<platform>-font-scale/` |
+
+At 1x, `allowFontScaling` and `maxFontSizeMultiplier` change nothing, which is
+why those specimens run in their own suite.
+
+`capture`, `compare`, and `update` (and the full pipeline) run every suite in
+turn. Each capture first switches the device to its suite's text size with
+`scripts/apply-vrt-text-size.sh`, restarting the app when the size changes, since
+a running app keeps the text size it started with. `compare` reports every suite
+even when an earlier one fails. A `--filter` capture skips the suites it selects
+nothing in, and `compare partial` only compares suites with a partial capture.
+
+To run one suite, set `VRT_SUITE`:
+
+```sh
+VRT_SUITE=font-scale yarn vrt android capture
+VRT_SUITE=font-scale yarn vrt android compare
+```
+
+`setup` and `verify` use the default suite's text size unless `VRT_SUITE` says
+otherwise, so `verify` after a full run reports the font-scale size the device
+was left at.
+
 ## What compare enforces
 
 - **Exact image set.** Actual and baseline directories must hold exactly one
@@ -102,5 +135,6 @@ that caused them, where the image diff gets reviewed alongside the code.
 ## CI
 
 `.github/workflows/visual-test.yml` runs nightly and on manual dispatch, on a
-Pixel 9 API 36 emulator and an iPhone 16 Pro iOS 26.5 simulator. Built apps are
+Pixel 9 API 36 emulator and an iPhone 16 Pro iOS 26.5 simulator. Each job runs
+both suites on the same device. Built apps are
 cached by their source fingerprint.

@@ -15,11 +15,15 @@ fail() {
 
 platform="${1:-}"
 mode="${2:-compare}"
-actual_dir=".vrt/actual/$platform"
-baseline_dir="tests/vrt/$platform"
-current_environment=".vrt/environment/$platform.txt"
+target="$(vrt_target "$platform")"
+# The command that reruns a stage for this platform and suite, for error messages.
+vrt_command="yarn vrt $platform"
+[[ "$VRT_SUITE" == "default" ]] || vrt_command="VRT_SUITE=$VRT_SUITE $vrt_command"
+actual_dir=".vrt/actual/$target"
+baseline_dir="tests/vrt/$target"
+current_environment=".vrt/environment/$target.txt"
 baseline_environment="$baseline_dir/environment.txt"
-report_dir=".vrt/report/$platform"
+report_dir=".vrt/report/$target"
 expected_list="$report_dir/expected-images.txt"
 scenario_images="$report_dir/scenario-images.txt"
 partial_marker="$actual_dir/.partial"
@@ -37,18 +41,18 @@ esac
 
 cd "$PROJECT_ROOT"
 
-[[ -d "$actual_dir" ]] || fail "Actual images not found. Run 'yarn vrt $platform capture' first."
+[[ -d "$actual_dir" ]] || fail "Actual images not found. Run '$vrt_command capture' first."
 [[ -f "$current_environment" ]] || fail \
-  "Environment metadata not found. Run 'yarn vrt $platform verify' first."
+  "Environment metadata not found. Run '$vrt_command verify' first."
 
 # Both marker checks run before this stage replaces anything. A mis-typed partial
 # comparison keeps the report of the complete run it should have been, and a
 # partial capture never reaches the point where it could overwrite a baseline.
 if [[ "$mode" == "partial" && ! -f "$partial_marker" ]]; then
-  fail "'$actual_dir' is not marked partial. Run 'yarn vrt $platform compare' for a complete capture set."
+  fail "'$actual_dir' is not marked partial. Run '$vrt_command compare' for a complete capture set."
 fi
 if [[ "$mode" == "update" && -f "$partial_marker" ]]; then
-  fail "Refusing to turn a partial capture into reviewed baselines. Run a complete 'yarn vrt $platform capture' first."
+  fail "Refusing to turn a partial capture into reviewed baselines. Run a complete '$vrt_command capture' first."
 fi
 
 yarn del-cli "$report_dir"
@@ -68,7 +72,7 @@ if ! awk '
   }
   END { exit invalid }
 ' "$scenario_list"; then
-  fail "The $platform scenario list is invalid."
+  fail "The $target scenario list is invalid."
 fi
 # Image files are the IDs without their `vrt-` prefix, as capture-vrt.sh names them.
 sed 's/^vrt-//; s/$/.png/' "$scenario_list" | LC_ALL=C sort > "$scenario_images"
@@ -82,7 +86,7 @@ if [[ "$mode" == "partial" ]]; then
   [[ -s "$expected_list" ]] || fail "Partial capture set in $actual_dir holds no images."
   comm -13 "$scenario_images" "$expected_list" > "$report_dir/captured-not-in-scenarios.txt"
   if [[ -s "$report_dir/captured-not-in-scenarios.txt" ]]; then
-    printf 'Captured images that are not %s scenarios:\n' "$platform" >&2
+    printf 'Captured images that are not %s scenarios:\n' "$target" >&2
     sed 's/^/  /' "$report_dir/captured-not-in-scenarios.txt" >&2
     fail "Partial capture set does not come from the VRT groups."
   fi
@@ -141,13 +145,13 @@ if [[ "$mode" == "update" ]]; then
     cp -a "$actual_dir/$image" "$baseline_dir/$image"
   done < "$expected_list"
   cp -a "$current_environment" "$baseline_environment"
-  printf 'Updated reviewed %s baselines in %s.\n' "$platform" "$baseline_dir"
+  printf 'Updated reviewed %s baselines in %s.\n' "$target" "$baseline_dir"
   printf 'Review the image diff, then commit %s with your change.\n' "$baseline_dir"
   exit 0
 fi
 
 [[ -d "$baseline_dir" ]] || fail \
-  "Reviewed baselines not found. Run 'yarn vrt $platform update' intentionally to create them."
+  "Reviewed baselines not found. Run '$vrt_command update' intentionally to create them."
 [[ -f "$baseline_environment" ]] || fail \
   "Baseline environment metadata not found at $baseline_environment."
 if [[ "$mode" == "partial" ]]; then
@@ -186,7 +190,7 @@ normalize_environment "$current_environment" "$normalized_current_environment"
 if ! cmp -s "$normalized_baseline_environment" "$normalized_current_environment"; then
   printf 'Baseline environment does not match the current VRT environment:\n' >&2
   diff -u "$normalized_baseline_environment" "$normalized_current_environment" >&2 || true
-  fail "Run on the baseline environment or intentionally update the $platform baselines."
+  fail "Run on the baseline environment or intentionally update the $target baselines."
 fi
 
 reg_cli="node_modules/.bin/reg-cli"
@@ -243,7 +247,7 @@ if [[ -f "$json_file" ]]; then
       console.log(`${icon} ${label}:`);
       for (const item of items) console.log(`   ${item}`);
     }
-  ' "$json_file" "$platform"
+  ' "$json_file" "$target"
 fi
 
 printf '🔗 Visual comparison report: %s\n' "$report_file"

@@ -119,6 +119,8 @@ function VrtUseCase({ item, testID }: { item: UseCaseItem; testID: string }) {
   );
 }
 
+const FONT_SCALING_SIZE = 14;
+
 export const groups: VrtGroup[] = [
   {
     children: (
@@ -743,7 +745,10 @@ export const groups: VrtGroup[] = [
   },
   {
     // Captured only by the font-scale suite, at a system text size above 1.2x
-    // (Android 1.3, iOS 1.353), so the three rows render at three sizes.
+    // (Android 1.3, iOS 1.353), so the three rows render at three sizes. Body
+    // size on purpose: Android 14+ scales fonts non-linearly, and at 1.3 a 26sp
+    // row only grows to ~27.6dp (1.06x), under the 1.2x cap. 14sp still gets the
+    // full ~1.34x (18.8dp), so the capped row lands visibly between the others.
     suite: 'font-scale',
     children: (
       <>
@@ -752,7 +757,7 @@ export const groups: VrtGroup[] = [
           label="default"
           showText={false}
           style={{
-            fontSize: SHORT_ROW_SIZE,
+            fontSize: FONT_SCALING_SIZE,
           }}
         >
           {SPECIMEN}
@@ -762,7 +767,7 @@ export const groups: VrtGroup[] = [
           label="disabled"
           showText={false}
           style={{
-            fontSize: SHORT_ROW_SIZE,
+            fontSize: FONT_SCALING_SIZE,
           }}
           allowFontScaling={false}
         >
@@ -773,7 +778,7 @@ export const groups: VrtGroup[] = [
           label="max 1.2x"
           showText={false}
           style={{
-            fontSize: SHORT_ROW_SIZE,
+            fontSize: FONT_SCALING_SIZE,
           }}
           maxFontSizeMultiplier={1.2}
         >

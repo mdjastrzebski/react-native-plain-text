@@ -69,6 +69,9 @@ device_adb=("$adb" -s "$serial")
 "${device_adb[@]}" shell wm size "$ANDROID_RESOLUTION"
 "${device_adb[@]}" shell wm density "$ANDROID_DENSITY"
 "${device_adb[@]}" shell settings put system font_scale "$ANDROID_FONT_SCALE"
+# The example's MainActivity handles fontScale changes itself, so a running app
+# would keep the text size it started with. Switching suites must not reuse it.
+"${device_adb[@]}" shell am force-stop "$VRT_APP_ID"
 "${device_adb[@]}" shell settings put system accelerometer_rotation 0
 "${device_adb[@]}" shell settings put system user_rotation 0
 "${device_adb[@]}" shell wm user-rotation lock 0
