@@ -20,7 +20,8 @@ hash_command() {
   fi
 }
 
-# Tracked source files whose bytes reach the compiled app. Generated trees
+# Source files whose bytes reach the compiled app, as git lists them (tracked
+# plus untracked-but-not-ignored, so local debris never counts). Generated trees
 # (`example/android`, `example/ios`, Podfile.lock) are left out; CI records the
 # toolchain in the cache key instead. Tests are excluded: nothing bundles them.
 #

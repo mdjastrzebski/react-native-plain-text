@@ -282,11 +282,7 @@ if [[ "$timing" == "1" ]]; then
   printf 'VRT step timings: %s\n' "$timings_file"
 fi
 
-if [[ "$captured" -lt "$selected" ]]; then
-  printf 'VRT captures: %s (%s of %s selected)\n' "$actual_dir" "$captured" "$selected"
-else
-  printf 'VRT captures: %s (%s)\n' "$actual_dir" "$captured"
-fi
+printf 'VRT captures: %s (%s)\n' "$actual_dir" "$captured"
 if [[ "$requested_selection" != "all" ]]; then
   printf 'Partial capture set: compare with "yarn vrt %s compare partial".\n' "$platform"
 fi

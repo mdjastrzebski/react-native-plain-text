@@ -136,8 +136,7 @@ jobs:
           emulator-port: 5554
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
-            -no-boot-anim -no-metrics -skin 1080x2400
-            -prop qemu.vrt.density=420 -prop qemu.vrt.font_scale=1 -wipe-data
+            -no-boot-anim -no-metrics -skin 1080x2400 -wipe-data
           disable-animations: true
           disable-spellchecker: true
           disable-linux-hw-accel: false

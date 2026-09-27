@@ -152,8 +152,6 @@ emulator_args=(
   -no-boot-anim
   -no-metrics
   -skin "$ANDROID_RESOLUTION"
-  -prop "qemu.vrt.density=$ANDROID_DENSITY"
-  -prop "qemu.vrt.font_scale=$ANDROID_FONT_SCALE"
   -wipe-data
 )
 if [[ -n "${emulator_window_arg:-}" ]]; then
