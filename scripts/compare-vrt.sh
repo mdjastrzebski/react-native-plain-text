@@ -247,8 +247,53 @@ else
   comparison_status=$?
 fi
 
-printf 'Visual comparison report: %s\n' "$report_file"
+# reg-cli only writes its results to files, so summarize them here to spare
+# opening the report when everything passed.
+if [[ -f "$json_file" ]]; then
+  node -e '
+    const result = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const groups = [
+      ["❌", "Failed", result.failedItems],
+      ["🆕", "New", result.newItems],
+      ["🗑️ ", "Deleted", result.deletedItems],
+    ];
+    const clean = groups.every(([, , items]) => items.length === 0);
+    console.log(
+      `\n${clean ? "✅" : "🚨"} ${process.argv[2]} VRT: ` +
+        `${result.passedItems.length} passed, ` +
+        groups.map(([, label, items]) => `${items.length} ${label.toLowerCase()}`).join(", ") +
+        ` (of ${result.expectedItems.length})`
+    );
+    for (const [icon, label, items] of groups) {
+      if (items.length === 0) continue;
+      console.log(`${icon} ${label}:`);
+      for (const item of items) console.log(`   ${item}`);
+    }
+  ' "$json_file" "$platform"
+fi
+
+printf '🔗 Visual comparison report: %s\n' "$report_file"
 if [[ "$mode" == "partial" ]]; then
   printf 'Partial run (%s): see %s\n' "$(<"$partial_marker")" "$partial_note"
 fi
+
+# Offer to open the report only to a person at a terminal, never in CI.
+if [[ -t 0 && -t 1 && -z "${CI:-}" ]]; then
+  opener=""
+  if command -v open > /dev/null; then
+    opener="open"
+  elif command -v xdg-open > /dev/null; then
+    opener="xdg-open"
+  fi
+  if [[ -n "$opener" ]]; then
+    printf 'Press Enter to open the report, any other key to skip. '
+    key=""
+    read -rsn1 key || true
+    printf '\n'
+    if [[ -z "$key" ]]; then
+      "$opener" "$report_file" > /dev/null 2>&1 || true
+    fi
+  fi
+fi
+
 exit "$comparison_status"
