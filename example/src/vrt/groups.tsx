@@ -26,7 +26,6 @@ import {
   BASELINE_ALIGNMENT_GLYPHS,
   LETTER_SPACINGS,
   TEXT_DECORATION_LINES,
-  TEXT_SHADOWS,
   TEXT_TRANSFORMS,
   TEXT_TRANSFORM_SPECIMEN,
   TEXT_TRANSFORM_ORDINAL_SPECIMEN,
@@ -698,26 +697,6 @@ export const groups: VrtGroup[] = [
             style={{
               fontSize: SHORT_ROW_SIZE,
               textDecorationLine,
-            }}
-          >
-            {SPECIMEN}
-          </VrtText>
-        ))}
-      </>
-    ),
-  },
-  {
-    children: (
-      <>
-        {TEXT_SHADOWS.map(({ label, style }) => (
-          <VrtText
-            testID={`vrt-features-text-shadow-${testIDSlug(label)}`}
-            key={label}
-            label={label}
-            showText={false}
-            style={{
-              fontSize: SHORT_ROW_SIZE,
-              ...style,
             }}
           >
             {SPECIMEN}

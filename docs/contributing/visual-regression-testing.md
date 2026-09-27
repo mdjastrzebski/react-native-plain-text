@@ -62,10 +62,10 @@ adb -s "$(cat .vrt/devices/android-serial)" shell am start -W \
 ## Scenarios
 
 Every specimen in `groups.tsx` is a scenario, named after its `vrt-…` test ID.
-Adding a specimen means it gets captured and needs a baseline. To leave one out,
-list it in `SKIPPED_SCENARIOS` in `scripts/vrt-scenarios/scenarios.ts`.
-`yarn test` checks that IDs are well formed and unique, and that every skipped
-entry still names a rendered specimen.
+Adding a specimen means it gets captured and needs a baseline. There is no skip
+list: to leave a specimen out, remove it from `groups.tsx` (and its baseline
+PNG), or give its group a `platform` to render it on one platform only.
+`yarn test` checks that IDs are well formed and unique.
 
 ## What compare enforces
 

@@ -21,11 +21,6 @@ export function loadVrtScenarios(platform: VrtPlatform) {
   }));
 
   const { getVrtScenarioIDs } = require('./scenarios') as typeof import('./scenarios');
-  const { getVrtExamples } =
-    require('../../example/src/vrt/examples') as typeof import('../../example/src/vrt/examples');
 
-  return {
-    scenarioIDs: getVrtScenarioIDs(platform),
-    renderedIDs: getVrtExamples(platform).map(({ testID }) => testID),
-  };
+  return { scenarioIDs: getVrtScenarioIDs(platform) };
 }
