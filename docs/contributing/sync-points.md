@@ -650,9 +650,9 @@ When the unified `Text` falls back to RN `<Text>` (`deopt`, nested text, non-str
 `accessibilityLanguage` wins when set; otherwise `lang` applies; an empty string counts as unset for both. This is
 resolved natively rather than in JS (see [performance.md](performance.md#prop-cost-policy)), so each platform has its
 own copy. iOS writes the result to the component view's `accessibilityLanguage`, after
-`RCTViewComponentView`'s own write of the raw prop. The `UILabel` doesn't need it: VoiceOver focuses the component view,
-whose `isAccessibilityElement` defers to its `contentView`, and never descends into the label. Android has no such property, so TalkBack reads it from a
-`LocaleSpan` over the whole text, which also overrides `lang`'s `textLocales` for glyph selection and hyphenation, making
+`RCTViewComponentView`'s own write of the raw prop. The `UILabel` doesn't need it: the component view is the
+accessibility element and the label never is ([Set 19](#set-19--accessible-defaults-to-true-on-ios)). Android has no
+such property, so TalkBack reads it from a `LocaleSpan` over the whole text, which also overrides `lang`'s `textLocales` for glyph selection and hyphenation, making
 `accessibilityLanguage` a measured input on Android ([Set 2](#set-2--a-prop-that-affects-measured-size)).
 
 **Files:**
@@ -666,6 +666,28 @@ whose `isAccessibilityElement` defers to its `contentView`, and never descends i
 
 **Failure mode:** with both props set, or one set to an empty string, VoiceOver and TalkBack speak the text in different
 languages — nothing throws.
+
+---
+
+## Set 19 — `accessible` defaults to true on iOS
+
+**Props:** `accessible`.
+
+RN's native `accessible` is a plain `bool` defaulting to `false`, so native can't tell "unset" from `false`. PlainText,
+like RN `<Text>`, treats unset as `true` on iOS: `mapPlainTextProps` always sends `accessible !== false`, and
+`RNPlainText.mm`'s `isAccessibilityElement` reads the prop directly. It has to override that getter because
+`RCTViewComponentView`'s asks the `contentView` (`_label`) instead, which ignored `accessible` entirely. `_label` is
+never an accessibility element itself, or VoiceOver would read it when the component view says no. A codegen
+`WithDefault<boolean, true>` would avoid the JS write, but TypeScript rejects it: it adds `null` to a prop `ViewProps`
+already types as `boolean | undefined`.
+
+**Files:**
+
+- `src/PlainText.tsx` → `mapPlainTextProps` — sends the iOS default
+- `ios/RNPlainText.mm` → `-isAccessibilityElement`, and `_label.isAccessibilityElement = NO` in `-initWithFrame:`
+
+**Failure mode:** drop the JS default and every PlainText vanishes from VoiceOver; drop the getter and
+`accessible={false}` is ignored. Neither throws.
 
 ---
 

@@ -1,6 +1,6 @@
-import { describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { createRef, type ComponentRef } from 'react';
-import type { TextStyle } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import {
   PlainText,
@@ -57,6 +57,7 @@ describe('<PlainText />', () => {
 
     expect(screen.toJSON()).toMatchInlineSnapshot(`
 <RNPlainText
+  accessible={true}
   fontSize={12}
   numberOfLines={2}
   style={
@@ -89,6 +90,7 @@ describe('<PlainText />', () => {
       expect(screen.root).toHaveProp('text', '3 items');
       expect(screen.toJSON()).toMatchInlineSnapshot(`
 <RNPlainText
+  accessible={true}
   text="3 items"
 />
 `);
@@ -135,6 +137,7 @@ describe('<PlainText />', () => {
       expect(screen.root).toHaveProp('text', '3 items');
       expect(screen.toJSON()).toMatchInlineSnapshot(`
 <RNPlainText
+  accessible={true}
   text="3 items"
 />
 `);
@@ -420,6 +423,25 @@ describe('mapPlainTextProps', () => {
     });
   });
 
+  describe('accessible', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('defaults to true on iOS, like RN <Text>', () => {
+      expect(mapPlainTextProps({}).accessible).toBe(true);
+      expect(mapPlainTextProps({ accessible: true }).accessible).toBe(true);
+      expect(mapPlainTextProps({ accessible: false }).accessible).toBe(false);
+    });
+
+    it('is left as given on Android', () => {
+      jest.replaceProperty(Platform, 'OS', 'android');
+
+      expect(mapPlainTextProps({})).not.toHaveProperty('accessible');
+      expect(mapPlainTextProps({ accessible: false }).accessible).toBe(false);
+    });
+  });
+
   describe('pass-through of remaining props', () => {
     it('forwards accessibility and identifier props', () => {
       expect(
@@ -442,12 +464,12 @@ describe('mapPlainTextProps', () => {
     });
 
     it('emits only the keys that hold a value', () => {
-      expect(Object.keys(mapPlainTextProps({ children: 'Hi' }))).toEqual(['text']);
+      expect(Object.keys(mapPlainTextProps({ children: 'Hi' }))).toEqual(['text', 'accessible']);
       expect(
         Object.keys(
           mapPlainTextProps({ children: 'Hi', style: { color: null, padding: undefined } })
         )
-      ).toEqual(['text']);
+      ).toEqual(['text', 'accessible']);
     });
 
     it('keeps style keys that only look like prototype members in style', () => {

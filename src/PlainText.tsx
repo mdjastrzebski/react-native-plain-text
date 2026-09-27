@@ -1,4 +1,5 @@
 import {
+  Platform,
   StyleSheet,
   type AccessibilityProps,
   type StyleProp,
@@ -132,6 +133,14 @@ export function mapPlainTextProps({
     } else if (__DEV__) {
       warnOnUnsupportedChildren(content);
     }
+  }
+
+  // SYNC: RNPlainText.mm's isAccessibilityElement reads this. See
+  // docs/contributing/sync-points.md#set-19--accessible-defaults-to-true-on-ios.
+  // iOS: accessible unless explicitly false, like RN <Text>. Always sent, since
+  // native's `accessible` defaults to false and can't tell unset from false.
+  if (Platform.OS === 'ios') {
+    nativeProps.accessible = nativeProps.accessible !== false;
   }
 
   if (unstable_lineHeightClippingCompat !== undefined) {

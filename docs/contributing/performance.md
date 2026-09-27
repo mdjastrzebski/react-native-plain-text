@@ -550,7 +550,9 @@ full key set on mount and on every re-render.
 The mapper now reuses `rest` as the native props and makes one `for...in` pass
 over the keys the flattened style actually sets, dispatching each through a
 null-prototype lookup table. It adds a key only when it holds a value, and adds
-`style` only when a view style remains.
+`style` only when a view style remains. The one exception is `accessible` on
+iOS, always sent because native can't tell unset from `false`
+([sync-points.md](sync-points.md#set-19--accessible-defaults-to-true-on-ios)).
 
 Measured on iPhone 16, 5000 components: about 5 ms off both mount (~1%) and a
 no-op update (~5%). Small on mount, where native work dominates, but it applies
