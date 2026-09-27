@@ -19,12 +19,16 @@ case "$platform" in
     serial_file="$PROJECT_ROOT/.vrt/devices/android-serial"
     [[ -f "$serial_file" ]] || fail "Run 'yarn vrt android setup' first."
     android_serial="$(<"$serial_file")"
+    source_apk="$PROJECT_ROOT/example/android/app/build/outputs/apk/release/app-release.apk"
+    target_dir="$PROJECT_ROOT/node_modules/.cache/vrt/apps/android"
+    target_apk="$target_dir/app-release.apk"
+    # A failed build must not leave a previous APK and fingerprint behind for CI
+    # to cache under the new key.
+    yarn del-cli "$source_apk" "$target_apk" "$target_dir/build-input.sha256"
 
     VRT_ENABLED=1 ANDROID_SERIAL="$android_serial" \
       yarn example android:release --device "$ANDROID_AVD_NAME" --no-bundler
 
-    source_apk="$PROJECT_ROOT/example/android/app/build/outputs/apk/release/app-release.apk"
-    target_apk="$PROJECT_ROOT/node_modules/.cache/vrt/apps/android/app-release.apk"
     [[ -f "$source_apk" ]] || fail "Expo did not produce $source_apk."
     mkdir -p "$(dirname "$target_apk")"
     cp -a "$source_apk" "$target_apk"
@@ -33,8 +37,9 @@ case "$platform" in
     ;;
   ios)
     expo_output="$PROJECT_ROOT/node_modules/.cache/vrt/expo-ios"
-    target_app="$PROJECT_ROOT/node_modules/.cache/vrt/apps/ios/PlainTextExample.app"
-    yarn del-cli "$expo_output" "$target_app"
+    target_dir="$PROJECT_ROOT/node_modules/.cache/vrt/apps/ios"
+    target_app="$target_dir/PlainTextExample.app"
+    yarn del-cli "$expo_output" "$target_app" "$target_dir/build-input.sha256"
 
     VRT_ENABLED=1 yarn example ios:release --device generic --no-bundler --output "$expo_output"
 

@@ -11,6 +11,9 @@ on:
           - android
           - ios
         default: all
+  # TEMPORARY: registers vrt.yml with GitHub so it can be dispatched from this
+  # branch before it reaches main. Remove before merging.
+  pull_request:
   schedule:
     # https://elmah.io/tools/cron-parser/#0_2_*_*_*
     - cron: '0 2 * * *'
@@ -152,13 +155,14 @@ jobs:
 
       # Saved even when a later stage failed: a capture flake must not throw away a
       # freshly built app. The gate keeps a run that died before producing the APK
-      # from publishing a cache that restores as a hit with no artifact in it.
+      # from publishing a cache that restores as a hit with no artifact in it, or
+      # with a stale one restored through the key prefix.
       - name: Check Android VRT build artifact
         id: android-artifact
         if: ${{ !cancelled() && steps.android-build-cache.outputs.cache-hit != 'true' }}
         run: |
           if [ -f node_modules/.cache/vrt/apps/android/app-release.apk ] &&
-            [ -f node_modules/.cache/vrt/apps/android/build-input.sha256 ]; then
+            ./scripts/vrt-app-state.sh verify-artifact android; then
             printf 'present=true\n' >> "$GITHUB_OUTPUT"
           else
             printf 'present=false\n' >> "$GITHUB_OUTPUT"
@@ -279,7 +283,7 @@ jobs:
         if: ${{ !cancelled() && steps.ios-build-cache.outputs.cache-hit != 'true' }}
         run: |
           if [ -d node_modules/.cache/vrt/apps/ios/PlainTextExample.app ] &&
-            [ -f node_modules/.cache/vrt/apps/ios/build-input.sha256 ]; then
+            ./scripts/vrt-app-state.sh verify-artifact ios; then
             printf 'present=true\n' >> "$GITHUB_OUTPUT"
           else
             printf 'present=false\n' >> "$GITHUB_OUTPUT"
