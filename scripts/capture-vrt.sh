@@ -124,8 +124,8 @@ timings_file="$timings_dir/$platform.tsv"
 
 "$SCRIPT_DIR/vrt-app-state.sh" verify-installed "$platform"
 [[ -x "$agent_device_bin" ]] || fail "agent-device is not installed. Run 'yarn'."
-# The capture set is derived from the VRT groups on every run, never kept by hand.
-capture_list="$("$SCRIPT_DIR/list-vrt-captures.sh" "$platform")"
+# The scenario list is derived from the VRT groups on every run, never kept by hand.
+scenario_list="$("$SCRIPT_DIR/list-vrt-scenarios.sh" "$platform")"
 case "$platform" in
   android)
     target_file="$PROJECT_ROOT/.vrt/devices/android-serial"
@@ -305,7 +305,7 @@ while read -r capture_id; do
       "$live_matching_threshold" \
       "$VRT_THRESHOLD_PIXEL" || true
   fi
-done < "$capture_list"
+done < "$scenario_list"
 
 [[ "$captured" -gt 0 ]] || fail \
   "No capture matched the selection ($requested_selection) on $platform."

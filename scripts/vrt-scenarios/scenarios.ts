@@ -3,11 +3,11 @@ import { getVrtExamples } from '../../example/src/vrt/examples';
 export const VRT_PLATFORMS = ['ios', 'android'] as const;
 export type VrtPlatform = (typeof VRT_PLATFORMS)[number];
 
-// Specimens that groups.tsx renders but no capture covers, so nothing compares
-// them. Adding to this list is how a coverage gap becomes invisible: prefer
-// letting the specimen be captured and reviewing its baseline. Paying a gap off
-// means deleting its entry here.
-export const UNCAPTURED_SPECIMENS: Record<VrtPlatform, string[]> = {
+// Specimens that groups.tsx renders but no scenario captures, so nothing
+// compares them. Adding to this list is how a coverage gap becomes invisible:
+// prefer letting the specimen become a scenario and reviewing its baseline.
+// Paying a gap off means deleting its entry here.
+export const SKIPPED_SCENARIOS: Record<VrtPlatform, string[]> = {
   android: [
     'vrt-capture-features-text-break-strategy-simple',
     'vrt-capture-features-text-break-strategy-highquality',
@@ -41,11 +41,11 @@ export const UNCAPTURED_SPECIMENS: Record<VrtPlatform, string[]> = {
 };
 
 // Every specimen the VRT app renders on `platform`, in render order, minus the
-// known gaps above. This is the capture set: capture-vrt.sh opens each ID and
+// skipped ones above. These are the scenarios: capture-vrt.sh opens each ID and
 // compare-vrt.sh requires exactly these images on both sides.
-export function getVrtCaptureIDs(platform: VrtPlatform): string[] {
-  const uncaptured = new Set(UNCAPTURED_SPECIMENS[platform]);
+export function getVrtScenarioIDs(platform: VrtPlatform): string[] {
+  const skipped = new Set(SKIPPED_SCENARIOS[platform]);
   return getVrtExamples(platform)
     .map(({ testID }) => testID)
-    .filter((testID) => !uncaptured.has(testID));
+    .filter((testID) => !skipped.has(testID));
 }

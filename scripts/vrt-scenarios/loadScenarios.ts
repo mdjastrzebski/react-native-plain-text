@@ -1,10 +1,10 @@
 import { jest } from '@jest/globals';
-import type { VrtPlatform } from './captures';
+import type { VrtPlatform } from './scenarios';
 
 // Loads the VRT groups as `platform` would render them. Only runs under Jest:
 // groups.tsx imports react-native, which is stubbed here down to what the groups
 // read at module scope, with `Platform.OS` pinned to the requested platform.
-export function loadVrtCaptures(platform: VrtPlatform) {
+export function loadVrtScenarios(platform: VrtPlatform) {
   jest.resetModules();
   jest.doMock('react-native-plain-text', () => ({ PlainText: 'PlainText' }));
   jest.doMock('react-native', () => ({
@@ -20,12 +20,12 @@ export function loadVrtCaptures(platform: VrtPlatform) {
     View: 'View',
   }));
 
-  const { getVrtCaptureIDs } = require('./captures') as typeof import('./captures');
+  const { getVrtScenarioIDs } = require('./scenarios') as typeof import('./scenarios');
   const { getVrtExamples } =
     require('../../example/src/vrt/examples') as typeof import('../../example/src/vrt/examples');
 
   return {
-    captureIDs: getVrtCaptureIDs(platform),
+    scenarioIDs: getVrtScenarioIDs(platform),
     renderedIDs: getVrtExamples(platform).map(({ testID }) => testID),
   };
 }

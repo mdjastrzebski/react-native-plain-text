@@ -21,7 +21,7 @@ current_environment=".vrt/environment/$platform.txt"
 baseline_environment="$baseline_dir/environment.txt"
 report_dir=".vrt/report/$platform"
 expected_list="$report_dir/expected-images.txt"
-capture_images="$report_dir/capture-images.txt"
+scenario_images="$report_dir/scenario-images.txt"
 partial_marker="$actual_dir/.partial"
 partial_note="$report_dir/partial-selection.txt"
 
@@ -61,9 +61,9 @@ fi
 yarn del-cli "$report_dir"
 mkdir -p "$report_dir"
 
-# The capture set is derived from the VRT groups on every run, the same list the
+# The scenario list is derived from the VRT groups on every run, the same list the
 # capture stage walked, so the two can never disagree about what belongs.
-capture_list="$("$SCRIPT_DIR/list-vrt-captures.sh" "$platform")"
+scenario_list="$("$SCRIPT_DIR/list-vrt-scenarios.sh" "$platform")"
 if ! awk '
   $0 !~ /^vrt-capture-[a-z0-9-]+$/ {
     printf "Invalid capture ID: %s.\n", $0 > "/dev/stderr"
@@ -75,28 +75,28 @@ if ! awk '
   }
   { print $0 ".png" }
   END { exit invalid }
-' "$capture_list" | LC_ALL=C sort > "$capture_images"; then
-  fail "The $platform capture list is invalid."
+' "$scenario_list" | LC_ALL=C sort > "$scenario_images"; then
+  fail "The $platform scenario list is invalid."
 fi
 
-# What this run compares: the whole capture set for a complete capture, or exactly
+# What this run compares: every scenario for a complete capture, or exactly
 # the images a filtered capture produced for a partial one. A partial run is only
 # ever an investigation, and the marker that records its filter is what keeps it
 # out of the reviewed baselines.
 if [[ "$mode" == "partial" ]]; then
   find "$actual_dir" -type f -name '*.png' -exec basename {} \; | LC_ALL=C sort > "$expected_list"
   [[ -s "$expected_list" ]] || fail "Partial capture set in $actual_dir holds no images."
-  comm -13 "$capture_images" "$expected_list" > "$report_dir/captured-not-in-capture-set.txt"
-  if [[ -s "$report_dir/captured-not-in-capture-set.txt" ]]; then
-    printf 'Captured images that are not in the %s capture set:\n' "$platform" >&2
-    sed 's/^/  /' "$report_dir/captured-not-in-capture-set.txt" >&2
+  comm -13 "$scenario_images" "$expected_list" > "$report_dir/captured-not-in-scenarios.txt"
+  if [[ -s "$report_dir/captured-not-in-scenarios.txt" ]]; then
+    printf 'Captured images that are not %s scenarios:\n' "$platform" >&2
+    sed 's/^/  /' "$report_dir/captured-not-in-scenarios.txt" >&2
     fail "Partial capture set does not come from the VRT groups."
   fi
   cp -a "$partial_marker" "$partial_note"
   printf 'Partial comparison of %s captures. This is not a full-suite pass.\n' \
     "$(wc -l < "$expected_list" | tr -d ' ')" >&2
 else
-  cp -a "$capture_images" "$expected_list"
+  cp -a "$scenario_images" "$expected_list"
 fi
 
 validate_image_set() {
