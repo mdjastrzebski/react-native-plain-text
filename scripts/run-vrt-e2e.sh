@@ -20,6 +20,9 @@ session_name="plaintext-vrt-e2e-$platform"
 agent_device_bin="$PROJECT_ROOT/node_modules/.bin/agent-device"
 
 "$SCRIPT_DIR/vrt-app-state.sh" verify-installed "$platform"
+# A capture leaves the device at its suite's text size, so put it back at this
+# suite's before checking the environment.
+"$SCRIPT_DIR/apply-vrt-text-size.sh" "$platform"
 "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"
 [[ -x "$agent_device_bin" ]] || fail "agent-device is not installed. Run 'yarn'."
 
@@ -43,34 +46,20 @@ agent_device() {
 
 if [[ "$platform" == "ios" ]]; then
   agent_device prepare ios-runner
-  # A fresh simulator gates the first custom-scheme deep link behind a one-time
-  # "Open in app?" confirmation dialog. Until it is accepted, launching
-  # "$deep_link" on a stopped app fails with "Simulator device failed to open".
-  # Disarm that dialog before the cold test exercises it, then require the app to
-  # reach the deep-link screen so the "always open" choice is committed before we
-  # clear app state.
+  # A fresh simulator asks "Open in app?" before the first custom-scheme deep link;
+  # until accepted, a cold open fails with "Simulator device failed to open".
+  # Accept it before the cold test, and wait for the deep-link screen so the choice
+  # is committed before app state is cleared.
   #
-  # Each attempt arms the scheme with a cold open (that is what surfaces the
-  # dialog) but confirms over the warm foreground path, the same open every
-  # capture uses: once the app is running it delivers the URL through the 'url'
-  # event reliably, whereas the very first launch right after accepting the
-  # dialog can drop the URL and render every specimen instead of the requested
-  # one. The genuinely cold deep link is still exercised, with its own retries,
-  # by vrt-deep-link-cold.ad below. Retry so one slow or URL-dropping launch
-  # cannot hard-fail the job the way a single unguarded wait did.
-  #
-  # Every attempt is logged rather than sent to /dev/null. This stage gates the
-  # whole job, so a run that exhausts the budget has to say what the simulator
-  # actually did on each attempt.
+  # Each attempt arms the dialog with a cold open but confirms over the warm path
+  # every capture uses: the first launch after accepting can drop the URL.
+  # vrt-deep-link-cold.ad still covers the cold path. Attempts are logged, not
+  # discarded, so an exhausted budget shows what happened.
 
-  # Accept the "Open in app?" dialog armed by the cold open. The dialog appears
-  # within a moment, but the app's launch keeps the simulator's main thread busy
-  # enough that a single short alert query can exceed the runner's execution
-  # watchdog and abort (its work is abandoned, and the next command may bounce
-  # with RUNNER_BUSY until it drains). So a miss is polled again rather than read
-  # as "no dialog", with a settle pause between polls, and the accept is trusted
-  # only once it reports the dialog gone. A dialog left standing would swallow
-  # the deep link that the warm open below delivers.
+  # Accept the dialog. The app's launch can stall a short alert query past the
+  # runner's watchdog (then RUNNER_BUSY), so a miss is polled again rather than
+  # read as no dialog, and the accept counts only once the dialog is gone: one left
+  # standing swallows the warm deep link.
   dismiss_cold_open_dialog() {
     local poll
     for poll in 1 2 3 4 5 6; do
@@ -118,9 +107,8 @@ if [[ "$platform" == "ios" ]]; then
 fi
 agent_device settings clear-app-state "$VRT_APP_ID"
 mkdir -p "$PROJECT_ROOT/.vrt/report"
-# The cold deep-link launch stays intermittently slow even once the confirmation
-# dialog is disarmed, so keep a retry budget. Without --fail-fast a cold failure
-# still lets the independent warm test run, so a flake never hides its result.
+# The cold launch stays intermittently slow, so keep retries. Without
+# --fail-fast a cold failure still lets the warm test report.
 agent_device test \
   "$PROJECT_ROOT/.agent-device/vrt-deep-link-cold.ad" \
   "$PROJECT_ROOT/.agent-device/vrt-deep-link-warm.ad" \

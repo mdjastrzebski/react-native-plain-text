@@ -56,7 +56,11 @@ run_setup() {
 
 run_build() { "$SCRIPT_DIR/build-vrt-app.sh" "$platform"; }
 run_install() { "$SCRIPT_DIR/install-vrt-app.sh" "$platform"; }
-run_verify() { "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"; }
+# A capture leaves the device at its suite's text size; verify checks this suite's.
+run_verify() {
+  "$SCRIPT_DIR/apply-vrt-text-size.sh" "$platform"
+  "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform"
+}
 run_e2e() { "$SCRIPT_DIR/run-vrt-e2e.sh" "$platform"; }
 run_capture() { "$SCRIPT_DIR/capture-vrt.sh" "$platform" "$@"; }
 run_compare() { "$SCRIPT_DIR/compare-vrt.sh" "$platform" "${1:-compare}"; }

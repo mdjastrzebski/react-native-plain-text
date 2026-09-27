@@ -98,9 +98,9 @@ VRT_SUITE=font-scale yarn vrt android capture
 VRT_SUITE=font-scale yarn vrt android compare
 ```
 
-`setup` and `verify` use the default suite's text size unless `VRT_SUITE` says
-otherwise, so `verify` after a full run reports the font-scale size the device
-was left at.
+`setup`, `verify`, and `e2e` use the default suite's text size unless
+`VRT_SUITE` says otherwise. A capture leaves the device at its suite's size, so
+`verify` and `e2e` switch it back first, the same way a capture does.
 
 ## What compare enforces
 

@@ -21,13 +21,15 @@ hash_command() {
 }
 
 # Files whose bytes reach the compiled app, per platform. Everything here is a
-# tracked source file: generated trees (`example/android`, `example/ios`,
-# Podfile.lock) are derived from these plus the toolchain, and CI records the
-# toolchain in the cache key instead of hashing generated files whose contents
-# nobody reviewed. Test sources are excluded because nothing imports them into
-# the bundle.
+# source file git knows about: tracked files plus untracked ones that are not
+# ignored, so a new file counts before it is committed but local debris
+# (`.DS_Store`, editor temp files, build and Kotlin daemon output) does not.
+# Generated trees (`example/android`, `example/ios`, Podfile.lock) are derived
+# from these plus the toolchain, and CI records the toolchain in the cache key
+# instead of hashing generated files whose contents nobody reviewed. Test
+# sources are excluded because nothing imports them into the bundle.
 #
-# This walks and hashes about 90 files in ~1.1s, all of it in `find` and `shasum`
+# This lists and hashes about 90 files in ~1.1s, nearly all of it in `shasum`
 # process spawns. https://github.com/mdjastrzebski/fs-fingerprint does the same
 # job (content plus path, metadata ignored, sorted) in about 30ms and could take
 # `VRT_ENABLED` as a content input, at the cost of a Node step and a dependency
@@ -39,6 +41,7 @@ hash_command() {
 app_build_inputs() {
   local platform="$1"
   local input
+  local files
   local inputs=(
     package.json
     yarn.lock
@@ -60,16 +63,16 @@ app_build_inputs() {
   esac
 
   for input in "${inputs[@]}" "${optional[@]}"; do
-    if [[ -f "$input" ]]; then
-      printf '%s\n' "$input"
-    elif [[ -d "$input" ]]; then
-      find "$input" -type f \
-        ! -path '*/build/*' \
-        ! -path '*/.gradle/*' \
-        ! -path '*/Pods/*' \
-        ! -name '*.test.ts' \
-        ! -name '*.test.tsx' \
-        -print
+    # `--cached` still lists tracked files deleted from the working tree, so
+    # keep only paths that exist.
+    files="$(
+      git ls-files --cached --others --exclude-standard -- "$input" |
+        while IFS= read -r file; do
+          [[ -f "$file" ]] && printf '%s\n' "$file"
+        done
+    )"
+    if [[ -n "$files" ]]; then
+      printf '%s\n' "$files" | grep -Ev '\.test\.tsx?$' || true
     elif [[ " ${optional[*]} " != *" $input "* ]]; then
       fail "The $platform build input '$input' is missing."
     fi
