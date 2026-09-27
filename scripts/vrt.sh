@@ -87,9 +87,9 @@ announce_suite() {
   return 0
 }
 
-# The --filter value a capture was given, or VRT_CAPTURE_FILTER.
+# The --filter value a capture was given.
 capture_filter() {
-  local filter="${VRT_CAPTURE_FILTER:-}"
+  local filter=""
   while [[ $# -gt 0 ]]; do
     if [[ "$1" == "--filter" && $# -ge 2 ]]; then
       filter="$2"

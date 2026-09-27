@@ -60,16 +60,6 @@ xcrun simctl ui "$simulator_udid" appearance light
 xcrun simctl ui "$simulator_udid" content_size "$IOS_CONTENT_SIZE"
 xcrun simctl status_bar "$simulator_udid" override --time 9:41 --batteryLevel 100 --batteryState charged --cellularBars 4 --wifiBars 3
 
-actual_locale="$(xcrun simctl spawn "$simulator_udid" defaults read NSGlobalDomain AppleLocale)"
-actual_appearance="$(xcrun simctl ui "$simulator_udid" appearance)"
-actual_content_size="$(xcrun simctl ui "$simulator_udid" content_size)"
-[[ "$actual_locale" == "$IOS_LOCALE" ]] || fail \
-  "iOS locale is '$actual_locale', expected '$IOS_LOCALE'."
-[[ "$actual_appearance" == "light" ]] || fail \
-  "iOS appearance is '$actual_appearance', expected 'light'."
-[[ "$actual_content_size" == "$IOS_CONTENT_SIZE" ]] || fail \
-  "iOS content size is '$actual_content_size', expected '$IOS_CONTENT_SIZE'."
-
 mkdir -p "$PROJECT_ROOT/.vrt/devices"
 printf '%s\n' "$simulator_udid" > "$PROJECT_ROOT/.vrt/devices/ios-udid"
 printf 'iOS VRT simulator is ready: %s (%s).\n' "$IOS_SIMULATOR_NAME" "$simulator_udid"

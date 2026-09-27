@@ -54,15 +54,6 @@ actual_api_level="$($adb -s "$serial" shell getprop ro.build.version.sdk | tr -d
 [[ "$actual_api_level" == "$ANDROID_API_LEVEL" ]] || fail \
   "Android API $ANDROID_API_LEVEL is required, but '$serial' runs API $actual_api_level."
 
-system_image_architecture="$ANDROID_SYSTEM_IMAGE_ARCHITECTURE"
-[[ "$system_image_architecture" != "unsupported" ]] || fail \
-  "Unsupported Android VRT host: $(uname -s)-$(uname -m)."
-source_properties="$android_sdk_root/system-images/android-$ANDROID_API_LEVEL/$ANDROID_SYSTEM_IMAGE_TARGET/$system_image_architecture/source.properties"
-[[ -f "$source_properties" ]] || fail "System image metadata not found at $source_properties."
-actual_revision="$(sed -n 's/^Pkg.Revision=//p' "$source_properties")"
-[[ "$actual_revision" == "$ANDROID_SYSTEM_IMAGE_REVISION" ]] || fail \
-  "Android system image revision $ANDROID_SYSTEM_IMAGE_REVISION is required, but revision $actual_revision is installed."
-
 device_adb=("$adb" -s "$serial")
 [[ "$("${device_adb[@]}" shell getprop sys.boot_completed | tr -d '\r')" == "1" ]] || fail \
   "Android emulator '$serial' has not completed booting."
@@ -125,22 +116,6 @@ while ((SECONDS < appearance_deadline)); do
 done
 [[ "$appearance_stable_reads" -eq 3 ]] || fail \
   "Android appearance did not remain in light mode."
-
-actual_resolution="$("${device_adb[@]}" shell wm size | tr -d '\r' | awk -F ': ' '/Physical size|Override size/ { value = $2 } END { print value }')"
-actual_density="$("${device_adb[@]}" shell wm density | tr -d '\r' | awk -F ': ' '/Physical density|Override density/ { value = $2 } END { print value }')"
-actual_font_scale="$("${device_adb[@]}" shell settings get system font_scale | tr -d '\r')"
-actual_locale="$("${device_adb[@]}" shell settings get system system_locales | tr -d '\r')"
-actual_timezone="$("${device_adb[@]}" shell getprop persist.sys.timezone | tr -d '\r')"
-[[ "$actual_resolution" == "$ANDROID_RESOLUTION" ]] || fail \
-  "Android resolution is '$actual_resolution', expected '$ANDROID_RESOLUTION'."
-[[ "$actual_density" == "$ANDROID_DENSITY" ]] || fail \
-  "Android density is '$actual_density', expected '$ANDROID_DENSITY'."
-android_font_scale_is "$actual_font_scale" "$ANDROID_FONT_SCALE" || fail \
-  "Android font scale is '$actual_font_scale', expected '$ANDROID_FONT_SCALE'."
-[[ "$actual_locale" == "$ANDROID_LOCALE" ]] || fail \
-  "Android locale is '$actual_locale', expected '$ANDROID_LOCALE'."
-[[ "$actual_timezone" == "$ANDROID_TIMEZONE" ]] || fail \
-  "Android timezone is '$actual_timezone', expected '$ANDROID_TIMEZONE'."
 
 mkdir -p "$PROJECT_ROOT/.vrt/devices"
 printf '%s\n' "$serial" > "$PROJECT_ROOT/.vrt/devices/android-serial"

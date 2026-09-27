@@ -39,9 +39,7 @@ android_sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 adb="$android_sdk_root/platform-tools/adb"
 avdmanager="$android_sdk_root/cmdline-tools/latest/bin/avdmanager"
 emulator="$android_sdk_root/emulator/emulator"
-emulator_properties="$android_sdk_root/emulator/source.properties"
 system_image="system-images;android-$ANDROID_API_LEVEL;$ANDROID_SYSTEM_IMAGE_TARGET;$ANDROID_SYSTEM_IMAGE_ARCHITECTURE"
-system_image_properties="$android_sdk_root/system-images/android-$ANDROID_API_LEVEL/$ANDROID_SYSTEM_IMAGE_TARGET/$ANDROID_SYSTEM_IMAGE_ARCHITECTURE/source.properties"
 
 case "$ANDROID_HEADLESS" in
   0) ;;
@@ -52,15 +50,6 @@ esac
 [[ -x "$adb" ]] || fail "adb not found at $adb."
 [[ -x "$avdmanager" ]] || fail "avdmanager not found at $avdmanager."
 [[ -x "$emulator" ]] || fail "Android emulator not found at $emulator."
-[[ -f "$emulator_properties" ]] || fail "Emulator metadata not found at $emulator_properties."
-[[ -f "$system_image_properties" ]] || fail \
-  "Install '$system_image' before running Android VRT."
-[[ "$(property "$emulator_properties" Pkg.Revision)" == "$ANDROID_EMULATOR_VERSION" ]] || fail \
-  "Android emulator $ANDROID_EMULATOR_VERSION is required."
-[[ "$(property "$emulator_properties" Pkg.BuildId)" == "$ANDROID_EMULATOR_BUILD" ]] || fail \
-  "Android emulator build $ANDROID_EMULATOR_BUILD is required."
-[[ "$(property "$system_image_properties" Pkg.Revision)" == "$ANDROID_SYSTEM_IMAGE_REVISION" ]] || fail \
-  "Android system image revision $ANDROID_SYSTEM_IMAGE_REVISION is required."
 
 device_catalog="$($avdmanager list device)"
 grep -Eq "id: [0-9]+ or \"$ANDROID_DEVICE_TYPE\"" <<< "$device_catalog" || fail \
@@ -117,11 +106,6 @@ if [[ ! -f "$avd_config" ]]; then
     --device "$ANDROID_DEVICE_TYPE" >&2
 fi
 [[ -f "$avd_config" ]] || fail "AVD creation did not produce $avd_config."
-
-[[ "$(property "$avd_config" image.sysdir.1)" == "$expected_image_path" ]] || fail \
-  "AVD '$ANDROID_AVD_NAME' does not use '$system_image'. Delete it and run setup again."
-[[ "$(property "$avd_config" hw.device.name)" == "$ANDROID_DEVICE_TYPE" ]] || fail \
-  "AVD '$ANDROID_AVD_NAME' does not use the '$ANDROID_DEVICE_TYPE' profile. Delete it and run setup again."
 
 # Match the overrides written by ReactiveCircus/android-emulator-runner.
 set_property "$avd_config" hw.cpu.ncore "$ANDROID_CORES"

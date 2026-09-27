@@ -27,8 +27,8 @@ case "$platform" in
 esac
 shift || true
 
-filter="${VRT_CAPTURE_FILTER:-}"
-limit="${VRT_CAPTURE_LIMIT:-}"
+filter=""
+limit=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --filter)
@@ -54,7 +54,6 @@ done
 
 session_name="plaintext-vrt-capture-$platform"
 session_open=0
-step_capture_id=unknown
 agent_device_bin="$PROJECT_ROOT/node_modules/.bin/agent-device"
 
 case "$platform" in
@@ -68,31 +67,15 @@ target="$(vrt_target "$platform")"
 
 actual_dir="$PROJECT_ROOT/.vrt/actual/$target"
 
-# Investigation knobs, off by default. They restore the `wait stable` guarantee
-# (two more accessibility fetches per specimen) to prove the cheaper default
-# renders the same bytes.
-settle_ms="${VRT_SETTLE_MS:-0}"
-stable_quiet_ms="${VRT_STABLE_QUIET_MS:-0}"
-stable_timeout_ms="${VRT_STABLE_TIMEOUT_MS:-5000}"
-capture_attempts="${VRT_CAPTURE_ATTEMPTS:-5}"
-# Android's pre-screenshot chrome stabilization is off: captures are cropped to
-# the specimen, and setup-android-vrt-device.sh already disables animations.
-android_stabilize="${VRT_ANDROID_STABILIZE:-0}"
-timing="${VRT_TIMING:-0}"
-# Report each capture's verdict as it is taken, not only at the compare stage.
-live_compare="${VRT_LIVE_COMPARE:-1}"
+capture_attempts=5
+# Each capture's verdict is reported as it is taken, not only at the compare stage.
 live_diff_dir="$PROJECT_ROOT/.vrt/live-diff/$target"
 case "$platform" in
   android) live_matching_threshold="$ANDROID_VRT_MATCHING_THRESHOLD" ;;
   *) live_matching_threshold="$IOS_VRT_MATCHING_THRESHOLD" ;;
 esac
-timings_dir="$PROJECT_ROOT/.vrt/timings"
-timings_file="$timings_dir/$target.tsv"
 
 [[ "$limit" =~ ^[1-9][0-9]*$ || -z "$limit" ]] || fail "--limit must be a positive integer."
-[[ "$settle_ms" =~ ^[0-9]+$ ]] || fail "VRT_SETTLE_MS must be a non-negative integer."
-[[ "$stable_quiet_ms" =~ ^[0-9]+$ ]] || fail "VRT_STABLE_QUIET_MS must be a non-negative integer."
-[[ "$capture_attempts" =~ ^[1-9][0-9]*$ ]] || fail "VRT_CAPTURE_ATTEMPTS must be a positive integer."
 
 "$SCRIPT_DIR/vrt-app-state.sh" verify-installed "$platform"
 [[ -x "$agent_device_bin" ]] || fail "agent-device is not installed. Run 'yarn'."
@@ -115,51 +98,12 @@ esac
 # compare stays runnable without a device.
 "$SCRIPT_DIR/verify-vrt-environment.sh" "$platform" >/dev/null
 
-if [[ "$timing" == "1" ]]; then
-  command -v jq >/dev/null 2>&1 || fail "VRT_TIMING=1 needs jq. Install jq or unset VRT_TIMING."
-  mkdir -p "$timings_dir"
-  printf 'capture_id\tstep\twall_clock_ms\trunner_round_trips\tstatus\n' > "$timings_file"
-fi
-
 agent_device() {
   AGENT_DEVICE_SESSION="$session_name" "$agent_device_bin" "$@" "${target_args[@]}"
 }
 
-# `wait` and `screenshot` report daemon-side cost under `data.cost`; `open`
-# reports `data.startup`. A step with neither is n/a, not a flattering zero.
-step_metrics() {
-  jq -r '
-    [ (.data.cost.wallClockMs // .cost.wallClockMs
-       // .data.startup.durationMs // .startup.durationMs
-       // "n/a"),
-      (.data.cost.runnerRoundTrips // .cost.runnerRoundTrips // "" | tostring)
-    ] | @tsv
-  ' "$1" 2>/dev/null
-}
-
-# One measured device round trip, so deep-link opens and accessibility fetches
-# are timed separately.
 step() {
-  local label="$1"
-  shift
-  if [[ "$timing" == "1" ]]; then
-    local step_json="$timings_dir/last-$label.json"
-    local step_stderr="$timings_dir/last-$label.err"
-    local status=ok metrics
-    if ! agent_device --json --cost --level digest "$@" >"$step_json" 2>"$step_stderr"; then
-      status=failed
-    fi
-    metrics="$(step_metrics "$step_json")"
-    [[ -n "$metrics" ]] || metrics="$(printf 'n/a\t')"
-    printf '%s\t%s\t%s\t%s\n' "$step_capture_id" "$label" "$metrics" "$status" \
-      >> "$timings_file"
-    if [[ "$status" == "failed" ]]; then
-      cat "$step_stderr" >&2
-      return 1
-    fi
-  else
-    agent_device --level digest "$@" >/dev/null
-  fi
+  agent_device --level digest "$@" >/dev/null
 }
 
 close_session() {
@@ -188,11 +132,8 @@ capture_selected() {
   return 1
 }
 
-yarn del-cli "$actual_dir"
+yarn del-cli "$actual_dir" "$live_diff_dir"
 mkdir -p "$actual_dir"
-if [[ "$live_compare" == "1" ]]; then
-  yarn del-cli "$live_diff_dir"
-fi
 if [[ "$requested_selection" != "all" ]]; then
   printf '%s\n' "$requested_selection" > "$partial_marker"
 fi
@@ -206,27 +147,16 @@ while read -r capture_id; do
   fi
   selected=$((selected + 1))
 
-  # With live comparison the verdict is the capture's only line. At a terminal a
-  # pending line stands in for it until the verdict overwrites it.
-  if [[ "$live_compare" != "1" ]]; then
-    printf 'Capturing %s\n' "$capture_id"
-  elif [[ -t 1 ]]; then
-    printf '⏳ %s' "$capture_id"
-  fi
-  step_capture_id="$capture_id"
+  # The verdict is the capture's only line. At a terminal a pending line stands
+  # in for it until the verdict overwrites it.
+  [[ -t 1 ]] && printf '⏳ %s' "$capture_id"
   deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
-  step open open "$VRT_APP_ID" "$deep_link" --foreground
+  step open "$VRT_APP_ID" "$deep_link" --foreground
   session_open=1
 
   # One accessibility fetch proves the specimen exists. No `wait stable`: the crop
   # below resolves the same selector on the same screen.
-  step wait wait "id=\"$capture_id\"" 15000
-  if [[ "$stable_quiet_ms" != "0" ]]; then
-    step stable wait stable "$stable_quiet_ms" "$stable_timeout_ms"
-  fi
-  if [[ "$settle_ms" != "0" ]]; then
-    step settle wait "$settle_ms"
-  fi
+  step wait "id=\"$capture_id\"" 15000
 
   # Files drop the ID's `vrt-` prefix; compare-vrt.sh derives the same names.
   image="${capture_id#vrt-}.png"
@@ -235,15 +165,17 @@ while read -r capture_id; do
     "$actual_dir/$image"
     --crop-on "id=\"$capture_id\""
   )
+  # Android's pre-screenshot chrome stabilization is skipped: captures are cropped
+  # to the specimen, and setup-android-vrt-device.sh already disables animations.
   if [[ "$platform" == "ios" ]]; then
     screenshot_command+=(--pixel-density "$IOS_VRT_PIXEL_DENSITY")
-  elif [[ "$android_stabilize" != "1" ]]; then
+  else
     screenshot_command+=(--no-stabilize)
   fi
 
   attempt=1
   while true; do
-    if step screenshot "${screenshot_command[@]}"; then
+    if step "${screenshot_command[@]}"; then
       break
     fi
     if [[ "$attempt" -ge "$capture_attempts" ]]; then
@@ -255,15 +187,13 @@ while read -r capture_id; do
     sleep 0.2
   done
   captured=$((captured + 1))
-  if [[ "$live_compare" == "1" ]]; then
-    [[ -t 1 ]] && printf '\r\033[K'
-    node "$SCRIPT_DIR/vrt-live-compare.js" \
-      "$actual_dir/$image" \
-      "$PROJECT_ROOT/tests/vrt/$target/$image" \
-      "$live_diff_dir/$image" \
-      "$live_matching_threshold" \
-      "$VRT_THRESHOLD_PIXEL" || true
-  fi
+  [[ -t 1 ]] && printf '\r\033[K'
+  node "$SCRIPT_DIR/vrt-live-compare.js" \
+    "$actual_dir/$image" \
+    "$PROJECT_ROOT/tests/vrt/$target/$image" \
+    "$live_diff_dir/$image" \
+    "$live_matching_threshold" \
+    "$VRT_THRESHOLD_PIXEL" || true
 done < "$scenario_list"
 
 [[ "$captured" -gt 0 ]] || fail \
@@ -271,16 +201,6 @@ done < "$scenario_list"
 
 agent_device close >/dev/null
 session_open=0
-
-if [[ "$timing" == "1" ]]; then
-  awk -F '\t' '
-    NR > 1 && $3 ~ /^[0-9.]+$/ { total += $3; n++ }
-    END {
-      if (n) printf "Measured %d steps, %.0f ms total, %.0f ms per step.\n", n, total, total / n
-    }
-  ' "$timings_file"
-  printf 'VRT step timings: %s\n' "$timings_file"
-fi
 
 printf 'VRT captures: %s (%s)\n' "$actual_dir" "$captured"
 if [[ "$requested_selection" != "all" ]]; then
