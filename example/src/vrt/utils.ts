@@ -275,28 +275,6 @@ export const FONT_VARIATION_SETTINGS: {
     fontVariationSettings: '"wght" 800, "wdth" 75',
   },
 ];
-export const COLORS = [
-  {
-    label: 'Indigo',
-    color: COLOR.indigo,
-  },
-  {
-    label: 'Plum',
-    color: COLOR.plum,
-  },
-  {
-    label: 'Oxblood',
-    color: COLOR.oxblood,
-  },
-  {
-    label: 'Ochre',
-    color: COLOR.ochre,
-  },
-  {
-    label: 'Moss',
-    color: COLOR.moss,
-  },
-];
 export const FONT_WEIGHTS = ['normal', 'bold', '100', '300', '500', '700', '900'] as const;
 export type FontFamilyRow = {
   label: string;

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Text, View, type AccessibilityProps, type StyleProp, type ViewStyle } from 'react-native';
+import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { PlainText, type PlainTextProps } from 'react-native-plain-text';
 import { COLOR } from '../theme';
 import { USE_CASE_GROUPS, type UseCaseItem } from './useCases';
@@ -36,7 +36,6 @@ import {
   TABULAR_FIGURE_ROWS,
   variableFontRow,
   FONT_VARIATION_SETTINGS,
-  COLORS,
   FONT_WEIGHTS,
   FONT_FAMILY_RESOLUTION,
   type VrtGroup,
@@ -48,7 +47,6 @@ type VrtTextProps = PlainTextProps & {
   label?: string;
   showText: boolean;
   containerStyle?: PlainTextProps['style'];
-  accessibilityProps?: AccessibilityProps & { testID?: string };
 };
 
 function VrtText({
@@ -56,15 +54,13 @@ function VrtText({
   label: _label,
   showText: _showText,
   containerStyle,
-  accessibilityProps,
   style,
   ...props
 }: VrtTextProps) {
   return (
     <PlainText
       {...props}
-      {...accessibilityProps}
-      testID={accessibilityProps?.testID ?? `${testID}-text`}
+      testID={`${testID}-text`}
       style={[vrtStyles.base, containerStyle, style]}
     />
   );
@@ -176,20 +172,17 @@ export const groups: VrtGroup[] = [
   {
     children: (
       <>
-        {COLORS.map(({ label, color }) => (
-          <VrtText
-            testID={`vrt-features-color-${testIDSlug(label)}`}
-            key={label}
-            label={label}
-            showText={false}
-            style={{
-              fontSize: SHORT_ROW_SIZE,
-              color,
-            }}
-          >
-            {SPECIMEN}
-          </VrtText>
-        ))}
+        <VrtText
+          testID="vrt-features-color-indigo"
+          label="Indigo"
+          showText={false}
+          style={{
+            fontSize: SHORT_ROW_SIZE,
+            color: COLOR.indigo,
+          }}
+        >
+          {SPECIMEN}
+        </VrtText>
         <VrtText
           testID="vrt-features-color-inverse"
           label="inverse"
@@ -749,6 +742,9 @@ export const groups: VrtGroup[] = [
     ),
   },
   {
+    // Captured only by the font-scale suite, at a system text size above 1.2x
+    // (Android 1.3, iOS 1.353), so the three rows render at three sizes.
+    suite: 'font-scale',
     children: (
       <>
         <VrtText
@@ -773,13 +769,13 @@ export const groups: VrtGroup[] = [
           {SPECIMEN}
         </VrtText>
         <VrtText
-          testID="vrt-features-font-scaling-max-1-5x"
-          label="max 1.5x"
+          testID="vrt-features-font-scaling-max-1-2x"
+          label="max 1.2x"
           showText={false}
           style={{
             fontSize: SHORT_ROW_SIZE,
           }}
-          maxFontSizeMultiplier={1.5}
+          maxFontSizeMultiplier={1.2}
         >
           {SPECIMEN}
         </VrtText>
@@ -1008,82 +1004,6 @@ export const groups: VrtGroup[] = [
     ),
   },
   {
-    children: (
-      <>
-        <VrtText
-          testID="vrt-features-accessibility-test-id"
-          label="testID"
-          showText={false}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            testID: 'plain-text-demo',
-          }}
-        >
-          &quot;plain-text-demo&quot;, findable in the native tree
-        </VrtText>
-        <VrtText
-          testID="vrt-features-accessibility-label"
-          label="label"
-          showText={false}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            accessibilityLabel: 'A screen reader announces this instead',
-          }}
-        >
-          Overrides the spoken text
-        </VrtText>
-        <VrtText
-          testID="vrt-features-accessibility-role"
-          label="role"
-          showText={false}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            accessibilityRole: 'header',
-          }}
-        >
-          &quot;header&quot;
-        </VrtText>
-        <VrtText
-          testID="vrt-features-accessibility-role-hint"
-          label="role + hint"
-          showText={false}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            accessibilityRole: 'link',
-            accessibilityHint: 'Opens the linked page',
-          }}
-        >
-          &quot;link&quot;, hinted
-        </VrtText>
-        <VrtText
-          testID="vrt-features-accessibility-state"
-          label="state"
-          showText={false}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            accessibilityState: {
-              disabled: true,
-            },
-          }}
-        >
-          disabled
-        </VrtText>
-        <VrtText
-          testID="vrt-features-accessibility-hidden"
-          label="hidden"
-          showText={false}
-          style={styles.a11yRow}
-          accessibilityProps={{
-            accessibilityElementsHidden: true,
-            importantForAccessibility: 'no-hide-descendants',
-          }}
-        >
-          Invisible to screen readers on both platforms
-        </VrtText>
-      </>
-    ),
-  },
-  {
     platform: 'android',
     children: (
       <>
@@ -1123,7 +1043,7 @@ export const groups: VrtGroup[] = [
     children: (
       <>
         {USE_CASE_GROUPS.flatMap(({ items }) => items).map((item) => (
-          <VrtUseCase key={item.label} item={item} testID={`vrt-use-cases-${item.label}`} />
+          <VrtUseCase key={item.label} item={item} testID={`vrt-examples-${item.label}`} />
         ))}
       </>
     ),

@@ -271,7 +271,8 @@ while read -r capture_id; do
     step settle wait "$settle_ms"
   fi
 
-  image="$capture_id.png"
+  # Files drop the ID's `vrt-` prefix; compare-vrt.sh derives the same names.
+  image="${capture_id#vrt-}.png"
   screenshot_command=(
     screenshot
     "$actual_dir/$image"

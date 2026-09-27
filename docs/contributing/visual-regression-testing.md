@@ -62,6 +62,8 @@ adb -s "$(cat .vrt/devices/android-serial)" shell am start -W \
 ## Scenarios
 
 Every specimen in `groups.tsx` is a scenario, named after its `vrt-…` test ID.
+Its image file drops the `vrt-` prefix: `vrt-features-font-size-48` is captured
+as `features-font-size-48.png`.
 Adding a specimen means it gets captured and needs a baseline. There is no skip
 list: to leave a specimen out, remove it from `groups.tsx` (and its baseline
 PNG), or give its group a `platform` to render it on one platform only.

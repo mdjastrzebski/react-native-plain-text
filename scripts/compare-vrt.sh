@@ -70,7 +70,8 @@ if ! awk '
 ' "$scenario_list"; then
   fail "The $platform scenario list is invalid."
 fi
-sed 's/$/.png/' "$scenario_list" | LC_ALL=C sort > "$scenario_images"
+# Image files are the IDs without their `vrt-` prefix, as capture-vrt.sh names them.
+sed 's/^vrt-//; s/$/.png/' "$scenario_list" | LC_ALL=C sort > "$scenario_images"
 
 # What this run compares: every scenario for a complete capture, or exactly
 # the images a filtered capture produced for a partial one. A partial run is only
