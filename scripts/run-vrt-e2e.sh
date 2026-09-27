@@ -14,7 +14,7 @@ fail() {
 }
 
 platform="${1:-}"
-capture_id="${VRT_E2E_CAPTURE_ID:-vrt-capture-features-font-size-48}"
+capture_id="${VRT_E2E_CAPTURE_ID:-vrt-features-font-size-48}"
 deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
 session_name="plaintext-vrt-e2e-$platform"
 agent_device_bin="$PROJECT_ROOT/node_modules/.bin/agent-device"

@@ -6,7 +6,7 @@ import { loadVrtScenarios } from './loadScenarios';
 // seconds instead of a VRT run.
 it.each(VRT_PLATFORMS)('%s scenario IDs are well-formed', (platform) => {
   const { scenarioIDs } = loadVrtScenarios(platform);
-  expect(scenarioIDs.filter((id) => !/^vrt-capture-[a-z0-9-]+$/.test(id))).toEqual([]);
+  expect(scenarioIDs.filter((id) => !/^vrt-[a-z0-9-]+$/.test(id))).toEqual([]);
 });
 
 it.each(VRT_PLATFORMS)('%s scenario IDs are unique', (platform) => {

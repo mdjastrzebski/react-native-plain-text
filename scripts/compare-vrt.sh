@@ -65,7 +65,7 @@ mkdir -p "$report_dir"
 # capture stage walked, so the two can never disagree about what belongs.
 scenario_list="$("$SCRIPT_DIR/list-vrt-scenarios.sh" "$platform")"
 if ! awk '
-  $0 !~ /^vrt-capture-[a-z0-9-]+$/ {
+  $0 !~ /^vrt-[a-z0-9-]+$/ {
     printf "Invalid capture ID: %s.\n", $0 > "/dev/stderr"
     invalid = 1
   }
@@ -77,9 +77,7 @@ if ! awk '
 ' "$scenario_list"; then
   fail "The $platform scenario list is invalid."
 fi
-while IFS= read -r capture_id; do
-  vrt_image_name "$capture_id"
-done < "$scenario_list" | LC_ALL=C sort > "$scenario_images"
+sed 's/$/.png/' "$scenario_list" | LC_ALL=C sort > "$scenario_images"
 
 # What this run compares: every scenario for a complete capture, or exactly
 # the images a filtered capture produced for a partial one. A partial run is only
@@ -113,15 +111,15 @@ validate_image_set() {
 
   [[ -d "$directory" ]] || fail "$label image directory not found at $directory."
   if [[ "$legacy_names" == "1" ]]; then
-    # Baselines may still use the legacy prefixed names (see vrt-config.sh), so
-    # both spellings count as the plain one. Holding both spellings of one image
+    # Baselines may still use the legacy names (see vrt-config.sh), so both
+    # spellings count as the current one. Holding both spellings of one image
     # would leave the lookup's first choice as the silent winner, so it fails.
     find "$directory" -type f -name '*.png' -exec basename {} \; |
-      sed "s/^$VRT_LEGACY_IMAGE_PREFIX//" | LC_ALL=C sort > "$image_list"
+      vrt_current_image_names | LC_ALL=C sort > "$image_list"
     uniq -d "$image_list" > "$ambiguous_list"
     if [[ -s "$ambiguous_list" ]]; then
-      printf '%s images in %s under both the plain and the %s name:\n' \
-        "$label" "$directory" "$VRT_LEGACY_IMAGE_PREFIX" >&2
+      printf '%s images in %s under both their current and their legacy vrt-capture- name:\n' \
+        "$label" "$directory" >&2
       sed 's/^/  /' "$ambiguous_list" >&2
       return 1
     fi

@@ -271,7 +271,7 @@ while read -r capture_id; do
     step settle wait "$settle_ms"
   fi
 
-  image="$(vrt_image_name "$capture_id")"
+  image="$capture_id.png"
   screenshot_command=(
     screenshot
     "$actual_dir/$image"

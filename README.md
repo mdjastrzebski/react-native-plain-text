@@ -193,7 +193,7 @@ Open a specimen using its deep link:
 ```sh
 xcrun simctl openurl \
   "$(cat .vrt/devices/ios-udid)" \
-  'exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48'
+  'exp+react-native-plain-text-example://vrt?testID=vrt-features-font-size-48'
 ```
 
 ### Android
@@ -215,7 +215,7 @@ adb -s "$android_serial" shell 'am force-stop plaintext.example'
 adb -s "$android_serial" shell 'am start -W \
   -a android.intent.action.VIEW \
   -c android.intent.category.BROWSABLE \
-  -d "exp+react-native-plain-text-example://vrt?testID=vrt-capture-features-font-size-48" \
+  -d "exp+react-native-plain-text-example://vrt?testID=vrt-features-font-size-48" \
   -p plaintext.example'
 ```
 
