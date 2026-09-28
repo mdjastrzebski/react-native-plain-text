@@ -85,32 +85,9 @@ Known differences that apply to all text, on top of the per-prop notes below:
 
 ## Props reference
 
-### `allowFontScaling`
+### Main props
 
-Whether the font size scales with the OS text-size (accessibility) setting.
-Also scales `lineHeight`. Scaling tracks the setting live, without a remount.
-
-| Type    | Default | Cost  |
-| ------- | ------- | ----- |
-| boolean | `true`  | light |
-
-### `android_hyphenationFrequency`
-
-_Android only._
-
-How often Android inserts hyphens when wrapping: `'none'`, `'normal'` or
-`'full'`. Prefer the cross-platform [`hyphens`](#hyphens) prop, which wins
-whenever it is set. This prop only applies when `hyphens` is left unset.
-
-| Type                           | Default  | Cost  |
-| ------------------------------ | -------- | ----- |
-| `'none' \| 'normal' \| 'full'` | `'none'` | light |
-
-- **Android:** on API 33+, `'normal'` and `'full'` use the faster `*_FAST`
-  hyphenation modes.
-- **iOS:** no-op.
-
-### `children`
+#### `children`
 
 The text to render. A string, a number, a `bigint`, or a flat array of them,
 which JSX produces for `{count} items`. The array is joined into one string.
@@ -126,7 +103,29 @@ A plain string is the fastest path. An array is joined in JS on every render.
   doesn't: development builds warn once and render nothing for them. Use the
   [`Text` component](./text-component) for automatic fallback to RN `<Text>`.
 
-### `ellipsizeMode`
+#### `text`
+
+_Not in RN `<Text>`._
+
+Alternative to `children`, and wins over it when both are set. A plain prop can
+be driven by Animated or Reanimated without a re-render, which `children`
+can't. See [Animating text](./recipes#animating-text).
+
+| Type   | Default     | Cost  |
+| ------ | ----------- | ----- |
+| string | `undefined` | light |
+
+#### `numberOfLines`
+
+Truncates the text to at most this many lines, ellipsized per
+[`ellipsizeMode`](#ellipsizemode). `0` means no limit. The limit also caps the
+node's measured height.
+
+| Type   | Default | Cost  |
+| ------ | ------- | ----- |
+| number | `0`     | light |
+
+#### `ellipsizeMode`
 
 Where to truncate text that doesn't fit in `numberOfLines`: at the start
 (`'head'`), in the middle (`'middle'`), at the end (`'tail'`), or cut off
@@ -140,7 +139,34 @@ without an ellipsis (`'clip'`). Has an effect only together with
 - **Android:** with `numberOfLines` above `1`, only `'tail'` and `'clip'` work
   correctly. This is a `TextView` limitation, shared with RN `<Text>`.
 
-### `hyphens`
+#### `allowFontScaling`
+
+Whether the font size scales with the OS text-size (accessibility) setting.
+Also scales `lineHeight`. Scaling tracks the setting live, without a remount.
+
+| Type    | Default | Cost  |
+| ------- | ------- | ----- |
+| boolean | `true`  | light |
+
+#### `maxFontSizeMultiplier`
+
+The largest scale factor the OS text-size setting can apply to this node's
+font. `2` means a 14pt font grows to at most 28pt. Values below `1`, including
+the default `0`, mean no limit. Ignored when `allowFontScaling` is `false`.
+
+| Type   | Default | Cost  |
+| ------ | ------- | ----- |
+| number | `0`     | light |
+
+#### View props
+
+`id`, `nativeID`, `testID`, `onLayout` and the accessibility props
+(`accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`,
+`role`, `aria-*` and the rest) behave as on any RN `View`. Each is light.
+
+### Misc props
+
+#### `hyphens`
 
 _Not in RN `<Text>`._
 
@@ -167,7 +193,7 @@ lines at them, Android doesn't, whatever `hyphens` is set to.
 Dropped with a development warning when the [`Text` component](./text-component)
 falls back to RN `<Text>`.
 
-### `lang`
+#### `lang`
 
 _Not in RN `<Text>`._
 
@@ -184,7 +210,23 @@ An empty or unset value uses the device locale.
 Dropped with a development warning when the [`Text` component](./text-component)
 falls back to RN `<Text>`.
 
-### `lineBreakStrategyIOS`
+#### `android_hyphenationFrequency`
+
+_Android only._
+
+How often Android inserts hyphens when wrapping: `'none'`, `'normal'` or
+`'full'`. Prefer the cross-platform [`hyphens`](#hyphens) prop, which wins
+whenever it is set. This prop only applies when `hyphens` is left unset.
+
+| Type                           | Default  | Cost  |
+| ------------------------------ | -------- | ----- |
+| `'none' \| 'normal' \| 'full'` | `'none'` | light |
+
+- **Android:** on API 33+, `'normal'` and `'full'` use the faster `*_FAST`
+  hyphenation modes.
+- **iOS:** no-op.
+
+#### `lineBreakStrategyIOS`
 
 _iOS only._
 
@@ -199,39 +241,7 @@ wraps as soon as a word doesn't fit.
 
 - **Android:** no-op. See [`textBreakStrategy`](#textbreakstrategy).
 
-### `maxFontSizeMultiplier`
-
-The largest scale factor the OS text-size setting can apply to this node's
-font. `2` means a 14pt font grows to at most 28pt. Values below `1`, including
-the default `0`, mean no limit. Ignored when `allowFontScaling` is `false`.
-
-| Type   | Default | Cost  |
-| ------ | ------- | ----- |
-| number | `0`     | light |
-
-### `numberOfLines`
-
-Truncates the text to at most this many lines, ellipsized per
-[`ellipsizeMode`](#ellipsizemode). `0` means no limit. The limit also caps the
-node's measured height.
-
-| Type   | Default | Cost  |
-| ------ | ------- | ----- |
-| number | `0`     | light |
-
-### `text`
-
-_Not in RN `<Text>`._
-
-Alternative to `children`, and wins over it when both are set. A plain prop can
-be driven by Animated or Reanimated without a re-render, which `children`
-can't. See [Animating text](./recipes#animating-text).
-
-| Type   | Default     | Cost  |
-| ------ | ----------- | ----- |
-| string | `undefined` | light |
-
-### `textBreakStrategy`
+#### `textBreakStrategy`
 
 _Android only._
 
@@ -245,7 +255,7 @@ evens out line lengths.
 
 - **iOS:** no-op. See [`lineBreakStrategyIOS`](#linebreakstrategyios).
 
-### `unstable_lineHeightClippingCompat`
+#### `unstable_lineHeightClippingCompat`
 
 _iOS only._
 
@@ -260,18 +270,14 @@ Unstable: may change or go away.
 
 - **Android:** no-op.
 
-### View props
-
-`id`, `nativeID`, `testID`, `onLayout` and the accessibility props
-(`accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`,
-`role`, `aria-*` and the rest) behave as on any RN `View`. Each is light.
-
 ## Styles reference
 
 Text styles are read from the flattened `style`. Every other key is applied to
 the view.
 
-### `color`
+### Main styles
+
+#### `color`
 
 Text color.
 
@@ -282,7 +288,18 @@ Text color.
 - **Android:** unset resolves to black, as in RN `<Text>`, not the theme's
   gray `TextView` color.
 
-### `fontFamily`
+#### `fontSize`
+
+Font size in points (dp). Scaled by the OS text-size setting unless
+[`allowFontScaling`](#allowfontscaling) is `false`.
+
+| Type   | Default | Cost  |
+| ------ | ------- | ----- |
+| number | `14`    | light |
+
+- **Android:** rounded up to a whole pixel, as in RN `<Text>`.
+
+#### `fontFamily`
 
 Font family name, or a font file's name for fonts bundled the RN way (Expo
 Font, `react-native-asset`, `assets/fonts`). Within a multi-face family, the
@@ -297,18 +314,23 @@ The first use of a family looks it up in the system font database (iOS) or the
 assets (Android). The result is cached per family and size, so later nodes with
 the same font pay little. Also carries `fontWeight`'s Android cost.
 
-### `fontSize`
+#### `fontWeight`
 
-Font size in points (dp). Scaled by the OS text-size setting unless
-[`allowFontScaling`](#allowfontscaling) is `false`.
+Font weight: `'normal'`, `'bold'`, `'100'` to `'900'`, or the same as a number.
 
-| Type   | Default | Cost  |
-| ------ | ------- | ----- |
-| number | `14`    | light |
+| Type                                          | Default     | Cost   |
+| --------------------------------------------- | ----------- | ------ |
+| `'normal' \| 'bold' \| '100'…'900' \| number` | `undefined` | medium |
 
-- **Android:** rounded up to a whole pixel, as in RN `<Text>`.
+- **iOS:** mapped to the matching `UIFont.Weight`, unknown values to regular. With a custom `fontFamily`,
+  the family's closest face is used, so a family with no bold face renders at
+  its nearest available weight.
+- **Android:** setting `fontWeight` or `fontStyle` at all, even to the font's
+  own default, moves the node onto Android's unhinted glyph path, matching RN
+  `<Text>`. Glyph positions shift by a subpixel and mounting costs about 2.5%
+  more.
 
-### `fontStyle`
+#### `fontStyle`
 
 `'normal'` or `'italic'`.
 
@@ -318,7 +340,94 @@ Font size in points (dp). Scaled by the OS text-size setting unless
 
 Cost as for [`fontWeight`](#fontweight).
 
-### `fontVariant`
+#### `lineHeight`
+
+Height of each line, in points. The glyphs are centered in the line box.
+Unset uses the font's natural line height. Scaled with the font when
+[`allowFontScaling`](#allowfontscaling) is on.
+
+| Type   | Default     | Cost   |
+| ------ | ----------- | ------ |
+| number | `undefined` | medium |
+
+- **iOS:** costs two paragraph-style fields.
+- **RN `<Text>`:** on iOS, a `lineHeight` below the font's natural height
+  clips only the top of the first line in RN, and a larger one pushes the text
+  down ([RN#29507](https://github.com/facebook/react-native/issues/29507)).
+  Plain Text shifts the drawn text so it stays centered and clips evenly. Set
+  [`unstable_lineHeightClippingCompat`](#unstable_lineheightclippingcompat) to
+  get RN's behavior back.
+- **Android:** wraps the text in a `SpannableString` with a line-height span
+  instead of passing a plain string, the reason for the medium rating.
+
+#### `letterSpacing`
+
+Extra space between characters, in points.
+
+| Type   | Default     | Cost  |
+| ------ | ----------- | ----- |
+| number | `undefined` | light |
+
+- **iOS:** applied as kerning.
+- **Android:** converted to `em` against the current font size, as in RN
+  `<Text>`.
+
+#### `textAlign`
+
+Horizontal alignment. `'auto'` follows the layout direction.
+
+| Type                                                   | Default  | Cost  |
+| ------------------------------------------------------ | -------- | ----- |
+| `'auto' \| 'left' \| 'right' \| 'center' \| 'justify'` | `'auto'` | light |
+
+- **Android:** `'left'` and `'right'` swap in RTL layouts, as in RN `<Text>`.
+  `'justify'` needs API 26+ and falls back to `'left'` below.
+
+#### `textDecorationLine`
+
+Draws a line under or through the text.
+
+| Type                                                                  | Default  | Cost  |
+| --------------------------------------------------------------------- | -------- | ----- |
+| `'none' \| 'underline' \| 'line-through' \| 'underline line-through'` | `'none'` | light |
+
+The line takes the text color. `textDecorationColor` and
+`textDecorationStyle` are [not supported yet](#planned).
+
+- **RN `<Text>`:** on iOS, RN draws the underline about one line thickness
+  above the font's own underline position. Plain Text uses the font's
+  position, so underlines sit slightly lower than in RN `<Text>`.
+
+#### `textTransform`
+
+Changes the case of the displayed text. The `text` or `children` you pass stays
+unchanged.
+
+| Type                                                   | Default  | Cost   |
+| ------------------------------------------------------ | -------- | ------ |
+| `'none' \| 'uppercase' \| 'lowercase' \| 'capitalize'` | `'none'` | medium |
+
+Allocates a transformed copy of the string on every update, on both platforms.
+`'capitalize'` also walks word boundaries. For static text, transforming the
+string yourself once is cheaper.
+
+- **RN `<Text>`:** on iOS, RN's `'capitalize'` also lowercases the rest of each
+  word ([RN#34117](https://github.com/facebook/react-native/issues/34117)), so
+  `'iPhone'` becomes `'Iphone'`. Plain Text only uppercases the first letter,
+  as CSS and Android do.
+
+#### View styles
+
+Every other key, such as `width`, `margin`, `padding`, `backgroundColor`,
+`borderRadius` or `opacity`, is applied to the view as on any RN `View`.
+
+- **RN `<Text>`:** on Android, RN clips text to the border box with
+  `overflow: 'hidden'`. Plain Text doesn't yet. Only visible with a
+  `borderRadius` and text reaching the corners.
+
+### Misc styles
+
+#### `fontVariant`
 
 OpenType features such as `'tabular-nums'`, `'small-caps'` or
 `'oldstyle-nums'`. An array, or a space- or comma-separated string.
@@ -340,7 +449,7 @@ The font needs to carry the feature, otherwise it has no effect.
   `fontVariant` unless `fontFamily`, `fontWeight` or `fontStyle` is set as
   well. Plain Text applies it on its own.
 
-### `fontVariationSettings`
+#### `fontVariationSettings`
 
 _Not in RN `<Text>`._
 
@@ -364,80 +473,7 @@ malformed string logs a warning and is ignored.
 Dropped with a development warning when the [`Text` component](./text-component)
 falls back to RN `<Text>`.
 
-### `fontWeight`
-
-Font weight: `'normal'`, `'bold'`, `'100'` to `'900'`, or the same as a number.
-
-| Type                                          | Default     | Cost   |
-| --------------------------------------------- | ----------- | ------ |
-| `'normal' \| 'bold' \| '100'…'900' \| number` | `undefined` | medium |
-
-- **iOS:** mapped to the matching `UIFont.Weight`, unknown values to regular. With a custom `fontFamily`,
-  the family's closest face is used, so a family with no bold face renders at
-  its nearest available weight.
-- **Android:** setting `fontWeight` or `fontStyle` at all, even to the font's
-  own default, moves the node onto Android's unhinted glyph path, matching RN
-  `<Text>`. Glyph positions shift by a subpixel and mounting costs about 2.5%
-  more.
-
-### `includeFontPadding`
-
-_Android only._
-
-Whether Android adds extra top and bottom padding to fit accents and
-descenders that exceed the font's ascent and descent. Set to `false` to line
-up text vertically with iOS.
-
-| Type    | Default | Cost  |
-| ------- | ------- | ----- |
-| boolean | `true`  | light |
-
-- **iOS:** no-op.
-
-### `letterSpacing`
-
-Extra space between characters, in points.
-
-| Type   | Default     | Cost  |
-| ------ | ----------- | ----- |
-| number | `undefined` | light |
-
-- **iOS:** applied as kerning.
-- **Android:** converted to `em` against the current font size, as in RN
-  `<Text>`.
-
-### `lineHeight`
-
-Height of each line, in points. The glyphs are centered in the line box.
-Unset uses the font's natural line height. Scaled with the font when
-[`allowFontScaling`](#allowfontscaling) is on.
-
-| Type   | Default     | Cost   |
-| ------ | ----------- | ------ |
-| number | `undefined` | medium |
-
-- **iOS:** costs two paragraph-style fields.
-- **RN `<Text>`:** on iOS, a `lineHeight` below the font's natural height
-  clips only the top of the first line in RN, and a larger one pushes the text
-  down ([RN#29507](https://github.com/facebook/react-native/issues/29507)).
-  Plain Text shifts the drawn text so it stays centered and clips evenly. Set
-  [`unstable_lineHeightClippingCompat`](#unstable_lineheightclippingcompat) to
-  get RN's behavior back.
-- **Android:** wraps the text in a `SpannableString` with a line-height span
-  instead of passing a plain string, the reason for the medium rating.
-
-### `textAlign`
-
-Horizontal alignment. `'auto'` follows the layout direction.
-
-| Type                                                   | Default  | Cost  |
-| ------------------------------------------------------ | -------- | ----- |
-| `'auto' \| 'left' \| 'right' \| 'center' \| 'justify'` | `'auto'` | light |
-
-- **Android:** `'left'` and `'right'` swap in RTL layouts, as in RN `<Text>`.
-  `'justify'` needs API 26+ and falls back to `'left'` below.
-
-### `textAlignVertical`
+#### `textAlignVertical`
 
 _RN `<Text>` supports this on Android only. Plain Text supports it on both platforms._
 
@@ -450,22 +486,18 @@ fixed `height` or `flex: 1`. `'auto'` is `'top'`.
 
 - Overridden by [`verticalAlign`](#verticalalign) when both are set.
 
-### `textDecorationLine`
+#### `verticalAlign`
 
-Draws a line under or through the text.
+_RN `<Text>` supports this on Android only. Plain Text supports it on both platforms._
 
-| Type                                                                  | Default  | Cost  |
-| --------------------------------------------------------------------- | -------- | ----- |
-| `'none' \| 'underline' \| 'line-through' \| 'underline line-through'` | `'none'` | light |
+Same as [`textAlignVertical`](#textalignvertical), with `'middle'` for
+`'center'`. Wins over `textAlignVertical` when both are set.
 
-The line takes the text color. `textDecorationColor` and
-`textDecorationStyle` are [not supported yet](#planned).
+| Type                                      | Default     | Cost  |
+| ----------------------------------------- | ----------- | ----- |
+| `'auto' \| 'top' \| 'bottom' \| 'middle'` | `undefined` | light |
 
-- **RN `<Text>`:** on iOS, RN draws the underline about one line thickness
-  above the font's own underline position. Plain Text uses the font's
-  position, so underlines sit slightly lower than in RN `<Text>`.
-
-### `textShadowColor`
+#### `textShadowColor`
 
 Color of the text shadow.
 
@@ -475,7 +507,7 @@ Color of the text shadow.
 
 Cost as for [`textShadowOffset`](#textshadowoffset).
 
-### `textShadowOffset`
+#### `textShadowOffset`
 
 Offset of the text shadow, in points.
 
@@ -493,7 +525,7 @@ RN `<Text>` on each platform:
   color isn't transparent. `textShadowRadius` alone is enough. Costs one paint
   call.
 
-### `textShadowRadius`
+#### `textShadowRadius`
 
 Blur radius of the text shadow.
 
@@ -504,36 +536,21 @@ Blur radius of the text shadow.
 - **Android:** in pixels, not dp, as in RN `<Text>`. The same value looks
   sharper on high-density screens than on iOS.
 
-### `textTransform`
+#### `includeFontPadding`
 
-Changes the case of the displayed text. The `text` or `children` you pass stays
-unchanged.
+_Android only._
 
-| Type                                                   | Default  | Cost   |
-| ------------------------------------------------------ | -------- | ------ |
-| `'none' \| 'uppercase' \| 'lowercase' \| 'capitalize'` | `'none'` | medium |
+Whether Android adds extra top and bottom padding to fit accents and
+descenders that exceed the font's ascent and descent. Set to `false` to line
+up text vertically with iOS.
 
-Allocates a transformed copy of the string on every update, on both platforms.
-`'capitalize'` also walks word boundaries. For static text, transforming the
-string yourself once is cheaper.
+| Type    | Default | Cost  |
+| ------- | ------- | ----- |
+| boolean | `true`  | light |
 
-- **RN `<Text>`:** on iOS, RN's `'capitalize'` also lowercases the rest of each
-  word ([RN#34117](https://github.com/facebook/react-native/issues/34117)), so
-  `'iPhone'` becomes `'Iphone'`. Plain Text only uppercases the first letter,
-  as CSS and Android do.
+- **iOS:** no-op.
 
-### `verticalAlign`
-
-_RN `<Text>` supports this on Android only. Plain Text supports it on both platforms._
-
-Same as [`textAlignVertical`](#textalignvertical), with `'middle'` for
-`'center'`. Wins over `textAlignVertical` when both are set.
-
-| Type                                      | Default     | Cost  |
-| ----------------------------------------- | ----------- | ----- |
-| `'auto' \| 'top' \| 'bottom' \| 'middle'` | `undefined` | light |
-
-### `writingDirection`
+#### `writingDirection`
 
 _iOS only._
 
@@ -545,15 +562,6 @@ which side the text aligns to.
 | `'auto' \| 'ltr' \| 'rtl'` | `'auto'` | light |
 
 - **Android:** no-op, as in RN `<Text>`.
-
-### View styles
-
-Every other key, such as `width`, `margin`, `padding`, `backgroundColor`,
-`borderRadius` or `opacity`, is applied to the view as on any RN `View`.
-
-- **RN `<Text>`:** on Android, RN clips text to the border box with
-  `overflow: 'hidden'`. Plain Text doesn't yet. Only visible with a
-  `borderRadius` and text reaching the corners.
 
 ## Planned
 
