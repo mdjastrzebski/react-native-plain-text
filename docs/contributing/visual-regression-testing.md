@@ -70,6 +70,33 @@ list: to leave a specimen out, remove it from `groups.tsx` (and its baseline
 PNG), or give its group a `platform` to render it on one platform only.
 `yarn test` checks that IDs are well formed and unique.
 
+### What belongs in the suite
+
+Every scenario is a baseline to review and update whenever rendering changes, so
+each one has to protect something no other scenario does. Prefer stable
+scenarios that rarely need a new baseline:
+
+- **Feature rows** that vary one prop, or a combination of two where they
+  interact.
+- **Representative examples** of typical UI text (headings, body copy, labels,
+  badges) that stay stable over time.
+
+Three kinds of specimen from the example app are left out on purpose:
+
+- **Props with no visual effect.** Accessibility props (`accessibilityLabel`,
+  `accessibilityRole`, and so on) and animated text (Animated and Reanimated
+  driving `text`) don't change what a still screenshot shows. Test them with
+  VoiceOver or TalkBack, the native view tree, or unit tests instead.
+- **Redundant variations.** When a prop goes through one native code path, one
+  or two values cover it. For example, VRT doesn't render text in every palette
+  color: color is passed straight through, so one row catches a regression and
+  the extra rows only add images to update. Add another value only when it
+  takes a different code path, or when the platform treats it differently.
+- **Random combinations.** The example app's Random Combinations rows stack
+  three to five arbitrary props. A change to any one of those props changes the
+  image, so these rows would need new baselines far more often than the feature
+  rows that already cover each prop, without catching anything those rows miss.
+
 ## Suites
 
 A suite is a set of scenarios captured under its own device settings, with its

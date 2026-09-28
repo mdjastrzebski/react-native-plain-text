@@ -18,6 +18,8 @@ import {
   KOREAN_WORD_WRAP_SPECIMEN,
   TEXT_BREAK_STRATEGIES,
   TEXT_BREAK_STRATEGY_SPECIMEN,
+  SOFT_HYPHEN_SPECIMEN,
+  HYPHENATION_SPECIMEN,
   LINE_HEIGHTS,
   REALWORLD_FONT_SIZES,
   REALWORLD_FONTS,
@@ -88,15 +90,12 @@ function VrtExample({ item, testID }: { item: ExampleItem; testID: string }) {
     );
   }
 
-  const { text, style, numberOfLines, ellipsizeMode, allowFontScaling, maxFontSizeMultiplier } =
-    item;
+  const { text, style, numberOfLines, ellipsizeMode } = item;
   return (
     <VrtText
       testID={testID}
       numberOfLines={numberOfLines}
       ellipsizeMode={ellipsizeMode}
-      allowFontScaling={allowFontScaling}
-      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[{ color: COLOR.ink }, style]}
       containerStyle={style.width === '100%' ? vrtStyles.wideRow : undefined}
     >
@@ -543,6 +542,8 @@ export const groups: VrtGroup[] = [
             {ORPHAN_SPECIMEN}
           </VrtText>
         ))}
+        {/* 210pt, not 220pt: at 220pt hangul-word rendered identically to none,
+          so a broken mapping would go unnoticed. */}
         {(['none', 'hangul-word'] as const).map((s) => (
           <VrtText
             testID={`vrt-features-line-break-strategy-${s === 'none' ? 'korean-none' : s}`}
@@ -551,7 +552,7 @@ export const groups: VrtGroup[] = [
             style={[
               styles.body,
               {
-                width: 220,
+                width: 210,
               },
             ]}
           >
@@ -578,6 +579,50 @@ export const groups: VrtGroup[] = [
             ]}
           >
             {TEXT_BREAK_STRATEGY_SPECIMEN}
+          </VrtText>
+        ))}
+      </>
+    ),
+  },
+  {
+    // The devices run in English, so the "de" row also proves `lang` reaches
+    // native. A "lang: en" row would add nothing.
+    children: (
+      <>
+        <VrtText testID="vrt-features-hyphens-none" hyphens="none" style={styles.hyphenationRow}>
+          {HYPHENATION_SPECIMEN}
+        </VrtText>
+        <VrtText
+          testID="vrt-features-hyphens-none-soft-hyphens"
+          hyphens="none"
+          style={styles.hyphenationRow}
+        >
+          {SOFT_HYPHEN_SPECIMEN}
+        </VrtText>
+        <VrtText
+          testID="vrt-features-hyphens-auto-lang-de"
+          hyphens="auto"
+          lang="de"
+          style={styles.hyphenationRow}
+        >
+          {HYPHENATION_SPECIMEN}
+        </VrtText>
+      </>
+    ),
+  },
+  {
+    // With `hyphens` unset, android_hyphenationFrequency is the fallback.
+    platform: 'android',
+    children: (
+      <>
+        {(['none', 'normal', 'full'] as const).map((frequency) => (
+          <VrtText
+            testID={`vrt-features-hyphenation-frequency-${frequency}`}
+            key={frequency}
+            android_hyphenationFrequency={frequency}
+            style={styles.hyphenationRow}
+          >
+            {HYPHENATION_SPECIMEN}
           </VrtText>
         ))}
       </>
@@ -681,13 +726,9 @@ export const groups: VrtGroup[] = [
         <VrtText testID="vrt-features-font-variant-system-default" style={fontVariantRow}>
           {FONT_VARIANT_SPECIMEN}
         </VrtText>
-        {/* Figure spacing first: the pair of values people actually reach for.
-          It shows up as width: the two rows of each pair have the same digit
-          count, so tabular figures make them equally wide (each row
-          shrink-wraps to its text) and proportional ones do not. Compare
-          within a pair, never across. The value name sits in the label gutter
-          rather than in the string, so the row measures the digits and nothing
-          else. */}
+        {/* Both rows of a pair have the same digit count, so tabular figures
+          make them equally wide (each row shrink-wraps) and proportional ones
+          do not. Compare within a pair, never across. */}
         {TABULAR_FIGURE_ROWS.map((digits) => (
           <VrtText
             testID={`vrt-features-font-variant-tabular-nums-${digits}`}
@@ -827,8 +868,7 @@ export const groups: VrtGroup[] = [
         <VrtText testID="vrt-features-wrap-detection-longest-in-middle" style={styles.wrapProbe}>
           {'A\nBB\nthis line is longest  \nCCC'}
         </VrtText>
-        {/* Same paragraphs, longest one last: the width comes from a max over
-          paragraphs, so where it sits shouldn't matter. */}
+        {/* Same, with the longest paragraph last. */}
         <VrtText testID="vrt-features-wrap-detection-longest-last" style={styles.wrapProbe}>
           {'A\nBB\nCCC\nthis line is longest  '}
         </VrtText>

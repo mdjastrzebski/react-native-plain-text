@@ -10,8 +10,6 @@ type Combination = {
   style: TextStyle;
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
-  allowFontScaling?: boolean;
-  maxFontSizeMultiplier?: number;
 };
 
 // Several PlainTexts on one `alignItems: "baseline"` row, which a
@@ -32,8 +30,7 @@ type ExampleGroup = {
 // Hand-written and never shuffled, so runs render byte-identical rows.
 //
 // Colors come only from `COLOR`; a tinted row takes its text color from the same
-// pigment (`…Ink` where one exists). Only the rgba row spells out hexes: palette
-// values with an alpha.
+// pigment (`…Ink` where one exists).
 //
 // Groups are ordered by how common the shape is in real UIs, so the rows that
 // matter most come first.
@@ -121,7 +118,6 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
           'By continuing you agree to the terms of service and acknowledge the ' +
           'privacy policy, including how measurement data is retained.',
         style: { width: '100%', fontSize: 11, color: COLOR.faint, lineHeight: 16 },
-        allowFontScaling: false,
       },
     ],
   },
@@ -203,7 +199,6 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
           borderBottomWidth: 2,
           borderBottomColor: COLOR.indigo,
         },
-        maxFontSizeMultiplier: 1.3,
       },
     ],
   },

@@ -87,7 +87,6 @@ announce_suite() {
   return 0
 }
 
-# The --filter value a capture was given.
 capture_filter() {
   local filter=""
   while [[ $# -gt 0 ]]; do

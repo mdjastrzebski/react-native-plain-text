@@ -45,6 +45,12 @@ export const styles = StyleSheet.create({
   wrapProbe: {
     fontSize: 18,
   },
+  // Fixed narrow width: at 100% the word wrapped at the preceding space rather
+  // than mid-word, so no row showed a real hyphen.
+  hyphenationRow: {
+    width: 260,
+    fontSize: 20,
+  },
 });
 export const SPECIMEN = 'Quick brown fox';
 export const PARAGRAPH = 'The quick brown fox jumps over the lazy dog.';
@@ -57,6 +63,9 @@ export const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 export const ORPHAN_SPECIMEN = 'The last word of this text does not fit.';
 export const KOREAN_WORD_WRAP_SPECIMEN = '한글개행 한글개행 한글개행 한글개행 한글개행';
 export const TEXT_BREAK_STRATEGIES = ['simple', 'highQuality', 'balanced'] as const;
+export const SOFT_HYPHEN_SPECIMEN =
+  'Die Rei­se­kran­ken­ver­si­che­rung war früh­er nur et­was für Ge­schäfts­rei­sen­de, heu­te nut­zen sie auch ganz nor­ma­le Fa­mi­li­en.';
+export const HYPHENATION_SPECIMEN = SOFT_HYPHEN_SPECIMEN.replaceAll('\u00AD', '');
 export const TEXT_BREAK_STRATEGY_SPECIMEN =
   'Extraordinarily meticulous engineers occasionally debug astonishingly trivial issues quite carefully today, especially near release day, right before shipping.';
 export const LINE_HEIGHTS = [18, 26, 36];

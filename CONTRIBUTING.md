@@ -90,6 +90,11 @@ A prop that _is_ set gets a light/medium/heavy cost rating, recorded in
 `src/PlainTextViewNativeComponent.ts`. Full policy, tiers, and where the rule is
 tested: [performance.md](docs/contributing/performance.md#prop-cost-policy).
 
+**A new prop ships with specimens.** Add at least one section to the Features
+screen, with a row per value that shows how each is handled, and a matching group
+in the VRT suite (`example/src/vrt/groups.tsx`) with baselines. Details:
+[workflow.md](docs/contributing/workflow.md#specimens-for-a-new-prop).
+
 ## Manual sync points
 
 Some things in this codebase must be edited together, and **nothing verifies

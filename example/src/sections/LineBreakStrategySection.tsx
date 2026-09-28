@@ -27,7 +27,7 @@ export function LineBreakStrategySection({ showText }: { showText: boolean }) {
           label={s}
           showText={showText}
           lineBreakStrategyIOS={s}
-          style={[sharedStyles.body, { width: 220 }]}
+          style={[sharedStyles.body, { width: 210 }]}
         >
           {KOREAN_WORD_WRAP_SPECIMEN}
         </TextItem>
