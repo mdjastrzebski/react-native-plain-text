@@ -174,3 +174,24 @@ Maintainers publish with [release-it](https://github.com/release-it/release-it):
 ```sh
 yarn release
 ```
+
+### Changelog
+
+[`CHANGELOG.md`](./CHANGELOG.md) mirrors the GitHub release notes, newest
+release first. Keep the two in sync on every release:
+
+1. Run `yarn release`. The `@release-it/conventional-changelog` plugin builds
+   the notes from conventional commit messages and prepends them to
+   `CHANGELOG.md` under the `# Changelog` header.
+2. Before confirming the release commit, open `CHANGELOG.md` and edit the new
+   entry: fix commit subjects that read badly, drop entries users don't care
+   about, and add a `### 🙌 New Contributors` section for first-time
+   contributors (`- @handle made their first contribution in [#N](PR link)`).
+   Then `git add CHANGELOG.md` so the edit lands in the release commit.
+3. Use the same text for the GitHub release notes. If you edit the notes on
+   GitHub afterwards, copy the change back to `CHANGELOG.md` in a follow-up
+   commit.
+
+Only commits typed `feat`, `fix`, `perf`, `refactor` and `docs` show up in the
+generated notes (see the `release-it` config in `package.json`). Use those types
+in commit and PR titles for changes users should hear about.
