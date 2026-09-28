@@ -171,20 +171,16 @@
               "section": "✨ Features"
             },
             {
-              "type": "fix",
-              "section": "🐛 Bug Fixes"
-            },
-            {
               "type": "perf",
-              "section": "⚡ Performance"
+              "section": "⚡️ Performance"
             },
             {
-              "type": "refactor",
-              "section": "♻️ Code Refactoring"
+              "type": "fix",
+              "section": "🪲 Bug Fixes"
             },
             {
               "type": "docs",
-              "section": "📝 Documentation"
+              "section": "📚 Documentation"
             }
           ]
         }
