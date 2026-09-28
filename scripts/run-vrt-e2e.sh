@@ -105,17 +105,78 @@ if [[ "$platform" == "ios" ]]; then
   fi
   agent_device close >/dev/null
 fi
-agent_device settings clear-app-state "$VRT_APP_ID"
 mkdir -p "$PROJECT_ROOT/.vrt/report"
-# The cold launch stays intermittently slow, so keep retries. Without
-# --fail-fast a cold failure still lets the warm test report.
-agent_device test \
-  "$PROJECT_ROOT/.agent-device/vrt-deep-link-cold.ad" \
-  "$PROJECT_ROOT/.agent-device/vrt-deep-link-warm.ad" \
-  --env "VRT_APP_ID=$VRT_APP_ID" \
-  --env "VRT_DEEP_LINK=$deep_link" \
-  --env "VRT_CAPTURE_ID=$capture_id" \
-  --artifacts-dir "$PROJECT_ROOT/.vrt/agent-device/$platform" \
-  --report-junit "$PROJECT_ROOT/.vrt/report/$platform-e2e.xml" \
-  --timeout 180000 \
-  --retries 2
+artifacts_root="$PROJECT_ROOT/.vrt/agent-device/$platform"
+
+# A passing cold attempt takes under 30 s, so this only bounds a hang.
+attempt_timeout_ms=90000
+
+run_e2e_test() {
+  local name="$1" report="$2"
+  shift 2
+  agent_device test "$PROJECT_ROOT/.agent-device/$name.ad" \
+    --env "VRT_APP_ID=$VRT_APP_ID" \
+    --env "VRT_DEEP_LINK=$deep_link" \
+    --env "VRT_CAPTURE_ID=$capture_id" \
+    --artifacts-dir "$artifacts_root/$report" \
+    --report-junit "$PROJECT_ROOT/.vrt/report/$platform-e2e-$report.xml" \
+    --timeout "$attempt_timeout_ms" \
+    "$@"
+}
+
+# A timed-out attempt whose command ignores the cancel (a hung cold open) is an
+# infrastructure failure to agent-device: it stops retrying and leaves that
+# attempt's session open on the device. Close such leftovers before a new run.
+close_stale_sessions() {
+  local sessions name
+  sessions="$("$agent_device_bin" session list --json 2>/dev/null)" || return 0
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    printf 'Closing stale session %s\n' "$name" >&2
+    AGENT_DEVICE_SESSION="$name" "$agent_device_bin" close "${target_args[@]}" >/dev/null 2>&1 || true
+  done < <(
+    printf '%s' "$sessions" | node -e '
+      const prefix = process.argv[1] + ":";
+      let input = "";
+      process.stdin.on("data", (chunk) => (input += chunk));
+      process.stdin.on("end", () => {
+        const sessions = JSON.parse(input).data?.sessions ?? [];
+        for (const { name } of sessions) if (name?.startsWith(prefix)) console.log(name);
+      });
+    ' "$session_name" 2>/dev/null
+  )
+}
+
+# The daemon log is the only record of what a hung command was waiting on.
+save_daemon_log() {
+  local state_dir
+  state_dir="$("$agent_device_bin" session state-dir 2>/dev/null)" || return 0
+  [[ -f "$state_dir/daemon.log" ]] || return 0
+  mkdir -p "$artifacts_root"
+  cp "$state_dir/daemon.log" "$artifacts_root/daemon.log" || true
+}
+
+# The cold launch stays intermittently slow, and a hung attempt ends
+# agent-device's own retries, so each run here starts from cleared state with a
+# fresh retry budget. Cold and warm run separately so a cold hang can't keep the
+# warm test from reporting.
+cold_runs=3
+cold_passed=0
+for run in $(seq 1 "$cold_runs"); do
+  close_stale_sessions
+  agent_device settings clear-app-state "$VRT_APP_ID"
+  if run_e2e_test vrt-deep-link-cold "cold-$run" --retries 1; then
+    cold_passed=1
+    break
+  fi
+  printf 'Cold deep-link run %s/%s failed.\n' "$run" "$cold_runs" >&2
+done
+
+close_stale_sessions
+warm_passed=0
+run_e2e_test vrt-deep-link-warm warm --retries 2 && warm_passed=1
+
+if [[ "$cold_passed" != "1" || "$warm_passed" != "1" ]]; then
+  save_daemon_log
+  fail "Deep-link e2e failed (cold passed: $cold_passed, warm passed: $warm_passed). Artifacts: $artifacts_root"
+fi
