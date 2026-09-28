@@ -177,20 +177,22 @@ yarn release
 
 ### Changelog
 
-[`CHANGELOG.md`](./CHANGELOG.md) mirrors the GitHub release notes, newest
-release first. Keep the two in sync on every release:
+[`CHANGELOG.md`](./CHANGELOG.md) has the same entries as the GitHub release
+notes, newest release first, in a plainer form: no emojis and no New
+Contributors section. Update it on every release:
 
 1. Run `yarn release`. The `@release-it/conventional-changelog` plugin builds
    the notes from conventional commit messages and prepends them to
    `CHANGELOG.md` under the `# Changelog` header.
 2. Before confirming the release commit, open `CHANGELOG.md` and edit the new
-   entry: fix commit subjects that read badly, drop entries users don't care
-   about, and add a `### 🙌 New Contributors` section for first-time
-   contributors (`- @handle made their first contribution in [#N](PR link)`).
-   Then `git add CHANGELOG.md` so the edit lands in the release commit.
-3. Use the same text for the GitHub release notes. If you edit the notes on
-   GitHub afterwards, copy the change back to `CHANGELOG.md` in a follow-up
-   commit.
+   entry. Strip the emojis from the section headings (`### ✨ Features` becomes
+   `### Features`), fix commit subjects that read badly, and drop entries users
+   don't care about. Then `git add CHANGELOG.md` so the edit lands in the
+   release commit.
+3. The GitHub release notes keep the emoji headings. Add a
+   `### 🙌 New Contributors` section there for first-time contributors. If you
+   change an entry's wording on GitHub afterwards, copy it back to
+   `CHANGELOG.md` in a follow-up commit.
 
 Only commits typed `feat`, `fix`, `perf`, `refactor` and `docs` show up in the
 generated notes (see the `release-it` config in `package.json`). Use those types
