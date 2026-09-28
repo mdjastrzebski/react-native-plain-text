@@ -45,64 +45,20 @@ agent_device() {
 }
 
 if [[ "$platform" == "ios" ]]; then
+  # Without the approval setup writes, a cold deep link stops at an "Open in
+  # PlainText?" prompt and fails in ways that look like a slow launch.
+  approved_app="$(xcrun simctl spawn "$(<"$target_file")" defaults read \
+    com.apple.launchservices.schemeapproval \
+    "com.apple.CoreSimulator.CoreSimulatorBridge-->$VRT_APP_SCHEME" 2>/dev/null || true)"
+  [[ "$approved_app" == "$VRT_APP_ID" ]] || fail \
+    "The simulator has not approved '$VRT_APP_SCHEME' deep links for $VRT_APP_ID. Run 'yarn vrt ios setup'."
   agent_device prepare ios-runner
-  # A fresh simulator asks "Open in app?" before the first custom-scheme deep link;
-  # until accepted, a cold open fails with "Simulator device failed to open".
-  # Accept it before the cold test, and wait for the deep-link screen so the choice
-  # is committed before app state is cleared.
-  #
-  # Each attempt arms the dialog with a cold open but confirms over the warm path
-  # every capture uses: the first launch after accepting can drop the URL.
-  # vrt-deep-link-cold.ad still covers the cold path. Attempts are logged, not
-  # discarded, so an exhausted budget shows what happened.
-
-  # Accept the dialog. The app's launch can stall a short alert query past the
-  # runner's watchdog (then RUNNER_BUSY), so a miss is polled again rather than
-  # read as no dialog, and the accept counts only once the dialog is gone: one left
-  # standing swallows the warm deep link.
-  dismiss_cold_open_dialog() {
-    local poll
-    for poll in 1 2 3 4 5 6; do
-      if agent_device alert wait 3000; then
-        printf '  confirmation dialog detected (poll %s)\n' "$poll"
-        if agent_device alert accept; then
-          printf '  confirmation dialog accepted (poll %s)\n' "$poll"
-          return 0
-        fi
-        printf '  alert accept exited %s (poll %s)\n' "$?" "$poll"
-      else
-        printf '  confirmation dialog not detected (poll %s)\n' "$poll"
-      fi
-      sleep 2
-    done
-    return 1
-  }
-
-  diagnostics_dir="$PROJECT_ROOT/.vrt/agent-device/$platform/prewarm"
-  mkdir -p "$diagnostics_dir"
-  armed=0
-  for attempt in 1 2 3; do
-    attempt_log="$diagnostics_dir/attempt-$attempt.log"
-    {
-      printf '=== attempt %s: cold open\n' "$attempt"
-      agent_device open "$VRT_APP_ID" "$deep_link" --relaunch --timeout 30000 ||
-        printf 'cold open exited %s\n' "$?"
-      printf '=== attempt %s: confirmation dialog\n' "$attempt"
-      dismiss_cold_open_dialog ||
-        printf '  confirmation dialog never confirmed after 6 polls\n'
-      printf '=== attempt %s: warm open\n' "$attempt"
-      agent_device open "$VRT_APP_ID" "$deep_link" --foreground --timeout 30000 ||
-        printf 'warm open exited %s\n' "$?"
-      printf '=== attempt %s: wait for %s\n' "$attempt" "$capture_id"
-      agent_device wait "id=\"$capture_id\"" 20000
-    } > "$attempt_log" 2>&1 && armed=1 && break
-    printf 'Prewarm attempt %s did not reach %s; see %s\n' "$attempt" "$capture_id" "$attempt_log" >&2
-  done
-  if [[ "$armed" != "1" ]]; then
-    tail -n 40 "$diagnostics_dir/attempt-3.log" >&2 || true
-    agent_device screenshot "$diagnostics_dir/failure.png" || true
-    fail "iOS deep-link pre-warm never reached '$capture_id'; cold launch is not armed. Logs: $diagnostics_dir"
-  fi
+  # The first app launch on a freshly booted simulator is slow enough that
+  # `simctl openurl` gives up ("failed to open", operation timed out) even though
+  # the app opens. Pay that once here with a plain launch; later cold launches
+  # take about a second.
+  agent_device open "$VRT_APP_ID" --relaunch --timeout 60000
+  agent_device wait 'id="vrt-screen"' 30000 >/dev/null
   agent_device close >/dev/null
 fi
 mkdir -p "$PROJECT_ROOT/.vrt/report"

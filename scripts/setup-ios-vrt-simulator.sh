@@ -83,6 +83,12 @@ if ! locale_matches; then
   xcrun simctl boot "$simulator_udid"
   xcrun simctl bootstatus "$simulator_udid" -b
 fi
+# Approve the deep-link scheme up front. Otherwise the first `simctl openurl`
+# that launches the app asks "Open in PlainText?", and until someone taps Open
+# every cold deep link fails or hangs. Tapping it through XCTest is unreliable
+# while the app is launching.
+xcrun simctl spawn "$simulator_udid" defaults write com.apple.launchservices.schemeapproval \
+  "com.apple.CoreSimulator.CoreSimulatorBridge-->$VRT_APP_SCHEME" -string "$VRT_APP_ID"
 xcrun simctl ui "$simulator_udid" appearance light
 xcrun simctl ui "$simulator_udid" content_size "$IOS_CONTENT_SIZE"
 xcrun simctl status_bar "$simulator_udid" override --time 9:41 --batteryLevel 100 --batteryState charged --cellularBars 4 --wifiBars 3
