@@ -4,22 +4,22 @@
 
 | Prop                                                            | RN `<Text>` compatible | Notes                                                                              |
 | --------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------- |
-| [`allowFontScaling`](#allowfontscaling)                         | ✅                     |                                                                                    |
-| [`android_hyphenationFrequency`](#android_hyphenationfrequency) | ✅                     | Android-only, like RN `<Text>`. Only a fallback for when `hyphens` is unset.       |
 | [`children`](#children)                                         | 🟡                     | Text only: a string, number, bigint, or a flat array of them (`{count} items`).    |
+| [`text`](#text)                                                 | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
+| [`numberOfLines`](#numberoflines)                               | ✅                     |                                                                                    |
 | [`ellipsizeMode`](#ellipsizemode)                               | ✅                     |                                                                                    |
+| [`allowFontScaling`](#allowfontscaling)                         | ✅                     |                                                                                    |
+| [`maxFontSizeMultiplier`](#maxfontsizemultiplier)               | ✅                     |                                                                                    |
+| [`id`](#view-props)                                             | ✅                     |                                                                                    |
+| [`nativeID`](#view-props)                                       | ✅                     |                                                                                    |
+| [`testID`](#view-props)                                         | ✅                     |                                                                                    |
+| [`onLayout`](#view-props)                                       | ✅                     |                                                                                    |
+| [Accessibility props](#view-props)                              | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
 | [`hyphens`](#hyphens)                                           | ⬆️                     | Not in RN `<Text>`. `'none' \| 'auto'`, default `'none'`. See below.               |
 | [`lang`](#lang)                                                 | ⬆️                     | Not in RN `<Text>`. BCP-47 tag (e.g. `'de'`) for hyphenation and line breaking.    |
+| [`android_hyphenationFrequency`](#android_hyphenationfrequency) | ✅                     | Android-only, like RN `<Text>`. Only a fallback for when `hyphens` is unset.       |
 | [`lineBreakStrategyIOS`](#linebreakstrategyios)                 | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                      |
-| [`maxFontSizeMultiplier`](#maxfontsizemultiplier)               | ✅                     |                                                                                    |
-| [`nativeID`](#view-props)                                       | ✅                     |                                                                                    |
-| [`id`](#view-props)                                             | ✅                     |                                                                                    |
-| [`numberOfLines`](#numberoflines)                               | ✅                     |                                                                                    |
-| [`onLayout`](#view-props)                                       | ✅                     |                                                                                    |
-| [`testID`](#view-props)                                         | ✅                     |                                                                                    |
-| [`text`](#text)                                                 | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
 | [`textBreakStrategy`](#textbreakstrategy)                       | ✅                     | Android-only, like RN `<Text>`                                                     |
-| [Accessibility props](#view-props)                              | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
 
 RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
 
@@ -28,25 +28,25 @@ RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · 
 | Style                                             | RN `<Text>` compatible | Notes                                                                                   |
 | ------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------- |
 | [`color`](#color)                                 | ✅                     |                                                                                         |
-| [`fontFamily`](#fontfamily)                       | ✅                     |                                                                                         |
 | [`fontSize`](#fontsize)                           | ✅                     |                                                                                         |
+| [`fontFamily`](#fontfamily)                       | ✅                     |                                                                                         |
+| [`fontWeight`](#fontweight)                       | ✅                     |                                                                                         |
 | [`fontStyle`](#fontstyle)                         | ✅                     |                                                                                         |
+| [`lineHeight`](#lineheight)                       | ✅                     |                                                                                         |
+| [`letterSpacing`](#letterspacing)                 | ✅                     |                                                                                         |
+| [`textAlign`](#textalign)                         | ✅                     |                                                                                         |
+| [`textDecorationLine`](#textdecorationline)       | ✅                     |                                                                                         |
+| [`textTransform`](#texttransform)                 | ✅                     |                                                                                         |
+| [Every other `ViewStyle` prop](#view-styles)      | ✅                     | `width`, `margin`, `padding`, `backgroundColor`, `opacity`, etc                         |
 | [`fontVariant`](#fontvariant)                     | ✅                     |                                                                                         |
 | [`fontVariationSettings`](#fontvariationsettings) | ⬆️                     | Not in RN `<Text>`. Variable-font axes in CSS syntax, e.g. `'"wght" 700, "wdth" 87.5'`. |
-| [`fontWeight`](#fontweight)                       | ✅                     |                                                                                         |
-| [`includeFontPadding`](#includefontpadding)       | ✅                     | Android-only, like RN `<Text>`                                                          |
-| [`letterSpacing`](#letterspacing)                 | ✅                     |                                                                                         |
-| [`lineHeight`](#lineheight)                       | ✅                     |                                                                                         |
-| [`textAlign`](#textalign)                         | ✅                     |                                                                                         |
 | [`textAlignVertical`](#textalignvertical)         | ✅ ⬆️                  | Android-only in RN Text. Implemented for both iOS & Android here.                       |
-| [`textDecorationLine`](#textdecorationline)       | ✅                     |                                                                                         |
+| [`verticalAlign`](#verticalalign)                 | ✅ ⬆️                  | Android-only in RN Text. Implemented for both iOS & Android                             |
 | [`textShadowColor`](#textshadowcolor)             | ✅                     |                                                                                         |
 | [`textShadowOffset`](#textshadowoffset)           | ✅                     |                                                                                         |
 | [`textShadowRadius`](#textshadowradius)           | ✅                     |                                                                                         |
-| [`textTransform`](#texttransform)                 | ✅                     |                                                                                         |
-| [`verticalAlign`](#verticalalign)                 | ✅ ⬆️                  | Android-only in RN Text. Implemented for both iOS & Android                             |
+| [`includeFontPadding`](#includefontpadding)       | ✅                     | Android-only, like RN `<Text>`                                                          |
 | [`writingDirection`](#writingdirection)           | ✅                     | iOS-only, like RN `<Text>`. No-op on Android.                                           |
-| [Every other `ViewStyle` prop](#view-styles)      | ✅                     | `width`, `margin`, `padding`, `backgroundColor`, `opacity`, etc                         |
 
 RN `<Text>` compatibility: ✅ fully compatible · ⬆️ added in Plain Text
 
