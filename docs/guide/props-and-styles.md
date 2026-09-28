@@ -167,9 +167,7 @@ them, Android doesn't.
   is set. Known issue: with `hyphens="none"` and
   `android_hyphenationFrequency` also set, the text's measured size can
   assume hyphenation that isn't drawn.
-- **RN `<Text>`:** has no hyphenation control on iOS. The
-  [`Text` component](./text-component) drops this prop, with a development
-  warning, when it falls back to RN `<Text>`.
+- **RN `<Text>`:** has no hyphenation control on iOS.
 
 #### `lang`
 
@@ -181,9 +179,6 @@ hyphenation and line breaking. Defaults to the device language.
 | Type   | Default     | Cost  |
 | ------ | ----------- | ----- |
 | string | `undefined` | light |
-
-- **RN `<Text>`:** the [`Text` component](./text-component) drops this prop,
-  with a development warning, when it falls back to RN `<Text>`.
 
 #### `android_hyphenationFrequency`
 
@@ -408,9 +403,7 @@ invalid value logs a warning and is ignored.
   separately, even with the same font and settings, so it adds up in long
   lists.
 - **RN `<Text>`:** added in RN 0.88
-  ([RN#57804](https://github.com/facebook/react-native/pull/57804)). The
-  [`Text` component](./text-component) drops it, with a development warning,
-  when it falls back to RN `<Text>`.
+  ([RN#57804](https://github.com/facebook/react-native/pull/57804)).
 
 #### `textAlignVertical`
 
