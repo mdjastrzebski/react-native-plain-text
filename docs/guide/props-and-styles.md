@@ -83,23 +83,6 @@ Known differences that apply to all text, on top of the per-prop notes below:
 - **Single style only.** No nested `<Text>`, press handling or selection. See
   [Not supported](#not-supported).
 
-## How to read the reference
-
-Each entry below lists the prop's type, its default, and its **cost**: the
-extra native work a node pays when the prop is set. A prop left unset costs
-only a comparison, whatever its rating.
-
-- **light**: one comparison and at most one primitive write. No allocation.
-- **medium**: allocates per update, or moves the node onto a slower rendering
-  path. Cached or paid once per node where possible.
-- **heavy**: scales with text length or defeats a cache. No prop is heavy
-  today.
-
-Where a prop behaves differently from RN `<Text>`, its entry has an
-**RN `<Text>`:** note. No note means no known difference. Differences that
-affect all text, whatever the props, are listed under
-[Differences from RN Text](#differences-from-rn-text).
-
 ## Props reference
 
 ### `allowFontScaling`
