@@ -1,6 +1,7 @@
 import { registerRootComponent } from 'expo';
 
-import App from './src/App';
+const App =
+  process.env.VRT_ENABLED === '1' ? require('./src/AppVrt').default : require('./src/App').default;
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,

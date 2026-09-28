@@ -7,6 +7,12 @@
 
 # VSCode
 .vscode/
+
+# Editor temp files
+*~
+*.swp
+*.swo
+.#*
 jsconfig.json
 
 # Xcode
@@ -35,6 +41,7 @@ project.xcworkspace
 .classpath
 .cxx
 .gradle
+.kotlin
 .idea
 .project
 .settings
@@ -88,3 +95,6 @@ android/generated
 
 # React Native Nitro Modules
 nitrogen/
+
+# Visual regression test results (the built apps are cached in node_modules/.cache/vrt)
+.vrt/
