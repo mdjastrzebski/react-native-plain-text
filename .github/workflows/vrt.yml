@@ -11,11 +11,8 @@ on:
           - android
           - ios
         default: all
-  # TEMPORARY: registers vrt.yml with GitHub so it can be dispatched from this
-  # branch before it reaches main. Remove before merging.
-  pull_request:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 0 * * *'
 
 permissions:
   contents: read
