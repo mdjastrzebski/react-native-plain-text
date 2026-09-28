@@ -868,7 +868,6 @@ export const groups: VrtGroup[] = [
         <VrtText testID="vrt-features-wrap-detection-longest-in-middle" style={styles.wrapProbe}>
           {'A\nBB\nthis line is longest  \nCCC'}
         </VrtText>
-        {/* Same, with the longest paragraph last. */}
         <VrtText testID="vrt-features-wrap-detection-longest-last" style={styles.wrapProbe}>
           {'A\nBB\nCCC\nthis line is longest  '}
         </VrtText>

@@ -3,7 +3,7 @@
 # Shared VRT defaults. Every value can be overridden by the caller.
 export VRT_APP_ID="${VRT_APP_ID:-plaintext.example}"
 export VRT_APP_SCHEME="${VRT_APP_SCHEME:-exp+react-native-plain-text-example}"
-# iOS ONLY
+# iOS only.
 export VRT_RESET_DEVICE="${VRT_RESET_DEVICE:-0}"
 
 # The suite picks which scenarios run (the `suite` of their groups in
