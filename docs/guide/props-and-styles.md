@@ -66,23 +66,6 @@ Things Plain Text does that RN `<Text>` does not:
 - [`hyphens`](#hyphens) and [`lang`](#lang): cross-platform hyphenation
   control. RN `<Text>` has none on iOS.
 
-## Differences from RN Text
-
-Known differences that apply to all text, on top of the per-prop notes below:
-
-- **iOS wraps slightly earlier.** `UILabel` needs a bit more horizontal space
-  than RN `<Text>`'s TextKit layout, so near a width limit a word can move to
-  the next line where RN `<Text>` keeps it. The box gets the same width, only
-  the wrap point differs. Inherent to `UILabel`.
-- **iOS wraps at a plain hyphen.** `"text-size"` can split as `"text-"` /
-  `"size"`, which RN `<Text>` doesn't do. Use a non-breaking hyphen (`U+2011`,
-  `‑`) where that split is unwanted.
-- **iOS ignores trailing spaces on the last line of multi-line text** when
-  sizing the box. RN `<Text>` counts them, so its box is wider by their width.
-  Single-line text and Android are unaffected.
-- **Single style only.** No nested `<Text>`, press handling or selection. See
-  [Not supported](#not-supported).
-
 ## Props reference
 
 ### Main props
@@ -573,6 +556,23 @@ which side the text aligns to.
 | `dynamicTypeRamp`                                                       | To Do                  |
 
 Open an issue for the one you need. Real-world usage sets the priority.
+
+## Differences from RN Text
+
+Known differences that apply to all text, on top of the per-prop notes below:
+
+- **iOS wraps slightly earlier.** `UILabel` needs a bit more horizontal space
+  than RN `<Text>`'s TextKit layout, so near a width limit a word can move to
+  the next line where RN `<Text>` keeps it. The box gets the same width, only
+  the wrap point differs. Inherent to `UILabel`.
+- **iOS wraps at a plain hyphen.** `"text-size"` can split as `"text-"` /
+  `"size"`, which RN `<Text>` doesn't do. Use a non-breaking hyphen (`U+2011`,
+  `‑`) where that split is unwanted.
+- **iOS ignores trailing spaces on the last line of multi-line text** when
+  sizing the box. RN `<Text>` counts them, so its box is wider by their width.
+  Single-line text and Android are unaffected.
+- **Single style only.** No nested `<Text>`, press handling or selection. See
+  [Not supported](#not-supported).
 
 ## Not supported
 
