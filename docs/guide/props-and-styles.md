@@ -89,7 +89,7 @@ into one string on every render.
 
 #### `text`
 
-_Not in RN `<Text>`._
+_Plain Text addition to the standard RN `<Text>` props._
 
 The text to render, as a prop instead of `children`. Wins when both are set.
 Use it to animate text with Animated or Reanimated without re-rendering. See
@@ -150,7 +150,7 @@ any RN `View`. All are light.
 
 #### `hyphens`
 
-_Not in RN `<Text>`._
+_Plain Text addition to the standard RN `<Text>` props._
 
 Set to `'auto'` to hyphenate words at line breaks. Set [`lang`](#lang) as well
 so the right language's hyphenation rules are used.
@@ -171,7 +171,7 @@ them, Android doesn't.
 
 #### `lang`
 
-_Not in RN `<Text>`._
+_Plain Text addition to the standard RN `<Text>` props._
 
 The text's language as a BCP-47 tag, e.g. `'de'` or `'pl'`. Used for
 hyphenation and line breaking. Defaults to the device language.
@@ -387,7 +387,7 @@ support only a few.
 
 #### `fontVariationSettings`
 
-_Not in RN `<Text>`._
+_Plain Text addition to the standard RN `<Text>` styles._
 
 Sets a variable font's axes, like weight or width, to any value, in CSS
 syntax: `'"wght" 700, "wdth" 87.5'`. `'normal'` resets them.
