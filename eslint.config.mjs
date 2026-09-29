@@ -39,7 +39,7 @@ export default defineConfig([
   {
     // The example app uses inline styles on purpose: each demo shows the exact
     // style being exercised right next to the element it applies to.
-    files: ['example/**', 'example-shared/**'],
+    files: ['examples/**'],
     rules: {
       'react-native/no-inline-styles': 'off',
     },

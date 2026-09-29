@@ -7091,9 +7091,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"example-shared@workspace:*, example-shared@workspace:example-shared":
+"example-shared@workspace:*, example-shared@workspace:examples/shared":
   version: 0.0.0-use.local
-  resolution: "example-shared@workspace:example-shared"
+  resolution: "example-shared@workspace:examples/shared"
   dependencies:
     react: "npm:19.2.3"
     react-native: "npm:0.86.2"
@@ -12564,9 +12564,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"react-native-plain-text-example@workspace:example":
+"react-native-plain-text-example@workspace:examples/expo":
   version: 0.0.0-use.local
-  resolution: "react-native-plain-text-example@workspace:example"
+  resolution: "react-native-plain-text-example@workspace:examples/expo"
   dependencies:
     "@expo-google-fonts/inter": "npm:^0.4.2"
     "@expo/metro-runtime": "npm:~57.0.8"

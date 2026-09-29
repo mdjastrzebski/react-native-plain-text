@@ -65,28 +65,28 @@ prefixed names left are the generated ones we implement:
 
 ## Example app
 
-`example/` is an Expo dev-client app (see `example/AGENTS.md`, and check the
+`examples/expo/` is an Expo dev-client app (see `examples/expo/AGENTS.md`, and check the
 versioned Expo docs before touching Expo config). It consumes the library from
-source via `example/react-native.config.js`, which points the dependency at the
+source via `examples/expo/react-native.config.js`, which points the dependency at the
 repo root.
 
-The app's content lives in `example-shared/`, a private workspace package, so a
-second example app can render the same screens and VRT specimens. The split:
+The app's content lives in `examples/shared/`, a private workspace package
+imported as `example-shared`, so a second example app can render the same screens and VRT specimens. The split:
 
-- **`example-shared/`** holds the screens, sections, VRT scenarios, theme and
+- **`examples/shared/`** holds the screens, sections, VRT scenarios, theme and
   bundled font. Its main entry needs React Native, the library,
   `react-native-safe-area-context` (peers) and `react-native-memory-footprint`
   (its own dependency). Autolinking in Expo SDK 54+ links native modules that
   are dependencies of dependencies, so the Expo app doesn't list it. The
   Animating Text section, which needs Reanimated, sits behind its own entry
   point, `example-shared/animating-text`.
-- **`example/`** is the Expo shell: navigation, font loading, MMKV storage and
+- **`examples/expo/`** is the Expo shell: navigation, font loading, MMKV storage and
   the native config. Screens know nothing of react-navigation. They hand their
   header controls to the app through a `setHeaderActions` prop, and persist
   through `useSessionState`, whose storage the app provides.
 
 Its peer dependencies are also dev dependencies, for typechecking only; the
-`react-native-monorepo-config` setup in `example/metro.config.js` resolves them
+`react-native-monorepo-config` setup in `examples/expo/metro.config.js` resolves them
 from the app and blocks the package's own copies, so the bundle holds one of
 each.
 
@@ -95,7 +95,7 @@ Three screens, sharing the specimen furniture in `src/components/Specimen.tsx`
 palette in `src/theme.ts`, and the "Compare Text" flag in
 `src/components/CompareText.tsx`, one state above the app's screens, so the
 toggle is the same setting on every screen that offers it. Paths below are in
-`example-shared/`.
+`examples/shared/`.
 
 - **Features** (`src/screens/FeaturesScreen.tsx`): per-prop coverage, one prop
   per section and one value per row. Every new feature must add a section here.
@@ -129,7 +129,7 @@ The value lives in
 (`Helpers::Constants.min_ios_version_supported`). Check it there rather than
 assuming.
 
-Note the example app is higher: `example/ios/Podfile` pins `16.4` (Expo's
+Note the example app is higher: `examples/expo/ios/Podfile` pins `16.4` (Expo's
 default). That's the app's floor, not the library's, so never use it to justify
 dropping an `@available` guard.
 

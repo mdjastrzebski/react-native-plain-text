@@ -14,9 +14,9 @@ backed directly by the platform's native text widget (`UILabel` on iOS,
 Architecture) native component.
 
 This is a Yarn workspaces monorepo: the library lives in the root directory, and
-`example/` is an Expo dev-client app used to run and test changes. Its screens,
-sections and VRT specimens live in `example-shared/`, so they can be shared with
-other example apps. Use the Node.js
+`examples/expo/` is an Expo dev-client app used to run and test changes. Its screens,
+sections and VRT specimens live in `examples/shared/` (the `example-shared`
+package), so they can be shared with other example apps. Use the Node.js
 version in [`.nvmrc`](./.nvmrc), and use Yarn v4, not `npm`.
 
 ## Commands
@@ -53,9 +53,9 @@ yarn example android    # build & run on Android
 The library is iOS/Android only. `PlainText` renders a Fabric native
 component with no web fallback, so there is no `yarn example web`.
 
-To edit native code in an IDE, open `example/ios/PlainTextExample.xcworkspace`
+To edit native code in an IDE, open `examples/expo/ios/PlainTextExample.xcworkspace`
 in Xcode (sources under `Pods > Development Pods > react-native-plain-text`) or
-`example/android` in Android Studio (sources under `react-native-plain-text`).
+`examples/expo/android` in Android Studio (sources under `react-native-plain-text`).
 
 Agents: do not build the native binaries yourself unless explicitly asked to.
 They are slow, and the person you are working with is usually running the app
@@ -94,7 +94,7 @@ tested: [performance.md](docs/contributing/performance.md#prop-cost-policy).
 
 **A new prop ships with specimens.** Add at least one section to the Features
 screen, with a row per value that shows how each is handled, and a matching group
-in the VRT suite (`example-shared/src/vrt/groups.tsx`) with baselines. Details:
+in the VRT suite (`examples/shared/src/vrt/groups.tsx`) with baselines. Details:
 [workflow.md](docs/contributing/workflow.md#specimens-for-a-new-prop).
 
 ## Manual sync points

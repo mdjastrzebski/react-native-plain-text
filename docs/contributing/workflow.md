@@ -9,10 +9,10 @@ three of:
   equivalent prop or behavior rather than inventing a new API.
 - **Both platforms**: iOS and Android, not one "for now".
 - **Example coverage**: a dedicated section on the Features screen
-  (`example-shared/src/screens/FeaturesScreen.tsx`), so it's visible and testable.
+  (`examples/shared/src/screens/FeaturesScreen.tsx`), so it's visible and testable.
   See [Specimens for a new prop](#specimens-for-a-new-prop).
 - **VRT coverage**: the same specimens as a group in
-  `example-shared/src/vrt/groups.tsx`, with reviewed baselines.
+  `examples/shared/src/vrt/groups.tsx`, with reviewed baselines.
 - **A cost rating**: free when the prop is unused, and rated light/medium/heavy
   when it is set ([performance.md](performance.md#prop-cost-policy)). Medium and
   heavy get a `Cost:` note beside the prop in the codegen spec.
@@ -49,17 +49,17 @@ match CSS/web, not RN's bug. `textTransform: 'capitalize'` on iOS is this case
 
 Every newly supported prop gets at least one specimen in two places:
 
-1. **Features screen**: a new `example-shared/src/sections/<Prop>Section.tsx`,
+1. **Features screen**: a new `examples/shared/src/sections/<Prop>Section.tsx`,
    registered in `FeaturesScreen.tsx`. One row per value, so the rows show how
    the prop handles each value side by side. Cover the default, each enum
    member (or a spread of numeric values including edge cases such as `0` and
    negatives), and any value where the platforms or RN's `<Text>` are known to
    differ. Look at `FontSizeSection.tsx` or `LetterSpacingSection.tsx` for the
    shape.
-2. **VRT suite**: a matching group in `example-shared/src/vrt/groups.tsx` with the same
+2. **VRT suite**: a matching group in `examples/shared/src/vrt/groups.tsx` with the same
    values, one `VrtText` per value and a test ID of the form
    `vrt-features-<prop>-<value>`. Put any shared value list in
-   `example-shared/src/vrt/utils.ts`. Then capture and review baselines on both
+   `examples/shared/src/vrt/utils.ts`. Then capture and review baselines on both
    platforms ([visual-regression-testing.md](visual-regression-testing.md)).
 
 Keep the two in step. A value shown on the Features screen but missing from VRT

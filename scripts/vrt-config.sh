@@ -7,7 +7,7 @@ export VRT_APP_SCHEME="${VRT_APP_SCHEME:-exp+react-native-plain-text-example}"
 export VRT_RESET_DEVICE="${VRT_RESET_DEVICE:-0}"
 
 # The suite picks which scenarios run (the `suite` of their groups in
-# example-shared/src/vrt/groups.tsx) and the system text size they are captured at.
+# examples/shared/src/vrt/groups.tsx) and the system text size they are captured at.
 # Each suite keeps its own captures, reports and baselines.
 #   default     all other scenarios, at the platform's default text size
 #   font-scale  the font-scaling scenarios, at a large but common text size:

@@ -107,8 +107,7 @@
     "react-native": ">=0.81"
   },
   "workspaces": [
-    "example",
-    "example-shared",
+    "examples/*",
     "docs"
   ],
   "packageManager": "yarn@4.11.0",

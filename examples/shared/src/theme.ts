@@ -80,7 +80,7 @@ export const SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
 
 // The one bundled face, and the only one `fontVariationSettings` can move: each
 // app bundles it at build time (the Expo app through the expo-font config plugin
-// in example/app.json) from example-shared/assets/fonts/OpenSans.ttf, the
+// in examples/expo/app.json) from examples/shared/assets/fonts/OpenSans.ttf, the
 // variable release, with a wght axis (300-800,
 // default 400) and a wdth axis (75-100, default 100). No system font usably has
 // an fvar table (SF keeps its axes private, and Roboto is variable only from
