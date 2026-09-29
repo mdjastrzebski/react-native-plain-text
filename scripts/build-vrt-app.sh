@@ -19,7 +19,7 @@ case "$platform" in
     serial_file="$PROJECT_ROOT/.vrt/devices/android-serial"
     [[ -f "$serial_file" ]] || fail "Run 'yarn vrt android setup' first."
     android_serial="$(<"$serial_file")"
-    source_apk="$PROJECT_ROOT/example/android/app/build/outputs/apk/release/app-release.apk"
+    source_apk="$PROJECT_ROOT/examples/expo/android/app/build/outputs/apk/release/app-release.apk"
     target_dir="$PROJECT_ROOT/node_modules/.cache/vrt/apps/android"
     target_apk="$target_dir/app-release.apk"
     # A failed build must not leave a previous APK and fingerprint behind for CI

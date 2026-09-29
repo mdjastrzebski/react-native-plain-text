@@ -7,14 +7,13 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import type { ParamListBase } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Pressable, StyleSheet } from 'react-native';
 import { PlainText } from 'react-native-plain-text';
 import { COLOR } from '../theme';
+import type { SetHeaderActions } from './HeaderActions';
 
-// Lives above the tab navigator (not in either screen) so the toggle is shared
-// state between Features and Examples, rather than resetting per tab.
+// Lives above the app's screens (not in either screen) so the toggle is shared
+// state between Features and Examples, rather than resetting per screen.
 const CompareTextContext = createContext<
   | {
       showText: boolean;
@@ -38,9 +37,9 @@ export function CompareTextProvider({ children }: { children: ReactNode }) {
   return <CompareTextContext.Provider value={value}>{children}</CompareTextContext.Provider>;
 }
 
-// Installs both toggles into the screen's native stack header. Returns
-// `showText`; `compatOn` is read separately via useCompatOn.
-export function useCompareText(navigation: NativeStackNavigationProp<ParamListBase>) {
+// Installs both toggles into the screen's header. Returns `showText`;
+// `compatOn` is read separately via useCompatOn.
+export function useCompareText(setHeaderActions: SetHeaderActions) {
   const context = useContext(CompareTextContext);
   if (context == null) {
     throw new Error('useCompareText must be used inside a CompareTextProvider');
@@ -72,21 +71,8 @@ export function useCompareText(navigation: NativeStackNavigationProp<ParamListBa
       </Pressable>
     );
 
-    navigation.setOptions({
-      // `headerRight` draws on Android; iOS uses `unstable_headerRightItems` for
-      // `hidesSharedBackground` (iOS 26 otherwise puts a glass capsule behind the label).
-      headerRight: () => (
-        <View style={styles.headerButtonRow}>
-          {compatButton}
-          {button}
-        </View>
-      ),
-      unstable_headerRightItems: () => [
-        { type: 'custom', element: compatButton, hidesSharedBackground: true },
-        { type: 'custom', element: button, hidesSharedBackground: true },
-      ],
-    });
-  }, [navigation, showText, toggle, compatOn, toggleCompat]);
+    setHeaderActions([compatButton, button]);
+  }, [setHeaderActions, showText, toggle, compatOn, toggleCompat]);
 
   return showText;
 }
@@ -102,10 +88,6 @@ export function useCompatOn(): boolean {
 }
 
 const styles = StyleSheet.create({
-  headerButtonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   headerButton: {
     paddingVertical: 4,
     paddingHorizontal: 8,

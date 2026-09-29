@@ -9,15 +9,15 @@ time to track down the first time it came up.
   reload and Fast Refresh only pick up JS. A stale native build is the first
   thing to suspect when a native change "does nothing". (Don't run these
   yourself unless asked, see [workflow.md](workflow.md).)
-- **Do not run `./gradlew clean`** in `example/android`. It re-runs CMake
+- **Do not run `./gradlew clean`** in `examples/expo/android`. It re-runs CMake
   configure against the library's generated codegen dir before regenerating it,
   and fails. To force a clean native build, delete the caches by hand:
-  `example/android/app/.cxx`, `example/android/app/build`, `android/build`.
+  `examples/expo/android/app/.cxx`, `examples/expo/android/app/build`, `android/build`.
   Then run `yarn example android`, which regenerates codegen.
 - **After editing `android/src/main/jni/**` or `react-native.config.js`**,
   autolinking output can go stale: the generated `autolinking.json` /
   `autolinking.cpp` aren't reliably invalidated. Also delete
-  `example/android/build/generated/autolinking`.
+  `examples/expo/android/build/generated/autolinking`.
 - **New `ios/*.mm` files are only compiled after `pod install`** re-scans the
   podspec glob.
 
@@ -164,7 +164,7 @@ time to track down the first time it came up.
   `TextStyle` has no such key, `PlainText.tsx` widens the style type
   itself, as `PlainTextStyle`. That is the one place the library adds a style RN
   does not have, so anything typed against RN's `TextStyle` (`TextItem`'s `<Text>`
-  overlay in `example/src/components/Specimen.tsx`, for one) needs a cast in the
+  overlay in `examples/shared/src/components/Specimen.tsx`, for one) needs a cast in the
   other direction.
 
   Android has it directly: `TextView.setFontVariationSettings(String)`, API 26+,
@@ -239,7 +239,7 @@ time to track down the first time it came up.
   Only a font file carrying an `fvar` table can move. No system font usably
   does. SF's axes are private and Roboto is variable only from Android 12.
   That is why the example app bundles Open Sans (`VARIABLE` in
-  `example/src/theme.ts`) and why a row rendering as the baseline usually means
+  `examples/shared/src/theme.ts`) and why a row rendering as the baseline usually means
   a missing axis rather than a broken prop.
 
 ## Android

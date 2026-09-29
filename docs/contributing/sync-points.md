@@ -68,7 +68,7 @@ most props only touch a few.
 - `ios/PlainTextProps.mm` / RN's generated iOS glue — reads the generated prop into native code
 - `android/src/main/java/com/mdjstack/plaintext/PlainTextViewManager.kt` — `@ReactProp` setter that applies the prop to
   the mounted view
-- `example/src/screens/FeaturesScreen.tsx` — example app coverage, so the prop is exercised in the dev client
+- `examples/shared/src/screens/FeaturesScreen.tsx` — example app coverage, so the prop is exercised in the dev client
 
 **Contract:** the spec is what the rest of the codebase treats as ground truth (`src/PlainTextViewNativeComponent.ts:8`,
 `// SYNC: this spec is the source of truth for props`). Every other file listed here reads or mirrors it.
@@ -379,7 +379,7 @@ re-applies the OS **Bold text** setting to the typeface, which interacts with `f
 [Set 5](#set-5--deferred-prop-application-android-dirty-flags).
 
 ¹ Otherwise Android recreates the Activity and the views are rebuilt anyway.
-`example/plugins/withFontScaleConfigChanges.js` declares it so the no-recreate path is the one you exercise while
+`examples/expo/plugins/withFontScaleConfigChanges.js` declares it so the no-recreate path is the one you exercise while
 developing.
 
 ---

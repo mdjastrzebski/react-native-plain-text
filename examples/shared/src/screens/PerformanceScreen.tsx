@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 // unstable_NativeText is RN's bare RCTText host component (no <Text> JS wrapper).
 import { unstable_NativeText as NativeText } from 'react-native';
-import type { ParamListBase } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getMemoryFootprint } from 'react-native-memory-footprint';
 import {
   PlainText,
@@ -21,6 +19,7 @@ import {
   unstable_NativePlainText as NativePlainText,
   type PlainTextStyle,
 } from 'react-native-plain-text';
+import type { SetHeaderActions } from '../components/HeaderActions';
 import { Section, screenStyles } from '../components/Specimen';
 import { useSessionState } from '../useSessionState';
 import { COLOR, MONO, SERIF, VARIABLE } from '../theme';
@@ -133,9 +132,11 @@ const PerformanceObserverGlobal = (
 // commit/interaction measurement instead of after it.
 const forceGC = (globalThis as unknown as { gc?: () => void }).gc;
 
-type Props = NativeStackScreenProps<ParamListBase>;
+type Props = {
+  setHeaderActions: SetHeaderActions;
+};
 
-export default function PerformanceScreen({ navigation }: Props) {
+export function PerformanceScreen({ setHeaderActions }: Props) {
   // Persisted: runs are compared across app kills, so config can't reset on launch.
   const [config, setConfig] = useSessionState<AttrConfig>('perf-attrs', DEFAULT_CONFIG);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -195,8 +196,8 @@ export default function PerformanceScreen({ navigation }: Props) {
   const fingerprint = formatFingerprint(config);
   const live = `${labelFor(variant)} · ${fingerprint}`;
 
-  // Edited via the native header, not JS, so the panel is never part of the
-  // measured tree.
+  // Edited via the app's header, outside the screen, so the panel is never
+  // part of the measured tree.
   useLayoutEffect(() => {
     const button = (
       <Pressable
@@ -227,18 +228,8 @@ export default function PerformanceScreen({ navigation }: Props) {
       </Pressable>
     );
 
-    navigation.setOptions({
-      // Android draws headerRight; iOS uses the item form so the glass capsule
-      // can be turned off (same split as CompareText).
-      // Returns a stable element built above, not a component; CompareText's
-      // equivalent lives in a hook, so only this one needs the exemption.
-      // eslint-disable-next-line react/no-unstable-nested-components
-      headerRight: () => button,
-      unstable_headerRightItems: () => [
-        { type: 'custom', element: button, hidesSharedBackground: true },
-      ],
-    });
-  }, [navigation, config, mounted]);
+    setHeaderActions([button]);
+  }, [setHeaderActions, config, mounted]);
 
   useEffect(() => {
     if (PerformanceObserverGlobal == null) return;

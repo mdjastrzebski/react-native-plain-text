@@ -72,9 +72,16 @@ export const COLOR = {
 export const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 export const SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
 
-// The one bundled face, and the only one `fontVariationSettings` can move: it is
-// bundled at build time by the expo-font config plugin (example/app.json) from
-// assets/fonts/OpenSans.ttf, the variable release, with a wght axis (300-800,
+// Three Inter cuts are named directly by family: Inter_300Light_Italic,
+// Inter_400Regular and Inter_600SemiBold. Each app registers them under exactly
+// those names (the Expo app loads them from @expo-google-fonts/inter) and holds
+// rendering until they load, since an unregistered family silently falls back to
+// the system font.
+
+// The one bundled face, and the only one `fontVariationSettings` can move: each
+// app bundles it at build time (the Expo app through the expo-font config plugin
+// in examples/expo/app.json) from examples/shared/assets/fonts/OpenSans.ttf, the
+// variable release, with a wght axis (300-800,
 // default 400) and a wdth axis (75-100, default 100). No system font usably has
 // an fvar table (SF keeps its axes private, and Roboto is variable only from
 // Android 12), so every row that varies an axis has to name this family.

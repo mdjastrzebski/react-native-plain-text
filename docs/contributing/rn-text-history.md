@@ -6,7 +6,7 @@ changed between the old and new architecture. Read this before claiming that
 measurement: both are wrong.
 
 Verified against RN git history and the `react-native@0.83.10` sources vendored
-in `example/node_modules`.
+in `examples/expo/node_modules`.
 
 ## The claim that keeps coming up, and why it's false
 

@@ -1,9 +1,3 @@
-import {
-  Inter_300Light_Italic,
-  Inter_400Regular,
-  Inter_600SemiBold,
-  useFonts,
-} from '@expo-google-fonts/inter';
 import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { screenStyles } from './components/Specimen';
@@ -11,12 +5,10 @@ import { getVrtScenarios } from './vrt/scenarios';
 import { useVrtDeepLink } from './vrt/useVrtDeepLink';
 import { vrtStyles } from './vrt/utils';
 
-export default function AppVrt() {
-  const [fontsLoaded] = useFonts({
-    Inter_300Light_Italic,
-    Inter_400Regular,
-    Inter_600SemiBold,
-  });
+// The app loads the fonts the specimens name (see theme.ts) and passes
+// `fontsLoaded` rather than mounting this late: the deep link listener has to be
+// up from launch, or a URL delivered while fonts load would be missed.
+export function VrtApp({ fontsLoaded }: { fontsLoaded: boolean }) {
   const testID = useVrtDeepLink();
 
   if (!fontsLoaded || testID === undefined) return null;

@@ -1,8 +1,7 @@
 import { useRef, useState, type ComponentType, type ReactElement } from 'react';
 import { FlatList } from 'react-native';
-import type { ParamListBase } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCompareText } from '../components/CompareText';
+import type { SetHeaderActions } from '../components/HeaderActions';
 import { Cover, SearchField, screenStyles } from '../components/Specimen';
 import { AccessibilitySection } from '../sections/AccessibilitySection';
 import { AnimatingTextSection } from '../sections/AnimatingTextSection';
@@ -36,7 +35,19 @@ import { VerticalAlignSection } from '../sections/VerticalAlignSection';
 import { WrapDetectionSection } from '../sections/WrapDetectionSection';
 import { WritingDirectionSection } from '../sections/WritingDirectionSection';
 
-type Props = NativeStackScreenProps<ParamListBase>;
+type SectionProps = {
+  showText: boolean;
+  // For sections with a drag gesture, so the list doesn't scroll under it.
+  onDragStateChange: (dragging: boolean) => void;
+};
+
+// [title, Component] so search can filter on title directly. Key and title both
+// derive from `title`, since every entry shares the same props.
+type FeatureSection = [title: string, Component: ComponentType<SectionProps>];
+
+type Props = {
+  setHeaderActions: SetHeaderActions;
+};
 
 // One prop per section, one value per row (multi-prop rows live on Examples).
 // Each section is a component in ../sections/, named after its prop.
@@ -44,8 +55,8 @@ type Props = NativeStackScreenProps<ParamListBase>;
 // FlatList of pre-built elements: renderItem just returns the item, keeping virtualization.
 // Search field is a sticky ListHeaderComponent; cover lives in `sections` so it scrolls
 // away instead of pinning alongside the search field.
-export default function FeaturesScreen({ navigation }: Props) {
-  const showText = useCompareText(navigation);
+export function FeaturesScreen({ setHeaderActions }: Props) {
+  const showText = useCompareText(setHeaderActions);
 
   const [search, setSearch] = useState('');
 
@@ -55,9 +66,7 @@ export default function FeaturesScreen({ navigation }: Props) {
     scrollRef.current?.setNativeProps({ scrollEnabled: !dragging });
   };
 
-  // [title, Component] so search can filter on title directly. Key and title both
-  // derive from `title` below, since every entry here shares the same showText prop.
-  const sections: [string, ComponentType<{ showText: boolean }>][] = [
+  const sections: FeatureSection[] = [
     ['Font Size', FontSizeSection],
     ['Emoji', EmojiSection],
     ['Font Family', FontFamilySection],
@@ -88,6 +97,7 @@ export default function FeaturesScreen({ navigation }: Props) {
     ['Wrap Detection', WrapDetectionSection],
     ['Accessibility', AccessibilitySection],
     ['Font Padding', FontPaddingSection],
+    ['Animating Text', AnimatingTextSection],
   ];
 
   const query = search.toLowerCase();
@@ -104,10 +114,9 @@ export default function FeaturesScreen({ navigation }: Props) {
       : []),
     ...sections
       .filter(([title]) => title.toLowerCase().includes(query))
-      .map(([title, Section]) => <Section key={title} showText={showText} />),
-    ...('animating text'.includes(query)
-      ? [<AnimatingTextSection key="animating-text" onDragStateChange={onDragStateChange} />]
-      : []),
+      .map(([title, Section]) => (
+        <Section key={title} showText={showText} onDragStateChange={onDragStateChange} />
+      )),
   ];
 
   return (

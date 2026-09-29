@@ -11,8 +11,8 @@
     "lib/",
     "coverage/",
     "references/",
-    "example/ios/",
-    "example/android/",
+    "examples/expo/ios/",
+    "examples/expo/android/",
     "docs/doc_build/",
     ".yarn/",
     "CHANGELOG.md"

@@ -7,9 +7,7 @@
     "android": "expo run:android",
     "android:release": "expo run:android --variant release",
     "ios": "expo run:ios",
-    "ios:release": "expo run:ios --configuration Release",
-    "build:ios": "xcodebuild ONLY_ACTIVE_ARCH=YES -workspace ios/PlainTextExample.xcworkspace -UseNewBuildSystem=YES -scheme PlainTextExample -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -quiet",
-    "build:android": "cd android && ./gradlew assembleDebug -DtestBuildType=debug -Dorg.gradle.jvmargs=-Xmx4g"
+    "ios:release": "expo run:ios --configuration Release"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -18,12 +16,12 @@
     "@react-navigation/bottom-tabs": "^7.18.13",
     "@react-navigation/native": "^7.3.13",
     "@react-navigation/native-stack": "^7.18.5",
+    "example-shared": "workspace:*",
     "expo": "~57.0.9",
     "expo-font": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-native": "0.86.2",
-    "react-native-memory-footprint": "^0.1.0",
     "react-native-mmkv": "^4.3.2",
     "react-native-nitro-modules": "0.35.9",
     "react-native-reanimated": "4.5.1",

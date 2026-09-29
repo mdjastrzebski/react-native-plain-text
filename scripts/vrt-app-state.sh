@@ -22,7 +22,7 @@ hash_command() {
 
 # Source files whose bytes reach the compiled app, as git lists them (tracked
 # plus untracked-but-not-ignored, so local debris never counts). Generated trees
-# (`example/android`, `example/ios`, Podfile.lock) are left out; CI records the
+# (`examples/expo/android`, `examples/expo/ios`, Podfile.lock) are left out; CI records the
 # toolchain in the cache key instead. Tests are excluded: nothing bundles them.
 #
 # Takes ~1.1s. https://github.com/mdjastrzebski/fs-fingerprint takes ~30ms but
@@ -38,15 +38,18 @@ app_build_inputs() {
     react-native.config.js
     src
     cpp
-    example/package.json
-    example/app.json
-    example/index.js
-    example/babel.config.js
-    example/metro.config.js
-    example/src
-    example/assets
+    examples/expo/package.json
+    examples/expo/app.json
+    examples/expo/index.js
+    examples/expo/babel.config.js
+    examples/expo/metro.config.js
+    examples/expo/src
+    examples/expo/assets
+    examples/shared/package.json
+    examples/shared/src
+    examples/shared/assets
   )
-  local optional=(patches example/plugins)
+  local optional=(patches examples/expo/plugins)
   case "$platform" in
     android) inputs+=(android) ;;
     ios) inputs+=(ios RNPlainText.podspec) ;;
