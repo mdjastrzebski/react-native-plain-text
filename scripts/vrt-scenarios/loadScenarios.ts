@@ -21,7 +21,7 @@ export function loadVrtScenarios(platform: VrtPlatform, suite: VrtSuite) {
 
   const { getVrtScenarioIDs } = require('./scenarios') as typeof import('./scenarios');
   const { getVrtScenarios } =
-    require('../../example/src/vrt/scenarios') as typeof import('../../example/src/vrt/scenarios');
+    require('../../example-shared/src/vrt/scenarios') as typeof import('../../example-shared/src/vrt/scenarios');
 
   return {
     scenarioIDs: getVrtScenarioIDs(platform, suite),

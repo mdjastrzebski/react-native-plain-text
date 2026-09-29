@@ -65,7 +65,7 @@ next test.
      agree per the _three-way default contract_
      ([sync-points.md](sync-points.md#set-3--the-three-way-default-contract)) if it
      affects measured size.
-4. **Drive it from the perf suite.** `example/src/screens/PerformanceScreen.tsx`
+4. **Drive it from the perf suite.** `example-shared/src/screens/PerformanceScreen.tsx`
    already has a `Params` row for it (`ATTRIBUTES`, `key: 'experiment'`,
    options `(none)` / `baseline` / `experiment`) with `target: 'prop'`, which
    flows through `buildApplied`'s generic prop bucket and spreads via

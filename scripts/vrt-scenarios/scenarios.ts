@@ -1,7 +1,7 @@
-import { getVrtScenarios } from '../../example/src/vrt/scenarios';
-import type { VrtSuite } from '../../example/src/vrt/utils';
+import { getVrtScenarios } from '../../example-shared/src/vrt/scenarios';
+import type { VrtSuite } from '../../example-shared/src/vrt/utils';
 
-export { VRT_SUITES, type VrtSuite } from '../../example/src/vrt/utils';
+export { VRT_SUITES, type VrtSuite } from '../../example-shared/src/vrt/utils';
 export const VRT_PLATFORMS = ['ios', 'android'] as const;
 export type VrtPlatform = (typeof VRT_PLATFORMS)[number];
 

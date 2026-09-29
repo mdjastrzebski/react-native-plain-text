@@ -22,7 +22,8 @@ separate agent track.
 ## Always
 
 - **Yarn v4 workspaces, never `npm`.** The library is the repo root, `example/`
-  is an Expo dev-client app for running and testing changes.
+  is an Expo dev-client app for running and testing changes, and
+  `example-shared/` holds its screens, sections and VRT specimens.
 - **Run `yarn validate` after every change.** It skips `yarn test:android`
   (needs a JDK and the Android SDK), so run that yourself after touching
   `android/src/main/`. CI runs both.

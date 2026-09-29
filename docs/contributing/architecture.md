@@ -70,11 +70,32 @@ versioned Expo docs before touching Expo config). It consumes the library from
 source via `example/react-native.config.js`, which points the dependency at the
 repo root.
 
+The app's content lives in `example-shared/`, a private workspace package, so a
+second example app can render the same screens and VRT specimens. The split:
+
+- **`example-shared/`** holds the screens, sections, VRT scenarios, theme and
+  bundled font. Its main entry needs React Native, the library,
+  `react-native-safe-area-context` (peers) and `react-native-memory-footprint`
+  (its own dependency). Autolinking in Expo SDK 54+ links native modules that
+  are dependencies of dependencies, so the Expo app doesn't list it. The
+  Animating Text section, which needs Reanimated, sits behind its own entry
+  point, `example-shared/animating-text`.
+- **`example/`** is the Expo shell: navigation, font loading, MMKV storage and
+  the native config. Screens know nothing of react-navigation. They hand their
+  header controls to the app through a `setHeaderActions` prop, and persist
+  through `useSessionState`, whose storage the app provides.
+
+Its peer dependencies are also dev dependencies, for typechecking only; the
+`react-native-monorepo-config` setup in `example/metro.config.js` resolves them
+from the app and blocks the package's own copies, so the bundle holds one of
+each.
+
 Three screens, sharing the specimen furniture in `src/components/Specimen.tsx`
 (cover, section headings, the row that overlays RN's `<Text>` in red), the
 palette in `src/theme.ts`, and the "Compare Text" flag in
-`src/components/CompareText.tsx`, one state above the tab navigator, so the
-toggle is the same setting on every screen that offers it.
+`src/components/CompareText.tsx`, one state above the app's screens, so the
+toggle is the same setting on every screen that offers it. Paths below are in
+`example-shared/`.
 
 - **Features** (`src/screens/FeaturesScreen.tsx`): per-prop coverage, one prop
   per section and one value per row. Every new feature must add a section here.

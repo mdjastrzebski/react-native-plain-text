@@ -4110,44 +4110,44 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@turbo/darwin-64@npm:2.10.5":
-  version: 2.10.5
-  resolution: "@turbo/darwin-64@npm:2.10.5"
+"@turbo/darwin-64@npm:2.11.5":
+  version: 2.11.5
+  resolution: "@turbo/darwin-64@npm:2.11.5"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@turbo/darwin-arm64@npm:2.10.5":
-  version: 2.10.5
-  resolution: "@turbo/darwin-arm64@npm:2.10.5"
+"@turbo/darwin-arm64@npm:2.11.5":
+  version: 2.11.5
+  resolution: "@turbo/darwin-arm64@npm:2.11.5"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@turbo/linux-64@npm:2.10.5":
-  version: 2.10.5
-  resolution: "@turbo/linux-64@npm:2.10.5"
-  conditions: os=linux & cpu=x64
+"@turbo/linux-64@npm:2.11.5":
+  version: 2.11.5
+  resolution: "@turbo/linux-64@npm:2.11.5"
+  conditions: (os=android | os=linux) & cpu=x64
   languageName: node
   linkType: hard
 
-"@turbo/linux-arm64@npm:2.10.5":
-  version: 2.10.5
-  resolution: "@turbo/linux-arm64@npm:2.10.5"
-  conditions: os=linux & cpu=arm64
+"@turbo/linux-arm64@npm:2.11.5":
+  version: 2.11.5
+  resolution: "@turbo/linux-arm64@npm:2.11.5"
+  conditions: (os=android | os=linux) & cpu=arm64
   languageName: node
   linkType: hard
 
-"@turbo/windows-64@npm:2.10.5":
-  version: 2.10.5
-  resolution: "@turbo/windows-64@npm:2.10.5"
+"@turbo/windows-64@npm:2.11.5":
+  version: 2.11.5
+  resolution: "@turbo/windows-64@npm:2.11.5"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@turbo/windows-arm64@npm:2.10.5":
-  version: 2.10.5
-  resolution: "@turbo/windows-arm64@npm:2.10.5"
+"@turbo/windows-arm64@npm:2.11.5":
+  version: 2.11.5
+  resolution: "@turbo/windows-arm64@npm:2.11.5"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
@@ -7132,6 +7132,27 @@ __metadata:
   checksum: 10c0/0255d9f936215fd206156fd4caa9e8d35e62075d720dc7d847e89b417e5e62cf1ce6c9b4e0a1633a9256de0efefaf9f8d26924b1f3c8620cffb9db78e7d3076b
   languageName: node
   linkType: hard
+
+"example-shared@workspace:*, example-shared@workspace:example-shared":
+  version: 0.0.0-use.local
+  resolution: "example-shared@workspace:example-shared"
+  dependencies:
+    react: "npm:19.2.3"
+    react-native: "npm:0.86.2"
+    react-native-memory-footprint: "npm:^0.1.0"
+    react-native-reanimated: "npm:4.5.1"
+    react-native-safe-area-context: "npm:~5.7.0"
+    react-native-worklets: "npm:0.10.1"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+    react-native-reanimated: "*"
+    react-native-safe-area-context: "*"
+  peerDependenciesMeta:
+    react-native-reanimated:
+      optional: true
+  languageName: unknown
+  linkType: soft
 
 "execa@npm:^5.0.0":
   version: 5.1.1
@@ -12596,6 +12617,7 @@ __metadata:
     "@react-navigation/native": "npm:^7.3.13"
     "@react-navigation/native-stack": "npm:^7.18.5"
     babel-plugin-transform-inline-environment-variables: "npm:0.4.4"
+    example-shared: "workspace:*"
     expo: "npm:~57.0.9"
     expo-dev-client: "npm:~57.0.10"
     expo-font: "npm:~57.0.1"
@@ -12603,7 +12625,6 @@ __metadata:
     react: "npm:19.2.3"
     react-native: "npm:0.86.2"
     react-native-builder-bob: "npm:^0.43.0"
-    react-native-memory-footprint: "npm:^0.1.0"
     react-native-mmkv: "npm:^4.3.2"
     react-native-monorepo-config: "npm:^0.4.0"
     react-native-nitro-modules: "npm:0.35.9"
@@ -14396,15 +14417,15 @@ __metadata:
   linkType: hard
 
 "turbo@npm:^2.9.16":
-  version: 2.10.5
-  resolution: "turbo@npm:2.10.5"
+  version: 2.11.5
+  resolution: "turbo@npm:2.11.5"
   dependencies:
-    "@turbo/darwin-64": "npm:2.10.5"
-    "@turbo/darwin-arm64": "npm:2.10.5"
-    "@turbo/linux-64": "npm:2.10.5"
-    "@turbo/linux-arm64": "npm:2.10.5"
-    "@turbo/windows-64": "npm:2.10.5"
-    "@turbo/windows-arm64": "npm:2.10.5"
+    "@turbo/darwin-64": "npm:2.11.5"
+    "@turbo/darwin-arm64": "npm:2.11.5"
+    "@turbo/linux-64": "npm:2.11.5"
+    "@turbo/linux-arm64": "npm:2.11.5"
+    "@turbo/windows-64": "npm:2.11.5"
+    "@turbo/windows-arm64": "npm:2.11.5"
   dependenciesMeta:
     "@turbo/darwin-64":
       optional: true
@@ -14420,7 +14441,7 @@ __metadata:
       optional: true
   bin:
     turbo: bin/turbo
-  checksum: 10c0/081a8a4f4afe4026bde29ef9d0c98a1403437e9e72cd066973a82ec2f2482a1c6bd34973a997a23131520f37b9c063ba29a79583e18d0d70eeed8cd6baa1a003
+  checksum: 10c0/2fc7e68ec2d56e038d84f2d3ee528e356fcf4bc6af4434e39b96d4c63518e406ff04fb35c912b0a5bbbcf5bf5431ba054ebb0ca26921e34e117ad19e6a06e6d6
   languageName: node
   linkType: hard
 

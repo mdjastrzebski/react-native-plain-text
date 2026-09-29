@@ -164,7 +164,7 @@ time to track down the first time it came up.
   `TextStyle` has no such key, `PlainText.tsx` widens the style type
   itself, as `PlainTextStyle`. That is the one place the library adds a style RN
   does not have, so anything typed against RN's `TextStyle` (`TextItem`'s `<Text>`
-  overlay in `example/src/components/Specimen.tsx`, for one) needs a cast in the
+  overlay in `example-shared/src/components/Specimen.tsx`, for one) needs a cast in the
   other direction.
 
   Android has it directly: `TextView.setFontVariationSettings(String)`, API 26+,
@@ -239,7 +239,7 @@ time to track down the first time it came up.
   Only a font file carrying an `fvar` table can move. No system font usably
   does. SF's axes are private and Roboto is variable only from Android 12.
   That is why the example app bundles Open Sans (`VARIABLE` in
-  `example/src/theme.ts`) and why a row rendering as the baseline usually means
+  `example-shared/src/theme.ts`) and why a row rendering as the baseline usually means
   a missing axis rather than a broken prop.
 
 ## Android

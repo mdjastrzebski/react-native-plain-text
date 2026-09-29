@@ -1,6 +1,6 @@
 # Visual regression testing
 
-The VRT suite renders each specimen from `example/src/vrt/groups.tsx` on its own
+The VRT suite renders each specimen from `example-shared/src/vrt/groups.tsx` on its own
 screen in a Release build of the example app, screenshots it cropped to the
 specimen's bounds, and compares the PNG with a reviewed baseline in
 `tests/vrt/<platform>/`.

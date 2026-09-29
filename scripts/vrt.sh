@@ -66,7 +66,7 @@ run_capture() { "$SCRIPT_DIR/capture-vrt.sh" "$platform" "$@"; }
 run_compare() { "$SCRIPT_DIR/compare-vrt.sh" "$platform" "${1:-compare}"; }
 run_update() { "$SCRIPT_DIR/compare-vrt.sh" "$platform" update; }
 
-# Every suite, in order (VRT_SUITES in example/src/vrt/utils.ts), unless VRT_SUITE
+# Every suite, in order (VRT_SUITES in example-shared/src/vrt/utils.ts), unless VRT_SUITE
 # names one. Each capture switches the device to its suite's text size itself.
 if [[ -n "${VRT_SUITE:-}" ]]; then
   suites=("$VRT_SUITE")

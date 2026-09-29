@@ -23,7 +23,7 @@ export default defineConfig({
     ],
   },
   // Brand palette and typography cues pulled from the example app's
-  // `example/src/theme.ts` and `example/src/components/Specimen.tsx`.
+  // `example-shared/src/theme.ts` and `example-shared/src/components/Specimen.tsx`.
   globalStyles: path.join(__dirname, 'styles/index.css'),
   // Render every page as Markdown alongside the HTML and emit `llms.txt` /
   // `llms-full.txt`, so LLMs can read the docs without scraping the site.

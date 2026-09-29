@@ -45,6 +45,9 @@ app_build_inputs() {
     example/metro.config.js
     example/src
     example/assets
+    example-shared/package.json
+    example-shared/src
+    example-shared/assets
   )
   local optional=(patches example/plugins)
   case "$platform" in

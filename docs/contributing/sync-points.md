@@ -68,7 +68,7 @@ most props only touch a few.
 - `ios/PlainTextProps.mm` / RN's generated iOS glue — reads the generated prop into native code
 - `android/src/main/java/com/mdjstack/plaintext/PlainTextViewManager.kt` — `@ReactProp` setter that applies the prop to
   the mounted view
-- `example/src/screens/FeaturesScreen.tsx` — example app coverage, so the prop is exercised in the dev client
+- `example-shared/src/screens/FeaturesScreen.tsx` — example app coverage, so the prop is exercised in the dev client
 
 **Contract:** the spec is what the rest of the codebase treats as ground truth (`src/PlainTextViewNativeComponent.ts:8`,
 `// SYNC: this spec is the source of truth for props`). Every other file listed here reads or mirrors it.

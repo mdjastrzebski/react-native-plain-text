@@ -39,7 +39,7 @@
       [
         "expo-font",
         {
-          "fonts": ["./assets/fonts/OpenSans.ttf"]
+          "fonts": ["../example-shared/assets/fonts/OpenSans.ttf"]
         }
       ]
     ]

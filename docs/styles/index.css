@@ -1,5 +1,5 @@
 /*
- * Docs palette, taken from the example app's `example/src/theme.ts`.
+ * Docs palette, taken from the example app's `example-shared/src/theme.ts`.
  *
  * The brand ramp is that palette's `indigo` accent (#2f55c0), its designated
  * blue, with hover/active steps darkened along the same hue and the light
@@ -26,15 +26,15 @@
 }
 
 /*
- * Typography, following the same cues as the example app's `example/src/theme.ts`
- * and `example/src/components/Specimen.tsx`.
+ * Typography, following the same cues as the example app's `example-shared/src/theme.ts`
+ * and `example-shared/src/components/Specimen.tsx`.
  *
  * The library's whole claim is that it draws with the platform's own text widget
  * in the platform's own face, one style per node. So the docs lead with the
  * native system stack rather than a bundled web face (the default theme opens
  * with "Inter var"), the same reason the example's cover lockup takes the system
  * face instead of a serif wordmark. Mono is the platform's own monospace, with
- * Menlo kept prominent as `example/src/theme.ts`'s `MONO` picks it on iOS.
+ * Menlo kept prominent as `example-shared/src/theme.ts`'s `MONO` picks it on iOS.
  */
 :root {
   --rp-font-family-base:

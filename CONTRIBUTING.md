@@ -14,7 +14,9 @@ backed directly by the platform's native text widget (`UILabel` on iOS,
 Architecture) native component.
 
 This is a Yarn workspaces monorepo: the library lives in the root directory, and
-`example/` is an Expo dev-client app used to run and test changes. Use the Node.js
+`example/` is an Expo dev-client app used to run and test changes. Its screens,
+sections and VRT specimens live in `example-shared/`, so they can be shared with
+other example apps. Use the Node.js
 version in [`.nvmrc`](./.nvmrc), and use Yarn v4, not `npm`.
 
 ## Commands
@@ -92,7 +94,7 @@ tested: [performance.md](docs/contributing/performance.md#prop-cost-policy).
 
 **A new prop ships with specimens.** Add at least one section to the Features
 screen, with a row per value that shows how each is handled, and a matching group
-in the VRT suite (`example/src/vrt/groups.tsx`) with baselines. Details:
+in the VRT suite (`example-shared/src/vrt/groups.tsx`) with baselines. Details:
 [workflow.md](docs/contributing/workflow.md#specimens-for-a-new-prop).
 
 ## Manual sync points

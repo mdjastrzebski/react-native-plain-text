@@ -1,8 +1,7 @@
 import { useState, type ComponentType, type ReactElement } from 'react';
 import { FlatList } from 'react-native';
-import type { ParamListBase } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCompareText } from '../components/CompareText';
+import type { SetHeaderActions } from '../components/HeaderActions';
 import { Cover, SearchField, screenStyles } from '../components/Specimen';
 import { BadgesSection } from '../sections/BadgesSection';
 import { BodyCopySection } from '../sections/BodyCopySection';
@@ -14,12 +13,14 @@ import { NumeralsSection } from '../sections/NumeralsSection';
 import { RandomCombinationsSection } from '../sections/RandomCombinationsSection';
 import { StatusAndFeedbackSection } from '../sections/StatusAndFeedbackSection';
 
-type Props = NativeStackScreenProps<ParamListBase>;
+type Props = {
+  setHeaderActions: SetHeaderActions;
+};
 
 // Examples stacks several props per row (Features varies one prop at a time).
 // FlatList of pre-built elements: renderItem just returns the item, keeping virtualization.
-export default function ExamplesScreen({ navigation }: Props) {
-  const showText = useCompareText(navigation);
+export function ExamplesScreen({ setHeaderActions }: Props) {
+  const showText = useCompareText(setHeaderActions);
 
   const [search, setSearch] = useState('');
 

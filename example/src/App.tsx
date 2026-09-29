@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Children, useCallback } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import {
   useFonts,
   Inter_300Light_Italic,
@@ -7,20 +7,40 @@ import {
   Inter_600SemiBold,
 } from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons';
-import { NavigationContainer, type NavigationState } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  type NavigationState,
+  type ParamListBase,
+} from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
   createNativeStackNavigator,
   type NativeStackNavigationOptions,
+  type NativeStackNavigationProp,
+  type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
+import {
+  COLOR,
+  CompareTextProvider,
+  ExamplesScreen,
+  FeaturesScreen,
+  PerformanceScreen,
+  SessionStorageProvider,
+  useSessionState,
+  type FeatureSection,
+  type SetHeaderActions,
+} from 'example-shared';
+import { AnimatingTextSection } from 'example-shared/animating-text';
+import { createMMKV } from 'react-native-mmkv';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlainText } from 'react-native-plain-text';
-import { CompareTextProvider } from './components/CompareText';
-import { useSessionState } from './useSessionState';
-import { COLOR } from './theme';
-import FeaturesScreen from './screens/FeaturesScreen';
-import PerformanceScreen from './screens/PerformanceScreen';
-import ExamplesScreen from './screens/ExamplesScreen';
+
+// Backs useSessionState, so session values survive an app kill.
+const storage = createMMKV({ id: 'persisted-state' });
+
+// Built-in sections come from example-shared; this app has Reanimated, so it
+// adds the one that needs it.
+const EXTRA_FEATURE_SECTIONS: FeatureSection[] = [['Animating Text', AnimatingTextSection]];
 
 const Tab = createBottomTabNavigator();
 // Reusing the same Navigator/Screen components across the three mounted stacks
@@ -58,12 +78,48 @@ function titleOptions(title: string): NativeStackNavigationOptions {
   };
 }
 
+// The shared screens hand their header controls to this app, which puts them in
+// the native stack header.
+function useHeaderActions(navigation: NativeStackNavigationProp<ParamListBase>): SetHeaderActions {
+  return useCallback(
+    (actions) => {
+      navigation.setOptions({
+        // `headerRight` draws on Android; iOS uses `unstable_headerRightItems` for
+        // `hidesSharedBackground` (iOS 26 otherwise puts a glass capsule behind the label).
+        headerRight: () => <View style={styles.headerActions}>{Children.toArray(actions)}</View>,
+        unstable_headerRightItems: () =>
+          actions.map((element) => ({ type: 'custom', element, hidesSharedBackground: true })),
+      });
+    },
+    [navigation]
+  );
+}
+
+type ScreenProps = NativeStackScreenProps<ParamListBase>;
+
+function FeaturesRoute({ navigation }: ScreenProps) {
+  return (
+    <FeaturesScreen
+      setHeaderActions={useHeaderActions(navigation)}
+      extraSections={EXTRA_FEATURE_SECTIONS}
+    />
+  );
+}
+
+function ExamplesRoute({ navigation }: ScreenProps) {
+  return <ExamplesScreen setHeaderActions={useHeaderActions(navigation)} />;
+}
+
+function PerformanceRoute({ navigation }: ScreenProps) {
+  return <PerformanceScreen setHeaderActions={useHeaderActions(navigation)} />;
+}
+
 // Tab titles double as the persisted selection's tab route name (see
 // `onStateChange` below), so they must stay stable across releases.
 const TABS = [
-  { title: 'Features', route: 'PlainText', icon: 'text', screen: FeaturesScreen },
-  { title: 'Examples', route: 'Examples', icon: 'albums', screen: ExamplesScreen },
-  { title: 'Performance', route: 'Benchmarks', icon: 'speedometer', screen: PerformanceScreen },
+  { title: 'Features', route: 'PlainText', icon: 'text', screen: FeaturesRoute },
+  { title: 'Examples', route: 'Examples', icon: 'albums', screen: ExamplesRoute },
+  { title: 'Performance', route: 'Benchmarks', icon: 'speedometer', screen: PerformanceRoute },
 ] as const;
 
 // Built once at module load, not per render: react-navigation diffs `component`
@@ -82,9 +138,17 @@ const TAB_SCREENS = TABS.map(({ title, route, icon, screen }) => ({
   ),
 }));
 
+export default function App() {
+  return (
+    <SessionStorageProvider storage={storage}>
+      <Root />
+    </SessionStorageProvider>
+  );
+}
+
 // Gated on load: an unregistered fontFamily alias silently falls back to the
 // system font, which would make the font rows lie until loading finished.
-export default function App() {
+function Root() {
   const [fontsLoaded] = useFonts({
     Inter_300Light_Italic,
     Inter_400Regular,
@@ -135,6 +199,10 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   // 23pt: large enough to read as the page name, small enough that all three
   // titles still fit one line beside their header button.
   headerTitle: {
