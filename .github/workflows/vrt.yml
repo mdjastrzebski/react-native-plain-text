@@ -12,7 +12,8 @@ on:
           - ios
         default: all
   schedule:
-    - cron: '17 2 * * *'
+    - cron: '13 23 * * *'
+      timezone: 'Europe/Warsaw'
 
 permissions:
   contents: read
