@@ -13,7 +13,6 @@ on:
         default: all
   schedule:
     - cron: '13 23 * * *'
-      timezone: 'Europe/Warsaw'
 
 permissions:
   contents: read
