@@ -74,12 +74,12 @@ The app's content lives in `examples/shared/`, a private workspace package
 imported as `example-shared`, so a second example app can render the same screens and VRT specimens. The split:
 
 - **`examples/shared/`** holds the screens, sections, VRT scenarios, theme and
-  bundled font. Its main entry needs React Native, the library,
-  `react-native-safe-area-context` (peers) and `react-native-memory-footprint`
-  (its own dependency). Autolinking in Expo SDK 54+ links native modules that
-  are dependencies of dependencies, so the Expo app doesn't list it. The
-  Animating Text section, which needs Reanimated, sits behind its own entry
-  point, `example-shared/animating-text`.
+  bundled font. The app provides its peers: React Native, the library,
+  `react-native-safe-area-context` and Reanimated (with
+  `react-native-worklets`, whose Babel plugin `babel-preset-expo` only adds
+  when the app itself can resolve it). `react-native-memory-footprint` is the
+  package's own dependency: autolinking in Expo SDK 54+ links native modules
+  that are dependencies of dependencies, so the Expo app doesn't list it.
 - **`examples/expo/`** is the Expo shell: navigation, font loading, MMKV storage and
   the native config. Screens know nothing of react-navigation. They hand their
   header controls to the app through a `setHeaderActions` prop, and persist

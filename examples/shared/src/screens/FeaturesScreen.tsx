@@ -4,6 +4,7 @@ import { useCompareText } from '../components/CompareText';
 import type { SetHeaderActions } from '../components/HeaderActions';
 import { Cover, SearchField, screenStyles } from '../components/Specimen';
 import { AccessibilitySection } from '../sections/AccessibilitySection';
+import { AnimatingTextSection } from '../sections/AnimatingTextSection';
 import { BaselineAlignmentSection } from '../sections/BaselineAlignmentSection';
 import { BordersSection } from '../sections/BordersSection';
 import { ColorSection } from '../sections/ColorSection';
@@ -34,7 +35,7 @@ import { VerticalAlignSection } from '../sections/VerticalAlignSection';
 import { WrapDetectionSection } from '../sections/WrapDetectionSection';
 import { WritingDirectionSection } from '../sections/WritingDirectionSection';
 
-export type FeatureSectionProps = {
+type SectionProps = {
   showText: boolean;
   // For sections with a drag gesture, so the list doesn't scroll under it.
   onDragStateChange: (dragging: boolean) => void;
@@ -42,13 +43,10 @@ export type FeatureSectionProps = {
 
 // [title, Component] so search can filter on title directly. Key and title both
 // derive from `title`, since every entry shares the same props.
-export type FeatureSection = [title: string, Component: ComponentType<FeatureSectionProps>];
+type FeatureSection = [title: string, Component: ComponentType<SectionProps>];
 
 type Props = {
   setHeaderActions: SetHeaderActions;
-  // Sections that need a dependency not every app has (Animating Text needs
-  // Reanimated), listed after the built-in ones.
-  extraSections?: readonly FeatureSection[];
 };
 
 // One prop per section, one value per row (multi-prop rows live on Examples).
@@ -57,7 +55,7 @@ type Props = {
 // FlatList of pre-built elements: renderItem just returns the item, keeping virtualization.
 // Search field is a sticky ListHeaderComponent; cover lives in `sections` so it scrolls
 // away instead of pinning alongside the search field.
-export function FeaturesScreen({ setHeaderActions, extraSections = [] }: Props) {
+export function FeaturesScreen({ setHeaderActions }: Props) {
   const showText = useCompareText(setHeaderActions);
 
   const [search, setSearch] = useState('');
@@ -99,7 +97,7 @@ export function FeaturesScreen({ setHeaderActions, extraSections = [] }: Props) 
     ['Wrap Detection', WrapDetectionSection],
     ['Accessibility', AccessibilitySection],
     ['Font Padding', FontPaddingSection],
-    ...extraSections,
+    ['Animating Text', AnimatingTextSection],
   ];
 
   const query = search.toLowerCase();

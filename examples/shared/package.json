@@ -4,8 +4,7 @@
   "private": true,
   "description": "Screens, sections and VRT scenarios shared by the example apps",
   "exports": {
-    ".": "./src/index.ts",
-    "./animating-text": "./src/animating-text.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "react-native-memory-footprint": "^0.1.0"
@@ -15,11 +14,6 @@
     "react-native": "*",
     "react-native-reanimated": "*",
     "react-native-safe-area-context": "*"
-  },
-  "peerDependenciesMeta": {
-    "react-native-reanimated": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "react": "19.2.3",

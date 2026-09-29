@@ -27,20 +27,14 @@ import {
   PerformanceScreen,
   SessionStorageProvider,
   useSessionState,
-  type FeatureSection,
   type SetHeaderActions,
 } from 'example-shared';
-import { AnimatingTextSection } from 'example-shared/animating-text';
 import { createMMKV } from 'react-native-mmkv';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlainText } from 'react-native-plain-text';
 
 // Backs useSessionState, so session values survive an app kill.
 const storage = createMMKV({ id: 'persisted-state' });
-
-// Built-in sections come from example-shared; this app has Reanimated, so it
-// adds the one that needs it.
-const EXTRA_FEATURE_SECTIONS: FeatureSection[] = [['Animating Text', AnimatingTextSection]];
 
 const Tab = createBottomTabNavigator();
 // Reusing the same Navigator/Screen components across the three mounted stacks
@@ -98,12 +92,7 @@ function useHeaderActions(navigation: NativeStackNavigationProp<ParamListBase>):
 type ScreenProps = NativeStackScreenProps<ParamListBase>;
 
 function FeaturesRoute({ navigation }: ScreenProps) {
-  return (
-    <FeaturesScreen
-      setHeaderActions={useHeaderActions(navigation)}
-      extraSections={EXTRA_FEATURE_SECTIONS}
-    />
-  );
+  return <FeaturesScreen setHeaderActions={useHeaderActions(navigation)} />;
 }
 
 function ExamplesRoute({ navigation }: ScreenProps) {

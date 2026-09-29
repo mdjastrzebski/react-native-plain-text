@@ -7106,9 +7106,6 @@ __metadata:
     react-native: "*"
     react-native-reanimated: "*"
     react-native-safe-area-context: "*"
-  peerDependenciesMeta:
-    react-native-reanimated:
-      optional: true
   languageName: unknown
   linkType: soft
 
