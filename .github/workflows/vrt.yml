@@ -12,7 +12,7 @@ on:
           - ios
         default: all
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '13 23 * * *'
 
 permissions:
   contents: read
