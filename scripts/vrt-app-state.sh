@@ -69,6 +69,32 @@ app_build_inputs() {
   done
 }
 
+# Hashes the part of a build input that reaches the app. For a package.json
+# that is only the fields below: hashing the whole file rebuilt both apps (~36
+# minutes on iOS) for a `release-it` changelog tweak. yarn.lock still pins what
+# the dependency ranges resolve to.
+hash_build_input() {
+  local file="$1"
+  local fields
+  case "$file" in
+    # codegenConfig drives native codegen, and the `exports` source condition is
+    # how Metro resolves the library to src/.
+    package.json) fields=(dependencies devDependencies peerDependencies codegenConfig exports) ;;
+    example/package.json) fields=(dependencies devDependencies peerDependencies scripts) ;;
+    *)
+      hash_command < "$file"
+      return
+      ;;
+  esac
+  # A missing field prints as null, so adding or removing one changes the hash.
+  node -e '
+    const pkg = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const picked = {};
+    for (const field of process.argv.slice(1)) picked[field] = pkg[field] ?? null;
+    process.stdout.write(JSON.stringify(picked));
+  ' "${fields[@]}" < "$file" | hash_command
+}
+
 calculate_fingerprint() {
   local files
   files="$(cd "$PROJECT_ROOT" && app_build_inputs "$1")"
@@ -78,7 +104,7 @@ calculate_fingerprint() {
     cd "$PROJECT_ROOT"
     printf '%s\n' "$files" | LC_ALL=C sort | while IFS= read -r file; do
       printf '%s\n' "$file"
-      hash_command < "$file"
+      hash_build_input "$file"
     done
   ) | hash_command | awk '{ print $1 }'
 }
