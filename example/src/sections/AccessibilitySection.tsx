@@ -3,7 +3,9 @@ import { Section, TextItem } from '../components/Specimen';
 import { COLOR } from '../theme';
 
 // Accessibility props pass straight through to the native view and aren't
-// visually distinct — verify with VoiceOver/TalkBack or the native tree.
+// visually distinct — verify with VoiceOver/TalkBack or the native tree. The
+// aria-* rows are the same props twice: RN's aliases are resolved in JS by
+// mapPlainTextProps before native sees them (PlainText.tsx).
 export function AccessibilitySection({ showText }: { showText: boolean }) {
   return (
     <Section title="Accessibility">
@@ -62,6 +64,36 @@ export function AccessibilitySection({ showText }: { showText: boolean }) {
         }}
       >
         Invisible to screen readers on both platforms
+      </TextItem>
+      <TextItem
+        label="aria-label"
+        showText={showText}
+        style={styles.a11yRow}
+        accessibilityProps={{ 'aria-label': 'A screen reader announces this instead' }}
+      >
+        Same as &quot;label&quot;, via RN&apos;s alias
+      </TextItem>
+      <TextItem
+        label="aria-state"
+        showText={showText}
+        style={styles.a11yRow}
+        accessibilityProps={{
+          'aria-busy': true,
+          'aria-checked': 'mixed',
+          'aria-disabled': true,
+          'aria-expanded': false,
+          'aria-selected': true,
+        }}
+      >
+        Same as &quot;state&quot;, via RN&apos;s aliases
+      </TextItem>
+      <TextItem
+        label="aria-hidden"
+        showText={showText}
+        style={styles.a11yRow}
+        accessibilityProps={{ 'aria-hidden': true }}
+      >
+        Same as &quot;hidden&quot;, via RN&apos;s alias
       </TextItem>
     </Section>
   );

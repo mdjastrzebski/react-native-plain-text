@@ -20,6 +20,7 @@
 | `text`                         | ⬆️                     | Alternative to `children`. Use this to [animate text](./recipes#animating-text).   |
 | `textBreakStrategy`            | ✅                     | Android-only, like RN `<Text>`                                                     |
 | Accessibility props            | ✅                     | `accessible`, `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, etc |
+| `aria-*` aliases               | ✅                     | Like RN `<Text>`. `aria-label`, `aria-hidden`, `aria-busy`, `aria-checked`, etc    |
 
 RN `<Text>` compatibility: ✅ fully compatible · 🟡 partially compatible · ⬆️ added in Plain Text.
 

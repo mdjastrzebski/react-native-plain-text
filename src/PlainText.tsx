@@ -1,6 +1,7 @@
 import {
   StyleSheet,
   type AccessibilityProps,
+  type AccessibilityState,
   type StyleProp,
   type TextProps,
   type TextStyle,
@@ -109,6 +110,16 @@ export function mapPlainTextProps({
   text,
   style,
   unstable_lineHeightClippingCompat,
+  // Destructured rather than read off `rest`: the native view has no `aria-*`
+  // props, so an alias left in place would reach it as an unknown key and do
+  // nothing. Same set RN <Text> resolves, same rules — see Text.js:91-143.
+  'aria-busy': ariaBusy,
+  'aria-checked': ariaChecked,
+  'aria-disabled': ariaDisabled,
+  'aria-expanded': ariaExpanded,
+  'aria-hidden': ariaHidden,
+  'aria-label': ariaLabel,
+  'aria-selected': ariaSelected,
   ...rest
 }: PlainTextProps): NativeProps {
   // `rest` is a fresh object, so it doubles as the native props. Add only keys that
@@ -133,6 +144,43 @@ export function mapPlainTextProps({
 
   if (unstable_lineHeightClippingCompat !== undefined) {
     nativeProps.lineHeightClippingCompat = unstable_lineHeightClippingCompat;
+  }
+
+  // The aria-* aliases RN <Text> maps onto the accessibility* props, resolved the
+  // same way Text.js does it: an alias wins over the accessibility* prop it names.
+  // SYNC: the alias list and these rules have to match Text.js — see
+  // docs/contributing/sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary.
+  if (ariaLabel != null) {
+    nativeProps.accessibilityLabel = ariaLabel;
+  }
+
+  if (
+    ariaBusy != null ||
+    ariaChecked != null ||
+    ariaDisabled != null ||
+    ariaExpanded != null ||
+    ariaSelected != null
+  ) {
+    // Rebuilt field by field, as Text.js does it, so an alias wins over the field it
+    // names. The fields it doesn't name (`value`) are dropped along the way, which is
+    // RN's behavior too — keep the two rendering the same tree.
+    const state = nativeProps.accessibilityState as AccessibilityState | undefined;
+    nativeProps.accessibilityState = {
+      busy: ariaBusy ?? state?.busy,
+      checked: ariaChecked ?? state?.checked,
+      disabled: ariaDisabled ?? state?.disabled,
+      expanded: ariaExpanded ?? state?.expanded,
+      selected: ariaSelected ?? state?.selected,
+    };
+  }
+
+  if (ariaHidden !== undefined) {
+    nativeProps.accessibilityElementsHidden = ariaHidden;
+    // `accessibilityElementsHidden` is iOS-only (Android's view managers have no
+    // handler for it), so the second prop is what hides the subtree there.
+    if (ariaHidden === true) {
+      nativeProps.importantForAccessibility = 'no-hide-descendants';
+    }
   }
 
   // No null guard: `for...in` over a missing style runs zero times.

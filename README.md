@@ -84,7 +84,10 @@ Everything below is API-compatible with RN `<Text>`. Most commonly used:
 - **Props:** `numberOfLines`, `ellipsizeMode`, `allowFontScaling`,
   `maxFontSizeMultiplier`, `onLayout`, `testID`, `nativeID` / `id`, and all of
   RN's accessibility props (`accessible`, `accessibilityLabel`,
-  `accessibilityRole`, `accessibilityState`, …).
+  `accessibilityRole`, `accessibilityState`, …), including the `aria-*`
+  aliases RN `<Text>` accepts (`aria-label`, `aria-hidden`, `aria-busy`,
+  `aria-checked`, `aria-disabled`, `aria-expanded`, `aria-selected`), resolved
+  with the same precedence RN uses.
 
 Beyond RN `<Text>`, PlainText adds hyphenation control:
 
