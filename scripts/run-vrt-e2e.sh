@@ -35,7 +35,8 @@ case "$platform" in
   ios)
     target_file="$PROJECT_ROOT/.vrt/devices/ios-udid"
     [[ -f "$target_file" ]] || fail "Run 'yarn vrt ios setup' first."
-    target_args=(--udid "$(<"$target_file")")
+    ios_udid="$(<"$target_file")"
+    target_args=(--udid "$ios_udid")
     ;;
   *) fail "Platform must be 'android' or 'ios'." ;;
 esac
@@ -50,20 +51,18 @@ artifacts_root="$PROJECT_ROOT/.vrt/agent-device/$platform"
 # The daemon log is the only record of what a hung command was waiting on, and
 # the session's runner.log holds the XCTest runner's build and start output.
 save_agent_device_logs() {
-  local state_dir file
+  local state_dir
   state_dir="$("$agent_device_bin" session state-dir 2>/dev/null)" || return 0
   mkdir -p "$artifacts_root"
-  [[ -f "$state_dir/daemon.log" ]] && { cp "$state_dir/daemon.log" "$artifacts_root/daemon.log" || true; }
-  [[ -d "$state_dir/sessions/$session_name" ]] || return 0
-  while IFS= read -r file; do
-    cp "$file" "$artifacts_root/" || true
-  done < <(find "$state_dir/sessions/$session_name" -name '*.log' -type f)
+  cp "$state_dir/daemon.log" "$artifacts_root/" 2>/dev/null || true
+  find "$state_dir/sessions/$session_name" -name '*.log' -type f \
+    -exec cp {} "$artifacts_root/" \; 2>/dev/null || true
 }
 
 if [[ "$platform" == "ios" ]]; then
   # Without the approval setup writes, a cold deep link stops at an "Open in
   # PlainText?" prompt and fails in ways that look like a slow launch.
-  approved_app="$(xcrun simctl spawn "$(<"$target_file")" defaults read \
+  approved_app="$(xcrun simctl spawn "$ios_udid" defaults read \
     com.apple.launchservices.schemeapproval \
     "com.apple.CoreSimulator.CoreSimulatorBridge-->$VRT_APP_SCHEME" 2>/dev/null || true)"
   [[ "$approved_app" == "$VRT_APP_ID" ]] || fail \
@@ -74,10 +73,9 @@ if [[ "$platform" == "ios" ]]; then
     save_agent_device_logs
     fail "Could not prepare the iOS runner. Logs: $artifacts_root"
   fi
-  # The first app launch on a freshly booted simulator is slow enough that
-  # `simctl openurl` gives up ("failed to open", operation timed out) even though
-  # the app opens. Pay that once here with a plain launch; later cold launches
-  # take about a second.
+  # The first launch after install is the slowest. Pay it here with a plain
+  # launch, which agent-device retries, so it doesn't count against the cold
+  # deep link below.
   agent_device open "$VRT_APP_ID" --relaunch --timeout 60000
   agent_device wait 'id="vrt-screen"' 30000 >/dev/null
   agent_device close >/dev/null
@@ -134,45 +132,27 @@ run_bounded() {
 # screen ("Screen: unavailable (no-session)"), so take the evidence from the
 # simulator itself. SpringBoard's log says why a launch was refused or timed out.
 save_ios_failure_evidence() {
-  local dir="$1" udid
-  udid="$(<"$target_file")"
+  local dir="$1"
   mkdir -p "$dir"
-  xcrun simctl io "$udid" screenshot "$dir/failure.png" >/dev/null 2>&1 || true
-  run_bounded 60 xcrun simctl spawn "$udid" log show --last 3m --style compact \
+  xcrun simctl io "$ios_udid" screenshot "$dir/failure.png" >/dev/null 2>&1 || true
+  run_bounded 60 xcrun simctl spawn "$ios_udid" log show --last 3m --style compact \
     --predicate 'process == "SpringBoard" OR process == "CoreSimulatorBridge" OR process == "PlainTextExample"' \
     > "$dir/system.log" 2>&1 || true
 }
 
-# iOS drives the cold deep link itself instead of through vrt-deep-link-cold.ad.
-# agent-device's `open <app> <url>` gives `simctl openurl` a fixed 15 s with no
-# retry, and this Release app starting cold on a CI simulator regularly takes
-# longer: nightly runs failed every cold attempt with "xcrun timed out" or
-# "Simulator device failed to open" while plain launches and warm links passed.
-# What matters is that the app, started by the link, shows the linked screen, so
-# openurl's exit status is logged rather than trusted.
-ios_openurl_timeout_s=60
-
-# Milliseconds since the epoch. Bash 3.2, which macOS ships, has no EPOCHREALTIME.
-now_ms() {
-  perl -MTime::HiRes=time -e 'printf "%d\n", time * 1000'
-}
-
-format_ms() {
-  printf '%d.%ds' "$(($1 / 1000))" "$(($1 % 1000 / 100))"
-}
-
+# iOS runs the cold deep link itself rather than through vrt-deep-link-cold.ad:
+# agent-device gives `simctl openurl` a fixed 15 s with no retry, which cold
+# launches on CI exceed. The check is that the link, starting the app, reaches
+# the capture screen, so openurl's exit status is only logged.
 run_ios_cold_deep_link() {
-  local dir="$1" udid status=0 started opened
-  udid="$(<"$target_file")"
+  local dir="$1" status=0 started openurl_s
   mkdir -p "$dir"
-  xcrun simctl terminate "$udid" "$VRT_APP_ID" >/dev/null 2>&1 || true
-  started="$(now_ms)"
-  run_bounded "$ios_openurl_timeout_s" xcrun simctl openurl "$udid" "$deep_link" \
-    > "$dir/openurl.log" 2>&1 || status=$?
-  opened="$(now_ms)"
+  xcrun simctl terminate "$ios_udid" "$VRT_APP_ID" >/dev/null 2>&1 || true
+  started=$SECONDS
+  run_bounded 60 xcrun simctl openurl "$ios_udid" "$deep_link" > "$dir/openurl.log" 2>&1 || status=$?
+  openurl_s=$((SECONDS - started))
   if [[ "$status" != "0" ]]; then
-    printf 'simctl openurl exited %s after %s; checking the screen anyway:\n' \
-      "$status" "$(format_ms $((opened - started)))" >&2
+    printf 'simctl openurl exited %s after %ss; checking the screen anyway:\n' "$status" "$openurl_s" >&2
     sed 's/^/  /' "$dir/openurl.log" >&2
   fi
   # Without --relaunch this binds the session to the app the link started. If the
@@ -182,34 +162,41 @@ run_ios_cold_deep_link() {
     agent_device wait "id=\"$capture_id\"" 30000 >/dev/null &&
     agent_device wait stable 200 5000 >/dev/null || return 1
   # openurl's time shows how close cold launches run to agent-device's 15 s.
-  printf '✓ cold deep link (openurl %s, screen %s)\n' \
-    "$(format_ms $((opened - started)))" "$(format_ms $(($(now_ms) - opened)))"
+  printf '✓ cold deep link (openurl %ss, screen %ss)\n' "$openurl_s" "$((SECONDS - started - openurl_s))"
 }
 
-# The cold launch stays intermittently slow, and a hung attempt ends
-# agent-device's own retries, so each run here starts from cleared state with a
-# fresh retry budget. Cold and warm run separately so a cold hang can't keep the
-# warm test from reporting.
+run_cold_attempt() {
+  local run="$1" dir="$artifacts_root/cold-$1" status=0
+  if [[ "$platform" == "android" ]]; then
+    run_e2e_test vrt-deep-link-cold "cold-$run" --retries 1
+    return
+  fi
+  run_ios_cold_deep_link "$dir" || status=$?
+  [[ "$status" == "0" ]] || save_ios_failure_evidence "$dir"
+  agent_device close >/dev/null 2>&1 || true
+  return "$status"
+}
+
+# Each cold run starts from cleared app state. On Android it also gets a fresh
+# retry budget, since a hung attempt ends agent-device's own retries. Cold and
+# warm run separately so a cold hang can't keep the warm test from reporting.
 cold_runs=3
 cold_passed=0
 for run in $(seq 1 "$cold_runs"); do
   close_stale_sessions
   agent_device settings clear-app-state "$VRT_APP_ID"
-  if [[ "$platform" == "ios" ]]; then
-    run_ios_cold_deep_link "$artifacts_root/cold-$run" && cold_passed=1
-    [[ "$cold_passed" == "1" ]] || save_ios_failure_evidence "$artifacts_root/cold-$run"
-    agent_device close >/dev/null 2>&1 || true
-  else
-    run_e2e_test vrt-deep-link-cold "cold-$run" --retries 1 && cold_passed=1
+  if run_cold_attempt "$run"; then
+    cold_passed=1
+    break
   fi
-  [[ "$cold_passed" == "1" ]] && break
   printf 'Cold deep-link run %s/%s failed.\n' "$run" "$cold_runs" >&2
 done
 
 close_stale_sessions
 warm_passed=0
-run_e2e_test vrt-deep-link-warm warm --retries 2 && warm_passed=1
-if [[ "$warm_passed" != "1" && "$platform" == "ios" ]]; then
+if run_e2e_test vrt-deep-link-warm warm --retries 2; then
+  warm_passed=1
+elif [[ "$platform" == "ios" ]]; then
   save_ios_failure_evidence "$artifacts_root/warm"
 fi
 

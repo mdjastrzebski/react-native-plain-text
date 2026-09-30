@@ -69,11 +69,11 @@ app_build_inputs() {
   done
 }
 
-# Prints the part of a build input that reaches the app. For a package.json
+# Hashes the part of a build input that reaches the app. For a package.json
 # that is only the fields below: hashing the whole file rebuilt both apps (~36
 # minutes on iOS) for a `release-it` changelog tweak. yarn.lock still pins what
 # the dependency ranges resolve to.
-build_input_content() {
+hash_build_input() {
   local file="$1"
   local fields
   case "$file" in
@@ -82,7 +82,7 @@ build_input_content() {
     package.json) fields=(dependencies devDependencies peerDependencies codegenConfig exports) ;;
     example/package.json) fields=(dependencies devDependencies peerDependencies scripts) ;;
     *)
-      cat "$file"
+      hash_command < "$file"
       return
       ;;
   esac
@@ -92,7 +92,7 @@ build_input_content() {
     const picked = {};
     for (const field of process.argv.slice(1)) picked[field] = pkg[field] ?? null;
     process.stdout.write(JSON.stringify(picked));
-  ' "${fields[@]}" < "$file"
+  ' "${fields[@]}" < "$file" | hash_command
 }
 
 calculate_fingerprint() {
@@ -104,7 +104,7 @@ calculate_fingerprint() {
     cd "$PROJECT_ROOT"
     printf '%s\n' "$files" | LC_ALL=C sort | while IFS= read -r file; do
       printf '%s\n' "$file"
-      build_input_content "$file" | hash_command
+      hash_build_input "$file"
     done
   ) | hash_command | awk '{ print $1 }'
 }
