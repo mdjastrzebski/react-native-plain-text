@@ -29,7 +29,7 @@ In outline, `Text` does this (simplified, without the development warnings
 described below):
 
 ```tsx
-export function Text({ deopt, text, children, ...rest }: TextProps) {
+export function Text({ mode = 'compat', text, children, ...rest }: TextProps) {
   // 1. Is this <Text> nested inside another <Text>?
   const isNestedText = use(unstable_TextAncestorContext);
 
@@ -37,12 +37,15 @@ export function Text({ deopt, text, children, ...rest }: TextProps) {
   const content = text ?? children;
   const isTextContent = isPlainText(content);
 
-  // 3. Render PlainText when possible...
-  if (!deopt && !isNestedText && isTextContent) {
+  // 3. In compat mode, is a prop PlainText can't reproduce (e.g. onPress) set?
+  const needsRNText = mode === 'fallback' || (mode === 'compat' && hasUnsupportedProp(rest));
+
+  // 4. Render PlainText when possible...
+  if (!needsRNText && !isNestedText && isTextContent) {
     return <PlainText {...rest}>{content}</PlainText>;
   }
 
-  // 4. ...and fall back to RN <Text> otherwise.
+  // 5. ...and fall back to RN <Text> otherwise.
   return <RNText {...rest}>{content}</RNText>;
 }
 ```
@@ -54,7 +57,8 @@ first and renders the native view directly, skipping the `PlainText` wrapper.
 
 `Text` renders `PlainText` only when all of these hold:
 
-- `deopt` isn't set (see below).
+- `mode` isn't `"fallback"`, and in the default `"compat"` mode no prop `PlainText`
+  can't reproduce is set (see [Modes](#modes) below).
 - The content is text: the `text` prop if set, otherwise `children`. That's a
   string, a number (or `bigint`), or a mix like `{count} items` (which JSX passes
   as `[count, ' items']`). Anything containing an element (nested `<Text>`, an
@@ -68,35 +72,42 @@ Whichever branch is taken, all other props are forwarded unchanged, so `Text` is
 API-compatible with RN `<Text>`. When it resolves to `PlainText`, only the props and
 styles [`PlainText` supports](./props-and-styles) apply.
 
-Props are never inspected to pick a branch, so release builds pay nothing for them.
-Instead, in development `Text` warns once per prop when it renders `PlainText` with a
-prop `PlainText` can't reproduce: `onPress`, `onLongPress`, `onPressIn`, `onPressOut`,
-`onTextLayout`, `selectable`, `adjustsFontSizeToFit`, `dataDetectorType`, or
-`dynamicTypeRamp`. Add `deopt` to those instances.
+The props `PlainText` can't reproduce are `onPress`, `onLongPress`, `onPressIn`,
+`onPressOut`, `onTextLayout`, `selectable`, `adjustsFontSizeToFit`,
+`dataDetectorType` and `dynamicTypeRamp`.
 
-The reverse applies on fallback: RN `<Text>` drops the `PlainText`-only props
-`hyphens`, `lang`, `unstable_lineHeightClippingCompat` and the
-`fontVariationSettings` style, so development builds warn once when a fallback
-(automatic or via `deopt`) drops one of them. The `text` prop isn't dropped: it's
-passed to RN `<Text>` as children.
+RN `<Text>` in turn drops the `PlainText`-only props `hyphens`, `lang`,
+`unstable_lineHeightClippingCompat` and the `fontVariationSettings` style, so
+development builds warn once when any fallback drops one of them. The `text` prop
+isn't dropped: it's passed to RN `<Text>` as children.
 
-## Deoptimizing a single instance
+## Modes
 
-`children` shape and text nesting are handled automatically — you don't need `deopt`
-for those. It's for a single-style string that would otherwise take the `PlainText`
-path, but relies on a prop `PlainText` doesn't support (such as `onPress`, see the
-development warning above) or hits a `PlainText` rendering issue. Pass `deopt` to
-skip the selection for that instance and always render RN `<Text>`:
+The `mode` prop controls how `Text` picks between `PlainText` and RN `<Text>`.
+Nested text and non-text children render RN `<Text>` in every mode.
+
+| `mode`               | Plain text with an unsupported prop (e.g. `onPress`)    | Plain text otherwise |
+| -------------------- | ------------------------------------------------------- | -------------------- |
+| `"compat"` (default) | RN `<Text>`, silently                                   | `PlainText`          |
+| `"fast"`             | `PlainText`, which ignores the prop, with a dev warning | `PlainText`          |
+| `"fallback"`         | RN `<Text>`                                             | RN `<Text>`          |
+
+- **`"compat"`** keeps `Text` a safe drop-in: an instance using `onPress`,
+  `selectable` or another prop `PlainText` can't reproduce keeps working, because it
+  renders RN `<Text>`. The price is checking those props on every render, in release
+  builds too.
+- **`"fast"`** skips that check. Props `PlainText` can't reproduce are ignored, and
+  development builds warn once per prop so you can fix the call site.
+- **`"fallback"`** always renders RN `<Text>`. Use it for an instance that hits a
+  `PlainText` rendering issue.
 
 ```jsx
 import { Text } from 'react-native-plain-text';
 
-<Text deopt>Hello there 👋</Text>;
+<Text mode="fallback">Hello there 👋</Text>;
 ```
 
-`deopt` itself is never forwarded to RN `<Text>`. An explicit `deopt={false}` reaches
-the native `PlainText` view as an ignored prop, since stripping it would cost every
-render. Omit `deopt` rather than setting it to `false`.
+`mode` itself is never forwarded to either component.
 
 ## Using it in your own Text component
 
@@ -113,10 +124,10 @@ export function AppText({ style, ...rest }: TextProps) {
 ```
 
 To own the RN `<Text>` fallback yourself, use `unstable_mapTextProps`, the same function
-`Text` runs. It returns the native props when `PlainText` can render, or `null` when
-`deopt` is set or the content isn't plain text. Props `PlainText` can't reproduce, such
-as `onPress`, don't make it return `null`: they only warn in development, so pass
-`deopt` for those. It doesn't check nesting, so do that first. Like
+`Text` runs, and honors `mode` the same way. It returns the native props when
+`PlainText` can render, or `null` when the content isn't plain text, `mode` is
+`"fallback"`, or, in `"compat"` mode, a prop `PlainText` can't reproduce is set. It
+doesn't check nesting, so do that first. Like
 `unstable_NativePlainText`, which renders its result, its props aren't guaranteed
 stable across releases:
 
@@ -142,7 +153,7 @@ export function AppText({ style, ...rest }: TextProps) {
 ```
 
 This renders the `NativePlainText` view directly, as `Text` does, skipping the
-`PlainText` JS wrapper. `unstable_mapTextProps` gives the same development warnings
-for props `PlainText` ignores. The warnings for `PlainText`-only props dropped on
+`PlainText` JS wrapper. In `"fast"` mode `unstable_mapTextProps` gives the same
+development warnings for props `PlainText` ignores. The warnings for `PlainText`-only props dropped on
 fallback stay in `Text`, and so does passing the `text` prop to RN `<Text>` as
 children.

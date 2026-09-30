@@ -7,15 +7,30 @@ import {
 } from 'react-native';
 import { mapPlainTextProps, type PlainTextOwnProps, type PlainTextProps } from './PlainText';
 import PlainTextViewNativeComponent, { type NativeProps } from './PlainTextViewNativeComponent';
-import { joinTextChildren, warnOnPlainTextOnlyProp, warnOnUnsupportedProp } from './utils';
+import {
+  findUnsupportedProp,
+  joinTextChildren,
+  warnOnPlainTextOnlyProp,
+  warnOnUnsupportedProp,
+} from './utils';
+
+/**
+ * How the unified `Text` picks between PlainText and RN `<Text>`:
+ *
+ * - `'compat'` (default): PlainText, unless a prop PlainText can't reproduce (`onPress`,
+ *   `selectable`, …) is set; then RN `<Text>`.
+ * - `'fast'`: PlainText whenever the content is plain text. Unsupported props are
+ *   ignored, with a dev warning.
+ * - `'fallback'`: always RN `<Text>`.
+ *
+ * Nested text and non-text children render RN `<Text>` in every mode.
+ */
+export type TextMode = 'compat' | 'fast' | 'fallback';
 
 export type TextProps = Omit<RNTextProps, keyof PlainTextOwnProps> &
   PlainTextOwnProps & {
-    /**
-     * Always render RN `<Text>`, even for a plain string. Escape hatch for props or
-     * rendering PlainText doesn't support.
-     */
-    deopt?: boolean;
+    /** How to pick between PlainText and RN `<Text>`. Defaults to `'compat'`. */
+    mode?: TextMode;
     /** Host element of whichever component renders: PlainText's or RN `<Text>`'s. */
     ref?: Ref<HostInstance>;
   };
@@ -28,32 +43,27 @@ export function Text(props: TextProps) {
   }
 
   if (__DEV__) {
-    warnOnPlainTextOnlyProp(
-      props,
-      props.deopt
-        ? '`deopt` is set'
-        : isNestedText
-          ? 'it is nested inside another <Text>'
-          : 'its children are not plain text'
-    );
+    warnOnPlainTextOnlyProp(props, getFallbackReason(props, isNestedText));
   }
 
   // RN <Text> ignores `text`, so it goes in as children.
-  const { deopt, text, ...rnTextProps } = props;
+  const { mode, text, ...rnTextProps } = props;
   return <RNText {...rnTextProps}>{text ?? props.children}</RNText>;
 }
 
 /**
  * Maps RN `<Text>` props to `unstable_NativePlainText` props.
  *
- * Returns `null` only when `deopt` is set or the content isn't plain text; render RN
- * `<Text>` then. Props PlainText can't reproduce (`onPress`, `selectable`, …) still
- * map, with only a dev warning: pass `deopt` for those.
+ * Returns `null` when RN `<Text>` should render instead: `mode="fallback"`, content
+ * that isn't plain text, or, in the default `compat` mode, a prop PlainText can't
+ * reproduce (`onPress`, `selectable`, …). In `fast` mode those props still map, with
+ * only a dev warning.
  *
  * Doesn't check nesting: skip it inside another `<Text>` (`unstable_TextAncestorContext`).
  */
 export function mapTextProps(props: TextProps): NativeProps | null {
-  if (props.deopt) {
+  const mode = props.mode;
+  if (mode === 'fallback') {
     return null;
   }
 
@@ -61,23 +71,31 @@ export function mapTextProps(props: TextProps): NativeProps | null {
   const content = props.text ?? props.children;
 
   // Hot path
-  if (typeof content === 'string') {
+  let text: string | undefined;
+  if (typeof content !== 'string') {
+    // Slow path
+    text = joinTextChildren(content);
+    if (text === undefined) {
+      return null;
+    }
+  }
+
+  if (mode === 'fast') {
     if (__DEV__) {
       warnOnUnsupportedProp(props);
     }
-
-    return mapPlainTextProps(props as PlainTextProps);
-  }
-
-  // Slow path
-  const text = joinTextChildren(content);
-  if (text === undefined) {
+  } else if (findUnsupportedProp(props) !== undefined) {
     return null;
   }
 
-  if (__DEV__) {
-    warnOnUnsupportedProp(props);
-  }
+  return mapPlainTextProps((text === undefined ? props : { ...props, text }) as PlainTextProps);
+}
 
-  return mapPlainTextProps({ ...props, text } as PlainTextProps);
+function getFallbackReason(props: TextProps, isNestedText: boolean): string {
+  if (props.mode === 'fallback') return '`mode="fallback"` is set';
+  if (isNestedText) return 'it is nested inside another <Text>';
+  if (joinTextChildren(props.text ?? props.children) === undefined) {
+    return 'its children are not plain text';
+  }
+  return `\`${findUnsupportedProp(props)}\` is set, which PlainText can't reproduce`;
 }

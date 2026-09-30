@@ -109,8 +109,11 @@ export function mapPlainTextProps({
   text,
   style,
   unstable_lineHeightClippingCompat,
+  // The unified Text's `mode`: dropped here, where `rest` is copied anyway, so it
+  // never reaches the native view.
+  mode,
   ...rest
-}: PlainTextProps): NativeProps {
+}: PlainTextProps & { mode?: unknown }): NativeProps {
   // `rest` is a fresh object, so it doubles as the native props. Add only keys that
   // hold a value: Fabric's prop diff walks every key, `undefined` ones included.
   const nativeProps: Record<string, unknown> = rest;
