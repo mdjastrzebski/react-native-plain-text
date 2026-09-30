@@ -142,15 +142,27 @@ save_ios_failure_evidence() {
 # openurl's exit status is logged rather than trusted.
 ios_openurl_timeout_s=60
 
+# Milliseconds since the epoch. Bash 3.2, which macOS ships, has no EPOCHREALTIME.
+now_ms() {
+  perl -MTime::HiRes=time -e 'printf "%d\n", time * 1000'
+}
+
+format_ms() {
+  printf '%d.%ds' "$(($1 / 1000))" "$(($1 % 1000 / 100))"
+}
+
 run_ios_cold_deep_link() {
-  local dir="$1" udid status=0
+  local dir="$1" udid status=0 started opened
   udid="$(<"$target_file")"
   mkdir -p "$dir"
   xcrun simctl terminate "$udid" "$VRT_APP_ID" >/dev/null 2>&1 || true
+  started="$(now_ms)"
   run_bounded "$ios_openurl_timeout_s" xcrun simctl openurl "$udid" "$deep_link" \
     > "$dir/openurl.log" 2>&1 || status=$?
+  opened="$(now_ms)"
   if [[ "$status" != "0" ]]; then
-    printf 'simctl openurl exited %s; checking the screen anyway:\n' "$status" >&2
+    printf 'simctl openurl exited %s after %s; checking the screen anyway:\n' \
+      "$status" "$(format_ms $((opened - started)))" >&2
     sed 's/^/  /' "$dir/openurl.log" >&2
   fi
   # Without --relaunch this binds the session to the app the link started. If the
@@ -158,7 +170,10 @@ run_ios_cold_deep_link() {
   # should: after clear-app-state, only the link can reach the capture screen.
   agent_device open "$VRT_APP_ID" --timeout 60000 >/dev/null &&
     agent_device wait "id=\"$capture_id\"" 30000 >/dev/null &&
-    agent_device wait stable 200 5000 >/dev/null
+    agent_device wait stable 200 5000 >/dev/null || return 1
+  # openurl's time shows how close cold launches run to agent-device's 15 s.
+  printf '✓ cold deep link (openurl %s, screen %s)\n' \
+    "$(format_ms $((opened - started)))" "$(format_ms $(($(now_ms) - opened)))"
 }
 
 # The cold launch stays intermittently slow, and a hung attempt ends
