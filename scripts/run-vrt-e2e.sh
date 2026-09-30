@@ -44,6 +44,22 @@ agent_device() {
   AGENT_DEVICE_SESSION="$session_name" "$agent_device_bin" "$@" "${target_args[@]}"
 }
 
+mkdir -p "$PROJECT_ROOT/.vrt/report"
+artifacts_root="$PROJECT_ROOT/.vrt/agent-device/$platform"
+
+# The daemon log is the only record of what a hung command was waiting on, and
+# the session's runner.log holds the XCTest runner's build and start output.
+save_agent_device_logs() {
+  local state_dir file
+  state_dir="$("$agent_device_bin" session state-dir 2>/dev/null)" || return 0
+  mkdir -p "$artifacts_root"
+  [[ -f "$state_dir/daemon.log" ]] && { cp "$state_dir/daemon.log" "$artifacts_root/daemon.log" || true; }
+  [[ -d "$state_dir/sessions/$session_name" ]] || return 0
+  while IFS= read -r file; do
+    cp "$file" "$artifacts_root/" || true
+  done < <(find "$state_dir/sessions/$session_name" -name '*.log' -type f)
+}
+
 if [[ "$platform" == "ios" ]]; then
   # Without the approval setup writes, a cold deep link stops at an "Open in
   # PlainText?" prompt and fails in ways that look like a slow launch.
@@ -52,7 +68,12 @@ if [[ "$platform" == "ios" ]]; then
     "com.apple.CoreSimulator.CoreSimulatorBridge-->$VRT_APP_SCHEME" 2>/dev/null || true)"
   [[ "$approved_app" == "$VRT_APP_ID" ]] || fail \
     "The simulator has not approved '$VRT_APP_SCHEME' deep links for $VRT_APP_ID. Run 'yarn vrt ios setup'."
-  agent_device prepare ios-runner
+  # Building the XCTest runner usually takes 1-2 minutes, but a slow CI runner
+  # outlasted agent-device's default 240 s budget.
+  if ! agent_device prepare ios-runner --timeout 600000; then
+    save_agent_device_logs
+    fail "Could not prepare the iOS runner. Logs: $artifacts_root"
+  fi
   # The first app launch on a freshly booted simulator is slow enough that
   # `simctl openurl` gives up ("failed to open", operation timed out) even though
   # the app opens. Pay that once here with a plain launch; later cold launches
@@ -61,8 +82,6 @@ if [[ "$platform" == "ios" ]]; then
   agent_device wait 'id="vrt-screen"' 30000 >/dev/null
   agent_device close >/dev/null
 fi
-mkdir -p "$PROJECT_ROOT/.vrt/report"
-artifacts_root="$PROJECT_ROOT/.vrt/agent-device/$platform"
 
 # A passing cold attempt takes under 30 s, so this only bounds a hang.
 attempt_timeout_ms=90000
@@ -101,15 +120,6 @@ close_stale_sessions() {
       });
     ' "$session_name" 2>/dev/null
   )
-}
-
-# The daemon log is the only record of what a hung command was waiting on.
-save_daemon_log() {
-  local state_dir
-  state_dir="$("$agent_device_bin" session state-dir 2>/dev/null)" || return 0
-  [[ -f "$state_dir/daemon.log" ]] || return 0
-  mkdir -p "$artifacts_root"
-  cp "$state_dir/daemon.log" "$artifacts_root/daemon.log" || true
 }
 
 # Runs a command, killing it after the given number of seconds. macOS has no
@@ -204,6 +214,6 @@ if [[ "$warm_passed" != "1" && "$platform" == "ios" ]]; then
 fi
 
 if [[ "$cold_passed" != "1" || "$warm_passed" != "1" ]]; then
-  save_daemon_log
+  save_agent_device_logs
   fail "Deep-link e2e failed (cold passed: $cold_passed, warm passed: $warm_passed). Artifacts: $artifacts_root"
 fi
