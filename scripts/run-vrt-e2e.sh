@@ -59,6 +59,9 @@ save_agent_device_logs() {
     -exec cp {} "$artifacts_root/" \; 2>/dev/null || true
 }
 
+# Whatever ends the run early, keep agent-device's logs for the CI artifact.
+trap 'status=$?; [[ "$status" == 0 ]] || save_agent_device_logs; exit "$status"' EXIT
+
 if [[ "$platform" == "ios" ]]; then
   # Without the approval setup writes, a cold deep link stops at an "Open in
   # PlainText?" prompt and fails in ways that look like a slow launch.
@@ -69,10 +72,8 @@ if [[ "$platform" == "ios" ]]; then
     "The simulator has not approved '$VRT_APP_SCHEME' deep links for $VRT_APP_ID. Run 'yarn vrt ios setup'."
   # Building the XCTest runner usually takes 1-2 minutes, but a slow CI runner
   # outlasted agent-device's default 240 s budget.
-  if ! agent_device prepare ios-runner --timeout 600000; then
-    save_agent_device_logs
+  agent_device prepare ios-runner --timeout 600000 ||
     fail "Could not prepare the iOS runner. Logs: $artifacts_root"
-  fi
   # The first launch after install is the slowest. Pay it here with a plain
   # launch, which agent-device retries, so it doesn't count against the cold
   # deep link below.
@@ -159,7 +160,7 @@ run_ios_cold_deep_link() {
   # link never started it, this launches it plainly and the wait fails, as it
   # should: after clear-app-state, only the link can reach the capture screen.
   agent_device open "$VRT_APP_ID" --timeout 60000 >/dev/null &&
-    agent_device wait "id=\"$capture_id\"" 30000 >/dev/null &&
+    agent_device wait "id=\"$capture_id\"" 60000 >/dev/null &&
     agent_device wait stable 200 5000 >/dev/null || return 1
   # openurl's time shows how close cold launches run to agent-device's 15 s.
   printf '✓ cold deep link (openurl %ss, screen %ss)\n' "$openurl_s" "$((SECONDS - started - openurl_s))"
@@ -167,6 +168,9 @@ run_ios_cold_deep_link() {
 
 run_cold_attempt() {
   local run="$1" dir="$artifacts_root/cold-$1" status=0
+  # On a slow runner even this can hit agent-device's 15 s xcrun limit, which
+  # should cost one attempt, not the run.
+  agent_device settings clear-app-state "$VRT_APP_ID" || return 1
   if [[ "$platform" == "android" ]]; then
     run_e2e_test vrt-deep-link-cold "cold-$run" --retries 1
     return
@@ -184,7 +188,6 @@ cold_runs=3
 cold_passed=0
 for run in $(seq 1 "$cold_runs"); do
   close_stale_sessions
-  agent_device settings clear-app-state "$VRT_APP_ID"
   if run_cold_attempt "$run"; then
     cold_passed=1
     break
@@ -201,6 +204,5 @@ elif [[ "$platform" == "ios" ]]; then
 fi
 
 if [[ "$cold_passed" != "1" || "$warm_passed" != "1" ]]; then
-  save_agent_device_logs
   fail "Deep-link e2e failed (cold passed: $cold_passed, warm passed: $warm_passed). Artifacts: $artifacts_root"
 fi
