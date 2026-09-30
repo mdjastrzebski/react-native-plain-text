@@ -51,6 +51,16 @@ BOOL textDecorationHasLineThrough(const std::string &textDecorationLine);
  */
 RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign);
 
+/*
+ * The language VoiceOver speaks the text in: accessibilityLanguage when set,
+ * otherwise lang, nil when neither is (an empty string counts as unset).
+ * Resolved here rather than in JS, per
+ * docs/contributing/performance.md#prop-cost-policy.
+ * SYNC: PlainTextView.kt's resolveLocaleSpanTag must resolve identically. See
+ * docs/contributing/sync-points.md#set-18--the-lang-and-accessibilitylanguage-fallback.
+ */
+NSString *accessibilityLanguageFromProps(const RNPlainTextProps &props);
+
 NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode);
 
 NSLineBreakStrategy lineBreakStrategyFromProp(RNPlainTextLineBreakStrategyIOS lineBreakStrategyIOS);

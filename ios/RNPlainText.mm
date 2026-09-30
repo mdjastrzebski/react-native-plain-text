@@ -108,6 +108,10 @@ using namespace plaintext;
     _forceApplyProps = YES;
 
     self.contentView = _label;
+    // This view is the accessibility element (see -isAccessibilityElement), so the
+    // label must not be one: when `accessible` is false VoiceOver would otherwise
+    // look inside and read it anyway.
+    _label.isAccessibilityElement = NO;
   }
 
   return self;
@@ -293,9 +297,34 @@ using namespace plaintext;
         _label.lineBreakStrategy = lineBreakStrategyFromProp(newViewProps.lineBreakStrategyIOS);
     }
 
+    // Decided before super, which replaces _props and may free what oldViewProps
+    // refers to.
+    BOOL accessibilityLanguageChanged = _forceApplyProps ||
+        oldViewProps.lang != newViewProps.lang ||
+        oldViewProps.accessibilityLanguage != newViewProps.accessibilityLanguage;
+
     _forceApplyProps = NO;
 
     [super updateProps:props oldProps:oldProps];
+
+    // After super: RCTViewComponentView writes the raw accessibilityLanguage prop
+    // (nil when unset), which would otherwise clobber the lang fallback. Only this
+    // view needs it: it is the accessibility element, never _label.
+    // SYNC: PlainTextView.kt's resolveLocaleSpanTag is the Android counterpart. See
+    // docs/contributing/sync-points.md#set-18--the-lang-and-accessibilitylanguage-fallback.
+    if (accessibilityLanguageChanged) {
+        self.accessibilityElement.accessibilityLanguage = accessibilityLanguageFromProps(newViewProps);
+    }
+}
+
+// Read from props, like RN's RCTParagraphComponentView. RCTViewComponentView's
+// own getter asks contentView instead, which ignores `accessible`.
+// SYNC: PlainText.tsx defaults `accessible` to true on iOS, since the native
+// default is false. See
+// docs/contributing/sync-points.md#set-19--accessible-defaults-to-true-on-ios.
+- (BOOL)isAccessibilityElement
+{
+    return static_cast<const RNPlainTextProps &>(*_props).accessible;
 }
 
 @end

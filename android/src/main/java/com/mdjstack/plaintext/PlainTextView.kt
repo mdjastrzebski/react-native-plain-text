@@ -12,6 +12,7 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.text.TextUtils
 import android.text.style.LineHeightSpan
+import android.text.style.LocaleSpan
 import android.util.AttributeSet
 import android.util.LruCache
 import android.util.TypedValue
@@ -108,6 +109,7 @@ class PlainTextView : AppCompatTextView {
   private var appliedBaseTypeface: Typeface? = baseTypeface
 
   private var appliedLang: String? = null
+  private var accessibilityLanguage: String? = null
 
   // Combined by applyHyphenationFrequency regardless of which setter ran last.
   private var hyphens: String? = null
@@ -273,22 +275,37 @@ class PlainTextView : AppCompatTextView {
     dirtyText = true
   }
 
-  // The single place text reaches TextView, since a lineHeight span must be layered on.
+  // The single place text reaches TextView, since lineHeight and locale spans must be
+  // layered on.
   private fun applyText() {
     val value = applyTextTransform(rawText?.toString() ?: "", textTransform)
-    if (lineHeightSp.isNaN()) {
+    val localeSpanTag = resolveLocaleSpanTag(accessibilityLanguage, appliedLang)
+    if (lineHeightSp.isNaN() && localeSpanTag == null) {
       setText(value)
       return
     }
     val spannable = SpannableString(value)
-    spannable.setSpan(
-      CustomLineHeightSpan(
-        toEffectivePixel(lineHeightSp, allowFontScaling, maxFontSizeMultiplier)
-      ),
-      0,
-      spannable.length,
-      Spannable.SPAN_INCLUSIVE_INCLUSIVE
-    )
+    if (!lineHeightSp.isNaN()) {
+      spannable.setSpan(
+        CustomLineHeightSpan(
+          toEffectivePixel(lineHeightSp, allowFontScaling, maxFontSizeMultiplier)
+        ),
+        0,
+        spannable.length,
+        Spannable.SPAN_INCLUSIVE_INCLUSIVE
+      )
+    }
+    // TalkBack picks its speech language from a LocaleSpan only, never textLocales.
+    // A MetricAffectingSpan: it overrides textLocales for glyph selection and
+    // hyphenation too, so accessibilityLanguage is a measured input.
+    if (localeSpanTag != null) {
+      spannable.setSpan(
+        LocaleSpan(Locale.forLanguageTag(localeSpanTag)),
+        0,
+        spannable.length,
+        Spannable.SPAN_INCLUSIVE_INCLUSIVE
+      )
+    }
     setText(spannable)
   }
 
@@ -571,17 +588,27 @@ class PlainTextView : AppCompatTextView {
     gravity = (gravity and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
   }
 
-  // Null/empty restores the default locale.
+  // Null/empty restores the default locale. Also feeds the LocaleSpan (see applyText).
   fun setLang(lang: String?) {
     val normalized = if (lang.isNullOrEmpty()) null else lang
     if (normalized == appliedLang) return
     appliedLang = normalized
+    dirtyText = true
 
     textLocales = if (normalized == null) {
       LocaleList.getAdjustedDefault()
     } else {
       LocaleList(Locale.forLanguageTag(normalized))
     }
+  }
+
+  // RN core ignores this prop on Android; here it becomes the text's LocaleSpan,
+  // winning over lang (see applyText). Null/empty falls back to lang.
+  fun setAccessibilityLanguage(value: String?) {
+    val normalized = if (value.isNullOrEmpty()) null else value
+    if (normalized == accessibilityLanguage) return
+    accessibilityLanguage = normalized
+    dirtyText = true
   }
 
   // Wins over android_hyphenationFrequency whenever the app sets it at all,
@@ -703,6 +730,14 @@ private fun toEffectivePixel(
     PixelUtil.toPixelFromDIP(sp)
   }
 }
+
+// accessibilityLanguage when set, otherwise lang; both arrive already normalized
+// (empty to null). The fallback resolves here rather than in JS, per
+// docs/contributing/performance.md#prop-cost-policy.
+// SYNC: PlainTextProps.mm's accessibilityLanguageFromProps must resolve identically.
+// See docs/contributing/sync-points.md#set-18--the-lang-and-accessibilitylanguage-fallback.
+internal fun resolveLocaleSpanTag(accessibilityLanguage: String?, lang: String?): String? =
+  accessibilityLanguage ?: lang
 
 // Mirrors <Text> (com.facebook.react.views.text.TextTransform, reimplemented here
 // since that one is internal to RN's own module). Capitalize already matches CSS

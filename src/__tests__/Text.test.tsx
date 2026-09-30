@@ -31,6 +31,7 @@ describe('<Text />', () => {
     expect(screen.root).toHaveProp('text', '3 items');
     expect(screen.toJSON()).toMatchInlineSnapshot(`
 <RNPlainText
+  accessible={true}
   text="3 items"
 />
 `);
@@ -83,6 +84,7 @@ describe('<Text />', () => {
     expect(screen.root).toHaveProp('text', '3 items');
     expect(screen.toJSON()).toMatchInlineSnapshot(`
 <RNPlainText
+  accessible={true}
   text="3 items"
 />
 `);
@@ -221,6 +223,7 @@ describe('<Text />', () => {
     expect(screen.root).toHaveProp('lineHeightClippingCompat', true);
     expect(screen.toJSON()).toMatchInlineSnapshot(`
 <RNPlainText
+  accessible={true}
   fontSize={12}
   fontVariationSettings=""wght" 700"
   hyphens="auto"
@@ -351,6 +354,7 @@ describe('<Text />', () => {
 describe('mapTextProps', () => {
   it('maps a string child to native props', () => {
     expect(mapTextProps({ children: 'Hello', style: { fontSize: 12, padding: 4 } })).toEqual({
+      accessible: true,
       text: 'Hello',
       fontSize: 12,
       style: { padding: 4 },
@@ -358,11 +362,15 @@ describe('mapTextProps', () => {
   });
 
   it('joins interpolated children', () => {
-    expect(mapTextProps({ children: [3, ' items'] })).toEqual({ text: '3 items' });
+    expect(mapTextProps({ children: [3, ' items'] })).toEqual({
+      accessible: true,
+      text: '3 items',
+    });
   });
 
   it('prefers the text prop over children', () => {
     expect(mapTextProps({ text: 'Hi', children: <RNText>ignored</RNText> })).toEqual({
+      accessible: true,
       text: 'Hi',
     });
   });
@@ -395,6 +403,7 @@ describe('mapTextProps', () => {
 
     expect(screen.toJSON()).toMatchInlineSnapshot(`
 <RNPlainText
+  accessible={true}
   fontSize={14}
   fontWeight="bold"
   text="Hello"

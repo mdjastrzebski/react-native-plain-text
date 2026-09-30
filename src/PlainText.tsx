@@ -1,4 +1,5 @@
 import {
+  Platform,
   StyleSheet,
   type AccessibilityProps,
   type StyleProp,
@@ -28,7 +29,10 @@ export type PlainTextOwnProps = {
    * platform default. On Android, overrides `android_hyphenationFrequency`.
    */
   hyphens?: 'none' | 'auto';
-  /** BCP-47 language tag (e.g. `'pl'`, `'de'`) for hyphenation and line breaking. */
+  /**
+   * BCP-47 language tag (e.g. `'pl'`, `'de'`) for hyphenation and line breaking.
+   * Also the screen-reader language unless `accessibilityLanguage` is set.
+   */
   lang?: string;
 
   // SYNC: renamed to the bare lineHeightClippingCompat past this file — see
@@ -129,6 +133,14 @@ export function mapPlainTextProps({
     } else if (__DEV__) {
       warnOnUnsupportedChildren(content);
     }
+  }
+
+  // SYNC: RNPlainText.mm's isAccessibilityElement reads this. See
+  // docs/contributing/sync-points.md#set-19--accessible-defaults-to-true-on-ios.
+  // iOS: accessible unless explicitly false, like RN <Text>. Always sent, since
+  // native's `accessible` defaults to false and can't tell unset from false.
+  if (Platform.OS === 'ios') {
+    nativeProps.accessible = nativeProps.accessible !== false;
   }
 
   if (unstable_lineHeightClippingCompat !== undefined) {

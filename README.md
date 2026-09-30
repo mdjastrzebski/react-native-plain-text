@@ -98,7 +98,12 @@ Beyond RN `<Text>`, PlainText adds hyphenation control:
   `'none' | 'normal' | 'full'`. Only applies as a fallback when `hyphens` is
   left unset.
 - `lang` (prop): BCP-47 language tag (e.g. `'de'`), picking the hyphenation
-  dictionary and locale-sensitive line breaking.
+  dictionary and locale-sensitive line breaking. It is also the language screen
+  readers speak the text in (iOS `accessibilityLanguage`, Android `LocaleSpan`)
+  unless `accessibilityLanguage` is set.
+- `accessibilityLanguage` (prop): RN's own prop, which RN only honors on iOS.
+  PlainText also applies it on Android, as a `LocaleSpan`. Wins over `lang`
+  for speech.
 
 See
 [Props and styles](https://mdjastrzebski.github.io/react-native-plain-text/guide/props-and-styles)
