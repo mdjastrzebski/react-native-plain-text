@@ -379,6 +379,103 @@ describe('mapPlainTextProps', () => {
     });
   });
 
+  // RN <Text> resolves the aria-* aliases in JS (Text.js:91-143). PlainText has to
+  // do the same: the native view only knows the accessibility* names, so an alias
+  // passed through as-is reaches it as an unknown prop and does nothing.
+  describe('aria-* aliases', () => {
+    it('maps aria-label onto accessibilityLabel', () => {
+      expect(mapPlainTextProps({ 'aria-label': 'Greeting' }).accessibilityLabel).toBe('Greeting');
+    });
+
+    it('lets aria-label win over accessibilityLabel', () => {
+      expect(
+        mapPlainTextProps({ 'aria-label': 'Greeting', 'accessibilityLabel': 'Ignored' })
+          .accessibilityLabel
+      ).toBe('Greeting');
+    });
+
+    it('keeps accessibilityLabel when there is no aria-label', () => {
+      expect(mapPlainTextProps({ accessibilityLabel: 'Greeting' }).accessibilityLabel).toBe(
+        'Greeting'
+      );
+    });
+
+    it('maps each state alias onto its accessibilityState field', () => {
+      expect(
+        mapPlainTextProps({
+          'aria-busy': true,
+          'aria-checked': 'mixed',
+          'aria-disabled': true,
+          'aria-expanded': false,
+          'aria-selected': true,
+        }).accessibilityState
+      ).toEqual({
+        busy: true,
+        checked: 'mixed',
+        disabled: true,
+        expanded: false,
+        selected: true,
+      });
+    });
+
+    it('lets a state alias win over the accessibilityState field it names', () => {
+      expect(
+        mapPlainTextProps({
+          'aria-disabled': false,
+          'accessibilityState': { disabled: true, selected: true },
+        }).accessibilityState
+      ).toEqual({ disabled: false, selected: true });
+    });
+
+    it('keeps accessibilityState untouched when no state alias is set', () => {
+      const accessibilityState = { disabled: true };
+
+      expect(
+        mapPlainTextProps({ 'aria-label': 'Greeting', accessibilityState }).accessibilityState
+      ).toBe(accessibilityState);
+    });
+
+    it('maps aria-hidden onto accessibilityElementsHidden and importantForAccessibility', () => {
+      expect(mapPlainTextProps({ 'aria-hidden': true })).toMatchObject({
+        accessibilityElementsHidden: true,
+        importantForAccessibility: 'no-hide-descendants',
+      });
+    });
+
+    it('leaves importantForAccessibility alone for aria-hidden={false}', () => {
+      expect(mapPlainTextProps({ 'aria-hidden': false })).toMatchObject({
+        accessibilityElementsHidden: false,
+      });
+      expect(mapPlainTextProps({ 'aria-hidden': false })).not.toHaveProperty(
+        'importantForAccessibility'
+      );
+    });
+
+    it('emits no accessibility props when no alias is set', () => {
+      const nativeProps = mapPlainTextProps({ children: 'Hi' });
+
+      expect(nativeProps).not.toHaveProperty('accessibilityLabel');
+      expect(nativeProps).not.toHaveProperty('accessibilityState');
+      expect(nativeProps).not.toHaveProperty('accessibilityElementsHidden');
+      expect(nativeProps).not.toHaveProperty('importantForAccessibility');
+    });
+
+    it('never leaks an aria-* key into the native props', () => {
+      const nativeProps = mapPlainTextProps({
+        'aria-busy': true,
+        'aria-checked': true,
+        'aria-disabled': true,
+        'aria-expanded': true,
+        'aria-hidden': true,
+        'aria-label': 'Greeting',
+        'aria-selected': true,
+        'children': 'Hi',
+      });
+
+      expect(Object.keys(nativeProps).filter((key) => key.startsWith('aria-'))).toEqual([]);
+    });
+  });
+
   describe('style splitting', () => {
     it('pulls text-style keys out and keeps layout styles in style', () => {
       const nativeProps = mapPlainTextProps({

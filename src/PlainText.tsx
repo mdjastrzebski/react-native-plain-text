@@ -1,6 +1,7 @@
 import {
   StyleSheet,
   type AccessibilityProps,
+  type AccessibilityState,
   type StyleProp,
   type TextProps,
   type TextStyle,
@@ -104,15 +105,22 @@ export function PlainText({ ref, ...props }: PlainTextProps & { ref?: Ref<PlainT
   return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }
 
+// Mirrors RN <Text>'s aria-* -> accessibility* mapping, quirks included (Text.js:91-143).
+// Re-check if RN enables enableNativeViewPropTransformations (off as of 0.86.2).
 export function mapPlainTextProps({
   children,
   text,
   style,
   unstable_lineHeightClippingCompat,
+  'aria-label': ariaLabel,
+  'aria-busy': ariaBusy,
+  'aria-checked': ariaChecked,
+  'aria-disabled': ariaDisabled,
+  'aria-expanded': ariaExpanded,
+  'aria-selected': ariaSelected,
+  'aria-hidden': ariaHidden,
   ...rest
 }: PlainTextProps): NativeProps {
-  // `rest` is a fresh object, so it doubles as the native props. Add only keys that
-  // hold a value: Fabric's prop diff walks every key, `undefined` ones included.
   const nativeProps: Record<string, unknown> = rest;
 
   const content = text ?? children;
@@ -133,6 +141,34 @@ export function mapPlainTextProps({
 
   if (unstable_lineHeightClippingCompat !== undefined) {
     nativeProps.lineHeightClippingCompat = unstable_lineHeightClippingCompat;
+  }
+
+  if (ariaLabel != null) {
+    nativeProps.accessibilityLabel = ariaLabel;
+  }
+
+  if (
+    ariaBusy != null ||
+    ariaChecked != null ||
+    ariaDisabled != null ||
+    ariaExpanded != null ||
+    ariaSelected != null
+  ) {
+    const state = nativeProps.accessibilityState as AccessibilityState | undefined;
+    nativeProps.accessibilityState = {
+      busy: ariaBusy ?? state?.busy,
+      checked: ariaChecked ?? state?.checked,
+      disabled: ariaDisabled ?? state?.disabled,
+      expanded: ariaExpanded ?? state?.expanded,
+      selected: ariaSelected ?? state?.selected,
+    };
+  }
+
+  if (ariaHidden !== undefined) {
+    nativeProps.accessibilityElementsHidden = ariaHidden;
+    if (ariaHidden === true) {
+      nativeProps.importantForAccessibility = 'no-hide-descendants';
+    }
   }
 
   // No null guard: `for...in` over a missing style runs zero times.

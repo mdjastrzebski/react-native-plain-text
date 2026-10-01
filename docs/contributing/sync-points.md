@@ -615,6 +615,11 @@ at runtime.
 **Contract:** every `TextProps` key missing from `NativeProps` is checked in `findUnsupportedProp`, except the ones that
 only matter alongside another. Adding one of these props to the spec means removing it from the warning.
 
+The `aria-*` aliases are the other direction: `ViewProps` extends RN's `AccessibilityProps`, so they are already in
+`NativeProps` and were never listed here, but they need resolving before native sees them. See the comment above
+`mapPlainTextProps` in `src/PlainText.tsx` — that's the only place this behavior lives, so it isn't a multi-file sync
+point like the sets above.
+
 **Failure mode:** a prop missing from the warning is dropped by `Text` with no message. A prop the spec gains but the
 warning still lists warns about something that now works.
 
