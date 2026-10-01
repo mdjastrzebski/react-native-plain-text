@@ -97,7 +97,10 @@ export interface NativeProps extends ViewProps {
   allowFontScaling?: CodegenTypes.WithDefault<boolean, true>;
   maxFontSizeMultiplier?: CodegenTypes.WithDefault<CodegenTypes.Float, 0>;
 
-  // Internal prop used for experiments. No-op in public releases.
+  // EXPERIMENT: true picks mapPlainTextPropsFast over mapPlainTextPropsBaseline
+  // (PlainText.tsx) for the aria-* -> accessibility* conversion — same output, a
+  // cheaper JS path. Purely a JS-side choice: native never reads this prop for it, a
+  // no-op here as for every other experiment. See docs/contributing/perf-experiments.md.
   experiment?: CodegenTypes.WithDefault<boolean, false>;
   lineHeightClippingCompat?: CodegenTypes.WithDefault<boolean, false>;
   includeFontPadding?: CodegenTypes.WithDefault<boolean, true>;

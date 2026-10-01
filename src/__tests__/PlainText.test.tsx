@@ -379,30 +379,70 @@ describe('mapPlainTextProps', () => {
     });
   });
 
-  // RN <Text> resolves the aria-* aliases in JS (Text.js:91-143). PlainText has to
-  // do the same: the native view only knows the accessibility* names, so an alias
-  // passed through as-is reaches it as an unknown prop and does nothing.
-  describe('aria-* aliases', () => {
+  // EXPERIMENT (`experiment` prop): the baseline has no aria-* support — that shipped
+  // in PR #43, then moved entirely behind this flag so its cost (optimized) can be
+  // A/B'd against not having it. See docs/contributing/perf-experiments.md.
+  describe('aria-* aliases (baseline: unsupported)', () => {
+    it('does not resolve aria-label onto accessibilityLabel', () => {
+      expect(mapPlainTextProps({ 'aria-label': 'Greeting' }).accessibilityLabel).toBeUndefined();
+    });
+
+    it('does not resolve the state aliases onto accessibilityState', () => {
+      expect(
+        mapPlainTextProps({ 'aria-busy': true, 'aria-disabled': true }).accessibilityState
+      ).toBeUndefined();
+    });
+
+    it('does not resolve aria-hidden onto accessibilityElementsHidden', () => {
+      expect(mapPlainTextProps({ 'aria-hidden': true })).not.toHaveProperty(
+        'accessibilityElementsHidden'
+      );
+    });
+
+    it('leaves a direct accessibilityLabel/accessibilityState untouched', () => {
+      const accessibilityState = { disabled: true };
+
+      expect(
+        mapPlainTextProps({ accessibilityLabel: 'Greeting', accessibilityState })
+      ).toMatchObject({ accessibilityLabel: 'Greeting', accessibilityState });
+    });
+
+    it('passes an aria-* key through inert, under its original name (pre-#43 behavior)', () => {
+      const nativeProps = mapPlainTextProps({ 'aria-label': 'Greeting', 'children': 'Hi' });
+
+      expect(nativeProps).toMatchObject({ 'aria-label': 'Greeting' });
+    });
+  });
+
+  // RN <Text> resolves the aria-* aliases in JS (Text.js:91-143). The `experiment`
+  // path is PlainText's equivalent, optimized — see mapPlainTextPropsFast
+  // (PlainText.tsx) and docs/contributing/perf-experiments.md. `experiment` isn't a
+  // public PlainText prop, so these pass it the way the perf suite does: as an extra
+  // prop bypassing the type.
+  describe('aria-* aliases (experiment: true)', () => {
+    const withExperiment = (props: PlainTextProps) =>
+      mapPlainTextProps({ ...props, experiment: true } as PlainTextProps);
+
     it('maps aria-label onto accessibilityLabel', () => {
-      expect(mapPlainTextProps({ 'aria-label': 'Greeting' }).accessibilityLabel).toBe('Greeting');
+      expect(withExperiment({ 'aria-label': 'Greeting' }).accessibilityLabel).toBe('Greeting');
     });
 
     it('lets aria-label win over accessibilityLabel', () => {
       expect(
-        mapPlainTextProps({ 'aria-label': 'Greeting', 'accessibilityLabel': 'Ignored' })
+        withExperiment({ 'aria-label': 'Greeting', 'accessibilityLabel': 'Ignored' })
           .accessibilityLabel
       ).toBe('Greeting');
     });
 
     it('keeps accessibilityLabel when there is no aria-label', () => {
-      expect(mapPlainTextProps({ accessibilityLabel: 'Greeting' }).accessibilityLabel).toBe(
+      expect(withExperiment({ accessibilityLabel: 'Greeting' }).accessibilityLabel).toBe(
         'Greeting'
       );
     });
 
     it('maps each state alias onto its accessibilityState field', () => {
       expect(
-        mapPlainTextProps({
+        withExperiment({
           'aria-busy': true,
           'aria-checked': 'mixed',
           'aria-disabled': true,
@@ -420,7 +460,7 @@ describe('mapPlainTextProps', () => {
 
     it('lets a state alias win over the accessibilityState field it names', () => {
       expect(
-        mapPlainTextProps({
+        withExperiment({
           'aria-disabled': false,
           'accessibilityState': { disabled: true, selected: true },
         }).accessibilityState
@@ -428,31 +468,30 @@ describe('mapPlainTextProps', () => {
     });
 
     it('keeps accessibilityState untouched when no state alias is set', () => {
-      const accessibilityState = { disabled: true };
-
       expect(
-        mapPlainTextProps({ 'aria-label': 'Greeting', accessibilityState }).accessibilityState
-      ).toBe(accessibilityState);
+        withExperiment({ 'aria-label': 'Greeting', 'accessibilityState': { disabled: true } })
+          .accessibilityState
+      ).toEqual({ disabled: true });
     });
 
     it('maps aria-hidden onto accessibilityElementsHidden and importantForAccessibility', () => {
-      expect(mapPlainTextProps({ 'aria-hidden': true })).toMatchObject({
+      expect(withExperiment({ 'aria-hidden': true })).toMatchObject({
         accessibilityElementsHidden: true,
         importantForAccessibility: 'no-hide-descendants',
       });
     });
 
     it('leaves importantForAccessibility alone for aria-hidden={false}', () => {
-      expect(mapPlainTextProps({ 'aria-hidden': false })).toMatchObject({
+      expect(withExperiment({ 'aria-hidden': false })).toMatchObject({
         accessibilityElementsHidden: false,
       });
-      expect(mapPlainTextProps({ 'aria-hidden': false })).not.toHaveProperty(
+      expect(withExperiment({ 'aria-hidden': false })).not.toHaveProperty(
         'importantForAccessibility'
       );
     });
 
     it('emits no accessibility props when no alias is set', () => {
-      const nativeProps = mapPlainTextProps({ children: 'Hi' });
+      const nativeProps = withExperiment({ children: 'Hi' });
 
       expect(nativeProps).not.toHaveProperty('accessibilityLabel');
       expect(nativeProps).not.toHaveProperty('accessibilityState');
@@ -461,7 +500,7 @@ describe('mapPlainTextProps', () => {
     });
 
     it('never leaks an aria-* key into the native props', () => {
-      const nativeProps = mapPlainTextProps({
+      const nativeProps = withExperiment({
         'aria-busy': true,
         'aria-checked': true,
         'aria-disabled': true,
@@ -473,6 +512,10 @@ describe('mapPlainTextProps', () => {
       });
 
       expect(Object.keys(nativeProps).filter((key) => key.startsWith('aria-'))).toEqual([]);
+    });
+
+    it('leaves experiment itself in the native props (native no-ops on it)', () => {
+      expect(withExperiment({ children: 'Hi' })).toMatchObject({ experiment: true });
     });
   });
 

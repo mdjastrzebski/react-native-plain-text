@@ -105,21 +105,26 @@ export function PlainText({ ref, ...props }: PlainTextProps & { ref?: Ref<PlainT
   return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }
 
-export function mapPlainTextProps({
+// EXPERIMENT (`experiment` prop): routes to the aria-* optimized mapPlainTextPropsFast,
+// or to the baseline below (no aria-* support, pre-#43 behavior), to A/B the feature's
+// cost against not having it. `experiment` isn't part of PlainTextProps, so it's read
+// via a cast — same as the perf suite sets it. See docs/contributing/perf-experiments.md.
+export function mapPlainTextProps(props: PlainTextProps): NativeProps {
+  if ((props as Record<string, unknown>).experiment === true) {
+    return mapPlainTextPropsFast(props);
+  }
+
+  return mapPlainTextPropsBaseline(props);
+}
+
+// No aria-* handling — the library's pre-#43 shape, kept as the A/B's "without the
+// feature" arm. `rest` (== nativeProps) still contains any aria-* keys a caller set,
+// verbatim under their hyphenated names — inert on native, same as before #43.
+function mapPlainTextPropsBaseline({
   children,
   text,
   style,
   unstable_lineHeightClippingCompat,
-  // Destructured rather than read off `rest`: the native view has no `aria-*`
-  // props, so an alias left in place would reach it as an unknown key and do
-  // nothing. Same set RN <Text> resolves, same rules — see Text.js:91-143.
-  'aria-busy': ariaBusy,
-  'aria-checked': ariaChecked,
-  'aria-disabled': ariaDisabled,
-  'aria-expanded': ariaExpanded,
-  'aria-hidden': ariaHidden,
-  'aria-label': ariaLabel,
-  'aria-selected': ariaSelected,
   ...rest
 }: PlainTextProps): NativeProps {
   // `rest` is a fresh object, so it doubles as the native props. Add only keys that
@@ -146,24 +151,75 @@ export function mapPlainTextProps({
     nativeProps.lineHeightClippingCompat = unstable_lineHeightClippingCompat;
   }
 
-  // The aria-* aliases RN <Text> maps onto the accessibility* props, resolved the
-  // same way Text.js does it: an alias wins over the accessibility* prop it names.
-  // SYNC: the alias list and these rules have to match Text.js — see
-  // docs/contributing/sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary.
-  if (ariaLabel != null) {
-    nativeProps.accessibilityLabel = ariaLabel;
+  applyStyle(nativeProps, style);
+
+  return nativeProps as NativeProps;
+}
+
+// EXPERIMENT (`experiment` prop): the only path with aria-* support, optimized so the
+// common (aria-unset) case costs as little as possible over the baseline above — the
+// A/B measures the feature's cost once it's cheap, not two implementations of it.
+// Doesn't destructure the 7 aria-* names: Babel's objectWithoutProperties scans its
+// exclusion list per own key of props, so each extra excluded name costs every call,
+// aria-* set or not. `rest` below still holds any aria-* keys under their original
+// names, read and stripped per-field further down. See docs/contributing/perf-experiments.md.
+function mapPlainTextPropsFast({
+  children,
+  text,
+  style,
+  unstable_lineHeightClippingCompat,
+  ...rest
+}: PlainTextProps): NativeProps {
+  const nativeProps: Record<string, unknown> = rest;
+
+  const content = text ?? children;
+
+  if (typeof content === 'string') {
+    nativeProps.text = content;
+  } else if (content != null) {
+    const joined = joinTextChildren(content);
+    if (joined !== undefined) {
+      nativeProps.text = joined;
+    } else if (__DEV__) {
+      warnOnUnsupportedChildren(content);
+    }
   }
 
+  if (unstable_lineHeightClippingCompat !== undefined) {
+    nativeProps.lineHeightClippingCompat = unstable_lineHeightClippingCompat;
+  }
+
+  // Plain property reads, not `in`: V8's HasProperty path (what `in` compiles to)
+  // JITs worse than a LoadIC here, measured. Inlined, not a shared helper: a
+  // multi-param function-call boundary measured costlier than the reads it would
+  // guard. Three independent blocks below, not one combined gate — label, state, and
+  // hidden are unrelated aliases; Text.js resolves them independently too. SYNC: same
+  // precedence rules as mapPlainTextPropsBaseline's aria block — see
+  // docs/contributing/sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary.
+  // See docs/contributing/perf-experiments.md for the measurements.
+
+  // `!== undefined`, not `!= null`: the type is `string | undefined`, so there's no
+  // real `null` to guard against. One condition then covers both the merge and the
+  // delete, skipping the delete too when unset (measured: ~90ns to delete a key
+  // that's there vs. ~14ns for a no-op).
+  const ariaLabel = nativeProps['aria-label'] as string | undefined;
+  if (ariaLabel !== undefined) {
+    nativeProps.accessibilityLabel = ariaLabel;
+    delete nativeProps['aria-label'];
+  }
+
+  const ariaBusy = nativeProps['aria-busy'] as boolean | undefined;
+  const ariaChecked = nativeProps['aria-checked'] as boolean | 'mixed' | undefined;
+  const ariaDisabled = nativeProps['aria-disabled'] as boolean | undefined;
+  const ariaExpanded = nativeProps['aria-expanded'] as boolean | undefined;
+  const ariaSelected = nativeProps['aria-selected'] as boolean | undefined;
   if (
-    ariaBusy != null ||
-    ariaChecked != null ||
-    ariaDisabled != null ||
-    ariaExpanded != null ||
-    ariaSelected != null
+    ariaBusy !== undefined ||
+    ariaChecked !== undefined ||
+    ariaDisabled !== undefined ||
+    ariaExpanded !== undefined ||
+    ariaSelected !== undefined
   ) {
-    // Rebuilt field by field, as Text.js does it, so an alias wins over the field it
-    // names. The fields it doesn't name (`value`) are dropped along the way, which is
-    // RN's behavior too — keep the two rendering the same tree.
     const state = nativeProps.accessibilityState as AccessibilityState | undefined;
     nativeProps.accessibilityState = {
       busy: ariaBusy ?? state?.busy,
@@ -172,17 +228,28 @@ export function mapPlainTextProps({
       expanded: ariaExpanded ?? state?.expanded,
       selected: ariaSelected ?? state?.selected,
     };
+    delete nativeProps['aria-busy'];
+    delete nativeProps['aria-checked'];
+    delete nativeProps['aria-disabled'];
+    delete nativeProps['aria-expanded'];
+    delete nativeProps['aria-selected'];
   }
 
+  const ariaHidden = nativeProps['aria-hidden'] as boolean | undefined;
   if (ariaHidden !== undefined) {
     nativeProps.accessibilityElementsHidden = ariaHidden;
-    // `accessibilityElementsHidden` is iOS-only (Android's view managers have no
-    // handler for it), so the second prop is what hides the subtree there.
     if (ariaHidden === true) {
       nativeProps.importantForAccessibility = 'no-hide-descendants';
     }
+    delete nativeProps['aria-hidden'];
   }
 
+  applyStyle(nativeProps, style);
+
+  return nativeProps as NativeProps;
+}
+
+function applyStyle(nativeProps: Record<string, unknown>, style: StyleProp<PlainTextStyle>): void {
   // No null guard: `for...in` over a missing style runs zero times.
   const flatStyle = StyleSheet.flatten(style) as Record<string, unknown>;
 
@@ -224,6 +291,4 @@ export function mapPlainTextProps({
   if (viewStyle !== undefined) {
     nativeProps.style = viewStyle;
   }
-
-  return nativeProps as NativeProps;
 }
