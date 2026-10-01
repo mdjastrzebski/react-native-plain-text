@@ -6,7 +6,7 @@ using namespace facebook;
 
 NitroPlainTextComponentDescriptor::NitroPlainTextComponentDescriptor(
     const react::ComponentDescriptorParameters& parameters)
-    : ConcreteComponentDescriptor(parameters, react::RawPropsParser(/* enableJsiParser */ true))
+    : ConcreteComponentDescriptor(parameters, nitro::RawPropsCompat::makePropsParser())
 #ifndef __APPLE__
       ,
       measurementsManager_(std::make_shared<const NitroPlainTextMeasurementsManager>(contextContainer_))
@@ -27,17 +27,22 @@ void NitroPlainTextComponentDescriptor::adopt(react::ShadowNode& shadowNode) con
 
   [[maybe_unused]] auto& concreteShadowNode = static_cast<NitroPlainTextShadowNode&>(shadowNode);
 
-#ifdef ANDROID
-  // Same as the generated descriptor: on Android, Nitro routes props to the view
-  // through state.
-  const std::shared_ptr<const HybridNitroPlainTextProps>& constProps = concreteShadowNode.getConcreteSharedProps();
-  const std::shared_ptr<HybridNitroPlainTextProps>& props = std::const_pointer_cast<HybridNitroPlainTextProps>(constProps);
-  HybridNitroPlainTextState state{props};
-  concreteShadowNode.setStateData(std::move(state));
+#ifndef __APPLE__
+  // Before the early return below: a clone needs it whether or not props changed.
+  concreteShadowNode.setMeasurementsManager(measurementsManager_);
 #endif
 
-#ifndef __APPLE__
-  concreteShadowNode.setMeasurementsManager(measurementsManager_);
+#ifdef ANDROID
+  // Same as nitro::ViewComponentDescriptor::adopt (final, so not reusable): Nitro
+  // routes props to the Android view through state, and keeps the State identity
+  // when no Nitro prop changed, so a base View prop change skips the State update.
+  auto constProps = std::static_pointer_cast<const HybridNitroPlainTextProps>(concreteShadowNode.getProps());
+  const std::shared_ptr<const HybridNitroPlainTextProps>& previousProps = concreteShadowNode.getStateData().getProps();
+  if (previousProps != nullptr && constProps->hasSameProps(*previousProps)) {
+    return;
+  }
+  HybridNitroPlainTextState state{std::move(constProps)};
+  concreteShadowNode.setStateData(std::move(state));
 #endif
 }
 

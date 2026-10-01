@@ -43,47 +43,47 @@ const char* toString(NitroEllipsizeMode value) {
 // measurementInputsEqual (cpp/NitroPlainTextShadowNode.cpp).
 folly::dynamic serializeProps(const HybridNitroPlainTextProps& props) {
   folly::dynamic serialized = folly::dynamic::object;
-  if (props.text.value.has_value()) {
-    serialized["text"] = props.text.value.value();
+  if (props.text.get().has_value()) {
+    serialized["text"] = props.text.get().value();
   }
-  if (props.fontSize.value.has_value()) {
-    serialized["fontSize"] = props.fontSize.value.value();
+  if (props.fontSize.get().has_value()) {
+    serialized["fontSize"] = props.fontSize.get().value();
   }
-  if (props.fontFamily.value.has_value()) {
-    serialized["fontFamily"] = props.fontFamily.value.value();
+  if (props.fontFamily.get().has_value()) {
+    serialized["fontFamily"] = props.fontFamily.get().value();
   }
-  if (props.fontWeight.value.has_value()) {
-    serialized["fontWeight"] = props.fontWeight.value.value();
+  if (props.fontWeight.get().has_value()) {
+    serialized["fontWeight"] = props.fontWeight.get().value();
   }
-  if (props.fontStyle.value.has_value()) {
-    serialized["fontStyle"] = props.fontStyle.value.value();
+  if (props.fontStyle.get().has_value()) {
+    serialized["fontStyle"] = props.fontStyle.get().value();
   }
-  if (props.lineHeight.value.has_value()) {
-    serialized["lineHeight"] = props.lineHeight.value.value();
+  if (props.lineHeight.get().has_value()) {
+    serialized["lineHeight"] = props.lineHeight.get().value();
   }
-  if (props.letterSpacing.value.has_value()) {
-    serialized["letterSpacing"] = props.letterSpacing.value.value();
+  if (props.letterSpacing.get().has_value()) {
+    serialized["letterSpacing"] = props.letterSpacing.get().value();
   }
-  if (props.textTransform.value.has_value()) {
-    serialized["textTransform"] = toString(props.textTransform.value.value());
+  if (props.textTransform.get().has_value()) {
+    serialized["textTransform"] = toString(props.textTransform.get().value());
   }
-  if (props.hyphens.value.has_value()) {
-    serialized["hyphens"] = toString(props.hyphens.value.value());
+  if (props.hyphens.get().has_value()) {
+    serialized["hyphens"] = toString(props.hyphens.get().value());
   }
-  if (props.lang.value.has_value()) {
-    serialized["lang"] = props.lang.value.value();
+  if (props.lang.get().has_value()) {
+    serialized["lang"] = props.lang.get().value();
   }
-  if (props.numberOfLines.value.has_value()) {
-    serialized["numberOfLines"] = static_cast<int>(props.numberOfLines.value.value());
+  if (props.numberOfLines.get().has_value()) {
+    serialized["numberOfLines"] = static_cast<int>(props.numberOfLines.get().value());
   }
-  if (props.ellipsizeMode.value.has_value()) {
-    serialized["ellipsizeMode"] = toString(props.ellipsizeMode.value.value());
+  if (props.ellipsizeMode.get().has_value()) {
+    serialized["ellipsizeMode"] = toString(props.ellipsizeMode.get().value());
   }
-  if (props.allowFontScaling.value.has_value()) {
-    serialized["allowFontScaling"] = props.allowFontScaling.value.value();
+  if (props.allowFontScaling.get().has_value()) {
+    serialized["allowFontScaling"] = props.allowFontScaling.get().value();
   }
-  if (props.maxFontSizeMultiplier.value.has_value()) {
-    serialized["maxFontSizeMultiplier"] = props.maxFontSizeMultiplier.value.value();
+  if (props.maxFontSizeMultiplier.get().has_value()) {
+    serialized["maxFontSizeMultiplier"] = props.maxFontSizeMultiplier.get().value();
   }
   return serialized;
 }

@@ -5,6 +5,7 @@
 
 #include "NitroPlainTextShadowNode.hpp"
 
+#include <NitroModules/RawPropsCompat.hpp>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 
 namespace margelo::nitro::plaintext::views {

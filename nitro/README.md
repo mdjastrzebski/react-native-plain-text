@@ -65,10 +65,26 @@ to be handled in `measureContent`, `measurementInputsEqual` and the native view.
 ## Regenerating bindings
 
 After editing the spec, run `yarn workspace react-native-plain-text-nitro specs`
-and commit `nitrogen/generated/`. Then rebuild the example app's native code.
+and commit `nitrogen/generated/` (un-ignored in the root `.gitignore`). Then
+rebuild the example app's native code.
+
+## Nitro version
+
+On `react-native-nitro-modules`/`nitrogen` 0.37.1 (also the example app's, for
+`react-native-mmkv`). As of 0.37.1, Nitro Views still generate a plain,
+non-measuring `ConcreteViewShadowNode` with no hook for a custom one, so
+`cpp/` stays necessary. (Upstream has only an unmerged experiment, the
+`test/layouting` branch.) What 0.37 did add, and `cpp/` now uses:
+
+- `ReactProp<T>` (was `CachedProp<T>`): immutable prop entries, so
+  `measurementInputsEqual` compares them by identity (`hasSameValue`).
+- `nitro::ViewComponentDescriptor<T>`, a generic descriptor with Android's
+  props-into-state step, which also keeps the State identity when no Nitro prop
+  changed. It's `final`, so `NitroPlainTextComponentDescriptor` copies its
+  `adopt` rather than extending it.
 
 ## Removing
 
-Delete `nitro/`, drop `"nitro"` from the root `workspaces`, `tsconfig.build.json`
-and `.oxfmtrc.json`, drop the dependency from `example/package.json`, remove the
+Delete `nitro/`, drop `"nitro"` from the root `workspaces`, `tsconfig.build.json`,
+`.oxfmtrc.json` and `.gitignore`, drop the dependency from `example/package.json`, remove the
 Nitro variants from `example/src/screens/PerformanceScreen.tsx`, then `yarn`.

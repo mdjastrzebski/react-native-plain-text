@@ -11,10 +11,10 @@
     "specs": "nitrogen --logLevel=\"debug\""
   },
   "devDependencies": {
-    "nitrogen": "0.35.9",
+    "nitrogen": "0.37.1",
     "react": "19.2.3",
     "react-native": "0.86.2",
-    "react-native-nitro-modules": "0.35.9"
+    "react-native-nitro-modules": "0.37.1"
   },
   "peerDependencies": {
     "react": "*",

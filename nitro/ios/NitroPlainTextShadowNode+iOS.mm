@@ -41,23 +41,23 @@ react::Float ceilToPixel(react::Float value, react::Float pointScaleFactor)
 
 CGFloat resolveFontSizeMultiplier(const HybridNitroPlainTextProps &props, CGFloat baseMultiplier)
 {
-  return clampFontSizeMultiplier(props.allowFontScaling.value.value_or(true),
-                                 props.maxFontSizeMultiplier.value.value_or(0),
+  return clampFontSizeMultiplier(props.allowFontScaling.get().value_or(true),
+                                 props.maxFontSizeMultiplier.get().value_or(0),
                                  baseMultiplier);
 }
 
 UIFont *resolveFont(const HybridNitroPlainTextProps &props, CGFloat fontSizeMultiplier)
 {
-  return margelo::nitro::plaintext::resolveFont(stringOrEmpty(props.fontFamily.value),
-                                stringOrEmpty(props.fontWeight.value),
-                                stringOrEmpty(props.fontStyle.value),
-                                props.fontSize.value.value_or(kDefaultFontSize),
+  return margelo::nitro::plaintext::resolveFont(stringOrEmpty(props.fontFamily.get()),
+                                stringOrEmpty(props.fontWeight.get()),
+                                stringOrEmpty(props.fontStyle.get()),
+                                props.fontSize.get().value_or(kDefaultFontSize),
                                 fontSizeMultiplier);
 }
 
 double lineHeightOf(const HybridNitroPlainTextProps &props)
 {
-  return props.lineHeight.value.value_or(0);
+  return props.lineHeight.get().value_or(0);
 }
 
 } // namespace
@@ -68,10 +68,10 @@ react::Size NitroPlainTextShadowNode::measureContent(const react::LayoutContext 
   const auto &props = getConcreteProps();
 
   NSString *text = @"";
-  if (props.text.value.has_value()) {
-    text = [NSString stringWithUTF8String:props.text.value->c_str()] ?: @"";
+  if (props.text.get().has_value()) {
+    text = [NSString stringWithUTF8String:props.text.get()->c_str()] ?: @"";
   }
-  switch (props.textTransform.value.value_or(NitroTextTransform::NONE)) {
+  switch (props.textTransform.get().value_or(NitroTextTransform::NONE)) {
     case NitroTextTransform::UPPERCASE:
       text = text.uppercaseString;
       break;
@@ -91,13 +91,13 @@ react::Size NitroPlainTextShadowNode::measureContent(const react::LayoutContext 
   NSMutableDictionary<NSAttributedStringKey, id> *attributes = [NSMutableDictionary dictionary];
   attributes[NSFontAttributeName] = font;
 
-  if (props.letterSpacing.value.has_value()) {
-    attributes[NSKernAttributeName] = @(props.letterSpacing.value.value());
+  if (props.letterSpacing.get().has_value()) {
+    attributes[NSKernAttributeName] = @(props.letterSpacing.get().value());
   }
 
   // Same key the Swift view sets (kCTLanguageAttributeName).
-  if (props.lang.value.has_value() && !props.lang.value->empty()) {
-    NSString *lang = [NSString stringWithUTF8String:props.lang.value->c_str()];
+  if (props.lang.get().has_value() && !props.lang.get()->empty()) {
+    NSString *lang = [NSString stringWithUTF8String:props.lang.get()->c_str()];
     if (lang != nil) {
       attributes[(__bridge NSAttributedStringKey)kCTLanguageAttributeName] = lang;
     }
@@ -113,7 +113,7 @@ react::Size NitroPlainTextShadowNode::measureContent(const react::LayoutContext 
     perLineHeight = static_cast<react::Float>(lineHeight);
   }
 
-  if (props.hyphens.value == NitroHyphens::AUTO) {
+  if (props.hyphens.get() == NitroHyphens::AUTO) {
     if (paragraphStyle == nil) {
       paragraphStyle = [NSMutableParagraphStyle new];
     }
@@ -149,7 +149,7 @@ react::Size NitroPlainTextShadowNode::measureContent(const react::LayoutContext 
   };
 
   // Cap height to numberOfLines (0 = unlimited), matching UILabel's own line clamp.
-  auto numberOfLines = static_cast<int>(std::round(props.numberOfLines.value.value_or(0)));
+  auto numberOfLines = static_cast<int>(std::round(props.numberOfLines.get().value_or(0)));
   if (numberOfLines > 0) {
     react::Float maxHeight = ceilToPixel(numberOfLines * perLineHeight, pointScaleFactor);
     size.height = std::min(size.height, maxHeight);

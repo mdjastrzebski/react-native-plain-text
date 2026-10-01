@@ -95,6 +95,9 @@ android/generated
 
 # React Native Nitro Modules
 nitrogen/
+# Except the temporary Nitro port's bindings, committed like Nitro libraries do
+# (its podspec, Gradle and CMake load them).
+!nitro/nitrogen/
 
 # Visual regression test results (the built apps are cached in node_modules/.cache/vrt)
 .vrt/

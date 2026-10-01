@@ -5,15 +5,16 @@ namespace margelo::nitro::plaintext::views {
 using namespace facebook;
 
 bool measurementInputsEqual(const HybridNitroPlainTextProps& a, const HybridNitroPlainTextProps& b) {
-  return a.text.value == b.text.value && a.fontSize.value == b.fontSize.value &&
-      a.fontFamily.value == b.fontFamily.value && a.fontWeight.value == b.fontWeight.value &&
-      a.fontStyle.value == b.fontStyle.value && a.lineHeight.value == b.lineHeight.value &&
-      a.letterSpacing.value == b.letterSpacing.value &&
-      a.textTransform.value == b.textTransform.value && a.hyphens.value == b.hyphens.value &&
-      a.lang.value == b.lang.value && a.numberOfLines.value == b.numberOfLines.value &&
-      a.ellipsizeMode.value == b.ellipsizeMode.value &&
-      a.allowFontScaling.value == b.allowFontScaling.value &&
-      a.maxFontSizeMultiplier.value == b.maxFontSizeMultiplier.value;
+  // hasSameValue compares Nitro's immutable prop entries by identity: an unchanged
+  // JS value keeps its entry across snapshots, so this never misses a change.
+  return a.text.hasSameValue(b.text) && a.fontSize.hasSameValue(b.fontSize) &&
+      a.fontFamily.hasSameValue(b.fontFamily) && a.fontWeight.hasSameValue(b.fontWeight) &&
+      a.fontStyle.hasSameValue(b.fontStyle) && a.lineHeight.hasSameValue(b.lineHeight) &&
+      a.letterSpacing.hasSameValue(b.letterSpacing) && a.textTransform.hasSameValue(b.textTransform) &&
+      a.hyphens.hasSameValue(b.hyphens) && a.lang.hasSameValue(b.lang) &&
+      a.numberOfLines.hasSameValue(b.numberOfLines) && a.ellipsizeMode.hasSameValue(b.ellipsizeMode) &&
+      a.allowFontScaling.hasSameValue(b.allowFontScaling) &&
+      a.maxFontSizeMultiplier.hasSameValue(b.maxFontSizeMultiplier);
 }
 
 react::ShadowNodeTraits NitroPlainTextShadowNode::BaseTraits() {

@@ -11454,18 +11454,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nitrogen@npm:0.35.9":
-  version: 0.35.9
-  resolution: "nitrogen@npm:0.35.9"
+"nitrogen@npm:0.37.1":
+  version: 0.37.1
+  resolution: "nitrogen@npm:0.37.1"
   dependencies:
     chalk: "npm:^5.3.0"
-    react-native-nitro-modules: "npm:^0.35.9"
+    react-native-nitro-modules: "npm:^0.37.1"
     ts-morph: "npm:^28.0.0"
     yargs: "npm:^18.0.0"
-    zod: "npm:^4.0.5"
+    zod: "npm:^4.4.3"
   bin:
     nitrogen: lib/index.js
-  checksum: 10c0/1138573077003a27498902065318afb8928976df488c352105036977b46e9b99a4c3adfb246adb8a005fa793c8f8a4fbb1f2923211d16352cf7f9a5b30423fbe
+  checksum: 10c0/2f0aef19427a58dde9c3e9da9151381c21e0479c0e7fceb55131039201113f3eacd8c5cc01e5b408d4ba86dba8d9a7210d7189144cc35fdde83db950f34c29bd
   languageName: node
   linkType: hard
 
@@ -12625,23 +12625,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-nitro-modules@npm:0.35.9":
-  version: 0.35.9
-  resolution: "react-native-nitro-modules@npm:0.35.9"
+"react-native-nitro-modules@npm:0.37.1, react-native-nitro-modules@npm:^0.37.1":
+  version: 0.37.1
+  resolution: "react-native-nitro-modules@npm:0.37.1"
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 10c0/2e5c1b3eed1d187e7c2bbbf661e6405cb69c6a20b01427ea4c8a3bfe07a4baf2efbeb170a21f8c17fb0e18f022244f4b1fe1ce69a7ec824a7a4cf72441893cf1
-  languageName: node
-  linkType: hard
-
-"react-native-nitro-modules@npm:^0.35.9":
-  version: 0.35.10
-  resolution: "react-native-nitro-modules@npm:0.35.10"
-  peerDependencies:
-    react: "*"
-    react-native: "*"
-  checksum: 10c0/55c117c418abfb1223053eb93b8604bd7b6edc22ee9568a7017888a78f51dfa8ae5f2d11906c4cf6c87ae41b05ba099dc8958082b8aa1cfe8e1c7c1f3e9aff0e
+  checksum: 10c0/5178f2ee891cb746b084fdf382b6020e366d8e4a81922a3f1d60a453d34fca6ebb1b00c4c28785c36385bc182ab76a30cba70441c39abbc25d3ad54db612e46e
   languageName: node
   linkType: hard
 
@@ -12674,7 +12664,7 @@ __metadata:
     react-native-memory-footprint: "npm:^0.1.0"
     react-native-mmkv: "npm:^4.3.2"
     react-native-monorepo-config: "npm:^0.4.0"
-    react-native-nitro-modules: "npm:0.35.9"
+    react-native-nitro-modules: "npm:0.37.1"
     react-native-plain-text-nitro: "workspace:*"
     react-native-reanimated: "npm:4.5.1"
     react-native-safe-area-context: "npm:~5.7.0"
@@ -12687,10 +12677,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "react-native-plain-text-nitro@workspace:nitro"
   dependencies:
-    nitrogen: "npm:0.35.9"
+    nitrogen: "npm:0.37.1"
     react: "npm:19.2.3"
     react-native: "npm:0.86.2"
-    react-native-nitro-modules: "npm:0.35.9"
+    react-native-nitro-modules: "npm:0.37.1"
   peerDependencies:
     react: "*"
     react-native: "*"
@@ -15423,7 +15413,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^4.0.5":
+"zod@npm:^4.4.3":
   version: 4.6.5
   resolution: "zod@npm:4.6.5"
   checksum: 10c0/32eb6c5e98becbe045675b2141c3611451c16ba567f9779231d79af41c4d651ca1c22f154aef7e6c6e77b929f23e43f1154ca05b82e119e922353725d6776af5

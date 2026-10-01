@@ -1,0 +1,30 @@
+{
+  "uiViewClassName": "NitroPlainText",
+  "supportsRawText": false,
+  "bubblingEventTypes": {},
+  "directEventTypes": {},
+  "validAttributes": {
+    "text": true,
+    "color": true,
+    "fontSize": true,
+    "fontFamily": true,
+    "fontWeight": true,
+    "fontStyle": true,
+    "lineHeight": true,
+    "letterSpacing": true,
+    "textAlign": true,
+    "textDecorationLine": true,
+    "textTransform": true,
+    "textShadowColor": true,
+    "textShadowOffsetWidth": true,
+    "textShadowOffsetHeight": true,
+    "textShadowRadius": true,
+    "hyphens": true,
+    "lang": true,
+    "numberOfLines": true,
+    "ellipsizeMode": true,
+    "allowFontScaling": true,
+    "maxFontSizeMultiplier": true,
+    "hybridRef": true
+  }
+}
