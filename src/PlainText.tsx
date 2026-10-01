@@ -125,6 +125,7 @@ export function mapPlainTextProps({
 
   const content = text ?? children;
 
+  // Hot path
   if (typeof content === 'string') {
     nativeProps.text = content;
   }
@@ -170,12 +171,6 @@ export function mapPlainTextProps({
     }
   }
 
-  applyStyle(nativeProps, style);
-
-  return nativeProps as NativeProps;
-}
-
-function applyStyle(nativeProps: Record<string, unknown>, style: StyleProp<PlainTextStyle>): void {
   // No null guard: `for...in` over a missing style runs zero times.
   const flatStyle = StyleSheet.flatten(style) as Record<string, unknown>;
 
@@ -217,4 +212,6 @@ function applyStyle(nativeProps: Record<string, unknown>, style: StyleProp<Plain
   if (viewStyle !== undefined) {
     nativeProps.style = viewStyle;
   }
+
+  return nativeProps as NativeProps;
 }
