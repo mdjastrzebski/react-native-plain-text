@@ -633,19 +633,10 @@ mounted, changing the font size left every label at its old size. Fixed by
 moving the comparison into the clone constructor. The numbers above are from
 after the fix.
 
-### Resolve `aria-*` without destructuring the names (`src/PlainText.tsx`)
+### Resolve `aria-*` by destructuring the names (`src/PlainText.tsx`)
 
-PR #43 destructured all 7 `aria-*` names out of `props`. Babel's
-`objectWithoutProperties` scans its exclusion list per own key of `props`, so
-each extra name costs every `mapPlainTextProps` call, `aria-*` set or not — an
-`experiment`-prop A/B (concluded, see [perf-experiments.md](perf-experiments.md))
-measured ~150-200ns/call unset under Node/V8.
-
-Now only the 4 base names are destructured; the 7 `aria-*` fields are read off
-`rest` and deleted individually once resolved, so an unset alias costs one
-property read. Each of label/state/hidden resolves in its own independent
-`if`, inlined rather than behind a helper — a multi-param call boundary
-measured costlier than the reads it would guard.
+`mapPlainTextProps` destructures all 7 `aria-*` names directly, the same as the
+4 base props, so none of them reaches `rest`.
 
 ## Considered and rejected
 

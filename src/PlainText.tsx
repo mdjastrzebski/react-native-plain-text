@@ -105,14 +105,20 @@ export function PlainText({ ref, ...props }: PlainTextProps & { ref?: Ref<PlainT
   return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }
 
-// Not destructuring the aria-* names is deliberate, not an oversight: each extra
-// exclusion costs every call regardless of use — see docs/contributing/performance.md.
-// `rest` still holds any aria-* keys, read and stripped per-field below.
+// Same aria-* set and precedence RN <Text> resolves — see Text.js:91-143.
+// SYNC: must match docs/contributing/sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary.
 export function mapPlainTextProps({
   children,
   text,
   style,
   unstable_lineHeightClippingCompat,
+  'aria-label': ariaLabel,
+  'aria-busy': ariaBusy,
+  'aria-checked': ariaChecked,
+  'aria-disabled': ariaDisabled,
+  'aria-expanded': ariaExpanded,
+  'aria-selected': ariaSelected,
+  'aria-hidden': ariaHidden,
   ...rest
 }: PlainTextProps): NativeProps {
   const nativeProps: Record<string, unknown> = rest;
@@ -136,19 +142,10 @@ export function mapPlainTextProps({
     nativeProps.lineHeightClippingCompat = unstable_lineHeightClippingCompat;
   }
 
-  // SYNC: alias list and precedence must match Text.js — see
-  // docs/contributing/sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary.
-  const ariaLabel = nativeProps['aria-label'] as string | undefined;
   if (ariaLabel !== undefined) {
     nativeProps.accessibilityLabel = ariaLabel;
-    delete nativeProps['aria-label'];
   }
 
-  const ariaBusy = nativeProps['aria-busy'] as boolean | undefined;
-  const ariaChecked = nativeProps['aria-checked'] as boolean | 'mixed' | undefined;
-  const ariaDisabled = nativeProps['aria-disabled'] as boolean | undefined;
-  const ariaExpanded = nativeProps['aria-expanded'] as boolean | undefined;
-  const ariaSelected = nativeProps['aria-selected'] as boolean | undefined;
   if (
     ariaBusy !== undefined ||
     ariaChecked !== undefined ||
@@ -164,20 +161,13 @@ export function mapPlainTextProps({
       expanded: ariaExpanded ?? state?.expanded,
       selected: ariaSelected ?? state?.selected,
     };
-    delete nativeProps['aria-busy'];
-    delete nativeProps['aria-checked'];
-    delete nativeProps['aria-disabled'];
-    delete nativeProps['aria-expanded'];
-    delete nativeProps['aria-selected'];
   }
 
-  const ariaHidden = nativeProps['aria-hidden'] as boolean | undefined;
   if (ariaHidden !== undefined) {
     nativeProps.accessibilityElementsHidden = ariaHidden;
     if (ariaHidden === true) {
       nativeProps.importantForAccessibility = 'no-hide-descendants';
     }
-    delete nativeProps['aria-hidden'];
   }
 
   applyStyle(nativeProps, style);

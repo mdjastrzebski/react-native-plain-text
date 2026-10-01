@@ -651,9 +651,10 @@ and friends) that RN's `<Text>` doesn't, so those stay unhandled here too.
 
 These are RN `AccessibilityProps` keys, which `ViewProps` extends, so they type-check
 on `NativeProps` without ever being declared in the spec. The native view has no
-`aria-*` props: `PlainTextProps` spreads its rest into the native props object, so an
-alias left in place lands in Fabric's prop set as a key nothing reads and is silently
-dropped. RN's `<Text>` converts them in JS (`Text.js:91-143`) and so must `PlainText`.
+`aria-*` props: an alias left in place would land in Fabric's prop set as a key nothing
+reads and be silently dropped. RN's `<Text>` converts them in JS (`Text.js:91-143`) and
+so must `PlainText` — `mapPlainTextProps` destructures all seven names directly, same as
+the four base ones, so none of them ever reaches `rest`.
 
 **Files:**
 
@@ -670,9 +671,8 @@ exactly:
   reference.
 - `aria-hidden` always sets `accessibilityElementsHidden`, and adds
   `importantForAccessibility: 'no-hide-descendants'` only when it's `true`.
-- Each alias present in `rest` is deleted once resolved; a leftover key is silently
-  ignored by native, so a missed `delete` fails quietly too (the "never leaks" test
-  covers it).
+- Each alias is destructured out of `props`, so none of the seven names reaches `rest`
+  in the first place (the "never leaks" test covers it).
 
 **Deviations, both deliberate:**
 
