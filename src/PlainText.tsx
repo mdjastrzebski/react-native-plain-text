@@ -105,10 +105,9 @@ export function PlainText({ ref, ...props }: PlainTextProps & { ref?: Ref<PlainT
   return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }
 
-// Doesn't destructure the 7 aria-* names: Babel's objectWithoutProperties scans its
-// exclusion list per own key of props, so each extra excluded name costs every call,
-// aria-* set or not — see docs/contributing/performance.md. `rest` below still holds
-// any aria-* keys under their original names, read and stripped per-field further down.
+// Not destructuring the aria-* names is deliberate, not an oversight: each extra
+// exclusion costs every call regardless of use — see docs/contributing/performance.md.
+// `rest` still holds any aria-* keys, read and stripped per-field below.
 export function mapPlainTextProps({
   children,
   text,
@@ -122,7 +121,9 @@ export function mapPlainTextProps({
 
   if (typeof content === 'string') {
     nativeProps.text = content;
-  } else if (content != null) {
+  }
+  // Slow path: JSX passes `{count} items` as `[count, ' items']`.
+  else if (content != null) {
     const joined = joinTextChildren(content);
     if (joined !== undefined) {
       nativeProps.text = joined;
@@ -135,18 +136,8 @@ export function mapPlainTextProps({
     nativeProps.lineHeightClippingCompat = unstable_lineHeightClippingCompat;
   }
 
-  // Plain property reads, not `in`: V8's HasProperty path (what `in` compiles to)
-  // JITs worse than a LoadIC here, measured. Inlined, not a shared helper: a
-  // multi-param function-call boundary measured costlier than the reads it would
-  // guard. Three independent blocks below, not one combined gate — label, state, and
-  // hidden are unrelated aliases; Text.js resolves them independently too.
-  // SYNC: the alias list and precedence rules have to match Text.js — see
+  // SYNC: alias list and precedence must match Text.js — see
   // docs/contributing/sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary.
-
-  // `!== undefined`, not `!= null`: the type is `string | undefined`, so there's no
-  // real `null` to guard against. One condition then covers both the merge and the
-  // delete, skipping the delete too when unset (measured: ~90ns to delete a key
-  // that's there vs. ~14ns for a no-op).
   const ariaLabel = nativeProps['aria-label'] as string | undefined;
   if (ariaLabel !== undefined) {
     nativeProps.accessibilityLabel = ariaLabel;
