@@ -157,6 +157,9 @@ avoid AI-writing tells.
 - Make sure `yarn validate` passes.
 - Follow the pull request template.
 - For changes to the API or implementation, open an issue to discuss first.
+- PR descriptions must be short: a few bullet points with only the key
+  information (what changed and why). Do not write lengthy descriptions,
+  multi-section write-ups, or restate what's visible in the diff.
 
 ## Documentation site
 
