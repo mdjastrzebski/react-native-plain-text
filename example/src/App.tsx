@@ -16,6 +16,7 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PlainText } from 'react-native-plain-text';
 import { CompareTextProvider } from './components/CompareText';
+import { TextImplementationProvider } from './components/TextImplementation';
 import { useSessionState } from './useSessionState';
 import { COLOR } from './theme';
 import FeaturesScreen from './screens/FeaturesScreen';
@@ -113,23 +114,26 @@ export default function App() {
   return (
     <SafeAreaProvider>
       {/* Above the navigator: the Features and Examples screens share one
-          "Compare Text" setting, so switching tabs keeps the overlay on. */}
-      <CompareTextProvider>
-        <NavigationContainer onStateChange={onStateChange}>
-          <Tab.Navigator
-            initialRouteName={initialTabName}
-            screenOptions={{
-              headerShown: false,
-              tabBarActiveTintColor: COLOR.indigo,
-              tabBarInactiveTintColor: COLOR.faint,
-            }}
-          >
-            {TAB_SCREENS.map(({ title, stack, tabBarIcon }) => (
-              <Tab.Screen key={title} name={title} component={stack} options={{ tabBarIcon }} />
-            ))}
-          </Tab.Navigator>
-        </NavigationContainer>
-      </CompareTextProvider>
+          "Compare Text" setting and one Fabric/Nitro choice, so switching tabs
+          keeps both. */}
+      <TextImplementationProvider>
+        <CompareTextProvider>
+          <NavigationContainer onStateChange={onStateChange}>
+            <Tab.Navigator
+              initialRouteName={initialTabName}
+              screenOptions={{
+                headerShown: false,
+                tabBarActiveTintColor: COLOR.indigo,
+                tabBarInactiveTintColor: COLOR.faint,
+              }}
+            >
+              {TAB_SCREENS.map(({ title, stack, tabBarIcon }) => (
+                <Tab.Screen key={title} name={title} component={stack} options={{ tabBarIcon }} />
+              ))}
+            </Tab.Navigator>
+          </NavigationContainer>
+        </CompareTextProvider>
+      </TextImplementationProvider>
     </SafeAreaProvider>
   );
 }

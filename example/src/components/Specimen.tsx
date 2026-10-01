@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { PlainText, type PlainTextStyle } from 'react-native-plain-text';
 import { useCompatOn } from './CompareText';
+import { SpecimenText } from './TextImplementation';
 import { COLOR } from '../theme';
 
 export function Cover({
@@ -155,7 +156,7 @@ export function TextItem({
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number;
   lang?: string;
-  // Forwarded to both PlainText and the comparison Text so both expose the same
+  // Forwarded to both the specimen and the comparison Text so both expose the same
   // accessibility surface.
   accessibilityProps?: AccessibilityProps & { testID?: string };
   children: string;
@@ -169,7 +170,7 @@ export function TextItem({
           PlainText's measured width instead of measuring its own. */}
       <View style={styles.specimen}>
         <View style={[styles.row, containerStyle]}>
-          <PlainText
+          <SpecimenText
             // `base` first (so a row's own fontSize/style overrides the default),
             // `compareText` last (so it overrides a demo row's own color/border,
             // same as the Text overlay does).
@@ -187,7 +188,7 @@ export function TextItem({
             {...accessibilityProps}
           >
             {children}
-          </PlainText>
+          </SpecimenText>
         </View>
         {showText && (
           <View style={styles.overlay}>

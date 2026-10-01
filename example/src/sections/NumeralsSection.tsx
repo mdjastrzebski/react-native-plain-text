@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { PlainText } from 'react-native-plain-text';
 import { CompareBox, Section, screenStyles, TextItem } from '../components/Specimen';
+import { SpecimenText } from '../components/TextImplementation';
 import { COLOR } from '../theme';
 
 // Figures at display sizes, where negative tracking and the digit widths matter.
@@ -46,22 +46,22 @@ export function NumeralsSection({ showText }: { showText: boolean }) {
           </View>
         }
       >
-        <PlainText
+        <SpecimenText
           style={[
             { fontSize: 32, fontWeight: '800', color: COLOR.ink },
             showText && styles.compareText,
           ]}
         >
           €169.90
-        </PlainText>
-        <PlainText
+        </SpecimenText>
+        <SpecimenText
           style={[
             { fontSize: 13, color: COLOR.muted, marginLeft: 6 },
             showText && styles.compareText,
           ]}
         >
           {' incl. VAT'}
-        </PlainText>
+        </SpecimenText>
       </CompareBox>
       {/* Three siblings, not two: baseline alignment is a row-wide property,
         not just first/last child. */}
@@ -85,30 +85,30 @@ export function NumeralsSection({ showText }: { showText: boolean }) {
           </View>
         }
       >
-        <PlainText
+        <SpecimenText
           style={[
             { fontSize: 40, fontWeight: '300', color: COLOR.ink },
             showText && styles.compareText,
           ]}
         >
           98.4
-        </PlainText>
-        <PlainText
+        </SpecimenText>
+        <SpecimenText
           style={[
             { fontSize: 20, color: COLOR.muted, marginLeft: 2 },
             showText && styles.compareText,
           ]}
         >
           %
-        </PlainText>
-        <PlainText
+        </SpecimenText>
+        <SpecimenText
           style={[
             { fontSize: 13, color: COLOR.moss, marginLeft: 8 },
             showText && styles.compareText,
           ]}
         >
           {' +2.1 today'}
-        </PlainText>
+        </SpecimenText>
       </CompareBox>
       {/* Same font size both sides: catches a lineHeight-driven baseline
         shift that a size-only fix would miss. */}
@@ -143,7 +143,7 @@ export function NumeralsSection({ showText }: { showText: boolean }) {
           </View>
         }
       >
-        <PlainText
+        <SpecimenText
           style={[
             {
               fontSize: 16,
@@ -156,15 +156,15 @@ export function NumeralsSection({ showText }: { showText: boolean }) {
           ]}
         >
           Total
-        </PlainText>
-        <PlainText
+        </SpecimenText>
+        <SpecimenText
           style={[
             { fontSize: 16, fontWeight: '600', color: COLOR.ink, marginLeft: 8 },
             showText && styles.compareText,
           ]}
         >
           €42.00
-        </PlainText>
+        </SpecimenText>
       </CompareBox>
     </Section>
   );

@@ -13,6 +13,16 @@ Native code: `ios/HybridNitroPlainText.swift` (UILabel, one `attributedText` wri
 per prop transaction) and `android/.../HybridNitroPlainText.kt` (AppCompatTextView,
 dirty flags flushed in `afterUpdate`), each kept to the shape of the Fabric view.
 
+## In the example app
+
+- **Performance screen:** the NitroPlainText and NativeNitroPlainText variant chips,
+  next to PlainText and NativePlainText. Each chip names its implementation, and
+  this screen ignores the toggle below.
+- **Features and Examples screens:** a "Fabric"/"Nitro" header button
+  (`example/src/components/TextImplementation.tsx`) switches every specimen,
+  including the animated ones, between the two. It's session-persisted like the
+  other header toggles. Labels and other screen chrome stay on Fabric.
+
 ## Measuring
 
 Nitro Views get a stock, non-measuring shadow node, so on its own the view would
@@ -87,4 +97,6 @@ non-measuring `ConcreteViewShadowNode` with no hook for a custom one, so
 
 Delete `nitro/`, drop `"nitro"` from the root `workspaces`, `tsconfig.build.json`,
 `.oxfmtrc.json` and `.gitignore`, drop the dependency from `example/package.json`, remove the
-Nitro variants from `example/src/screens/PerformanceScreen.tsx`, then `yarn`.
+Nitro variants from `example/src/screens/PerformanceScreen.tsx` and the toggle
+(`TextImplementation.tsx`, its uses in `CompareText.tsx`, `App.tsx`,
+`Specimen.tsx`, `AnimatingTextSection.tsx` and three CompareBox sections), then `yarn`.

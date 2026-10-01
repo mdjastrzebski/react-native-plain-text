@@ -23,6 +23,9 @@ import {
   type PlainTextStyle,
 } from 'react-native-plain-text';
 // TEMPORARY: Nitro Views port of PlainText, benchmarked side by side (nitro/).
+// Imported directly rather than through the app-wide Fabric/Nitro toggle
+// (components/TextImplementation.tsx), which this screen deliberately ignores:
+// each variant chip names its implementation, so results never mislabel a run.
 import { NativeNitroPlainText, NitroPlainText } from 'react-native-plain-text-nitro';
 import { Section, screenStyles } from '../components/Specimen';
 import { useSessionState } from '../useSessionState';

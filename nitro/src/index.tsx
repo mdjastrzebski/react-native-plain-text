@@ -1,5 +1,7 @@
+import type { ComponentRef, Ref } from 'react';
 import {
   processColor,
+  type AccessibilityState,
   StyleSheet,
   type AccessibilityProps,
   type StyleProp,
@@ -29,6 +31,7 @@ type SupportedTextProps =
   | 'ellipsizeMode'
   | 'allowFontScaling'
   | 'maxFontSizeMultiplier'
+  | 'id'
   | 'nativeID'
   | 'testID'
   | 'onLayout';
@@ -81,17 +84,58 @@ const TEXT_STYLE_KEYS: Record<string, number | undefined> = Object.assign(Object
  * Temporary Nitro Views port of `PlainText`, for benchmarking. Supports a subset of
  * PlainText's props, see `specs/NitroPlainText.nitro.ts`.
  */
-export function NitroPlainText(props: NitroPlainTextProps) {
-  return <NativeNitroPlainText {...mapNitroPlainTextProps(props)} />;
+type NitroPlainTextRef = ComponentRef<typeof NativeNitroPlainText>;
+
+// `ref` reaches the host component, so Animated/Reanimated's createAnimatedComponent
+// can write `text` straight onto it, as with PlainText.
+export function NitroPlainText({
+  ref,
+  ...props
+}: NitroPlainTextProps & { ref?: Ref<NitroPlainTextRef> }) {
+  return <NativeNitroPlainText {...mapNitroPlainTextProps(props)} ref={ref} />;
 }
 
 export function mapNitroPlainTextProps({
   children,
   text,
   style,
+  'aria-label': ariaLabel,
+  'aria-busy': ariaBusy,
+  'aria-checked': ariaChecked,
+  'aria-disabled': ariaDisabled,
+  'aria-expanded': ariaExpanded,
+  'aria-selected': ariaSelected,
+  'aria-hidden': ariaHidden,
   ...rest
 }: NitroPlainTextProps): NativeProps {
   const nativeProps: Record<string, unknown> = rest;
+
+  // Copy of src/PlainText.tsx's aria-* -> accessibility* mapping (RN <Text>'s).
+  if (ariaLabel != null) {
+    nativeProps.accessibilityLabel = ariaLabel;
+  }
+  if (
+    ariaBusy != null ||
+    ariaChecked != null ||
+    ariaDisabled != null ||
+    ariaExpanded != null ||
+    ariaSelected != null
+  ) {
+    const state = nativeProps.accessibilityState as AccessibilityState | undefined;
+    nativeProps.accessibilityState = {
+      busy: ariaBusy ?? state?.busy,
+      checked: ariaChecked ?? state?.checked,
+      disabled: ariaDisabled ?? state?.disabled,
+      expanded: ariaExpanded ?? state?.expanded,
+      selected: ariaSelected ?? state?.selected,
+    };
+  }
+  if (ariaHidden !== undefined) {
+    nativeProps.accessibilityElementsHidden = ariaHidden;
+    if (ariaHidden === true) {
+      nativeProps.importantForAccessibility = 'no-hide-descendants';
+    }
+  }
 
   const content = text ?? children;
   if (typeof content === 'string') {

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { PlainText } from 'react-native-plain-text';
 import { CompareBox, Section, screenStyles, TextItem } from '../components/Specimen';
+import { SpecimenText } from '../components/TextImplementation';
 import { COLOR } from '../theme';
 
 export function BadgesSection({ showText }: { showText: boolean }) {
@@ -90,15 +90,15 @@ export function BadgesSection({ showText }: { showText: boolean }) {
           </View>
         }
       >
-        <PlainText
+        <SpecimenText
           style={[
             { fontSize: 24, fontWeight: '700', color: COLOR.ink },
             showText && styles.compareText,
           ]}
         >
           New Season
-        </PlainText>
-        <PlainText
+        </SpecimenText>
+        <SpecimenText
           style={[
             {
               fontSize: 11,
@@ -115,7 +115,7 @@ export function BadgesSection({ showText }: { showText: boolean }) {
           ]}
         >
           SALE
-        </PlainText>
+        </SpecimenText>
       </CompareBox>
     </Section>
   );

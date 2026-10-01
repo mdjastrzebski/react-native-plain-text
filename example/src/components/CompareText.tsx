@@ -11,6 +11,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { ParamListBase } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { PlainText } from 'react-native-plain-text';
+import { useTextImplementation } from './TextImplementation';
 import { COLOR } from '../theme';
 
 // Lives above the tab navigator (not in either screen) so the toggle is shared
@@ -46,6 +47,7 @@ export function useCompareText(navigation: NativeStackNavigationProp<ParamListBa
     throw new Error('useCompareText must be used inside a CompareTextProvider');
   }
   const { showText, toggle, compatOn, toggleCompat } = context;
+  const { implementation, toggle: toggleImplementation } = useTextImplementation();
 
   useLayoutEffect(() => {
     const button = (
@@ -72,21 +74,37 @@ export function useCompareText(navigation: NativeStackNavigationProp<ParamListBa
       </Pressable>
     );
 
+    // TEMPORARY: switches the specimens between the Fabric component and its
+    // Nitro Views port (nitro/). Labels the one currently showing.
+    const implementationButton = (
+      <Pressable
+        onPress={toggleImplementation}
+        hitSlop={8}
+        style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonPressed]}
+      >
+        <PlainText style={styles.headerButtonLabel}>
+          {implementation === 'nitro' ? 'Nitro' : 'Fabric'}
+        </PlainText>
+      </Pressable>
+    );
+
     navigation.setOptions({
       // `headerRight` draws on Android; iOS uses `unstable_headerRightItems` for
       // `hidesSharedBackground` (iOS 26 otherwise puts a glass capsule behind the label).
       headerRight: () => (
         <View style={styles.headerButtonRow}>
+          {implementationButton}
           {compatButton}
           {button}
         </View>
       ),
       unstable_headerRightItems: () => [
+        { type: 'custom', element: implementationButton, hidesSharedBackground: true },
         { type: 'custom', element: compatButton, hidesSharedBackground: true },
         { type: 'custom', element: button, hidesSharedBackground: true },
       ],
     });
-  }, [navigation, showText, toggle, compatOn, toggleCompat]);
+  }, [navigation, showText, toggle, compatOn, toggleCompat, implementation, toggleImplementation]);
 
   return showText;
 }

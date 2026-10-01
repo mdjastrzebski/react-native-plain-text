@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { PlainText } from 'react-native-plain-text';
 import { CompareBox, Section } from '../components/Specimen';
+import { SpecimenText } from '../components/TextImplementation';
 import { COLOR } from '../theme';
 
 // H (flat-bottomed), g (bowl + descending tail), and x (x-height only) cover
@@ -34,7 +34,7 @@ export function BaselineAlignmentSection({ showText }: { showText: boolean }) {
         }
       >
         {BASELINE_ALIGNMENT_GLYPHS.map(({ text, fontSize }, index) => (
-          <PlainText
+          <SpecimenText
             key={text}
             style={[
               { fontSize, marginLeft: index === 0 ? 0 : 10 },
@@ -42,7 +42,7 @@ export function BaselineAlignmentSection({ showText }: { showText: boolean }) {
             ]}
           >
             {text}
-          </PlainText>
+          </SpecimenText>
         ))}
         <View style={styles.baselineRuler} />
       </CompareBox>

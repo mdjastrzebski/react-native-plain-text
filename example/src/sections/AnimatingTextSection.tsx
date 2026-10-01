@@ -1,15 +1,28 @@
-import { useEffect, useRef, type ComponentRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Animated as RNAnimated, StyleSheet, Text, View } from 'react-native';
 import ReanimatedAnimated, { useAnimatedProps, useSharedValue } from 'react-native-reanimated';
 import { PlainText } from 'react-native-plain-text';
+// TEMPORARY: Nitro Views port of PlainText (nitro/), see nitro/README.md.
+import { NitroPlainText } from 'react-native-plain-text-nitro';
 import { Section } from '../components/Specimen';
+import { useTextImplementation } from '../components/TextImplementation';
 import { TextScrubber } from '../components/TextScrubber';
 import { COLOR } from '../theme';
 
 // `text`, not `children`: createAnimatedComponent writes updates onto the host
 // ref by prop name, bypassing PlainText's children -> text remap.
-const RNAnimatedPlainText = RNAnimated.createAnimatedComponent(PlainText);
-const ReanimatedPlainText = ReanimatedAnimated.createAnimatedComponent(PlainText);
+// Both implementations up front, picked per render by the app-wide toggle:
+// createAnimatedComponent must run once, not per render.
+const ANIMATED = {
+  fabric: {
+    rn: RNAnimated.createAnimatedComponent(PlainText),
+    reanimated: ReanimatedAnimated.createAnimatedComponent(PlainText),
+  },
+  nitro: {
+    rn: RNAnimated.createAnimatedComponent(NitroPlainText),
+    reanimated: ReanimatedAnimated.createAnimatedComponent(NitroPlainText),
+  },
+};
 
 // `'worklet'` lets the same function run on both the RN Animated and
 // Reanimated sides.
@@ -36,7 +49,10 @@ export function AnimatingTextSection({
   // several times per frame and Fabric commits can land out of order, so
   // coalesce to one write per frame.
   const rnValue = useRef(new RNAnimated.Value(0)).current;
-  const rnAnimatedRef = useRef<ComponentRef<typeof RNAnimatedPlainText>>(null);
+  // Re-pointed on remount when the implementation toggles; flush() reads it late.
+  const rnAnimatedRef = useRef<{ setNativeProps(props: object): void }>(null);
+  const { implementation } = useTextImplementation();
+  const { rn: RNAnimatedText, reanimated: ReanimatedText } = ANIMATED[implementation];
 
   useEffect(() => {
     let frame: number | null = null;
@@ -73,11 +89,11 @@ export function AnimatingTextSection({
     <Section title="Animating text" footer={ANIMATING_TEXT_FOOTER} spacedRows>
       <View style={styles.animatingRow}>
         <Text style={styles.animatingLabel}>ANIMATED (RN CORE)</Text>
-        <RNAnimatedPlainText ref={rnAnimatedRef} style={styles.animatingText} text="" />
+        <RNAnimatedText ref={rnAnimatedRef as never} style={styles.animatingText} text="" />
       </View>
       <View style={styles.animatingRow}>
         <Text style={styles.animatingLabel}>REANIMATED</Text>
-        <ReanimatedPlainText style={styles.animatingText} text="" animatedProps={reanimatedProps} />
+        <ReanimatedText style={styles.animatingText} text="" animatedProps={reanimatedProps} />
       </View>
       <Text style={styles.renderCountLabel}>RENDER COUNT: {renderCount.current}</Text>
       <TextScrubber onChange={onScrub} onDragStateChange={onDragStateChange} />
