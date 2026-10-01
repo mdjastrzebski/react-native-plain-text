@@ -48,24 +48,6 @@ Two rules, both binding on every new prop or style.
   also means every prop the cost table above rates has a native cost only, not a
   hidden JS one on top.
 
-**Two exceptions, both renames RN's own `<Text>` already makes in JS**, so neither
-adds a decision this library could have pushed down to native:
-
-- `unstable_lineHeightClippingCompat` → `lineHeightClippingCompat`, the value untouched
-  ([sync-points.md](sync-points.md#set-13--lineheightclippingcompat-one-prop-renamed-at-the-js-boundary)).
-- The `aria-*` aliases → the `accessibility*` props they stand for, each value still the
-  one the app set ([sync-points.md](sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary)).
-  `aria-hidden` is the one that writes two props instead of one, because Android needs
-  both `accessibilityElementsHidden` and `importantForAccessibility` to take a subtree
-  out of the accessibility tree.
-
-Cost of the second one when unused: seven extra names in the rest destructure, so Babel's
-`objectWithoutProperties` skips seven more entries per prop key it copies. Measured at
-~10 ns per `mapPlainTextProps` call on a typical four-prop node, against ~5 ms for a
-5000-node no-op update — under 0.01%, and it buys not silently dropping a prop on every
-render. The conversion itself is guarded, so an unset alias costs one comparison and an
-early return like any other prop.
-
 | Tier       | Means                                                                                                                                                    |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **light**  | A comparison and at most one primitive write per apply. No allocation. This is what a prop mapping onto a single platform setter should cost.            |
@@ -632,11 +614,6 @@ node, so it compared the new props against themselves, always returned
 mounted, changing the font size left every label at its old size. Fixed by
 moving the comparison into the clone constructor. The numbers above are from
 after the fix.
-
-### Resolve `aria-*` by destructuring the names (`src/PlainText.tsx`)
-
-`mapPlainTextProps` destructures all 7 `aria-*` names directly, the same as the
-4 base props, so none of them reaches `rest`.
 
 ## Considered and rejected
 

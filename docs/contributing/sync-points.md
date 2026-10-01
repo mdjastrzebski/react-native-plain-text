@@ -616,8 +616,9 @@ at runtime.
 only matter alongside another. Adding one of these props to the spec means removing it from the warning.
 
 The `aria-*` aliases are the other direction: `ViewProps` extends RN's `AccessibilityProps`, so they are already in
-`NativeProps` and were never listed here, but they need resolving before native sees them —
-[Set 18](#set-18--aria-aliases-resolved-at-the-js-boundary).
+`NativeProps` and were never listed here, but they need resolving before native sees them. See the comment above
+`mapPlainTextProps` in `src/PlainText.tsx` — that's the only place this behavior lives, so it isn't a multi-file sync
+point like the sets above.
 
 **Failure mode:** a prop missing from the warning is dropped by `Text` with no message. A prop the spec gains but the
 warning still lists warns about something that now works.
@@ -639,62 +640,6 @@ When the unified `Text` falls back to RN `<Text>` (`deopt`, nested text, non-str
 **Contract:** every `PlainTextOwnProps` key RN `<Text>` drops is checked in `findPlainTextOnlyProp`.
 
 **Failure mode:** a new `PlainTextOwnProps` key missing from the warning is dropped on fallback with no message.
-
----
-
-## Set 18 — `aria-*` aliases: resolved at the JS boundary
-
-**Props:** `aria-label`, `aria-busy`, `aria-checked`, `aria-disabled`, `aria-expanded`,
-`aria-selected`, `aria-hidden`. Exactly the ones RN's `<Text>` resolves, and nothing
-else — `<View>` resolves a second set (`aria-labelledby`, `aria-live`, `aria-valuemax`
-and friends) that RN's `<Text>` doesn't, so those stay unhandled here too.
-
-These are RN `AccessibilityProps` keys, which `ViewProps` extends, so they type-check
-on `NativeProps` without ever being declared in the spec. The native view has no
-`aria-*` props: an alias left in place would land in Fabric's prop set as a key nothing
-reads and be silently dropped. RN's `<Text>` converts them in JS (`Text.js:91-143`) and
-so must `PlainText` — `mapPlainTextProps` destructures all seven names directly, same as
-the four base ones, so none of them ever reaches `rest`.
-
-**Files:**
-
-- `node_modules/react-native/Libraries/Text/Text.js` — the conversion being mirrored
-- `src/PlainText.tsx` → `mapPlainTextProps` — the conversion itself
-- `src/__tests__/PlainText.test.tsx` — the `aria-* aliases` block
-
-**Contract:** the alias list, the per-key precedence and the merge rules match `Text.js`
-exactly:
-
-- `aria-label` wins over `accessibilityLabel`, and only when it isn't `null`.
-- The five state aliases each win over the `accessibilityState` field they name. Any one
-  of them set creates `accessibilityState`; none set leaves the prop untouched, by
-  reference.
-- `aria-hidden` always sets `accessibilityElementsHidden`, and adds
-  `importantForAccessibility: 'no-hide-descendants'` only when it's `true`.
-- Each alias is destructured out of `props`, so none of the seven names reaches `rest`
-  in the first place (the "never leaks" test covers it).
-
-**Deviations, both deliberate:**
-
-- The state merge rebuilds the object from the five fields it names, so
-  `accessibilityState={{value}}` combined with any state alias loses `value`. That is
-  `Text.js`'s behavior, kept so the two render the same tree. RN's own C++ conversion
-  (`AccessibilityProps.cpp:383`) merges field-wise and keeps it; this is where that
-  differs, not a bug in either.
-- `aria-hidden` sets `importantForAccessibility` even when the app set it explicitly, so
-  `aria-hidden` wins over both accessibility props it implies. Also `Text.js`'s behavior.
-
-**Why this isn't native:** RN is moving the conversion into C++ behind
-`ReactNativeFeatureFlags::enableNativeViewPropTransformations()`, which does the same
-seven aliases (`AccessibilityProps.cpp:322-457`) and merges `accessibilityState`
-field-wise. It ships defaulted **off** as of RN 0.86.2, which is the version this library
-targets, so the JS conversion is still the only one that runs. When the flag turns on,
-RN's `Text.js` will presumably drop its copy and so should this — re-check
-`Text.js:91-143` before assuming either side is settled.
-
-**Failure mode:** an alias that reaches native unchanged is invisible on first render and
-never announced by a screen reader. A new alias `Text.js` gains that isn't mirrored
-here stays unhandled — the opposite failure.
 
 ---
 

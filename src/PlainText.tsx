@@ -105,8 +105,8 @@ export function PlainText({ ref, ...props }: PlainTextProps & { ref?: Ref<PlainT
   return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }
 
-// Same aria-* set and precedence RN <Text> resolves — see Text.js:91-143.
-// SYNC: must match docs/contributing/sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary.
+// Mirrors RN <Text>'s aria-* -> accessibility* mapping, quirks included (Text.js:91-143).
+// Re-check if RN enables enableNativeViewPropTransformations (off as of 0.86.2).
 export function mapPlainTextProps({
   children,
   text,
@@ -142,16 +142,16 @@ export function mapPlainTextProps({
     nativeProps.lineHeightClippingCompat = unstable_lineHeightClippingCompat;
   }
 
-  if (ariaLabel !== undefined) {
+  if (ariaLabel != null) {
     nativeProps.accessibilityLabel = ariaLabel;
   }
 
   if (
-    ariaBusy !== undefined ||
-    ariaChecked !== undefined ||
-    ariaDisabled !== undefined ||
-    ariaExpanded !== undefined ||
-    ariaSelected !== undefined
+    ariaBusy != null ||
+    ariaChecked != null ||
+    ariaDisabled != null ||
+    ariaExpanded != null ||
+    ariaSelected != null
   ) {
     const state = nativeProps.accessibilityState as AccessibilityState | undefined;
     nativeProps.accessibilityState = {
