@@ -105,65 +105,11 @@ export function PlainText({ ref, ...props }: PlainTextProps & { ref?: Ref<PlainT
   return <PlainTextViewNativeComponent {...nativeProps} ref={ref} />;
 }
 
-// EXPERIMENT (`experiment` prop): routes to the aria-* optimized mapPlainTextPropsFast,
-// or to the baseline below (no aria-* support, pre-#43 behavior), to A/B the feature's
-// cost against not having it. `experiment` isn't part of PlainTextProps, so it's read
-// via a cast — same as the perf suite sets it. See docs/contributing/perf-experiments.md.
-export function mapPlainTextProps(props: PlainTextProps): NativeProps {
-  if ((props as Record<string, unknown>).experiment === true) {
-    return mapPlainTextPropsFast(props);
-  }
-
-  return mapPlainTextPropsBaseline(props);
-}
-
-// No aria-* handling — the library's pre-#43 shape, kept as the A/B's "without the
-// feature" arm. `rest` (== nativeProps) still contains any aria-* keys a caller set,
-// verbatim under their hyphenated names — inert on native, same as before #43.
-function mapPlainTextPropsBaseline({
-  children,
-  text,
-  style,
-  unstable_lineHeightClippingCompat,
-  ...rest
-}: PlainTextProps): NativeProps {
-  // `rest` is a fresh object, so it doubles as the native props. Add only keys that
-  // hold a value: Fabric's prop diff walks every key, `undefined` ones included.
-  const nativeProps: Record<string, unknown> = rest;
-
-  const content = text ?? children;
-
-  // Hot path
-  if (typeof content === 'string') {
-    nativeProps.text = content;
-  }
-  // Slow path: JSX passes `{count} items` as `[count, ' items']`.
-  else if (content != null) {
-    const joined = joinTextChildren(content);
-    if (joined !== undefined) {
-      nativeProps.text = joined;
-    } else if (__DEV__) {
-      warnOnUnsupportedChildren(content);
-    }
-  }
-
-  if (unstable_lineHeightClippingCompat !== undefined) {
-    nativeProps.lineHeightClippingCompat = unstable_lineHeightClippingCompat;
-  }
-
-  applyStyle(nativeProps, style);
-
-  return nativeProps as NativeProps;
-}
-
-// EXPERIMENT (`experiment` prop): the only path with aria-* support, optimized so the
-// common (aria-unset) case costs as little as possible over the baseline above — the
-// A/B measures the feature's cost once it's cheap, not two implementations of it.
 // Doesn't destructure the 7 aria-* names: Babel's objectWithoutProperties scans its
 // exclusion list per own key of props, so each extra excluded name costs every call,
-// aria-* set or not. `rest` below still holds any aria-* keys under their original
-// names, read and stripped per-field further down. See docs/contributing/perf-experiments.md.
-function mapPlainTextPropsFast({
+// aria-* set or not — see docs/contributing/performance.md. `rest` below still holds
+// any aria-* keys under their original names, read and stripped per-field further down.
+export function mapPlainTextProps({
   children,
   text,
   style,
@@ -193,10 +139,9 @@ function mapPlainTextPropsFast({
   // JITs worse than a LoadIC here, measured. Inlined, not a shared helper: a
   // multi-param function-call boundary measured costlier than the reads it would
   // guard. Three independent blocks below, not one combined gate — label, state, and
-  // hidden are unrelated aliases; Text.js resolves them independently too. SYNC: same
-  // precedence rules as mapPlainTextPropsBaseline's aria block — see
+  // hidden are unrelated aliases; Text.js resolves them independently too.
+  // SYNC: the alias list and precedence rules have to match Text.js — see
   // docs/contributing/sync-points.md#set-18--aria-aliases-resolved-at-the-js-boundary.
-  // See docs/contributing/perf-experiments.md for the measurements.
 
   // `!== undefined`, not `!= null`: the type is `string | undefined`, so there's no
   // real `null` to guard against. One condition then covers both the merge and the

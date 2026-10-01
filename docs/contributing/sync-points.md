@@ -670,8 +670,9 @@ exactly:
   reference.
 - `aria-hidden` always sets `accessibilityElementsHidden`, and adds
   `importantForAccessibility: 'no-hide-descendants'` only when it's `true`.
-- The aliases must be destructured out of the props, not read off `rest`. Nothing strips
-  them afterwards, and a leftover `aria-*` key is an unknown prop native ignores.
+- Each alias present in `rest` is deleted once resolved; a leftover key is silently
+  ignored by native, so a missed `delete` fails quietly too (the "never leaks" test
+  covers it).
 
 **Deviations, both deliberate:**
 
@@ -692,8 +693,8 @@ RN's `Text.js` will presumably drop its copy and so should this — re-check
 `Text.js:91-143` before assuming either side is settled.
 
 **Failure mode:** an alias that reaches native unchanged is invisible on first render and
-never announced by a screen reader. A stale entry in the destructuring list leaves the
-`Text.js` counterpart of the alias unhandled, in the other direction.
+never announced by a screen reader. A new alias `Text.js` gains that isn't mirrored
+here stays unhandled — the opposite failure.
 
 ---
 
