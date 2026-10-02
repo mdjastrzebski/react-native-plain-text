@@ -212,6 +212,13 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
     view?.setAndroidHyphenationFrequency(android_hyphenationFrequency)
   }
 
+  // iOS-only. Codegen requires it since the spec redeclares `accessible`, and
+  // BaseViewManager never handled the prop, so Android is unchanged.
+  // SYNC: see docs/contributing/sync-points.md#set-18--accessible-defaults-to-true.
+  @ReactProp(name = "accessible", defaultBoolean = true)
+  override fun setAccessible(view: PlainTextView?, accessible: Boolean) {
+  }
+
   @ReactProp(name = "allowFontScaling", defaultBoolean = true)
   override fun setAllowFontScaling(view: PlainTextView?, allowFontScaling: Boolean) {
     view?.setAllowFontScaling(allowFontScaling)

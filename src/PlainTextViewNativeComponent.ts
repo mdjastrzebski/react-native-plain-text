@@ -1,9 +1,9 @@
-import {
-  codegenNativeComponent,
-  type CodegenTypes,
-  type ColorValue,
-  type ViewProps,
-} from 'react-native';
+import { codegenNativeComponent, type CodegenTypes, type ColorValue } from 'react-native';
+// Not RN's ViewProps: omits `accessible` so it can be redeclared below. Codegen
+// matches `extends ViewProps` by name and fails on a type defined in this file,
+// so the alias must be imported under that name.
+// SYNC: see docs/contributing/sync-points.md#set-18--accessible-defaults-to-true.
+import type { PlainTextBaseViewProps as ViewProps } from './PlainTextBaseViewProps';
 
 // SYNC: this spec is the source of truth for props. Changing one touches several
 // other files that nothing checks automatically. See
@@ -12,6 +12,11 @@ import {
 // `Cost:` lines rate a prop that is *set*, per docs/contributing/performance.md#prop-cost-policy.
 // Unmarked props are light, and a set prop left at default still costs a check.
 export interface NativeProps extends ViewProps {
+  // Native default true (ViewProps' is false), matching RN <Text> with no per-render JS write.
+  // SYNC: RNPlainText.mm's -isAccessibilityElement reads this field. See
+  // docs/contributing/sync-points.md#set-18--accessible-defaults-to-true.
+  accessible?: CodegenTypes.WithDefault<boolean, true>;
+
   text?: string;
   color?: ColorValue;
   fontSize?: CodegenTypes.WithDefault<CodegenTypes.Float, 14>;
