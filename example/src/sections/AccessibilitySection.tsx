@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
-import { Section, TextItem } from '../components/Specimen';
+import { StyleSheet, Text } from 'react-native';
+import { CompareBox, Section, TextItem, screenStyles } from '../components/Specimen';
 import { COLOR } from '../theme';
 
 // Accessibility props pass straight through to the native view and aren't
@@ -54,6 +54,20 @@ export function AccessibilitySection({ showText }: { showText: boolean }) {
       >
         disabled
       </TextItem>
+      {/* VoiceOver should skip both. No overlay, so each row is one view and the result is unambiguous. */}
+      <TextItem
+        label="not accessible, PlainText"
+        showText={false}
+        style={styles.a11yRow}
+        accessibilityProps={{ accessible: false }}
+      >
+        PlainText: VoiceOver should skip this
+      </TextItem>
+      <CompareBox label="not accessible, RN Text" showText={false} overlay={null}>
+        <Text style={[screenStyles.base, styles.a11yRow]} accessible={false}>
+          RN Text: VoiceOver should skip this
+        </Text>
+      </CompareBox>
       <TextItem
         label="hidden"
         showText={showText}

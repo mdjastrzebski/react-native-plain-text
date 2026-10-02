@@ -21,6 +21,7 @@ most props only touch a few.
 
 **Props:** every prop declared in `NativeProps`:
 
+- `accessible` (iOS-only, see [Set 18](#set-18--accessible-defaults-to-true))
 - `text`
 - `color`
 - `fontSize`
@@ -640,6 +641,32 @@ When the unified `Text` falls back to RN `<Text>` (`deopt`, nested text, non-str
 **Contract:** every `PlainTextOwnProps` key RN `<Text>` drops is checked in `findPlainTextOnlyProp`.
 
 **Failure mode:** a new `PlainTextOwnProps` key missing from the warning is dropped on fallback with no message.
+
+---
+
+## Set 18 — `accessible` defaults to true
+
+**Props:** `accessible`.
+
+RN's native default is `false`. RN `<Text>` sends `true` from JS on every iOS render. PlainText sets it natively: the
+spec redeclares `accessible` as `WithDefault<boolean, true>`, which shadows `ViewProps::accessible` in
+`RNPlainTextProps`. For TypeScript to accept that, the spec extends an `Omit` of `ViewProps` imported under the name
+`ViewProps`. Codegen matches that name only, and fails on a type defined in the spec file.
+
+**Files:**
+
+- `src/PlainTextViewNativeComponent.ts` → the `accessible` declaration and the `ViewProps` import alias
+- `src/PlainTextBaseViewProps.ts` → the `Omit`
+- `ios/RNPlainText.mm` → `-isAccessibilityElement`, and `_label.isAccessibilityElement = NO`
+- `android/src/main/java/com/mdjstack/plaintext/PlainTextViewManager.kt` → no-op `setAccessible`, required by codegen
+
+**Contract:** the iOS getter reads `RNPlainTextProps::accessible`, not `ViewProps::accessible`.
+
+**Failure modes:**
+
+- Drop the spec declaration and every PlainText vanishes from VoiceOver.
+- Drop the getter and `accessible={false}` is ignored on iOS.
+- Rename the alias and codegen fails loudly.
 
 ---
 
