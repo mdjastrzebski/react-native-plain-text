@@ -80,10 +80,14 @@ jobs:
       - name: Generate Android project
         run: yarn example expo prebuild --platform android --no-install
 
+      # Nightly runs only look the key up and always build from scratch: an app
+      # restored under a matching fingerprint can pass on code it wasn't built from,
+      # which the nightly is there to catch. A key the lookup misses still gets saved.
       - name: Restore Android build
         id: android-build-cache
         uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
+          lookup-only: ${{ github.event_name == 'schedule' }}
           path: ${{ env.VRT_BUILD_CACHE_PATHS }}
           key: vrt-android-build-v4-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-${{ env.VRT_TOOLCHAIN }}-${{ steps.fingerprint.outputs.fingerprint }}
           restore-keys: |
@@ -142,7 +146,7 @@ jobs:
           channel: stable
           # The action runs `script:` line by line through `sh`, so orchestration lives in
           # a bash file.
-          script: ANDROID_BUILD_CACHE_HIT='${{ steps.android-build-cache.outputs.cache-hit }}' ./scripts/run-vrt-android-ci.sh
+          script: ANDROID_BUILD_CACHE_HIT='${{ steps.android-build-cache.outputs.cache-hit == 'true' && github.event_name != 'schedule' }}' ./scripts/run-vrt-android-ci.sh
 
       # Saved even when a later stage failed, so a capture flake keeps the fresh
       # build. The gate stops a run without a valid APK from caching an empty or
@@ -251,17 +255,19 @@ jobs:
       - name: Create iOS VRT simulator
         run: VRT_RESET_DEVICE=1 yarn vrt ios setup
 
+      # Nightly runs always build from scratch; see the Android job.
       - name: Restore iOS build
         id: ios-build-cache
         uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
+          lookup-only: ${{ github.event_name == 'schedule' }}
           path: ${{ env.VRT_BUILD_CACHE_PATHS }}
           key: vrt-ios-build-v4-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-${{ env.VRT_TOOLCHAIN }}-${{ steps.fingerprint.outputs.fingerprint }}
           restore-keys: |
             vrt-ios-build-v4-${{ runner.os }}-${{ runner.arch }}-vrt${{ env.VRT_ENABLED }}-${{ env.VRT_TOOLCHAIN }}-
 
       - name: Build iOS VRT app
-        if: steps.ios-build-cache.outputs.cache-hit != 'true'
+        if: steps.ios-build-cache.outputs.cache-hit != 'true' || github.event_name == 'schedule'
         run: yarn vrt ios build
 
       # Same save gate as the Android job.

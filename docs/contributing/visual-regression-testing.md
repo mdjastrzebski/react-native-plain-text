@@ -167,7 +167,8 @@ that caused them, where the image diff gets reviewed alongside the code.
 `.github/workflows/vrt.yml` runs nightly and on manual dispatch, on a
 Pixel 9 API 36 emulator and an iPhone 16 Pro iOS 26.5 simulator. Each job runs
 both suites on the same device. Built apps are cached by their source
-fingerprint.
+fingerprint, but only manual runs restore them: the nightly always builds from
+scratch, so a stale cached app can't hide a regression.
 
 To run it by hand, use Actions → Visual Regression Tests → Run workflow, or:
 
