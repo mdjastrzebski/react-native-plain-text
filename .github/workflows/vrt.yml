@@ -1,11 +1,6 @@
 name: Visual Regression Tests
 
 on:
-  pull_request:
-    # VRT runs are expensive, so only branches named for them trigger one. `**`
-    # is needed for branches with a slash in them.
-    branches:
-      - '**/*vrt*'
   workflow_dispatch:
     inputs:
       platform:
