@@ -108,6 +108,8 @@ using namespace plaintext;
     _forceApplyProps = YES;
 
     self.contentView = _label;
+    // Otherwise VoiceOver reads _label when -isAccessibilityElement returns NO.
+    _label.isAccessibilityElement = NO;
   }
 
   return self;
@@ -296,6 +298,15 @@ using namespace plaintext;
     _forceApplyProps = NO;
 
     [super updateProps:props oldProps:oldProps];
+}
+
+// RCTViewComponentView's getter asks contentView (_label), ignoring `accessible`.
+// Reads the spec's shadowing field (default true), not ViewProps::accessible (false).
+// SYNC: PlainTextViewNativeComponent.ts declares the true default. See
+// docs/contributing/sync-points.md#set-18--accessible-defaults-to-true.
+- (BOOL)isAccessibilityElement
+{
+    return static_cast<const RNPlainTextProps &>(*_props).accessible;
 }
 
 @end

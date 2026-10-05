@@ -538,6 +538,12 @@ describe('mapPlainTextProps', () => {
       });
     });
 
+    it('leaves accessible unset so the native true default applies', () => {
+      expect(mapPlainTextProps({})).not.toHaveProperty('accessible');
+      expect(mapPlainTextProps({ accessible: true }).accessible).toBe(true);
+      expect(mapPlainTextProps({ accessible: false }).accessible).toBe(false);
+    });
+
     it('emits only the keys that hold a value', () => {
       expect(Object.keys(mapPlainTextProps({ children: 'Hi' }))).toEqual(['text']);
       expect(
