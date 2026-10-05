@@ -169,6 +169,16 @@ Pixel 9 API 36 emulator and an iPhone 16 Pro iOS 26.5 simulator. Each job runs
 both suites on the same device. Built apps are cached by their source
 fingerprint.
 
+The iOS job also caches `~/.agent-device/apple-runner/derived`, which is
+agent-device's own XCTest runner build. Its `build-for-testing` costs two to
+three minutes and is pure `xcodebuild` output, so it is reused across runs. It
+is keyed separately from the app, on the toolchain and the pinned `agent-device`
+version rather than on the app fingerprint, because it does not depend on app
+source. agent-device names its derived path from a fingerprint of the runner
+sources and re-checks that fingerprint before reusing the tree, so a cache entry
+from another version is ignored rather than trusted, and the save step skips a
+tree whose `build-for-testing` was interrupted.
+
 To run it by hand, use Actions → Visual Regression Tests → Run workflow, or:
 
 ```sh
