@@ -26,7 +26,8 @@ concurrency:
 
 jobs:
   vrt-android:
-    # Scheduled runs have no inputs, so an empty platform means both.
+    # Scheduled and pull request runs have no inputs, so an empty platform means
+    # both.
     if: ${{ inputs.platform != 'ios' }}
     runs-on: ubuntu-24.04
     # A cold run is ~30 minutes, and the e2e stage carries its own retry budget.
@@ -189,6 +190,10 @@ jobs:
       IOS_DEVICE_TYPE_ID: com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro
       VRT_TOOLCHAIN: ios26.5-23F77-xcode26.5-17F42-iphone16pro
       VRT_BUILD_CACHE_PATHS: node_modules/.cache/vrt/apps/ios
+      # agent-device's own XCTest runner derived data. Its own cache lives here,
+      # and a `build-for-testing` of the runner costs 2-3 minutes, so it is
+      # cached across runs rather than rebuilt. See the runner-cache steps below.
+      VRT_RUNNER_CACHE_PATH: ~/.agent-device/apple-runner/derived
       VRT_REPORT_PATHS: |
         .vrt/report
         .vrt/actual
@@ -283,12 +288,51 @@ jobs:
           path: ${{ env.VRT_BUILD_CACHE_PATHS }}
           key: ${{ steps.ios-build-cache.outputs.cache-primary-key }}
 
+      # Deliberately not VRT_BUILD_CACHE_PATHS: the runner does not depend on the
+      # app source, so keying it on the app fingerprint would miss every run that
+      # only changed app code. agent-device picks its own derived path from a
+      # fingerprint of the runner sources and the toolchain, and re-checks that
+      # fingerprint before reusing the tree, so a stale restore is ignored rather
+      # than used. No prefix restore-keys, which would only restore a tree that
+      # hashes to a different directory name.
+      - name: Restore iOS XCTest runner
+        id: ios-runner-cache
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.VRT_RUNNER_CACHE_PATH }}
+          key: vrt-ios-runner-v1-${{ runner.os }}-${{ runner.arch }}-${{ env.VRT_TOOLCHAIN }}-${{ hashFiles('yarn.lock', 'package.json') }}
+
       - name: Run iOS VRT
         run: |
           yarn vrt ios install
           yarn vrt ios e2e
           yarn vrt ios capture
           yarn vrt ios compare
+
+      # Saved even when a stage failed, so an e2e flake keeps the runner that
+      # worked. The gate keeps an interrupted `build-for-testing` out of the
+      # cache: agent-device rejects a torn tree on the next run anyway, and
+      # caching one would make every later run pay to discover that again.
+      # Matched on shape rather than on agent-device's target names, which move
+      # between its versions. A miss only loses the cache; nothing reuses a tree
+      # it did not just build.
+      - name: Check iOS XCTest runner
+        id: ios-runner
+        if: ${{ !cancelled() && steps.ios-runner-cache.outputs.cache-hit != 'true' }}
+        run: |
+          if find "$HOME/.agent-device/apple-runner/derived" \
+            -path '*-Runner.app/PlugIns/*.xctest' -print -quit | grep -q .; then
+            printf 'present=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'present=false\n' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save iOS XCTest runner
+        if: ${{ !cancelled() && steps.ios-runner.outputs.present == 'true' }}
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.VRT_RUNNER_CACHE_PATH }}
+          key: ${{ steps.ios-runner-cache.outputs.cache-primary-key }}
 
       - name: Upload iOS VRT results
         if: always()
