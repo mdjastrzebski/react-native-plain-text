@@ -79,22 +79,28 @@ if [[ "$platform" == "ios" ]]; then
   # deep link below.
   agent_device open "$VRT_APP_ID" --relaunch --timeout 60000
   agent_device wait 'id="vrt-screen"' 30000 >/dev/null
-  agent_device close >/dev/null
+  # Deliberately no `close` here. Closing the session disposes the XCTest
+  # runner, so every later command pays a multi-minute `xcodebuild` re-prepare
+  # that no per-command wait budget can absorb. The cold attempts below reuse
+  # this session; the one close that warm genuinely needs is before its replay.
 fi
 
-# A passing cold attempt takes under 30 s, so this only bounds a hang.
-attempt_timeout_ms=90000
+# A passing cold attempt takes under 30 s once the runner is warm, so this only
+# bounds a hang. Warm has to also cover the one runner re-prepare it inherits
+# from the close above, which ran 100-170 s on CI.
+cold_attempt_timeout_ms=240000
+warm_attempt_timeout_ms=420000
 
 run_e2e_test() {
-  local name="$1" report="$2"
-  shift 2
+  local name="$1" report="$2" timeout_ms="$3"
+  shift 3
   agent_device test "$PROJECT_ROOT/.agent-device/$name.ad" \
     --env "VRT_APP_ID=$VRT_APP_ID" \
     --env "VRT_DEEP_LINK=$deep_link" \
     --env "VRT_CAPTURE_ID=$capture_id" \
     --artifacts-dir "$artifacts_root/$report" \
     --report-junit "$PROJECT_ROOT/.vrt/report/$platform-e2e-$report.xml" \
-    --timeout "$attempt_timeout_ms" \
+    --timeout "$timeout_ms" \
     "$@"
 }
 
@@ -172,12 +178,11 @@ run_cold_attempt() {
   # should cost one attempt, not the run.
   agent_device settings clear-app-state "$VRT_APP_ID" || return 1
   if [[ "$platform" == "android" ]]; then
-    run_e2e_test vrt-deep-link-cold "cold-$run" --retries 1
+    run_e2e_test vrt-deep-link-cold "cold-$run" "$cold_attempt_timeout_ms" --retries 1
     return
   fi
   run_ios_cold_deep_link "$dir" || status=$?
   [[ "$status" == "0" ]] || save_ios_failure_evidence "$dir"
-  agent_device close >/dev/null 2>&1 || true
   return "$status"
 }
 
@@ -195,9 +200,15 @@ for run in $(seq 1 "$cold_runs"); do
   printf 'Cold deep-link run %s/%s failed.\n' "$run" "$cold_runs" >&2
 done
 
+# `agent_device test` claims the device itself, so it cannot share the session
+# the cold attempts kept open. This is the one close the runner pays for; the
+# warm replay's budgets below are sized to cover the re-prepare it triggers.
+if [[ "$platform" == "ios" ]]; then
+  agent_device close >/dev/null 2>&1 || true
+fi
 close_stale_sessions
 warm_passed=0
-if run_e2e_test vrt-deep-link-warm warm --retries 2; then
+if run_e2e_test vrt-deep-link-warm warm "$warm_attempt_timeout_ms" --retries 2; then
   warm_passed=1
 elif [[ "$platform" == "ios" ]]; then
   save_ios_failure_evidence "$artifacts_root/warm"
