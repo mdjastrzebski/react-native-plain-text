@@ -26,11 +26,8 @@ concurrency:
 
 jobs:
   vrt-android:
-    # Scheduled runs have no inputs, so an empty platform means both. Forks inherit
-    # this workflow, but the nightly run is upstream-only: it is where the baseline
-    # images are kept current, and a fork has no reason to spend its owner's Actions
-    # minutes on it. Manual dispatch stays available everywhere, so a fork can still
-    # check a change by hand.
+    # Scheduled runs have no inputs, so an empty platform means both. The nightly
+    # is upstream-only (it keeps the baselines current); dispatch works in forks.
     if: ${{ inputs.platform != 'ios' && (github.event_name != 'schedule' || github.repository == 'mdjastrzebski/react-native-plain-text') }}
     runs-on: ubuntu-24.04
     # A cold run is ~30 minutes, and the e2e stage carries its own retry budget.
