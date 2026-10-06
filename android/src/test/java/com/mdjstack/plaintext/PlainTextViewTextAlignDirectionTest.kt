@@ -83,12 +83,17 @@ class PlainTextViewTextAlignDirectionTest {
     val view = PlainTextView(context)
     view.setTextAlign("justify")
     assertEquals(Gravity.LEFT, horizontalGravityOf(view))
+    assertEquals(
+      Layout.JUSTIFICATION_MODE_INTER_WORD,
+      view.justificationMode,
+    )
 
     view.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
 
-    // RN maps "justify" unconditionally (TextAttributeProps), so it doesn't swap
-    // under RTL like left/right; only the inter-word justification is its point.
-    assertEquals(Gravity.LEFT, horizontalGravityOf(view))
+    // Fabric <Text> resolves justify to the paragraph's start edge too
+    // (TextLayoutManager#getTextGravity), so it swaps sides under RTL like left;
+    // only the inter-word justification is unconditional.
+    assertEquals(Gravity.RIGHT, horizontalGravityOf(view))
     assertEquals(
       Layout.JUSTIFICATION_MODE_INTER_WORD,
       view.justificationMode,
@@ -96,18 +101,38 @@ class PlainTextViewTextAlignDirectionTest {
   }
 
   @Test
-  fun keepsCenterAndAutoIndependentOfDirection() {
+  fun keepsCenterIndependentOfDirection() {
     val center = PlainTextView(context)
-    val auto = PlainTextView(context)
     center.setTextAlign("center")
-    auto.setTextAlign("auto")
-    val autoGravity = horizontalGravityOf(auto)
 
     center.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
-    auto.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
 
     assertEquals(Gravity.CENTER_HORIZONTAL, horizontalGravityOf(center))
-    assertEquals(autoGravity, horizontalGravityOf(auto))
+  }
+
+  @Test
+  fun reResolvesAutoWhenTheDirectionArrivesAfterTheProp() {
+    // Fabric <Text> sends auto through the same default branch as left/justify —
+    // an absolute start edge from the paragraph direction, not NO_GRAVITY.
+    val auto = PlainTextView(context)
+    auto.setTextAlign("auto")
+    assertEquals(Gravity.LEFT, horizontalGravityOf(auto))
+
+    auto.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
+
+    assertEquals(Gravity.RIGHT, horizontalGravityOf(auto))
     assertEquals(Layout.JUSTIFICATION_MODE_NONE, auto.justificationMode)
+  }
+
+  @Test
+  fun resolvesAbsentAlignLikeAuto() {
+    // The codegen default 'auto' never reaches the view as null, but a null
+    // raw prop must still mean the paragraph's start edge, not gravity fallback.
+    val view = PlainTextView(context)
+    view.setTextAlign(null)
+    assertEquals(Gravity.LEFT, horizontalGravityOf(view))
+
+    view.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
+    assertEquals(Gravity.RIGHT, horizontalGravityOf(view))
   }
 }

@@ -675,10 +675,14 @@ iOS).
   swap on-device on both platforms
 
 **Contract:** `left`/`right` swap sides under an RTL paragraph — the iOS swap mirrors RN's own
-`RCTAttributedTextUtils.mm` (which flips explicit left/right when the layout direction is RTL), and the Android swap
-mirrors `TextAttributeProps.getTextAlignment`. `justify` stays on `Gravity.LEFT` on Android (RN maps it unconditionally,
-inter-word justification is its whole point) and stays `NSTextAlignmentJustified` on iOS; `auto`/`center` are unchanged
-on both. None of this affects measured size (`measureContent`/`measure()`), prop comparison (`measurementInputsEqual`)
+`RCTAttributedTextUtils.mm` (which flips explicit left/right when the layout direction is RTL), and the Android side
+mirrors Fabric's `TextLayoutManager.getTextGravity`, which resolves `left`/`justify`/`auto` to an absolute start edge
+from the paragraph direction (`LEFT` under ltr, `RIGHT` under rtl) and `right` to the opposite edge. The legacy
+`TextAttributeProps.getTextAlignment` mapping — where `justify` is unconditional `Gravity.LEFT` — is the paper path and
+only text input still uses it; Fabric `<Text>` never does, so `justify` and `auto` swap with `left` on Android.
+`justify` keeps its inter-word justification (`JUSTIFICATION_MODE_INTER_WORD`) and stays `NSTextAlignmentJustified` on
+iOS (the iOS swap only touches explicit left/right, matching RN); `center` is unchanged on both. None of this affects
+measured size (`measureContent`/`measure()`), prop comparison (`measurementInputsEqual`)
 or the iOS preview serialization — it is a pure redraw concern, which is why [Set 2](#set-2--a-prop-that-affects-measured-size)
 and [Set 3](#set-3--the-three-way-default-contract) don't list it.
 

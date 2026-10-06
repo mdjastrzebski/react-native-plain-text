@@ -519,17 +519,19 @@ class PlainTextView : AppCompatTextView {
     applyTextAlign()
   }
 
-  // Mirrors <Text> (TextAttributeProps#getTextAlignment): Gravity rather than
-  // TEXT_ALIGNMENT_*, with left/right resolved against layout direction for RTL.
-  // justify stays on Gravity.LEFT like RN (it doesn't swap), because TextAttributeProps
-  // maps "justify" unconditionally; the inter-word justification below is its whole point.
+  // Mirrors Fabric <Text> (TextLayoutManager#getTextGravity): gravity rather than
+  // TEXT_ALIGNMENT_*. left/justify/auto all resolve to an absolute start edge from the
+  // paragraph direction — LEFT under ltr, RIGHT under rtl — and right to the opposite
+  // edge; only justify adds inter-word justification on top. (The legacy
+  // TextAttributeProps#getTextAlignment mapping, where justify is unconditional
+  // Gravity.LEFT, is the paper path; Fabric <Text> never uses it — text input does.)
+  // Resolving from the current layout direction is what onRtlPropertiesChanged re-runs
+  // this for: justify/auto must swap sides with left when the direction arrives too.
   private fun applyTextAlign() {
     val textAlign = rawTextAlign
     val isRTL = layoutDirection == LAYOUT_DIRECTION_RTL
     val horizontal = when (textAlign) {
-      "justify" -> Gravity.LEFT
-      "auto", null -> Gravity.NO_GRAVITY
-      "left" -> if (isRTL) Gravity.RIGHT else Gravity.LEFT
+      "left", "justify", "auto", null -> if (isRTL) Gravity.RIGHT else Gravity.LEFT
       "right" -> if (isRTL) Gravity.LEFT else Gravity.RIGHT
       "center" -> Gravity.CENTER_HORIZONTAL
       else -> Gravity.NO_GRAVITY
