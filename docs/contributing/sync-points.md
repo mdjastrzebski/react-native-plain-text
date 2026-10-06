@@ -673,8 +673,9 @@ iOS).
   `updateLayoutMetrics` override that marks content for rebuild when the direction flips between LTR and RTL under an
   explicit `left`/`right` (`Undefined`, a new view's starting direction, counts as LTR); `finalizeUpdates:` does the
   one rebuild per transaction, after both props and layout metrics have landed
-- `example/src/sections/DirectionSection.tsx` — the `rtl`/`ltr` × `textAlign` rows that exercise the swap on-device on
-  both platforms (no VRT specimen covers it)
+- `example/src/sections/DirectionSection.tsx` — exercises the swap on-device on both platforms against the `<Text>`
+  overlay (no VRT specimen covers it): `left`/`justify`/`auto` plus one Hebrew `auto` row, mounted under `rtl` and then
+  flipped in place (same views, no prop change)
 
 **Contract:** `left`/`right` swap sides under an RTL paragraph — the iOS swap mirrors RN's own
 `RCTAttributedTextUtils.mm` (which flips explicit left/right when the layout direction is RTL), and the Android side
