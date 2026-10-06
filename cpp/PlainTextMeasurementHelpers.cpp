@@ -17,9 +17,6 @@ bool measurementInputsEqual(
       a.textTransform == b.textTransform &&
       a.hyphens == b.hyphens &&
       a.lang == b.lang &&
-      // Android only: its LocaleSpan affects layout (PlainTextView.kt). iOS
-      // just re-measures needlessly when it alone changes.
-      a.accessibilityLanguage == b.accessibilityLanguage &&
       a.numberOfLines == b.numberOfLines &&
       a.lineBreakStrategyIOS == b.lineBreakStrategyIOS &&
       a.allowFontScaling == b.allowFontScaling &&

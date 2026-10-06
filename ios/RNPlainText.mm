@@ -340,8 +340,8 @@ using namespace plaintext;
     // view needs it: RCTViewComponentView's isAccessibilityElement defers to
     // contentView (_label, YES by default), so VoiceOver focuses this view and
     // never descends into _label.
-    // SYNC: PlainTextView.kt's resolveLocaleSpanTag is the Android counterpart. See
-    // docs/contributing/sync-points.md#set-19--the-lang-and-accessibilitylanguage-fallback.
+    // SYNC: PlainTextView.kt's applyText (its LocaleSpan) is the Android counterpart. See
+    // docs/contributing/sync-points.md#set-19--lang-as-the-screen-reader-language.
     if (accessibilityLanguageChanged) {
         self.accessibilityElement.accessibilityLanguage = accessibilityLanguageFromProps(newViewProps);
     }

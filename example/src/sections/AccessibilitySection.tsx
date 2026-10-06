@@ -55,7 +55,7 @@ export function AccessibilitySection({ showText }: { showText: boolean }) {
         disabled
       </TextItem>
       <TextItem
-        label="language"
+        label="language (iOS)"
         showText={showText}
         style={styles.a11yRow}
         accessibilityProps={{ accessibilityLanguage: 'es-ES' }}

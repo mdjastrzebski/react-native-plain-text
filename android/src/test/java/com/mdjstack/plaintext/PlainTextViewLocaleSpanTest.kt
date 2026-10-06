@@ -11,10 +11,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-// Covers the lang/accessibilityLanguage fallback resolved in applyText rather than JS,
-// per docs/contributing/performance.md#prop-cost-policy.
-// SYNC: mirrors PlainTextProps.mm's accessibilityLanguageFromProps. See
-// docs/contributing/sync-points.md#set-19--the-lang-and-accessibilitylanguage-fallback.
+// Covers lang's LocaleSpan, the only language hint TalkBack reads.
+// SYNC: the Android side of RNPlainText.mm's lang-based accessibilityLanguage. See
+// docs/contributing/sync-points.md#set-19--lang-as-the-screen-reader-language.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Config.NEWEST_SDK])
 class PlainTextViewLocaleSpanTest {
@@ -29,17 +28,16 @@ class PlainTextViewLocaleSpanTest {
     return spans[0].locale?.toLanguageTag()
   }
 
-  private fun viewWith(lang: String? = null, accessibilityLanguage: String? = null): PlainTextView {
+  private fun viewWith(lang: String? = null): PlainTextView {
     val view = PlainTextView(context)
     view.setPlainText("Hello")
     view.setLang(lang)
-    view.setAccessibilityLanguage(accessibilityLanguage)
     view.flushPendingUpdates()
     return view
   }
 
   @Test
-  fun addsNoLocaleSpanWhenNeitherIsSet() {
+  fun addsNoLocaleSpanWhenLangIsUnset() {
     assertNull(localeSpanTagOf(viewWith()))
   }
 
@@ -49,18 +47,8 @@ class PlainTextViewLocaleSpanTest {
   }
 
   @Test
-  fun usesAccessibilityLanguageForTheLocaleSpan() {
-    assertEquals("fr", localeSpanTagOf(viewWith(accessibilityLanguage = "fr")))
-  }
-
-  @Test
-  fun letsAccessibilityLanguageWinOverLang() {
-    assertEquals("fr", localeSpanTagOf(viewWith(lang = "de", accessibilityLanguage = "fr")))
-  }
-
-  @Test
-  fun treatsEmptyAccessibilityLanguageAsUnset() {
-    assertEquals("de", localeSpanTagOf(viewWith(lang = "de", accessibilityLanguage = "")))
+  fun treatsEmptyLangAsUnset() {
+    assertNull(localeSpanTagOf(viewWith(lang = "")))
   }
 
   @Test

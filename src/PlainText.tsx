@@ -31,7 +31,7 @@ export type PlainTextOwnProps = {
   hyphens?: 'none' | 'auto';
   /**
    * BCP-47 language tag (e.g. `'pl'`, `'de'`) for hyphenation and line breaking.
-   * Also the screen-reader language unless `accessibilityLanguage` is set.
+   * Also the screen-reader language. On iOS, `accessibilityLanguage` wins when set.
    */
   lang?: string;
 

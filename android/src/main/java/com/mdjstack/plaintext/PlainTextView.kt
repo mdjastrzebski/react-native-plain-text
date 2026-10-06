@@ -109,7 +109,6 @@ class PlainTextView : AppCompatTextView {
   private var appliedBaseTypeface: Typeface? = baseTypeface
 
   private var appliedLang: String? = null
-  private var accessibilityLanguage: String? = null
 
   // Combined by applyHyphenationFrequency regardless of which setter ran last.
   private var hyphens: String? = null
@@ -279,14 +278,14 @@ class PlainTextView : AppCompatTextView {
   // layered on.
   private fun applyText() {
     val value = applyTextTransform(rawText?.toString() ?: "", textTransform)
-    val localeSpanTag = resolveLocaleSpanTag(accessibilityLanguage, appliedLang)
-    if (lineHeightSp.isNaN() && localeSpanTag == null) {
+    val lang = appliedLang
+    if (lineHeightSp.isNaN() && lang == null) {
       setText(value)
       return
     }
     // EXPENSIVE: allocates a SpannableString plus one span per set prop, per apply,
-    // where the early-out above passes the plain string (lineHeight's, lang's and
-    // accessibilityLanguage's cost, docs/contributing/performance.md).
+    // where the early-out above passes the plain string (lineHeight's and lang's
+    // cost, docs/contributing/performance.md).
     val spannable = SpannableString(value)
     if (!lineHeightSp.isNaN()) {
       spannable.setWholeTextSpan(
@@ -296,10 +295,11 @@ class PlainTextView : AppCompatTextView {
       )
     }
     // TalkBack picks its speech language from a LocaleSpan only, never textLocales.
-    // A MetricAffectingSpan: it overrides textLocales for glyph selection and
-    // hyphenation too, so accessibilityLanguage is a measured input.
-    if (localeSpanTag != null) {
-      spannable.setWholeTextSpan(LocaleSpan(Locale.forLanguageTag(localeSpanTag)))
+    // Same locale as textLocales (setLang), so layout is unchanged.
+    // SYNC: RNPlainText.mm's updateProps is the iOS counterpart. See
+    // docs/contributing/sync-points.md#set-19--lang-as-the-screen-reader-language.
+    if (lang != null) {
+      spannable.setWholeTextSpan(LocaleSpan(Locale.forLanguageTag(lang)))
     }
     setText(spannable)
   }
@@ -619,15 +619,6 @@ class PlainTextView : AppCompatTextView {
     }
   }
 
-  // RN core ignores this prop on Android; here it becomes the text's LocaleSpan,
-  // winning over lang (see applyText). Null/empty falls back to lang.
-  fun setAccessibilityLanguage(value: String?) {
-    val normalized = value?.ifEmpty { null }
-    if (normalized == accessibilityLanguage) return
-    accessibilityLanguage = normalized
-    dirtyText = true
-  }
-
   // Wins over android_hyphenationFrequency whenever the app sets it at all,
   // even to 'none'. See applyHyphenationFrequency.
   fun setHyphens(value: String?) {
@@ -751,15 +742,6 @@ private fun toEffectivePixel(
 private fun Spannable.setWholeTextSpan(span: Any) {
   setSpan(span, 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
 }
-
-// accessibilityLanguage when set, otherwise lang; both arrive already normalized
-// (empty to null). The fallback resolves here rather than in JS, per
-// docs/contributing/performance.md#prop-cost-policy.
-// A named function, not inlined into applyText, so the sync point has one anchor.
-// SYNC: PlainTextProps.mm's accessibilityLanguageFromProps must resolve identically.
-// See docs/contributing/sync-points.md#set-19--the-lang-and-accessibilitylanguage-fallback.
-internal fun resolveLocaleSpanTag(accessibilityLanguage: String?, lang: String?): String? =
-  accessibilityLanguage ?: lang
 
 // Mirrors <Text> (com.facebook.react.views.text.TextTransform, reimplemented here
 // since that one is internal to RN's own module). Capitalize already matches CSS

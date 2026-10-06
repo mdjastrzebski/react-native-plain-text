@@ -611,33 +611,6 @@ export const groups: VrtGroup[] = [
     ),
   },
   {
-    // Android's accessibilityLanguage becomes a LocaleSpan, which drives
-    // hyphenation too and wins over `lang`. Compare with
-    // vrt-features-hyphens-auto-lang-de above. iOS only hands it to VoiceOver.
-    platform: 'android',
-    children: (
-      <>
-        <VrtText
-          testID="vrt-features-accessibility-language-de"
-          hyphens="auto"
-          accessibilityLanguage="de"
-          style={styles.hyphenationRow}
-        >
-          {HYPHENATION_SPECIMEN}
-        </VrtText>
-        <VrtText
-          testID="vrt-features-accessibility-language-en-over-lang-de"
-          hyphens="auto"
-          lang="de"
-          accessibilityLanguage="en"
-          style={styles.hyphenationRow}
-        >
-          {HYPHENATION_SPECIMEN}
-        </VrtText>
-      </>
-    ),
-  },
-  {
     // With `hyphens` unset, android_hyphenationFrequency is the fallback.
     platform: 'android',
     children: (

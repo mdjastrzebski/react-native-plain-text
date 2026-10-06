@@ -96,17 +96,15 @@ RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical t
     return textAlignVertical;
 }
 
-static NSString *nsStringOrNilIfEmpty(const std::optional<std::string> &value)
-{
-    if (!value.has_value() || value.value().empty()) {
-        return nil;
-    }
-    return [NSString stringWithUTF8String:value.value().c_str()];
-}
-
 NSString *accessibilityLanguageFromProps(const RNPlainTextProps &props)
 {
-    return nsStringOrNilIfEmpty(props.accessibilityLanguage) ?: nsStringOrNilIfEmpty(props.lang);
+    if (!props.accessibilityLanguage.empty()) {
+        return [NSString stringWithUTF8String:props.accessibilityLanguage.c_str()];
+    }
+    if (props.lang.has_value() && !props.lang.value().empty()) {
+        return [NSString stringWithUTF8String:props.lang.value().c_str()];
+    }
+    return nil;
 }
 
 NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
