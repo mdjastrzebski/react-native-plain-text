@@ -7,6 +7,8 @@ import android.view.Gravity
 import android.view.View
 import com.facebook.react.uimanager.DisplayMetricsHolder
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -14,12 +16,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-// Covers how textAlign resolves against the paragraph direction Fabric pushes into
-// every view: the prop can land before the direction (CREATE before UPDATE_LAYOUT)
-// and the direction can change later with no prop change at all (an ancestor's
-// direction: 'rtl' toggling), so resolution has to repeat from the raw prop.
-// SYNC: the Android half of paragraph direction reaching text alignment; the iOS
-// half is RNPlainText's updateLayoutMetrics override. See
+// SYNC: the iOS counterpart is RNPlainText's updateLayoutMetrics override. See
 // docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Config.NEWEST_SDK])
@@ -30,9 +27,8 @@ class PlainTextViewTextAlignDirectionTest {
   @Before
   fun setUp() {
     DisplayMetricsHolder.initDisplayMetricsIfNotInitialized(context)
-    // The library manifest declares nothing, so Robolectric's application comes up
-    // without FLAG_SUPPORTS_RTL and View#resolveLayoutDirection skips RTL entirely
-    // (hasRtlSupport()). A real app's manifest sets supportsRtl="true".
+    // Without FLAG_SUPPORTS_RTL, View#resolveLayoutDirection ignores RTL. The library
+    // manifest doesn't set it; a real app's manifest sets supportsRtl="true".
     context.applicationInfo.flags = context.applicationInfo.flags or
       ApplicationInfo.FLAG_SUPPORTS_RTL
   }
@@ -90,9 +86,8 @@ class PlainTextViewTextAlignDirectionTest {
 
     view.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
 
-    // Fabric <Text> resolves justify to the paragraph's start edge too
-    // (TextLayoutManager#getTextGravity), so it swaps sides under RTL like left;
-    // only the inter-word justification is unconditional.
+    // Like Fabric <Text> (TextLayoutManager#getTextGravity): justify swaps sides like
+    // left; only the inter-word justification is unconditional.
     assertEquals(Gravity.RIGHT, horizontalGravityOf(view))
     assertEquals(
       Layout.JUSTIFICATION_MODE_INTER_WORD,
@@ -112,8 +107,7 @@ class PlainTextViewTextAlignDirectionTest {
 
   @Test
   fun reResolvesAutoWhenTheDirectionArrivesAfterTheProp() {
-    // Fabric <Text> sends auto through the same default branch as left/justify —
-    // an absolute start edge from the paragraph direction, not NO_GRAVITY.
+    // Like Fabric <Text>: auto takes the paragraph's start edge, not NO_GRAVITY.
     val auto = PlainTextView(context)
     auto.setTextAlign("auto")
     assertEquals(Gravity.LEFT, horizontalGravityOf(auto))
@@ -126,13 +120,31 @@ class PlainTextViewTextAlignDirectionTest {
 
   @Test
   fun resolvesAbsentAlignLikeAuto() {
-    // The codegen default 'auto' never reaches the view as null, but a null
-    // raw prop must still mean the paragraph's start edge, not gravity fallback.
+    // Codegen's 'auto' default means null never arrives, but it must still mean the start edge.
     val view = PlainTextView(context)
     view.setTextAlign(null)
     assertEquals(Gravity.LEFT, horizontalGravityOf(view))
 
     view.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
     assertEquals(Gravity.RIGHT, horizontalGravityOf(view))
+  }
+
+  @Test
+  fun keepsTheBuiltLayoutWhenReResolvingAnUnchangedAlign() {
+    // setJustificationMode drops the Layout even when unchanged, and View fires
+    // onRtlPropertiesChanged more than once per resolve.
+    val view = PlainTextView(context)
+    view.setText("Hello")
+    view.setTextAlign("justify")
+    view.measure(
+      View.MeasureSpec.makeMeasureSpec(200, View.MeasureSpec.EXACTLY),
+      View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+    )
+    val layout = view.layout
+    assertNotNull(layout)
+
+    view.onRtlPropertiesChanged(view.layoutDirection)
+
+    assertSame(layout, view.layout)
   }
 }

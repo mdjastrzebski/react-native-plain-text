@@ -509,9 +509,8 @@ class PlainTextView : AppCompatTextView {
     appliedVariationSettings = null
   }
 
-  // The raw prop, kept so onRtlPropertiesChanged below can re-resolve it: the layout
-  // direction it resolves against is not fixed at the time this prop is applied.
-  // Declared beside its setter like rawTextAlignVertical, never read from init.
+  // Kept raw so onRtlPropertiesChanged can re-resolve it. Declared after init, so init
+  // must not set it.
   private var rawTextAlign: String? = null
 
   fun setTextAlign(textAlign: String?) {
@@ -519,14 +518,9 @@ class PlainTextView : AppCompatTextView {
     applyTextAlign()
   }
 
-  // Mirrors Fabric <Text> (TextLayoutManager#getTextGravity): gravity rather than
-  // TEXT_ALIGNMENT_*. left/justify/auto all resolve to an absolute start edge from the
-  // paragraph direction — LEFT under ltr, RIGHT under rtl — and right to the opposite
-  // edge; only justify adds inter-word justification on top. (The legacy
-  // TextAttributeProps#getTextAlignment mapping, where justify is unconditional
-  // Gravity.LEFT, is the paper path; Fabric <Text> never uses it — text input does.)
-  // Resolving from the current layout direction is what onRtlPropertiesChanged re-runs
-  // this for: justify/auto must swap sides with left when the direction arrives too.
+  // Gravity, not TEXT_ALIGNMENT_*, mirroring Fabric <Text> (TextLayoutManager#getTextGravity):
+  // left/justify/auto take the paragraph's start edge, right the opposite one. The legacy
+  // TextAttributeProps#getTextAlignment (justify = unconditional LEFT) is paper/text-input only.
   private fun applyTextAlign() {
     val textAlign = rawTextAlign
     val isRTL = layoutDirection == LAYOUT_DIRECTION_RTL
@@ -544,22 +538,20 @@ class PlainTextView : AppCompatTextView {
       Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK.inv()) or horizontal
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      justificationMode =
+      val mode =
         if (textAlign == "justify") Layout.JUSTIFICATION_MODE_INTER_WORD
         else Layout.JUSTIFICATION_MODE_NONE
+      // EXPENSIVE: TextView.setJustificationMode clears the text Layout and requests a
+      // new one even when unchanged (TextView.java:5423), unlike setGravity above. This
+      // runs on every onRtlPropertiesChanged, which View fires more than once per resolve.
+      if (justificationMode != mode) justificationMode = mode
     }
   }
 
-  // SYNC: the Android half of paragraph direction reaching text alignment; the iOS
-  // half is RNPlainText's updateLayoutMetrics override. See
+  // Fabric sets the direction after props on mount (CREATE before UPDATE_LAYOUT), and an
+  // ancestor's direction can change with no prop change at all.
+  // SYNC: the iOS counterpart is RNPlainText's updateLayoutMetrics override. See
   // docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
-  //
-  // Fabric pushes Yoga's paragraph direction into every mounted view through
-  // SurfaceMountingManager.updateLayout -> View.setLayoutDirection, and that can
-  // land after the props that already resolved against the old direction (CREATE
-  // before UPDATE_LAYOUT on mount) or change later with no prop change at all (an
-  // ancestor's direction: 'rtl' toggling). Re-resolve from the raw prop stored
-  // above rather than caching a result.
   override fun onRtlPropertiesChanged(layoutDirection: Int) {
     super.onRtlPropertiesChanged(layoutDirection)
     applyTextAlign()
