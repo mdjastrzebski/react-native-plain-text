@@ -110,7 +110,9 @@ iOS-only: touches `measurementInputsEqual`, `ios/PlainTextShadowNode.mm`, `RNPla
 Android-only: touches `measurementInputsEqual`, `PlainTextMeasurementsManager.cpp`, `PlainTextViewManager.kt`
 `measure()`. No `ios/PlainTextShadowNode.mm` or `RNPlainText.mm` entry.
 
-- `accessibilityLanguage` (its `LocaleSpan` is a `MetricAffectingSpan`, overriding `lang`'s locale)
+- `accessibilityLanguage` (its `LocaleSpan` is a `MetricAffectingSpan`, overriding `lang`'s locale. The one exception to
+  "no `RNPlainText.mm` entry": iOS applies it there too, but only for VoiceOver, so it never reaches iOS measurement. See
+  [Set 19](#set-19--the-lang-and-accessibilitylanguage-fallback).)
 - `includeFontPadding`
 - `textBreakStrategy`
 - `android_hyphenationFrequency`

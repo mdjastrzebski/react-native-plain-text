@@ -89,7 +89,9 @@ Three kinds of specimen from the example app are left out on purpose:
 - **Props with no visual effect.** Accessibility props (`accessibilityLabel`,
   `accessibilityRole`, and so on) and animated text (Animated and Reanimated
   driving `text`) don't change what a still screenshot shows. Test them with
-  VoiceOver or TalkBack, the native view tree, or unit tests instead.
+  VoiceOver or TalkBack, the native view tree, or unit tests instead. The
+  exception is `accessibilityLanguage` on Android, which also sets the text's
+  locale for line breaking and hyphenation, so it has an Android-only group.
 - **Redundant variations.** When a prop goes through one native code path, one
   or two values cover it. For example, VRT doesn't render text in every palette
   color: color is passed straight through, so one row catches a regression and

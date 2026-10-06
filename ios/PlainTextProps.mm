@@ -96,7 +96,7 @@ RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical t
     return textAlignVertical;
 }
 
-static NSString *nonEmptyString(const std::optional<std::string> &value)
+static NSString *nsStringOrNilIfEmpty(const std::optional<std::string> &value)
 {
     if (!value.has_value() || value.value().empty()) {
         return nil;
@@ -106,7 +106,7 @@ static NSString *nonEmptyString(const std::optional<std::string> &value)
 
 NSString *accessibilityLanguageFromProps(const RNPlainTextProps &props)
 {
-    return nonEmptyString(props.accessibilityLanguage) ?: nonEmptyString(props.lang);
+    return nsStringOrNilIfEmpty(props.accessibilityLanguage) ?: nsStringOrNilIfEmpty(props.lang);
 }
 
 NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)

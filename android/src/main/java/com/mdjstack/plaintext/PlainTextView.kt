@@ -284,27 +284,22 @@ class PlainTextView : AppCompatTextView {
       setText(value)
       return
     }
+    // EXPENSIVE: allocates a SpannableString plus one span per set prop, per apply,
+    // where the early-out above passes the plain string (lineHeight's, lang's and
+    // accessibilityLanguage's cost, docs/contributing/performance.md).
     val spannable = SpannableString(value)
     if (!lineHeightSp.isNaN()) {
-      spannable.setSpan(
+      spannable.setWholeTextSpan(
         CustomLineHeightSpan(
           toEffectivePixel(lineHeightSp, allowFontScaling, maxFontSizeMultiplier)
-        ),
-        0,
-        spannable.length,
-        Spannable.SPAN_INCLUSIVE_INCLUSIVE
+        )
       )
     }
     // TalkBack picks its speech language from a LocaleSpan only, never textLocales.
     // A MetricAffectingSpan: it overrides textLocales for glyph selection and
     // hyphenation too, so accessibilityLanguage is a measured input.
     if (localeSpanTag != null) {
-      spannable.setSpan(
-        LocaleSpan(Locale.forLanguageTag(localeSpanTag)),
-        0,
-        spannable.length,
-        Spannable.SPAN_INCLUSIVE_INCLUSIVE
-      )
+      spannable.setWholeTextSpan(LocaleSpan(Locale.forLanguageTag(localeSpanTag)))
     }
     setText(spannable)
   }
@@ -612,7 +607,7 @@ class PlainTextView : AppCompatTextView {
 
   // Null/empty restores the default locale. Also feeds the LocaleSpan (see applyText).
   fun setLang(lang: String?) {
-    val normalized = if (lang.isNullOrEmpty()) null else lang
+    val normalized = lang?.ifEmpty { null }
     if (normalized == appliedLang) return
     appliedLang = normalized
     dirtyText = true
@@ -627,7 +622,7 @@ class PlainTextView : AppCompatTextView {
   // RN core ignores this prop on Android; here it becomes the text's LocaleSpan,
   // winning over lang (see applyText). Null/empty falls back to lang.
   fun setAccessibilityLanguage(value: String?) {
-    val normalized = if (value.isNullOrEmpty()) null else value
+    val normalized = value?.ifEmpty { null }
     if (normalized == accessibilityLanguage) return
     accessibilityLanguage = normalized
     dirtyText = true
@@ -753,9 +748,14 @@ private fun toEffectivePixel(
   }
 }
 
+private fun Spannable.setWholeTextSpan(span: Any) {
+  setSpan(span, 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+}
+
 // accessibilityLanguage when set, otherwise lang; both arrive already normalized
 // (empty to null). The fallback resolves here rather than in JS, per
 // docs/contributing/performance.md#prop-cost-policy.
+// A named function, not inlined into applyText, so the sync point has one anchor.
 // SYNC: PlainTextProps.mm's accessibilityLanguageFromProps must resolve identically.
 // See docs/contributing/sync-points.md#set-19--the-lang-and-accessibilitylanguage-fallback.
 internal fun resolveLocaleSpanTag(accessibilityLanguage: String?, lang: String?): String? =
