@@ -670,7 +670,9 @@ iOS).
   application comes up with RTL resolution disabled; a real app's manifest sets `android:supportsRtl="true"`, see
   `example/android/app/src/main/AndroidManifest.xml`)
 - `ios/RNPlainText.mm` → the `NSTextAlignmentLeft`/`Right` swap in `applyContentFromProps` plus the
-  `updateLayoutMetrics` override that re-applies when `_layoutMetrics.layoutDirection` changes
+  `updateLayoutMetrics` override that marks content for rebuild when the direction flips between LTR and RTL under an
+  explicit `left`/`right` (`Undefined`, a new view's starting direction, counts as LTR); `finalizeUpdates:` does the
+  one rebuild per transaction, after both props and layout metrics have landed
 - `example/src/sections/DirectionSection.tsx` and `example/src/vrt/groups.tsx` — the "direction" rows that exercise the
   swap on-device on both platforms
 
