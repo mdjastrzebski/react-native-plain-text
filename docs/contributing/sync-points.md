@@ -673,8 +673,8 @@ iOS).
   `updateLayoutMetrics` override that marks content for rebuild when the direction flips between LTR and RTL under an
   explicit `left`/`right` (`Undefined`, a new view's starting direction, counts as LTR); `finalizeUpdates:` does the
   one rebuild per transaction, after both props and layout metrics have landed
-- `example/src/sections/DirectionSection.tsx` and `example/src/vrt/groups.tsx` — the "direction" rows that exercise the
-  swap on-device on both platforms
+- `example/src/sections/DirectionSection.tsx` — the `rtl`/`ltr` × `textAlign` rows that exercise the swap on-device on
+  both platforms (no VRT specimen covers it)
 
 **Contract:** `left`/`right` swap sides under an RTL paragraph — the iOS swap mirrors RN's own
 `RCTAttributedTextUtils.mm` (which flips explicit left/right when the layout direction is RTL), and the Android side
@@ -690,8 +690,8 @@ and [Set 3](#set-3--the-three-way-default-contract) don't list it.
 
 **Failure mode:** alignment resolved once at prop time renders against the wrong side after the direction arrives (or
 changes) — a wrapped RTL paragraph's lines, and its short last line especially, hang on the opposite side. A recycled
-view would otherwise keep the previous mount's side. Both failure modes are silent and visual-only, so they only show
-up in the `direction` VRT rows.
+view would otherwise keep the previous mount's side. Both failure modes are silent and visual-only: the Robolectric test
+pins the Android side, but on iOS they only show up on-device, in the example app's Direction section.
 
 ---
 
