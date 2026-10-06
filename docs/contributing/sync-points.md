@@ -643,6 +643,59 @@ When the unified `Text` falls back to RN `<Text>` (`deopt`, nested text, non-str
 
 ---
 
+## Set 18 — Paragraph direction and text alignment
+
+**Props:** `textAlign`, resolved against the paragraph direction Yoga computes for the node (from the view's `direction`
+style, inherited like every other Yoga style).
+
+Fabric delivers that direction to each native view through layout — not props — so the swap is draw-only and must live
+on the native view, keyed off the direction that view has _right now_:
+
+- Android: `SurfaceMountingManager.updateLayout` → `View.setLayoutDirection`, which fires `onRtlPropertiesChanged`.
+- iOS: `RCTComponentViewProtocol.updateLayoutMetrics`, whose `layoutMetrics.layoutDirection` the Fabric layer updates on
+  every layout instruction.
+
+Two cases make caching the resolved value at prop-set time wrong: on mount `CREATE` applies props before
+`UPDATE_LAYOUT` brings the direction in, and an ancestor toggling `direction:` later changes the child's direction with
+no prop change at all. Both sides therefore store only the raw `textAlign` prop and re-resolve it from the current
+direction when told the direction changed (`onRtlPropertiesChanged` on Android, the `updateLayoutMetrics` override on
+iOS).
+
+**Files:**
+
+- `PlainTextView.kt` → `rawTextAlign` / `applyTextAlign` (called from `setTextAlign` **and** `onRtlPropertiesChanged`) —
+  the Android resolution
+- `android/src/test/java/com/mdjstack/plaintext/PlainTextViewTextAlignDirectionTest.kt` — pins the Android side; also
+  why the test sets `ApplicationInfo.FLAG_SUPPORTS_RTL` (the library manifest declares nothing, so Robolectric's
+  application comes up with RTL resolution disabled; a real app's manifest sets `android:supportsRtl="true"`, see
+  `example/android/app/src/main/AndroidManifest.xml`)
+- `ios/RNPlainText.mm` → the `NSTextAlignmentLeft`/`Right` swap in `applyContentFromProps` plus the
+  `updateLayoutMetrics` override that marks content for rebuild when the direction flips between LTR and RTL under an
+  explicit `left`/`right` (`Undefined`, a new view's starting direction, counts as LTR); `finalizeUpdates:` does the
+  one rebuild per transaction, after both props and layout metrics have landed
+- `example/src/sections/DirectionSection.tsx` — exercises the swap on-device on both platforms against the `<Text>`
+  overlay (no VRT specimen covers it): `left`/`justify`/`auto` plus one Hebrew `auto` row, mounted under `rtl` and then
+  flipped in place (same views, no prop change)
+
+**Contract:** `left`/`right` swap sides under an RTL paragraph — the iOS swap mirrors RN's own
+`RCTAttributedTextUtils.mm` (which flips explicit left/right when the layout direction is RTL), and the Android side
+mirrors Fabric's `TextLayoutManager.getTextGravity`, which resolves `left`/`justify`/`auto` to an absolute start edge
+from the paragraph direction (`LEFT` under ltr, `RIGHT` under rtl) and `right` to the opposite edge. The legacy
+`TextAttributeProps.getTextAlignment` mapping — where `justify` is unconditional `Gravity.LEFT` — is the paper path and
+only text input still uses it; Fabric `<Text>` never does, so `justify` and `auto` swap with `left` on Android.
+`justify` keeps its inter-word justification (`JUSTIFICATION_MODE_INTER_WORD`) and stays `NSTextAlignmentJustified` on
+iOS (the iOS swap only touches explicit left/right, matching RN); `center` is unchanged on both. None of this affects
+measured size (`measureContent`/`measure()`), prop comparison (`measurementInputsEqual`)
+or the iOS preview serialization — it is a pure redraw concern, which is why [Set 2](#set-2--a-prop-that-affects-measured-size)
+and [Set 3](#set-3--the-three-way-default-contract) don't list it.
+
+**Failure mode:** alignment resolved once at prop time renders against the wrong side after the direction arrives (or
+changes) — a wrapped RTL paragraph's lines, and its short last line especially, hang on the opposite side. A recycled
+view would otherwise keep the previous mount's side. Both failure modes are silent and visual-only: the Robolectric test
+pins the Android side, but on iOS they only show up on-device, in the example app's Direction section.
+
+---
+
 ## Adding a new sync point
 
 If you add a `// SYNC:` comment anywhere in `src`, `cpp`, `ios` or `android`, add or extend a set above in the same

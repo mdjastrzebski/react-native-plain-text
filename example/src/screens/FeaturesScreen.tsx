@@ -9,6 +9,7 @@ import { AnimatingTextSection } from '../sections/AnimatingTextSection';
 import { BaselineAlignmentSection } from '../sections/BaselineAlignmentSection';
 import { BordersSection } from '../sections/BordersSection';
 import { ColorSection } from '../sections/ColorSection';
+import { DirectionSection } from '../sections/DirectionSection';
 import { EllipsizeModeSection } from '../sections/EllipsizeModeSection';
 import { EmojiSection } from '../sections/EmojiSection';
 import { FontFamilySection } from '../sections/FontFamilySection';
@@ -66,6 +67,7 @@ export default function FeaturesScreen({ navigation }: Props) {
     ['Font Style', FontStyleSection],
     ['Text Align', TextAlignSection],
     ['Writing Direction', WritingDirectionSection],
+    ['Direction', DirectionSection],
     ['Baseline alignment', BaselineAlignmentSection],
     ['Multiline', MultilineSection],
     ['Number of Lines', NumberOfLinesSection],

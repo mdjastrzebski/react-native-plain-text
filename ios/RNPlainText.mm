@@ -89,6 +89,8 @@ using namespace plaintext;
     RNPlainTextLabel * _label;
     // Forces the first -updateProps to apply unconditionally, since _label starts with UILabel's factory defaults (e.g. 17pt font) rather than _props' defaults, so a no-op diff would otherwise skip applying them.
     BOOL _forceApplyProps;
+    // Consumed by -finalizeUpdates: so a transaction touching both props and layout builds the attributed string once.
+    BOOL _needsApplyContent;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
@@ -124,6 +126,15 @@ using namespace plaintext;
     UIFont *font = resolveFont(props, fontSizeMultiplier);
     UIColor *color = props.color.has_value() ? RCTUIColorFromSharedColor(props.color.value()) : [UIColor blackColor];
     NSTextAlignment alignment = textAlignmentFromProp(props.textAlign);
+    // SYNC: mirrors RN's RTL left/right swap in RCTAttributedTextUtils.mm. See
+    // docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
+    if (_layoutMetrics.layoutDirection == LayoutDirection::RightToLeft) {
+        if (alignment == NSTextAlignmentLeft) {
+            alignment = NSTextAlignmentRight;
+        } else if (alignment == NSTextAlignmentRight) {
+            alignment = NSTextAlignmentLeft;
+        }
+    }
     NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
     text = applyTextTransform(text, props.textTransform);
 
@@ -242,6 +253,27 @@ using namespace plaintext;
     }
 }
 
+// The direction lands after props on mount (CREATE before UPDATE_LAYOUT), and an
+// ancestor's direction can change with no prop change at all. Only an LTR/RTL flip
+// under explicit left/right changes the output: Undefined (a new view's starting
+// value) already reads as LTR in the swap, and other alignments ignore direction.
+// SYNC: the Android counterpart is PlainTextView.onRtlPropertiesChanged. See
+// docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
+- (void)updateLayoutMetrics:(const LayoutMetrics &)layoutMetrics
+           oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics
+{
+    BOOL wasRTL = _layoutMetrics.layoutDirection == LayoutDirection::RightToLeft;
+    [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
+    BOOL isRTL = _layoutMetrics.layoutDirection == LayoutDirection::RightToLeft;
+
+    if (wasRTL != isRTL) {
+        const auto &props = *std::static_pointer_cast<RNPlainTextProps const>(_props);
+        if (props.textAlign == RNPlainTextTextAlign::Left || props.textAlign == RNPlainTextTextAlign::Right) {
+            _needsApplyContent = YES;
+        }
+    }
+}
+
 - (void)updateProps:(Props::Shared const &)props oldProps:(Props::Shared const &)oldProps
 {
     const auto &oldViewProps = *std::static_pointer_cast<RNPlainTextProps const>(_props);
@@ -277,7 +309,7 @@ using namespace plaintext;
         oldViewProps.allowFontScaling != newViewProps.allowFontScaling ||
         oldViewProps.maxFontSizeMultiplier != newViewProps.maxFontSizeMultiplier ||
         oldViewProps.lineHeightClippingCompat != newViewProps.lineHeightClippingCompat) {
-        [self applyContentFromProps:newViewProps];
+        _needsApplyContent = YES;
     }
 
     if (_forceApplyProps || oldViewProps.numberOfLines != newViewProps.numberOfLines) {
@@ -296,6 +328,19 @@ using namespace plaintext;
     _forceApplyProps = NO;
 
     [super updateProps:props oldProps:oldProps];
+}
+
+// Fabric calls this after every -updateProps/-updateLayoutMetrics batch (mount, update and
+// Animated's synchronous prop update), so both have landed by the time content is built.
+- (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask
+{
+    [super finalizeUpdates:updateMask];
+
+    if (_needsApplyContent) {
+        _needsApplyContent = NO;
+        const auto &props = *std::static_pointer_cast<RNPlainTextProps const>(_props);
+        [self applyContentFromProps:props];
+    }
 }
 
 @end
