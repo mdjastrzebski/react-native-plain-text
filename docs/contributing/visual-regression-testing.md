@@ -187,6 +187,12 @@ gh workflow run vrt.yml --ref <branch> -f platform=ios
 
 `platform` is `all` (the default), `android`, or `ios`.
 
+The nightly run is upstream-only. Forks inherit the workflow file, and GitHub
+lets a fork enable scheduled workflows, so both jobs skip a `schedule` trigger
+unless `github.repository` is `mdjastrzebski/react-native-plain-text`.
+`workflow_dispatch` is not gated, so a fork can still run either platform by
+hand.
+
 ### Bumping the Android system image
 
 The Android emulator build is pinned by URL, but the system image is not:

@@ -26,9 +26,9 @@ concurrency:
 
 jobs:
   vrt-android:
-    # Scheduled and pull request runs have no inputs, so an empty platform means
-    # both.
-    if: ${{ inputs.platform != 'ios' }}
+    # Scheduled runs have no inputs, so an empty platform means both. The nightly
+    # is upstream-only (it keeps the baselines current); dispatch works in forks.
+    if: ${{ inputs.platform != 'ios' && (github.event_name != 'schedule' || github.repository == 'mdjastrzebski/react-native-plain-text') }}
     runs-on: ubuntu-24.04
     # A cold run is ~30 minutes, and the e2e stage carries its own retry budget.
     timeout-minutes: 75
@@ -179,7 +179,8 @@ jobs:
           retention-days: 7
 
   vrt-ios:
-    if: ${{ inputs.platform != 'android' }}
+    # Same upstream-only nightly guard as the Android job.
+    if: ${{ inputs.platform != 'android' && (github.event_name != 'schedule' || github.repository == 'mdjastrzebski/react-native-plain-text') }}
     runs-on: macos-26
     # A cold run is ~36 minutes on this runner, ~24 of them xcodebuild.
     timeout-minutes: 90
