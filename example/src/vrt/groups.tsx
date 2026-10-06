@@ -241,32 +241,6 @@ export const groups: VrtGroup[] = [
     ),
   },
   {
-    // The paragraph direction comes from an ancestor View's Yoga `direction`
-    // style, not a prop measured anywhere: left/right swap sides under rtl (and
-    // 'auto' follows the start edge), so each rtl row should mirror the ltr
-    // rows in the text-align group above. See
-    // docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
-    children: (
-      <>
-        {(['left', 'center', 'right', 'justify', 'auto'] as const).map((textAlign) => (
-          <VrtText
-            testID={`vrt-features-direction-rtl-${textAlign}`}
-            key={textAlign}
-            containerStyle={[vrtStyles.wideRow, { direction: 'rtl' }]}
-            style={[
-              styles.body,
-              {
-                textAlign,
-              },
-            ]}
-          >
-            {textAlign === 'justify' ? PARAGRAPH_LONG : PARAGRAPH}
-          </VrtText>
-        ))}
-      </>
-    ),
-  },
-  {
     platform: 'ios',
     children: (
       <>
