@@ -263,9 +263,7 @@ using namespace plaintext;
            oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics
 {
     BOOL wasRTL = _layoutMetrics.layoutDirection == LayoutDirection::RightToLeft;
-    // Pass the stored _layoutMetrics like the base class, not the parameter: a recycled
-    // view's stored metrics can differ from what the shadow tree reports.
-    [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:_layoutMetrics];
+    [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
     BOOL isRTL = _layoutMetrics.layoutDirection == LayoutDirection::RightToLeft;
 
     if (wasRTL != isRTL) {
