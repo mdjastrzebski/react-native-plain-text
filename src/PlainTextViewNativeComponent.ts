@@ -84,7 +84,9 @@ export interface NativeProps extends ViewProps {
   // unset: iOS's accessibilityLanguage, Android's LocaleSpan (the only language
   // hint TalkBack reads). The fallback resolves natively, not in JS.
   //
-  // Cost: light. One attribute on iOS, one guarded locale write on Android.
+  // Cost: medium. One attribute plus one accessibilityLanguage write on iOS. On
+  // Android, one guarded locale write plus a LocaleSpan, so a SpannableString in
+  // place of a plain string.
   lang?: string;
 
   // Re-declared from ViewProps: Android's base view config omits it (RN core only

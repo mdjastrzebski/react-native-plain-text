@@ -44,9 +44,9 @@ most props only touch a few.
 - `textTransform`
 - `hyphens`
 - `lang`
-- `accessibilityLanguage` (re-declared from `ViewProps`, since RN core's Android view config omits it; the generated
-  `std::optional` field shadows `ViewProps`' own `std::string` — see
-  [Set 19](#set-19--the-lang-and-accessibilitylanguage-fallback))
+- `accessibilityLanguage` (re-declared from `ViewProps`, since RN core's Android view config omits it. The generated
+  `std::optional` field shadows `ViewProps`' own `std::string`. See
+  [Set 19](#set-19--the-lang-and-accessibilitylanguage-fallback).)
 - `numberOfLines`
 - `ellipsizeMode`
 - `lineBreakStrategyIOS` (iOS-only — no Android setter body, no Android entry in
@@ -258,8 +258,9 @@ on both platforms for now, ready for whatever gets A/B tested next.
   letterSpacing is relative to font size)
 - `dirtyLetterSpacing`: `letterSpacing`
 - `dirtyTypeface`: `fontFamily`, `fontWeight`, `fontStyle`
-- `dirtyText`: `text`, `lineHeight`, `textTransform`, plus `fontSize` / `allowFontScaling` / `maxFontSizeMultiplier`
-  again (the `lineHeight` span is scaled too, via `markScaledSizesDirty()`)
+- `dirtyText`: `text`, `lineHeight`, `textTransform`, `lang`, `accessibilityLanguage` (both feed the `LocaleSpan`),
+  plus `fontSize` / `allowFontScaling` / `maxFontSizeMultiplier` again (the `lineHeight` span is scaled too, via
+  `markScaledSizesDirty()`)
 - Ordered separately, not a dirty flag: `fontVariationSettings` (see below)
 
 Setters whose work is **shared with other props** record state and set one of the flags above; `flushPendingUpdates()`
@@ -703,14 +704,14 @@ pins the Android side, but on iOS they only show up on-device, in the example ap
 
 ## Set 19 — The `lang` and `accessibilityLanguage` fallback
 
-**Props:** `lang`, `accessibilityLanguage` — two props that resolve down to one screen-reader language.
+**Props:** `lang`, `accessibilityLanguage`. The two props resolve down to one screen-reader language.
 
-`accessibilityLanguage` wins when set; otherwise `lang` applies; an empty string counts as unset for both. This is
+`accessibilityLanguage` wins when set, and `lang` applies otherwise. An empty string counts as unset for both. This is
 resolved natively rather than in JS (see [performance.md](performance.md#prop-cost-policy)), so each platform has its
-own copy. iOS writes the result to the component view's `accessibilityLanguage`, after
-`RCTViewComponentView`'s own write of the raw prop. The `UILabel` doesn't need it: VoiceOver focuses the component view,
-whose `isAccessibilityElement` defers to its `contentView`, and never descends into the label. Android has no such property, so TalkBack reads it from a
-`LocaleSpan` over the whole text, which also overrides `lang`'s `textLocales` for glyph selection and hyphenation, making
+own copy. iOS writes the result to the component view's `accessibilityLanguage`, after `RCTViewComponentView`'s own
+write of the raw prop. The `UILabel` doesn't need it: VoiceOver focuses the component view, whose
+`isAccessibilityElement` defers to its `contentView`, and never descends into the label. Android has no such property,
+so TalkBack reads it from a `LocaleSpan` over the whole text, which also overrides `lang`'s `textLocales` for glyph selection and hyphenation, making
 `accessibilityLanguage` a measured input on Android ([Set 2](#set-2--a-prop-that-affects-measured-size)).
 
 **Files:**
