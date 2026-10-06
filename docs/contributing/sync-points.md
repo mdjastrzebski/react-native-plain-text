@@ -655,7 +655,7 @@ on the native view, keyed off the direction that view has _right now_:
 - iOS: `RCTComponentViewProtocol.updateLayoutMetrics`, whose `layoutMetrics.layoutDirection` the Fabric layer updates on
   every layout instruction.
 
-Two mount orders make caching the resolved value at prop-set time wrong: on mount `CREATE` applies props before
+Two cases make caching the resolved value at prop-set time wrong: on mount `CREATE` applies props before
 `UPDATE_LAYOUT` brings the direction in, and an ancestor toggling `direction:` later changes the child's direction with
 no prop change at all. Both sides therefore store only the raw `textAlign` prop and re-resolve it from the current
 direction when told the direction changed (`onRtlPropertiesChanged` on Android, the `updateLayoutMetrics` override on

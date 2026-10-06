@@ -37,9 +37,7 @@ export function DirectionSection({ showText }: { showText: boolean }) {
         style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         testID="direction-flip"
       >
-        <PlainText style={styles.buttonLabel}>
-          {`Direction: ${direction.toUpperCase()}`}
-        </PlainText>
+        <PlainText style={styles.buttonLabel}>{`Direction: ${direction.toUpperCase()}`}</PlainText>
       </Pressable>
       <View style={{ direction }}>
         {ROWS.map(([label, textAlign, text]) => (
