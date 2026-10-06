@@ -509,9 +509,22 @@ class PlainTextView : AppCompatTextView {
     appliedVariationSettings = null
   }
 
-  // Mirrors <Text> (TextAttributeProps#getTextAlign): Gravity rather than
-  // TEXT_ALIGNMENT_*, with left/right resolved against layout direction for RTL.
+  // The raw prop, kept so onRtlPropertiesChanged below can re-resolve it: the layout
+  // direction it resolves against is not fixed at the time this prop is applied.
+  // Declared beside its setter like rawTextAlignVertical, never read from init.
+  private var rawTextAlign: String? = null
+
   fun setTextAlign(textAlign: String?) {
+    rawTextAlign = textAlign
+    applyTextAlign()
+  }
+
+  // Mirrors <Text> (TextAttributeProps#getTextAlignment): Gravity rather than
+  // TEXT_ALIGNMENT_*, with left/right resolved against layout direction for RTL.
+  // justify stays on Gravity.LEFT like RN (it doesn't swap), because TextAttributeProps
+  // maps "justify" unconditionally; the inter-word justification below is its whole point.
+  private fun applyTextAlign() {
+    val textAlign = rawTextAlign
     val isRTL = layoutDirection == LAYOUT_DIRECTION_RTL
     val horizontal = when (textAlign) {
       "justify" -> Gravity.LEFT
@@ -533,6 +546,21 @@ class PlainTextView : AppCompatTextView {
         if (textAlign == "justify") Layout.JUSTIFICATION_MODE_INTER_WORD
         else Layout.JUSTIFICATION_MODE_NONE
     }
+  }
+
+  // SYNC: the Android half of paragraph direction reaching text alignment; the iOS
+  // half is RNPlainText's updateLayoutMetrics override. See
+  // docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
+  //
+  // Fabric pushes Yoga's paragraph direction into every mounted view through
+  // SurfaceMountingManager.updateLayout -> View.setLayoutDirection, and that can
+  // land after the props that already resolved against the old direction (CREATE
+  // before UPDATE_LAYOUT on mount) or change later with no prop change at all (an
+  // ancestor's direction: 'rtl' toggling). Re-resolve from the raw prop stored
+  // above rather than caching a result.
+  override fun onRtlPropertiesChanged(layoutDirection: Int) {
+    super.onRtlPropertiesChanged(layoutDirection)
+    applyTextAlign()
   }
 
   private var rawTextAlignVertical: String? = null

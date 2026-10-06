@@ -124,6 +124,17 @@ using namespace plaintext;
     UIFont *font = resolveFont(props, fontSizeMultiplier);
     UIColor *color = props.color.has_value() ? RCTUIColorFromSharedColor(props.color.value()) : [UIColor blackColor];
     NSTextAlignment alignment = textAlignmentFromProp(props.textAlign);
+    // SYNC: mirrors RN's own paragraph-direction swap in
+    // RCTAttributedTextUtils.mm (textAttributes.layoutDirection): under an RTL
+    // paragraph, explicit left/right trade sides. See
+    // docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
+    if (_layoutMetrics.layoutDirection == LayoutDirection::RightToLeft) {
+        if (alignment == NSTextAlignmentLeft) {
+            alignment = NSTextAlignmentRight;
+        } else if (alignment == NSTextAlignmentRight) {
+            alignment = NSTextAlignmentLeft;
+        }
+    }
     NSString *text = props.text.has_value() ? ([NSString stringWithUTF8String:props.text.value().c_str()] ?: @"") : @"";
     text = applyTextTransform(text, props.textTransform);
 
@@ -238,6 +249,30 @@ using namespace plaintext;
 
     const auto &props = *std::static_pointer_cast<RNPlainTextProps const>(_props);
     if (props.allowFontScaling) {
+        [self applyContentFromProps:props];
+    }
+}
+
+// Fabric pushes Yoga's paragraph direction into every component view through
+// layoutMetrics.layoutDirection, and that can land after the props that already
+// resolved against the old direction (CREATE before UPDATE_LAYOUT on mount) or
+// change later with no prop change at all (an ancestor's direction: 'rtl'
+// toggling). Re-apply so the textAlign swap above re-reads _layoutMetrics, which
+// [super ...] has just brought up to date.
+// SYNC: PlainTextView.onRtlPropertiesChanged is the Android counterpart that
+// re-resolves textAlign against the view's layout direction. See
+// docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
+- (void)updateLayoutMetrics:(const LayoutMetrics &)layoutMetrics
+           oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics
+{
+    LayoutDirection oldDirection = _layoutMetrics.layoutDirection;
+    // Mirror the base class: pass the stored _layoutMetrics, not the parameter,
+    // since the stored one may be stale (e.g. from a recycled view) and differ
+    // from what the shadow tree reports.
+    [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:_layoutMetrics];
+
+    if (_layoutMetrics.layoutDirection != oldDirection) {
+        const auto &props = *std::static_pointer_cast<RNPlainTextProps const>(_props);
         [self applyContentFromProps:props];
     }
 }

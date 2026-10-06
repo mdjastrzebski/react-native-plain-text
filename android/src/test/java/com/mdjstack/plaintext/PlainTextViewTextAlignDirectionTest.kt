@@ -1,0 +1,113 @@
+package com.mdjstack.plaintext
+
+import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.text.Layout
+import android.view.Gravity
+import android.view.View
+import com.facebook.react.uimanager.DisplayMetricsHolder
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+
+// Covers how textAlign resolves against the paragraph direction Fabric pushes into
+// every view: the prop can land before the direction (CREATE before UPDATE_LAYOUT)
+// and the direction can change later with no prop change at all (an ancestor's
+// direction: 'rtl' toggling), so resolution has to repeat from the raw prop.
+// SYNC: the Android half of paragraph direction reaching text alignment; the iOS
+// half is RNPlainText's updateLayoutMetrics override. See
+// docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [Config.NEWEST_SDK])
+class PlainTextViewTextAlignDirectionTest {
+  private val context: Context
+    get() = RuntimeEnvironment.getApplication()
+
+  @Before
+  fun setUp() {
+    DisplayMetricsHolder.initDisplayMetricsIfNotInitialized(context)
+    // The library manifest declares nothing, so Robolectric's application comes up
+    // without FLAG_SUPPORTS_RTL and View#resolveLayoutDirection skips RTL entirely
+    // (hasRtlSupport()). A real app's manifest sets supportsRtl="true".
+    context.applicationInfo.flags = context.applicationInfo.flags or
+      ApplicationInfo.FLAG_SUPPORTS_RTL
+  }
+
+  private fun horizontalGravityOf(view: PlainTextView) =
+    view.gravity and Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK
+
+  @Test
+  fun resolvesLeftAgainstTheCurrentDirection() {
+    val view = PlainTextView(context)
+    view.setTextAlign("left")
+    assertEquals(Gravity.LEFT, horizontalGravityOf(view))
+  }
+
+  @Test
+  fun resolvesRightAgainstTheCurrentDirection() {
+    val view = PlainTextView(context)
+    view.setTextAlign("right")
+    assertEquals(Gravity.RIGHT, horizontalGravityOf(view))
+  }
+
+  @Test
+  fun resolvesAgainstADirectionAlreadySetBeforeTheProp() {
+    val view = PlainTextView(context)
+    view.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
+    view.setTextAlign("left")
+    assertEquals(Gravity.RIGHT, horizontalGravityOf(view))
+  }
+
+  @Test
+  fun reResolvesLeftWhenTheDirectionArrivesAfterTheProp() {
+    val view = PlainTextView(context)
+    view.setTextAlign("left")
+    view.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
+    assertEquals(Gravity.RIGHT, horizontalGravityOf(view))
+  }
+
+  @Test
+  fun reResolvesRightWhenTheDirectionArrivesAfterTheProp() {
+    val view = PlainTextView(context)
+    view.setTextAlign("right")
+    view.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
+    assertEquals(Gravity.LEFT, horizontalGravityOf(view))
+  }
+
+  @Test
+  fun reResolvesJustifyWhenTheDirectionArrivesAfterTheProp() {
+    val view = PlainTextView(context)
+    view.setTextAlign("justify")
+    assertEquals(Gravity.LEFT, horizontalGravityOf(view))
+
+    view.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
+
+    // RN maps "justify" unconditionally (TextAttributeProps), so it doesn't swap
+    // under RTL like left/right; only the inter-word justification is its point.
+    assertEquals(Gravity.LEFT, horizontalGravityOf(view))
+    assertEquals(
+      Layout.JUSTIFICATION_MODE_INTER_WORD,
+      view.justificationMode,
+    )
+  }
+
+  @Test
+  fun keepsCenterAndAutoIndependentOfDirection() {
+    val center = PlainTextView(context)
+    val auto = PlainTextView(context)
+    center.setTextAlign("center")
+    auto.setTextAlign("auto")
+    val autoGravity = horizontalGravityOf(auto)
+
+    center.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
+    auto.setLayoutDirection(View.LAYOUT_DIRECTION_RTL)
+
+    assertEquals(Gravity.CENTER_HORIZONTAL, horizontalGravityOf(center))
+    assertEquals(autoGravity, horizontalGravityOf(auto))
+    assertEquals(Layout.JUSTIFICATION_MODE_NONE, auto.justificationMode)
+  }
+}
