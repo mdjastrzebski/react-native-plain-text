@@ -82,7 +82,7 @@ export interface NativeProps extends ViewProps {
   // BCP-47 language tag (e.g. 'de') for hyphenation/line-breaking. Empty means unset.
   // Also the spoken language for screen readers: iOS's accessibilityLanguage (unless
   // RN's own accessibilityLanguage prop is set), Android's LocaleSpan (the only
-  // language hint TalkBack reads). The iOS fallback resolves natively, not in JS.
+  // language hint TalkBack reads).
   //
   // Cost: medium. One attribute plus one accessibilityLanguage write on iOS. On
   // Android, one guarded locale write plus a LocaleSpan, so a SpannableString in

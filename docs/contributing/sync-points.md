@@ -717,8 +717,7 @@ Android has no such property, so TalkBack reads it from a `LocaleSpan` over the 
 - `ios/PlainTextProps.h` / `.mm` → `accessibilityLanguageFromProps` — the iOS resolution
 - `ios/RNPlainText.mm` → `updateProps` — applies it after `super`
 - `PlainTextView.kt` → `applyText` — the Android `LocaleSpan`
-- `android/src/test/java/com/mdjstack/plaintext/PlainTextViewLocaleSpanTest.kt` — pins the Android side; doesn't run
-  against iOS, so it can't catch the two drifting apart on its own
+- `android/src/test/java/com/mdjstack/plaintext/PlainTextViewLocaleSpanTest.kt` — pins the Android side
 
 **Failure mode:** one platform's screen reader speaks the text in the device language instead of `lang`. Nothing throws.
 

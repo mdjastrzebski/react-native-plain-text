@@ -274,8 +274,7 @@ class PlainTextView : AppCompatTextView {
     dirtyText = true
   }
 
-  // The single place text reaches TextView, since lineHeight and locale spans must be
-  // layered on.
+  // The single place text reaches TextView, since spans must be layered on.
   private fun applyText() {
     val value = applyTextTransform(rawText?.toString() ?: "", textTransform)
     val lang = appliedLang
@@ -607,7 +606,7 @@ class PlainTextView : AppCompatTextView {
 
   // Null/empty restores the default locale. Also feeds the LocaleSpan (see applyText).
   fun setLang(lang: String?) {
-    val normalized = lang?.ifEmpty { null }
+    val normalized = if (lang.isNullOrEmpty()) null else lang
     if (normalized == appliedLang) return
     appliedLang = normalized
     dirtyText = true

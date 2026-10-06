@@ -52,10 +52,9 @@ BOOL textDecorationHasLineThrough(const std::string &textDecorationLine);
 RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical textAlignVertical, const std::optional<std::string> &verticalAlign);
 
 /*
- * The language VoiceOver speaks the text in: RN's accessibilityLanguage when set
- * (it is iOS-only in RN, so Android never sees it), otherwise lang, nil when
- * neither is (an empty string counts as unset). Resolved here rather than in JS,
- * per docs/contributing/performance.md#prop-cost-policy.
+ * The language VoiceOver speaks the text in: RN's accessibilityLanguage when set,
+ * otherwise lang, nil when neither is (an empty string counts as unset). Resolved
+ * here rather than in JS, per docs/contributing/performance.md#prop-cost-policy.
  */
 NSString *accessibilityLanguageFromProps(const RNPlainTextProps &props);
 
