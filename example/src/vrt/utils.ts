@@ -59,6 +59,13 @@ export const FONT_VARIANT_SPECIMEN = 'Waffle office 0123456789';
 export const EMOJI_SPECIMEN = 'Quick brown 🦊 jumps over the lazy 🐶';
 export const FONT_SIZES = [48, 40, 32, 26, 20, 16, 13, 10];
 export const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'] as const;
+// Short text, so the side it lands on is visible in the full-width row.
+export const DIRECTION_ROWS = [
+  { label: 'left', textAlign: 'left', text: SPECIMEN },
+  { label: 'right', textAlign: 'right', text: SPECIMEN },
+  { label: 'center', textAlign: 'center', text: SPECIMEN },
+] as const;
+
 export const ELLIPSIZE_MODES = ['head', 'middle', 'tail', 'clip'] as const;
 export const ORPHAN_SPECIMEN = 'The last word of this text does not fit.';
 export const KOREAN_WORD_WRAP_SPECIMEN = '한글개행 한글개행 한글개행 한글개행 한글개행';

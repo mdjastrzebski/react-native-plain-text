@@ -13,6 +13,7 @@ import {
   EMOJI_SPECIMEN,
   FONT_SIZES,
   TEXT_ALIGNS,
+  DIRECTION_ROWS,
   ELLIPSIZE_MODES,
   ORPHAN_SPECIMEN,
   KOREAN_WORD_WRAP_SPECIMEN,
@@ -237,6 +238,33 @@ export const groups: VrtGroup[] = [
             {textAlign === 'justify' ? PARAGRAPH_LONG : PARAGRAPH}
           </VrtText>
         ))}
+      </>
+    ),
+  },
+  {
+    // The paragraph direction comes from an ancestor View's Yoga `direction`
+    // style, not a prop measured anywhere: left and right swap sides under rtl,
+    // and center should stay put. See
+    // docs/contributing/sync-points.md#set-18--paragraph-direction-and-text-alignment.
+    children: (
+      <>
+        {(['ltr', 'rtl'] as const).flatMap((direction) =>
+          DIRECTION_ROWS.map(({ label, textAlign, text }) => (
+            <VrtText
+              testID={`vrt-features-direction-${direction}-${label}`}
+              key={`${direction}-${label}`}
+              containerStyle={[vrtStyles.wideRow, { direction }]}
+              style={[
+                styles.body,
+                {
+                  textAlign,
+                },
+              ]}
+            >
+              {text}
+            </VrtText>
+          ))
+        )}
       </>
     ),
   },
