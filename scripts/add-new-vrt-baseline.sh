@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Adds baselines for new scenarios without touching existing ones.
+# Example: scripts/add-new-vrt-baseline.sh android features-direction-
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,7 +11,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=./vrt-config.sh
 source "$SCRIPT_DIR/vrt-config.sh"
 
-# Example: scripts/add-new-vrt-baseline.sh android features-direction-
 usage() {
   printf 'Usage: %s <android|ios> <testIDRegex>\n' "${0##*/}"
   printf 'Captures the scenarios whose image name (test ID without "vrt-") matches\n'
@@ -45,51 +47,52 @@ baseline_dir="$PROJECT_ROOT/tests/vrt/$target"
 
 cd "$PROJECT_ROOT"
 
-# Exact image names, so the copy below takes only what the regex selects.
+# Exact image names, so only what the regex selects is copied later.
 scenario_list="$("$SCRIPT_DIR/list-vrt-scenarios.sh" "$platform")"
 grep_status=0
 matched="$(sed 's/^vrt-//' "$scenario_list" | grep -E -- "$regex")" || grep_status=$?
 [[ "$grep_status" -le 1 ]] || fail "Invalid testIDRegex '$regex'."
 [[ -n "$matched" ]] || fail "No $platform $VRT_SUITE scenario matches '$regex'."
 
-names=""
+names=()
 while read -r name; do
   if [[ -f "$baseline_dir/$name.png" ]]; then
     printf 'Skipping %s: it already has a baseline.\n' "$name"
   else
-    names+="$name"$'\n'
+    names+=("$name")
   fi
 done <<<"$matched"
-names="${names%$'\n'}"
-[[ -n "$names" ]] || fail "Every scenario matching '$regex' already has a baseline."
-printf 'Adding %s baseline(s):\n' "$(wc -l <<<"$names" | tr -d ' ')"
-sed 's/^/  /' <<<"$names"
+[[ ${#names[@]} -gt 0 ]] || fail "Every scenario matching '$regex' already has a baseline."
+
+printf 'Adding %s baseline(s):\n' "${#names[@]}"
+printf '  %s\n' "${names[@]}"
 
 "$SCRIPT_DIR/vrt.sh" "$platform" setup
 "$SCRIPT_DIR/vrt.sh" "$platform" build
 "$SCRIPT_DIR/vrt.sh" "$platform" install
 # capture matches substrings, so it may also capture a scenario whose ID contains
-# a selected one; only the selected images are copied.
+# a selected one. Only the selected images are copied.
 "$SCRIPT_DIR/vrt.sh" "$platform" capture \
-  --filter "$(sed 's/^/vrt-/' <<<"$names" | paste -sd, -)"
+  --filter "$(printf 'vrt-%s\n' "${names[@]}" | paste -sd, -)"
 
-# Every image is checked before any is copied, so a failed capture adds nothing.
-while read -r name; do
+# Check every image before copying any, so a failed capture adds nothing.
+for name in "${names[@]}"; do
   [[ -f "$actual_dir/$name.png" ]] || fail "Capture did not produce '$actual_dir/$name.png'."
-done <<<"$names"
-while read -r name; do
+done
+for name in "${names[@]}"; do
   cp "$actual_dir/$name.png" "$baseline_dir/"
-done <<<"$names"
+done
 
 # The new images match themselves, so this checks the capture environment against
 # the baselines' environment.txt. On a mismatch the added images are removed.
 if ! "$SCRIPT_DIR/vrt.sh" "$platform" compare partial; then
-  while read -r name; do
+  for name in "${names[@]}"; do
     rm -f "$baseline_dir/$name.png"
-  done <<<"$names"
+  done
   fail "Comparison failed, so no baseline was added. See the report above."
 fi
 
-printf 'Added %s baseline(s). Review the images, then commit them:\n' \
-  "$(wc -l <<<"$names" | tr -d ' ')"
-sed "s|^|  tests/vrt/$target/|; s|\$|.png|" <<<"$names"
+printf 'Added %s baseline(s). Review the images, then commit them:\n' "${#names[@]}"
+for name in "${names[@]}"; do
+  printf '  tests/vrt/%s/%s.png\n' "$target" "$name"
+done
