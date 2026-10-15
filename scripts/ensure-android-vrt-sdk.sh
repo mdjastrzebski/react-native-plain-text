@@ -61,14 +61,52 @@ read -r answer < /dev/tty || true
 [[ "$answer" == [yY] || "$answer" == [yY][eE][sS] ]] || \
   fail "Install the pinned Android SDK packages before running Android VRT."
 
-# sdkmanager may ask to accept licenses, so it reads from the terminal.
-"$sdkmanager" "${packages[@]}" < /dev/tty >&2
+# sdkmanager only installs the newest emulator on its channel, so it can neither
+# pin nor downgrade it. Fetch the pinned build from Google's repository instead.
+install_emulator() {
+  local host
+  case "$(uname -s)-$(uname -m)" in
+    Darwin-arm64) host="darwin_aarch64" ;;
+    Darwin-x86_64) host="darwin_x64" ;;
+    Linux-x86_64) host="linux_x64" ;;
+    *) fail "No pinned Android emulator download for $(uname -s)-$(uname -m)." ;;
+  esac
+  local url="https://dl.google.com/android/repository/emulator-$host-$ANDROID_EMULATOR_BUILD.zip"
+  local work
+  work="$(mktemp -d)"
+  printf 'Downloading %s\n' "$url" >&2
+  curl -fL --progress-bar -o "$work/emulator.zip" "$url" || fail "Could not download $url."
+  unzip -q "$work/emulator.zip" -d "$work" || fail "Could not unpack $url."
+  [[ -f "$work/emulator/source.properties" ]] || fail "$url has no emulator/source.properties."
+  # avdmanager only sees packages that have the package.xml sdkmanager writes.
+  local major minor micro
+  IFS=. read -r major minor micro <<<"$ANDROID_EMULATOR_VERSION"
+  cat >"$work/emulator/package.xml" <<XML
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns2:repository xmlns:ns2="http://schemas.android.com/repository/android/common/02" xmlns:ns3="http://schemas.android.com/repository/android/generic/02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><localPackage path="emulator" obsolete="false"><type-details xsi:type="ns3:genericDetailsType"/><revision><major>$major</major><minor>$minor</minor><micro>$micro</micro></revision><display-name>Android Emulator</display-name></localPackage></ns2:repository>
+XML
+  rm -rf "$android_sdk_root/emulator"
+  mv "$work/emulator" "$android_sdk_root/emulator"
+  rm -rf "$work"
+}
 
-# sdkmanager installs the newest package on its channel, not necessarily the
-# pinned one. Say so here rather than as a later mismatch.
+sdk_packages=()
+for package in "${packages[@]}"; do
+  if [[ "$package" == "emulator" ]]; then
+    install_emulator
+  else
+    sdk_packages+=("$package")
+  fi
+done
+
+# sdkmanager may ask to accept licenses, so it reads from the terminal.
+if [[ ${#sdk_packages[@]} -gt 0 ]]; then
+  "$sdkmanager" "${sdk_packages[@]}" < /dev/tty >&2
+fi
+
 [[ "$(property "$emulator_properties" Pkg.Revision)" == "$ANDROID_EMULATOR_VERSION" &&
   "$(property "$emulator_properties" Pkg.BuildId)" == "$ANDROID_EMULATOR_BUILD" ]] || fail \
-  "sdkmanager did not install Android emulator $ANDROID_EMULATOR_VERSION ($ANDROID_EMULATOR_BUILD). It may only be offered on another channel (--channel=1 beta, --channel=3 canary)."
+  "The downloaded emulator is not $ANDROID_EMULATOR_VERSION ($ANDROID_EMULATOR_BUILD). Check ANDROID_EMULATOR_VERSION and ANDROID_EMULATOR_BUILD in scripts/vrt-config.sh."
 [[ "$(property "$system_image_properties" Pkg.Revision)" == "$ANDROID_SYSTEM_IMAGE_REVISION" ]] || fail \
   "sdkmanager did not install '$system_image' revision $ANDROID_SYSTEM_IMAGE_REVISION."
 
