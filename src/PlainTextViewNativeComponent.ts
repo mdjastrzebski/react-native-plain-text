@@ -80,8 +80,13 @@ export interface NativeProps extends ViewProps {
   // Android's dictionary hyphenator.
   hyphens?: CodegenTypes.WithDefault<'none' | 'auto', 'none'>;
   // BCP-47 language tag (e.g. 'de') for hyphenation/line-breaking. Empty means unset.
+  // Also the spoken language for screen readers: iOS's accessibilityLanguage (unless
+  // RN's own accessibilityLanguage prop is set), Android's LocaleSpan (the only
+  // language hint TalkBack reads).
   //
-  // Cost: light. One attribute on iOS, one guarded locale write on Android.
+  // Cost: medium. One attribute plus one accessibilityLanguage write on iOS. On
+  // Android, one guarded locale write plus a LocaleSpan, so a SpannableString in
+  // place of a plain string.
   lang?: string;
 
   // 0 means unlimited. Caps rendered lines and the shadow node's measured intrinsic height.
