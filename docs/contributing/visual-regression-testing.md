@@ -162,6 +162,16 @@ git add tests/vrt/ios
 only the images you expect. Commit them in the same pull request as the change
 that caused them, where the image diff gets reviewed alongside the code.
 
+To add baselines for new scenarios without replacing the existing ones, pass a
+regex over image names:
+
+```sh
+scripts/add-new-vrt-baseline.sh android features-direction-
+```
+
+It skips scenarios that already have a baseline and adds nothing if the capture
+or the environment check fails.
+
 ## CI
 
 `.github/workflows/vrt.yml` runs nightly and on manual dispatch, on a
