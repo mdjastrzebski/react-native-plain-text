@@ -62,6 +62,22 @@ save_agent_device_logs() {
 # Whatever ends the run early, keep agent-device's logs for the CI artifact.
 trap 'status=$?; [[ "$status" == 0 ]] || save_agent_device_logs; exit "$status"' EXIT
 
+# agent-device gives its daemon a fixed 15 s to come up, which a slow CI runner
+# can miss ("Failed to start daemon"). Start it with a cheap command that can
+# be retried, so a slow start costs a retry rather than the run. A daemon that
+# came up late is reused by the next attempt.
+start_agent_device_daemon() {
+  local attempt attempts=3
+  for attempt in $(seq 1 "$attempts"); do
+    "$agent_device_bin" session list --json >/dev/null && return 0
+    printf 'agent-device daemon start %s/%s failed.\n' "$attempt" "$attempts" >&2
+    sleep 5
+  done
+  return 1
+}
+
+start_agent_device_daemon || fail "Could not start the agent-device daemon. Logs: $artifacts_root"
+
 if [[ "$platform" == "ios" ]]; then
   # Without the approval setup writes, a cold deep link stops at an "Open in
   # PlainText?" prompt and fails in ways that look like a slow launch.
