@@ -68,6 +68,7 @@ target="$(vrt_target "$platform")"
 actual_dir="$PROJECT_ROOT/.vrt/actual/$target"
 
 capture_attempts=5
+open_attempts=2
 # Each capture's verdict is reported as it is taken, not only at the compare stage.
 live_diff_dir="$PROJECT_ROOT/.vrt/live-diff/$target"
 case "$platform" in
@@ -151,12 +152,26 @@ while read -r capture_id; do
   # in for it until the verdict overwrites it.
   [[ -t 1 ]] && printf '⏳ %s' "$capture_id"
   deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
-  step open "$VRT_APP_ID" "$deep_link" --foreground
-  session_open=1
-
-  # One accessibility fetch proves the specimen exists. No `wait stable`: the crop
-  # below resolves the same selector on the same screen.
-  step wait "id=\"$capture_id\"" 15000
+  # A slow runner can lose the deep link or hang the accessibility fetch, which
+  # should cost one attempt, not the run.
+  open_attempt=1
+  while true; do
+    session_open=1
+    # One accessibility fetch proves the specimen exists. No `wait stable`: the
+    # crop below resolves the same selector on the same screen.
+    if step open "$VRT_APP_ID" "$deep_link" --foreground &&
+      step wait "id=\"$capture_id\"" 15000; then
+      break
+    fi
+    if [[ "$open_attempt" -ge "$open_attempts" ]]; then
+      fail "Opening '$capture_id' failed after $open_attempt attempts."
+    fi
+    printf 'Opening %s failed (attempt %s/%s); retrying.\n' \
+      "$capture_id" "$open_attempt" "$open_attempts" >&2
+    open_attempt=$((open_attempt + 1))
+    # Gives a runner still finishing a timed-out command time to settle.
+    sleep 2
+  done
 
   # Files drop the ID's `vrt-` prefix; compare-vrt.sh derives the same names.
   image="${capture_id#vrt-}.png"
