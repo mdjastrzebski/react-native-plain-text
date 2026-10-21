@@ -107,7 +107,6 @@ step() {
   agent_device --level digest "$@" >/dev/null
 }
 
-# Runs a command until it succeeds, failing the run after the given attempts.
 retry() {
   local attempts="$1" delay="$2" label="$3" attempt=1
   shift 3
@@ -174,9 +173,8 @@ while read -r capture_id; do
   # in for it until the verdict overwrites it.
   [[ -t 1 ]] && printf '⏳ %s' "$capture_id"
   session_open=1
-  # A slow runner can lose the deep link or hang the accessibility fetch, which
-  # should cost one attempt, not the run. The pause gives a runner still
-  # finishing a timed-out command time to settle.
+  # A slow runner can drop the deep link or time out the wait. The pause lets a
+  # timed-out command finish first.
   retry "$open_attempts" 2 "Opening '$capture_id'" open_specimen "$capture_id"
 
   # Files drop the ID's `vrt-` prefix; compare-vrt.sh derives the same names.

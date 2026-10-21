@@ -62,22 +62,6 @@ save_agent_device_logs() {
 # Whatever ends the run early, keep agent-device's logs for the CI artifact.
 trap 'status=$?; [[ "$status" == 0 ]] || save_agent_device_logs; exit "$status"' EXIT
 
-# agent-device gives its daemon a fixed 15 s to come up, which a slow CI runner
-# can miss ("Failed to start daemon"). Start it with a cheap command that can
-# be retried, so a slow start costs a retry rather than the run. A daemon that
-# came up late is reused by the next attempt.
-start_agent_device_daemon() {
-  local attempt attempts=3
-  for attempt in $(seq 1 "$attempts"); do
-    "$agent_device_bin" session list --json >/dev/null && return 0
-    printf 'agent-device daemon start %s/%s failed.\n' "$attempt" "$attempts" >&2
-    sleep 5
-  done
-  return 1
-}
-
-start_agent_device_daemon || fail "Could not start the agent-device daemon. Logs: $artifacts_root"
-
 if [[ "$platform" == "ios" ]]; then
   # Without the approval setup writes, a cold deep link stops at an "Open in
   # PlainText?" prompt and fails in ways that look like a slow launch.
@@ -164,7 +148,7 @@ save_ios_failure_evidence() {
 }
 
 # iOS runs the cold deep link itself rather than through vrt-deep-link-cold.ad:
-# agent-device gives `simctl openurl` a fixed 15 s with no retry, which cold
+# agent-device gives `simctl openurl` a fixed 20 s with no retry, which cold
 # launches on CI exceed. The check is that the link, starting the app, reaches
 # the capture screen, so openurl's exit status is only logged.
 run_ios_cold_deep_link() {
@@ -184,14 +168,13 @@ run_ios_cold_deep_link() {
   agent_device open "$VRT_APP_ID" --timeout 60000 >/dev/null &&
     agent_device wait "id=\"$capture_id\"" 60000 >/dev/null &&
     agent_device wait stable 200 5000 >/dev/null || return 1
-  # openurl's time shows how close cold launches run to agent-device's 15 s.
+  # openurl's time shows how close cold launches run to agent-device's 20 s.
   printf '✓ cold deep link (openurl %ss, screen %ss)\n' "$openurl_s" "$((SECONDS - started - openurl_s))"
 }
 
 run_cold_attempt() {
   local run="$1" dir="$artifacts_root/cold-$1" status=0
-  # On a slow runner even this can hit agent-device's 15 s xcrun limit, which
-  # should cost one attempt, not the run.
+  # A failed reset should cost one attempt, not the run.
   agent_device settings clear-app-state "$VRT_APP_ID" || return 1
   if [[ "$platform" == "android" ]]; then
     run_e2e_test vrt-deep-link-cold "cold-$run" "$cold_attempt_timeout_ms" --retries 1
