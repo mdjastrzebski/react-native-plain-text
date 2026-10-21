@@ -87,7 +87,7 @@
     "@release-it/conventional-changelog": "^11.0.1",
     "@testing-library/react-native": "^14.0.1",
     "@types/react": "^19.2.0",
-    "agent-device": "0.21.8",
+    "agent-device": "0.21.29",
     "del-cli": "^7.0.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",

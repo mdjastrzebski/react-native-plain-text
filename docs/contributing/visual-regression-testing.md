@@ -35,9 +35,12 @@ be rerun on its own.
   run it first.
 - `e2e` checks that cold and warm deep links work. It only matters when the
   deep-link path changes. On iOS the cold check calls `simctl openurl` itself,
-  since agent-device gives it only 15 s, and a failed attempt leaves a
+  since agent-device gives it only 20 s, and a failed attempt leaves a
   screenshot, the openurl output, and SpringBoard's log in
   `.vrt/agent-device/ios/cold-<n>/`.
+- A failed `capture` copies agent-device's daemon log and its session's
+  request logs to `.vrt/agent-device/capture-<suite target>/`, for example
+  `capture-ios` or `capture-ios-font-scale`.
 - `compare` only reads existing captures, so it is cheap to rerun.
 
 ## Local loop

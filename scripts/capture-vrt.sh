@@ -66,8 +66,10 @@ esac
 target="$(vrt_target "$platform")"
 
 actual_dir="$PROJECT_ROOT/.vrt/actual/$target"
+logs_dir="$PROJECT_ROOT/.vrt/agent-device/capture-$target"
 
 capture_attempts=5
+open_attempts=2
 # Each capture's verdict is reported as it is taken, not only at the compare stage.
 live_diff_dir="$PROJECT_ROOT/.vrt/live-diff/$target"
 case "$platform" in
@@ -106,12 +108,49 @@ step() {
   agent_device --level digest "$@" >/dev/null
 }
 
+retry() {
+  local attempts="$1" delay="$2" label="$3" attempt=1
+  shift 3
+  until "$@"; do
+    if [[ "$attempt" -ge "$attempts" ]]; then
+      fail "$label failed after $attempt attempts."
+    fi
+    printf '%s failed (attempt %s/%s); retrying.\n' "$label" "$attempt" "$attempts" >&2
+    attempt=$((attempt + 1))
+    sleep "$delay"
+  done
+}
+
+# One accessibility fetch proves the specimen exists. No `wait stable`: the
+# screenshot's crop resolves the same selector on the same screen.
+open_specimen() {
+  local capture_id="$1"
+  step open "$VRT_APP_ID" "$VRT_APP_SCHEME://vrt?testID=$capture_id" --foreground &&
+    step wait "id=\"$capture_id\"" 15000
+}
+
 close_session() {
   if [[ "$session_open" == "1" ]]; then
     agent_device close >/dev/null 2>&1 || true
   fi
 }
-trap close_session EXIT
+
+# The session's request logs show which command a failed capture was waiting
+# on, and the daemon log shows what that command was doing. The session
+# directory outlives runs and agent-device owns it, so only this run's files
+# are copied rather than the directory wiped.
+run_started="$(mktemp)"
+save_agent_device_logs() {
+  local state_dir
+  state_dir="$("$agent_device_bin" session state-dir 2>/dev/null)" || return 0
+  mkdir -p "$logs_dir"
+  cp "$state_dir/daemon.log" "$logs_dir/" 2>/dev/null || true
+  find "$state_dir/sessions/$session_name" -type f -newer "$run_started" \
+    -exec cp {} "$logs_dir/" \; 2>/dev/null || true
+  printf 'agent-device logs: %s\n' "$logs_dir" >&2
+}
+# Saved before the close, so they end at the failure.
+trap 'status=$?; [[ "$status" == 0 ]] || save_agent_device_logs; close_session; rm -f "$run_started"; exit "$status"' EXIT
 
 # A filtered capture is marked partial: only a complete set may become a baseline.
 partial_marker="$actual_dir/.partial"
@@ -132,7 +171,7 @@ capture_selected() {
   return 1
 }
 
-yarn del-cli "$actual_dir" "$live_diff_dir"
+yarn del-cli "$actual_dir" "$live_diff_dir" "$logs_dir"
 mkdir -p "$actual_dir"
 if [[ "$requested_selection" != "all" ]]; then
   printf '%s\n' "$requested_selection" > "$partial_marker"
@@ -150,13 +189,10 @@ while read -r capture_id; do
   # The verdict is the capture's only line. At a terminal a pending line stands
   # in for it until the verdict overwrites it.
   [[ -t 1 ]] && printf '⏳ %s' "$capture_id"
-  deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
-  step open "$VRT_APP_ID" "$deep_link" --foreground
   session_open=1
-
-  # One accessibility fetch proves the specimen exists. No `wait stable`: the crop
-  # below resolves the same selector on the same screen.
-  step wait "id=\"$capture_id\"" 15000
+  # A slow runner can drop the deep link or time out the wait. The pause lets a
+  # timed-out command finish first.
+  retry "$open_attempts" 2 "Opening '$capture_id'" open_specimen "$capture_id"
 
   # Files drop the ID's `vrt-` prefix; compare-vrt.sh derives the same names.
   image="${capture_id#vrt-}.png"
@@ -173,19 +209,7 @@ while read -r capture_id; do
     screenshot_command+=(--no-stabilize)
   fi
 
-  attempt=1
-  while true; do
-    if step "${screenshot_command[@]}"; then
-      break
-    fi
-    if [[ "$attempt" -ge "$capture_attempts" ]]; then
-      fail "Capturing '$capture_id' failed after $attempt attempts."
-    fi
-    printf 'Capture of %s failed (attempt %s/%s); retrying.\n' \
-      "$capture_id" "$attempt" "$capture_attempts" >&2
-    attempt=$((attempt + 1))
-    sleep 0.2
-  done
+  retry "$capture_attempts" 0.2 "Capturing '$capture_id'" step "${screenshot_command[@]}"
   captured=$((captured + 1))
   [[ -t 1 ]] && printf '\r\033[K'
   node "$SCRIPT_DIR/vrt-live-compare.js" \
