@@ -38,6 +38,9 @@ be rerun on its own.
   since agent-device gives it only 20 s, and a failed attempt leaves a
   screenshot, the openurl output, and SpringBoard's log in
   `.vrt/agent-device/ios/cold-<n>/`.
+- A failed `capture` copies agent-device's daemon log and its session's
+  request logs to `.vrt/agent-device/capture-<suite target>/`, for example
+  `capture-ios` or `capture-ios-font-scale`.
 - `compare` only reads existing captures, so it is cheap to rerun.
 
 ## Local loop

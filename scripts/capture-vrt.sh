@@ -66,6 +66,7 @@ esac
 target="$(vrt_target "$platform")"
 
 actual_dir="$PROJECT_ROOT/.vrt/actual/$target"
+logs_dir="$PROJECT_ROOT/.vrt/agent-device/capture-$target"
 
 capture_attempts=5
 open_attempts=2
@@ -133,7 +134,23 @@ close_session() {
     agent_device close >/dev/null 2>&1 || true
   fi
 }
-trap close_session EXIT
+
+# The session's request logs show which command a failed capture was waiting
+# on, and the daemon log shows what that command was doing. The session
+# directory outlives runs and agent-device owns it, so only this run's files
+# are copied rather than the directory wiped.
+run_started="$(mktemp)"
+save_agent_device_logs() {
+  local state_dir
+  state_dir="$("$agent_device_bin" session state-dir 2>/dev/null)" || return 0
+  mkdir -p "$logs_dir"
+  cp "$state_dir/daemon.log" "$logs_dir/" 2>/dev/null || true
+  find "$state_dir/sessions/$session_name" -type f -newer "$run_started" \
+    -exec cp {} "$logs_dir/" \; 2>/dev/null || true
+  printf 'agent-device logs: %s\n' "$logs_dir" >&2
+}
+# Saved before the close, so they end at the failure.
+trap 'status=$?; [[ "$status" == 0 ]] || save_agent_device_logs; close_session; rm -f "$run_started"; exit "$status"' EXIT
 
 # A filtered capture is marked partial: only a complete set may become a baseline.
 partial_marker="$actual_dir/.partial"
@@ -154,7 +171,7 @@ capture_selected() {
   return 1
 }
 
-yarn del-cli "$actual_dir" "$live_diff_dir"
+yarn del-cli "$actual_dir" "$live_diff_dir" "$logs_dir"
 mkdir -p "$actual_dir"
 if [[ "$requested_selection" != "all" ]]; then
   printf '%s\n' "$requested_selection" > "$partial_marker"
