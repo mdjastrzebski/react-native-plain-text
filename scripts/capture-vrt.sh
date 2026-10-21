@@ -107,6 +107,28 @@ step() {
   agent_device --level digest "$@" >/dev/null
 }
 
+# Runs a command until it succeeds, failing the run after the given attempts.
+retry() {
+  local attempts="$1" delay="$2" label="$3" attempt=1
+  shift 3
+  until "$@"; do
+    if [[ "$attempt" -ge "$attempts" ]]; then
+      fail "$label failed after $attempt attempts."
+    fi
+    printf '%s failed (attempt %s/%s); retrying.\n' "$label" "$attempt" "$attempts" >&2
+    attempt=$((attempt + 1))
+    sleep "$delay"
+  done
+}
+
+# One accessibility fetch proves the specimen exists. No `wait stable`: the
+# screenshot's crop resolves the same selector on the same screen.
+open_specimen() {
+  local capture_id="$1"
+  step open "$VRT_APP_ID" "$VRT_APP_SCHEME://vrt?testID=$capture_id" --foreground &&
+    step wait "id=\"$capture_id\"" 15000
+}
+
 close_session() {
   if [[ "$session_open" == "1" ]]; then
     agent_device close >/dev/null 2>&1 || true
@@ -151,27 +173,11 @@ while read -r capture_id; do
   # The verdict is the capture's only line. At a terminal a pending line stands
   # in for it until the verdict overwrites it.
   [[ -t 1 ]] && printf '⏳ %s' "$capture_id"
-  deep_link="$VRT_APP_SCHEME://vrt?testID=$capture_id"
+  session_open=1
   # A slow runner can lose the deep link or hang the accessibility fetch, which
-  # should cost one attempt, not the run.
-  open_attempt=1
-  while true; do
-    session_open=1
-    # One accessibility fetch proves the specimen exists. No `wait stable`: the
-    # crop below resolves the same selector on the same screen.
-    if step open "$VRT_APP_ID" "$deep_link" --foreground &&
-      step wait "id=\"$capture_id\"" 15000; then
-      break
-    fi
-    if [[ "$open_attempt" -ge "$open_attempts" ]]; then
-      fail "Opening '$capture_id' failed after $open_attempt attempts."
-    fi
-    printf 'Opening %s failed (attempt %s/%s); retrying.\n' \
-      "$capture_id" "$open_attempt" "$open_attempts" >&2
-    open_attempt=$((open_attempt + 1))
-    # Gives a runner still finishing a timed-out command time to settle.
-    sleep 2
-  done
+  # should cost one attempt, not the run. The pause gives a runner still
+  # finishing a timed-out command time to settle.
+  retry "$open_attempts" 2 "Opening '$capture_id'" open_specimen "$capture_id"
 
   # Files drop the ID's `vrt-` prefix; compare-vrt.sh derives the same names.
   image="${capture_id#vrt-}.png"
@@ -188,19 +194,7 @@ while read -r capture_id; do
     screenshot_command+=(--no-stabilize)
   fi
 
-  attempt=1
-  while true; do
-    if step "${screenshot_command[@]}"; then
-      break
-    fi
-    if [[ "$attempt" -ge "$capture_attempts" ]]; then
-      fail "Capturing '$capture_id' failed after $attempt attempts."
-    fi
-    printf 'Capture of %s failed (attempt %s/%s); retrying.\n' \
-      "$capture_id" "$attempt" "$capture_attempts" >&2
-    attempt=$((attempt + 1))
-    sleep 0.2
-  done
+  retry "$capture_attempts" 0.2 "Capturing '$capture_id'" step "${screenshot_command[@]}"
   captured=$((captured + 1))
   [[ -t 1 ]] && printf '\r\033[K'
   node "$SCRIPT_DIR/vrt-live-compare.js" \
