@@ -37,7 +37,9 @@ be rerun on its own.
   deep-link path changes. On iOS the cold check calls `simctl openurl` itself,
   since agent-device gives it only 20 s, and a failed attempt leaves a
   screenshot, the openurl output, and SpringBoard's log in
-  `.vrt/agent-device/ios/cold-<n>/`.
+  `.vrt/agent-device/ios/cold-<n>/`. A failed `e2e` also copies agent-device's
+  daemon log, the runner log, and the session's diagnostics (`*.ndjson`) to
+  `.vrt/agent-device/<platform>/`.
 - A failed `capture` copies agent-device's daemon log and its session's
   request logs to `.vrt/agent-device/capture-<suite target>/`, for example
   `capture-ios` or `capture-ios-font-scale`.
