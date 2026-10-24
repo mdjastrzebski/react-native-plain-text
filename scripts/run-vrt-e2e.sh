@@ -48,8 +48,10 @@ agent_device() {
 mkdir -p "$PROJECT_ROOT/.vrt/report"
 artifacts_root="$PROJECT_ROOT/.vrt/agent-device/$platform"
 
-# The daemon log is the only record of what a hung command was waiting on, and
-# the session's runner.log holds the XCTest runner's build and start output.
+# The per-session diagnostics logs are the only record of what a hung command
+# was waiting on, and the session's runner.log holds the XCTest runner's build
+# and start output.
+run_started="$(mktemp)"
 save_agent_device_logs() {
   local state_dir
   state_dir="$("$agent_device_bin" session state-dir 2>/dev/null)" || return 0
@@ -57,10 +59,13 @@ save_agent_device_logs() {
   cp "$state_dir/daemon.log" "$artifacts_root/" 2>/dev/null || true
   find "$state_dir/sessions/$session_name" -name '*.log' -type f \
     -exec cp {} "$artifacts_root/" \; 2>/dev/null || true
+  # Also covers the `$session_name:*` sessions of `agent_device test` attempts.
+  find "$state_dir/logs" -path "$state_dir/logs/$session_name*" -name '*.ndjson' -type f \
+    -newer "$run_started" -exec cp {} "$artifacts_root/" \; 2>/dev/null || true
 }
 
 # Whatever ends the run early, keep agent-device's logs for the CI artifact.
-trap 'status=$?; [[ "$status" == 0 ]] || save_agent_device_logs; exit "$status"' EXIT
+trap 'status=$?; [[ "$status" == 0 ]] || save_agent_device_logs; rm -f "$run_started"; exit "$status"' EXIT
 
 if [[ "$platform" == "ios" ]]; then
   # Without the approval setup writes, a cold deep link stops at an "Open in
@@ -75,10 +80,20 @@ if [[ "$platform" == "ios" ]]; then
   agent_device prepare ios-runner --timeout 600000 ||
     fail "Could not prepare the iOS runner. Logs: $artifacts_root"
   # The first launch after install is the slowest. Pay it here with a plain
-  # launch, which agent-device retries, so it doesn't count against the cold
-  # deep link below.
-  agent_device open "$VRT_APP_ID" --relaunch --timeout 60000
-  agent_device wait 'id="vrt-screen"' 30000 >/dev/null
+  # launch, so it doesn't count against the cold deep link below. `--timeout`
+  # also bounds the whole request (plus a 30 s margin), and a request timeout is
+  # not retried by agent-device: one CI open spent 80 s on the host before it
+  # reached the runner and timed out. Hence the larger budget and own retries.
+  warmup_attempts=3
+  for attempt in $(seq 1 "$warmup_attempts"); do
+    if agent_device open "$VRT_APP_ID" --relaunch --timeout 120000 &&
+      agent_device wait 'id="vrt-screen"' 30000 >/dev/null; then
+      break
+    fi
+    [[ "$attempt" -lt "$warmup_attempts" ]] ||
+      fail "Could not launch $VRT_APP_ID. Logs: $artifacts_root"
+    printf 'Warm-up launch %s/%s failed.\n' "$attempt" "$warmup_attempts" >&2
+  done
   # Deliberately no `close` here. Closing the session disposes the XCTest
   # runner, so every later command pays a multi-minute `xcodebuild` re-prepare
   # that no per-command wait budget can absorb. The cold attempts below reuse
