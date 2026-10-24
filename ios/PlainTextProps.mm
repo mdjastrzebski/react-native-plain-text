@@ -96,6 +96,17 @@ RNPlainTextTextAlignVertical resolveVerticalAlign(RNPlainTextTextAlignVertical t
     return textAlignVertical;
 }
 
+NSString *accessibilityLanguageFromProps(const RNPlainTextProps &props)
+{
+    if (!props.accessibilityLanguage.empty()) {
+        return [NSString stringWithUTF8String:props.accessibilityLanguage.c_str()];
+    }
+    if (props.lang.has_value() && !props.lang.value().empty()) {
+        return [NSString stringWithUTF8String:props.lang.value().c_str()];
+    }
+    return nil;
+}
+
 NSLineBreakMode lineBreakModeFromProp(RNPlainTextEllipsizeMode ellipsizeMode)
 {
     switch (ellipsizeMode) {
