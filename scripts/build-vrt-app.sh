@@ -19,7 +19,7 @@ case "$platform" in
     serial_file="$PROJECT_ROOT/.vrt/devices/android-serial"
     [[ -f "$serial_file" ]] || fail "Run 'yarn vrt android setup' first."
     android_serial="$(<"$serial_file")"
-    source_apk="$PROJECT_ROOT/example/android/app/build/outputs/apk/release/app-release.apk"
+    source_apk="$PROJECT_ROOT/examples/expo/android/app/build/outputs/apk/release/app-release.apk"
     target_dir="$PROJECT_ROOT/node_modules/.cache/vrt/apps/android"
     target_apk="$target_dir/app-release.apk"
     # A failed build must not leave a previous APK and fingerprint behind for CI
@@ -27,7 +27,7 @@ case "$platform" in
     yarn del-cli "$source_apk" "$target_apk" "$target_dir/build-input.sha256"
 
     VRT_ENABLED=1 ANDROID_SERIAL="$android_serial" \
-      yarn example android:release --device "$ANDROID_AVD_NAME" --no-bundler
+      yarn example:expo android:release --device "$ANDROID_AVD_NAME" --no-bundler
 
     [[ -f "$source_apk" ]] || fail "Expo did not produce $source_apk."
     mkdir -p "$(dirname "$target_apk")"
@@ -41,7 +41,7 @@ case "$platform" in
     target_app="$target_dir/PlainTextExample.app"
     yarn del-cli "$expo_output" "$target_app" "$target_dir/build-input.sha256"
 
-    VRT_ENABLED=1 yarn example ios:release --device generic --no-bundler --output "$expo_output"
+    VRT_ENABLED=1 yarn example:expo ios:release --device generic --no-bundler --output "$expo_output"
 
     # A read loop rather than mapfile: macOS ships Bash 3, which has no mapfile.
     ios_apps=()

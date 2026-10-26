@@ -12585,9 +12585,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"react-native-plain-text-example@workspace:example":
+"react-native-plain-text-example-expo@workspace:examples/expo":
   version: 0.0.0-use.local
-  resolution: "react-native-plain-text-example@workspace:example"
+  resolution: "react-native-plain-text-example-expo@workspace:examples/expo"
   dependencies:
     "@expo-google-fonts/inter": "npm:^0.4.2"
     "@expo/metro-runtime": "npm:~57.0.8"

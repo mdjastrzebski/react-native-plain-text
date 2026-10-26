@@ -68,7 +68,7 @@ most props only touch a few.
 - `ios/PlainTextProps.mm` / RN's generated iOS glue — reads the generated prop into native code
 - `android/src/main/java/com/mdjstack/plaintext/PlainTextViewManager.kt` — `@ReactProp` setter that applies the prop to
   the mounted view
-- `example/src/screens/FeaturesScreen.tsx` — example app coverage, so the prop is exercised in the dev client
+- `examples/expo/src/screens/FeaturesScreen.tsx` — example app coverage, so the prop is exercised in the dev client
 
 **Contract:** the spec is what the rest of the codebase treats as ground truth (`src/PlainTextViewNativeComponent.ts:8`,
 `// SYNC: this spec is the source of truth for props`). Every other file listed here reads or mirrors it.
@@ -379,7 +379,7 @@ re-applies the OS **Bold text** setting to the typeface, which interacts with `f
 [Set 5](#set-5--deferred-prop-application-android-dirty-flags).
 
 ¹ Otherwise Android recreates the Activity and the views are rebuilt anyway.
-`example/plugins/withFontScaleConfigChanges.js` declares it so the no-recreate path is the one you exercise while
+`examples/expo/plugins/withFontScaleConfigChanges.js` declares it so the no-recreate path is the one you exercise while
 developing.
 
 ---
@@ -668,12 +668,12 @@ iOS).
 - `android/src/test/java/com/mdjstack/plaintext/PlainTextViewTextAlignDirectionTest.kt` — pins the Android side; also
   why the test sets `ApplicationInfo.FLAG_SUPPORTS_RTL` (the library manifest declares nothing, so Robolectric's
   application comes up with RTL resolution disabled; a real app's manifest sets `android:supportsRtl="true"`, see
-  `example/android/app/src/main/AndroidManifest.xml`)
+  `examples/expo/android/app/src/main/AndroidManifest.xml`)
 - `ios/RNPlainText.mm` → the `NSTextAlignmentLeft`/`Right` swap in `applyContentFromProps` plus the
   `updateLayoutMetrics` override that marks content for rebuild when the direction flips between LTR and RTL under an
   explicit `left`/`right` (`Undefined`, a new view's starting direction, counts as LTR); `finalizeUpdates:` does the
   one rebuild per transaction, after both props and layout metrics have landed
-- `example/src/sections/DirectionSection.tsx` — exercises the swap on-device on both platforms against the `<Text>`
+- `examples/expo/src/sections/DirectionSection.tsx` — exercises the swap on-device on both platforms against the `<Text>`
   overlay (no VRT specimen covers it): `left`/`justify`/`auto` plus one Hebrew `auto` row, mounted under `rtl` and then
   flipped in place (same views, no prop change)
 

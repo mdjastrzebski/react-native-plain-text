@@ -65,9 +65,9 @@ prefixed names left are the generated ones we implement:
 
 ## Example app
 
-`example/` is an Expo dev-client app (see `example/AGENTS.md`, and check the
+`examples/expo/` is an Expo dev-client app (see `examples/expo/AGENTS.md`, and check the
 versioned Expo docs before touching Expo config). It consumes the library from
-source via `example/react-native.config.js`, which points the dependency at the
+source via `examples/expo/react-native.config.js`, which points the dependency at the
 repo root.
 
 Three screens, sharing the specimen furniture in `src/components/Specimen.tsx`
@@ -108,7 +108,7 @@ The value lives in
 (`Helpers::Constants.min_ios_version_supported`). Check it there rather than
 assuming.
 
-Note the example app is higher: `example/ios/Podfile` pins `16.4` (Expo's
+Note the example app is higher: `examples/expo/ios/Podfile` pins `16.4` (Expo's
 default). That's the app's floor, not the library's, so never use it to justify
 dropping an `@available` guard.
 

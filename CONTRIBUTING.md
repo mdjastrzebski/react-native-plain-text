@@ -14,26 +14,26 @@ backed directly by the platform's native text widget (`UILabel` on iOS,
 Architecture) native component.
 
 This is a Yarn workspaces monorepo: the library lives in the root directory, and
-`example/` is an Expo dev-client app used to run and test changes. Use the Node.js
+`examples/expo/` is an Expo dev-client app used to run and test changes. Use the Node.js
 version in [`.nvmrc`](./.nvmrc), and use Yarn v4, not `npm`.
 
 ## Commands
 
 Run from the repo root:
 
-|                                             |                                                        |
-| ------------------------------------------- | ------------------------------------------------------ |
-| `yarn validate`                             | All checks: lint, format, typecheck, test, build       |
-| `yarn typecheck`                            | TypeScript                                             |
-| `yarn lint`                                 | ESLint (`--fix` to autofix)                            |
-| `yarn format`                               | oxfmt on JS/TS, md, json and yml                       |
-| `yarn test`                                 | Jest (`yarn test path -t "name"` for one case)         |
-| `yarn test:cpp`                             | C++ unit tests in `tests/cpp/`, no framework           |
-| `yarn test:android`                         | Kotlin unit tests in `android/src/test/` (Robolectric) |
-| `yarn vrt android` / `yarn vrt ios`         | Visual regression tests on emulator/simulator          |
-| `yarn example ios` / `yarn example android` | Build & run the example app                            |
-| `yarn example start`                        | Metro only (no native rebuild)                         |
-| `yarn prepare`                              | Build the shippable library into `lib/`                |
+|                                                       |                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------ |
+| `yarn validate`                                       | All checks: lint, format, typecheck, test, build       |
+| `yarn typecheck`                                      | TypeScript                                             |
+| `yarn lint`                                           | ESLint (`--fix` to autofix)                            |
+| `yarn format`                                         | oxfmt on JS/TS, md, json and yml                       |
+| `yarn test`                                           | Jest (`yarn test path -t "name"` for one case)         |
+| `yarn test:cpp`                                       | C++ unit tests in `tests/cpp/`, no framework           |
+| `yarn test:android`                                   | Kotlin unit tests in `android/src/test/` (Robolectric) |
+| `yarn vrt android` / `yarn vrt ios`                   | Visual regression tests on emulator/simulator          |
+| `yarn example:expo ios` / `yarn example:expo android` | Build & run the example app                            |
+| `yarn example:expo start`                             | Metro only (no native rebuild)                         |
+| `yarn prepare`                                        | Build the shippable library into `lib/`                |
 
 ## Development workflow
 
@@ -43,17 +43,17 @@ The example app uses the local copy of the library. Changes to the library's
 JavaScript are picked up on reload, native changes need a rebuild.
 
 ```sh
-yarn example start      # Metro only
-yarn example ios        # build & run on iOS
-yarn example android    # build & run on Android
+yarn example:expo start      # Metro only
+yarn example:expo ios        # build & run on iOS
+yarn example:expo android    # build & run on Android
 ```
 
 The library is iOS/Android only. `PlainText` renders a Fabric native
-component with no web fallback, so there is no `yarn example web`.
+component with no web fallback, so there is no `yarn example:expo web`.
 
-To edit native code in an IDE, open `example/ios/PlainTextExample.xcworkspace`
+To edit native code in an IDE, open `examples/expo/ios/PlainTextExample.xcworkspace`
 in Xcode (sources under `Pods > Development Pods > react-native-plain-text`) or
-`example/android` in Android Studio (sources under `react-native-plain-text`).
+`examples/expo/android` in Android Studio (sources under `react-native-plain-text`).
 
 Agents: do not build the native binaries yourself unless explicitly asked to.
 They are slow, and the person you are working with is usually running the app
@@ -92,7 +92,7 @@ tested: [performance.md](docs/contributing/performance.md#prop-cost-policy).
 
 **A new prop ships with specimens.** Add at least one section to the Features
 screen, with a row per value that shows how each is handled, and a matching group
-in the VRT suite (`example/src/vrt/groups.tsx`) with baselines. Details:
+in the VRT suite (`examples/expo/src/vrt/groups.tsx`) with baselines. Details:
 [workflow.md](docs/contributing/workflow.md#specimens-for-a-new-prop).
 
 ## Manual sync points
