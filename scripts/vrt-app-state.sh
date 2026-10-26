@@ -43,7 +43,7 @@ app_build_inputs() {
     examples/expo/index.js
     examples/expo/babel.config.js
     examples/expo/metro.config.js
-    examples/expo/src
+    examples/shared/src
     examples/expo/assets
   )
   local optional=(patches examples/expo/plugins)
@@ -81,6 +81,7 @@ hash_build_input() {
     # how Metro resolves the library to src/.
     package.json) fields=(dependencies devDependencies peerDependencies codegenConfig exports) ;;
     examples/expo/package.json) fields=(dependencies devDependencies peerDependencies scripts) ;;
+    examples/shared/package.json) fields=(dependencies devDependencies peerDependencies exports) ;;
     *)
       hash_command < "$file"
       return

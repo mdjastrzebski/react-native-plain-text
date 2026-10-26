@@ -73,11 +73,12 @@ export const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 export const SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
 
 // The one bundled face, and the only one `fontVariationSettings` can move: it is
-// bundled at build time by the expo-font config plugin (examples/expo/app.json) from
-// assets/fonts/OpenSans.ttf, the variable release, with a wght axis (300-800,
-// default 400) and a wdth axis (75-100, default 100). No system font usably has
-// an fvar table (SF keeps its axes private, and Roboto is variable only from
-// Android 12), so every row that varies an axis has to name this family.
+// bundled at build time from assets/fonts/OpenSans.ttf (examples/shared), the
+// variable release, with a wght axis (300-800, default 400) and a wdth axis (75-100,
+// default 100). Each app embeds it its own way (the expo-font config plugin in
+// examples/expo/app.json, for one). No system font usably has an fvar table (SF
+// keeps its axes private, and Roboto is variable only from Android 12), so every
+// row that varies an axis has to name this family.
 //
 // Unlike MONO and SERIF the two names are the same font file. They differ
 // because RN resolves a bundled family differently per platform: from the asset
@@ -88,3 +89,25 @@ export const SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
 // Adding this font is why the sections that use it need a native rebuild rather
 // than a Metro reload.
 export const VARIABLE = Platform.select({ ios: 'Open Sans', default: 'OpenSans' });
+
+// The three Inter cuts, one per row of the font family specimens. Each is its own
+// static file, so weight and slant live in the name rather than in `fontWeight`
+// and `fontStyle`.
+//
+// The names differ per platform for the same reason as VARIABLE: iOS resolves a
+// bundled font by the PostScript name inside the file (name table ID 6), Android
+// by the asset file name without its extension. Each app registers the fonts
+// under exactly these names (Expo through `useFonts`, the bare app by shipping the
+// TTFs under the Android names), so the sections only ever read this table.
+export const INTER = Platform.select({
+  ios: {
+    regular: 'Inter-Regular',
+    semiBold: 'Inter-SemiBold',
+    lightItalic: 'Inter-LightItalic',
+  },
+  default: {
+    regular: 'Inter_400Regular',
+    semiBold: 'Inter_600SemiBold',
+    lightItalic: 'Inter_300Light_Italic',
+  },
+});

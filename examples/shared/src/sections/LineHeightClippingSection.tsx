@@ -1,6 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import { Section, screenStyles, TextItem } from '../components/Specimen';
 import type { PlainTextStyle } from 'react-native-plain-text';
+import { INTER } from '../theme';
 
 // Paired 1:1 with REALWORLD_FONTS by index.
 const REALWORLD_FONT_SIZES = [16, 20, 24, 32, 40];
@@ -13,14 +14,14 @@ const REALWORLD_FONTS: { label: string; style: PlainTextStyle }[] = Platform.sel
     { label: 'Georgia', style: { fontFamily: 'Georgia' } },
     { label: 'Helvetica Neue', style: { fontFamily: 'Helvetica Neue' } },
     { label: 'Baskerville', style: { fontFamily: 'Baskerville' } },
-    { label: 'Inter SemiBold', style: { fontFamily: 'Inter_600SemiBold' } },
+    { label: 'Inter SemiBold', style: { fontFamily: INTER.semiBold } },
   ],
   default: [
     { label: 'System', style: {} },
     { label: 'serif', style: { fontFamily: 'serif' } },
     { label: 'sans-serif-medium', style: { fontFamily: 'sans-serif-medium' } },
     { label: 'cursive', style: { fontFamily: 'cursive' } },
-    { label: 'Inter SemiBold', style: { fontFamily: 'Inter_600SemiBold' } },
+    { label: 'Inter SemiBold', style: { fontFamily: INTER.semiBold } },
   ],
 });
 

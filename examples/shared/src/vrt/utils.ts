@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Platform, StyleSheet, type TextStyle } from 'react-native';
 import type { PlainTextStyle } from 'react-native-plain-text';
-import { COLOR, VARIABLE } from '../theme';
+import { COLOR, INTER, VARIABLE } from '../theme';
 // A suite has its own device settings and baselines. Groups default to 'default'.
 export const VRT_SUITES = ['default', 'font-scale'] as const;
 export type VrtSuite = (typeof VRT_SUITES)[number];
@@ -107,7 +107,7 @@ export const REALWORLD_FONTS: {
     {
       label: 'Inter SemiBold',
       style: {
-        fontFamily: 'Inter_600SemiBold',
+        fontFamily: INTER.semiBold,
       },
     },
   ],
@@ -137,7 +137,7 @@ export const REALWORLD_FONTS: {
     {
       label: 'Inter SemiBold',
       style: {
-        fontFamily: 'Inter_600SemiBold',
+        fontFamily: INTER.semiBold,
       },
     },
   ],
@@ -418,24 +418,24 @@ const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
 });
 const CUSTOM_FONT_ROWS: FontFamilyRow[] = [
   {
-    label: 'expo-font alias',
+    label: 'Bundled font',
     style: {
       fontSize: 26,
-      fontFamily: 'Inter_400Regular',
+      fontFamily: INTER.regular,
     },
   },
   {
-    label: 'expo-font alias, heavier cut',
+    label: 'Bundled font, heavier cut',
     style: {
       fontSize: 26,
-      fontFamily: 'Inter_600SemiBold',
+      fontFamily: INTER.semiBold,
     },
   },
   {
-    label: 'expo-font alias, light italic',
+    label: 'Bundled font, light italic',
     style: {
       fontSize: 26,
-      fontFamily: 'Inter_300Light_Italic',
+      fontFamily: INTER.lightItalic,
     },
   },
 ];

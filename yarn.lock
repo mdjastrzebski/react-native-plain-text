@@ -12607,10 +12607,47 @@ __metadata:
     react-native-mmkv: "npm:^4.3.2"
     react-native-monorepo-config: "npm:^0.4.0"
     react-native-nitro-modules: "npm:0.35.9"
+    react-native-plain-text-example-shared: "workspace:*"
     react-native-reanimated: "npm:4.5.1"
     react-native-safe-area-context: "npm:~5.7.0"
     react-native-screens: "npm:~4.26.0"
     react-native-worklets: "npm:0.10.1"
+  languageName: unknown
+  linkType: soft
+
+"react-native-plain-text-example-shared@workspace:*, react-native-plain-text-example-shared@workspace:examples/shared":
+  version: 0.0.0-use.local
+  resolution: "react-native-plain-text-example-shared@workspace:examples/shared"
+  dependencies:
+    "@react-navigation/bottom-tabs": "npm:^7.18.13"
+    "@react-navigation/native": "npm:^7.3.13"
+    "@react-navigation/native-stack": "npm:^7.18.5"
+    react: "npm:19.2.3"
+    react-native: "npm:0.86.2"
+    react-native-memory-footprint: "npm:^0.1.0"
+    react-native-mmkv: "npm:^4.3.2"
+    react-native-nitro-modules: "npm:0.35.9"
+    react-native-reanimated: "npm:4.5.1"
+    react-native-safe-area-context: "npm:~5.7.0"
+    react-native-screens: "npm:~4.26.0"
+    react-native-worklets: "npm:0.10.1"
+  peerDependencies:
+    "@react-navigation/bottom-tabs": "*"
+    "@react-navigation/native": "*"
+    "@react-navigation/native-stack": "*"
+    react: "*"
+    react-native: "*"
+    react-native-memory-footprint: "*"
+    react-native-mmkv: "*"
+    react-native-nitro-modules: "*"
+    react-native-plain-text: "*"
+    react-native-reanimated: "*"
+    react-native-safe-area-context: "*"
+    react-native-screens: "*"
+    react-native-worklets: "*"
+  peerDependenciesMeta:
+    react-native-plain-text:
+      optional: true
   languageName: unknown
   linkType: soft
 

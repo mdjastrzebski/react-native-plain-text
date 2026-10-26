@@ -1,5 +1,6 @@
 import { Platform, type TextStyle } from 'react-native';
 import { Section, TextItem } from '../components/Specimen';
+import { INTER } from '../theme';
 
 // fontFamily is required (not optional) so a row's content can't come out empty.
 type FontFamilyRow = { label: string; style: TextStyle & { fontFamily: string } };
@@ -103,31 +104,25 @@ const PLATFORM_FONT_ROWS: FontFamilyRow[] = Platform.select({
   ],
 });
 
-// Custom fonts loaded via expo-font (App.tsx). On iOS, expo-font swizzles
-// +fontNames(forFamilyName:) so an unknown family retries as an alias and
-// returns the resolved PostScript name — UIFontDescriptorFamilyAttribute
-// matching doesn't call it, which is why these rows used to fall back to the
-// system font. (An earlier fix checking for a 0-length result never worked:
-// the swizzle returns one name, not none.)
-//
-// Android needs no such workaround: expo-font registers the aliases into
-// ReactFontManager, which PlainTextView.applyTypeface already resolves through.
+// The Inter cuts bundled with the app, named as INTER spells them: the PostScript
+// name on iOS, the asset file name on Android. Both apps register the fonts under
+// those names, so the rows read the same in either.
 const CUSTOM_FONT_ROWS: FontFamilyRow[] = [
   {
-    label: 'expo-font alias',
-    style: { fontSize: 26, fontFamily: 'Inter_400Regular' },
+    label: 'Bundled font',
+    style: { fontSize: 26, fontFamily: INTER.regular },
   },
   {
-    // Each cut is loaded under its own alias, so weight lives in the name
+    // Each cut is its own font file, so weight lives in the name
     // rather than in fontWeight: no sibling cut to match against.
-    label: 'expo-font alias, heavier cut',
-    style: { fontSize: 26, fontFamily: 'Inter_600SemiBold' },
+    label: 'Bundled font, heavier cut',
+    style: { fontSize: 26, fontFamily: INTER.semiBold },
   },
   {
     // Slant in the name too, for the same reason. Face is already italic, so
     // nothing is synthesized.
-    label: 'expo-font alias, light italic',
-    style: { fontSize: 26, fontFamily: 'Inter_300Light_Italic' },
+    label: 'Bundled font, light italic',
+    style: { fontSize: 26, fontFamily: INTER.lightItalic },
   },
 ];
 
@@ -143,8 +138,8 @@ const FONT_FAMILY_RESOLUTION: FontFamilyRow[] = [
 ];
 
 const FONT_FAMILY_RESOLUTION_FOOTER = Platform.select({
-  ios: 'Compare Text should agree on every row. Inter_* are expo-font aliases, one per cut.',
-  default: 'The built-in rows are Android analogs. Inter_* are expo-font aliases, one per cut.',
+  ios: 'Compare Text should agree on every row. The Inter rows are bundled fonts, one per cut.',
+  default: 'The built-in rows are Android analogs. The Inter rows are bundled fonts, one per cut.',
 });
 
 export function FontFamilySection({ showText }: { showText: boolean }) {

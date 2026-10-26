@@ -70,6 +70,14 @@ versioned Expo docs before touching Expo config). It consumes the library from
 source via `examples/expo/react-native.config.js`, which points the dependency at the
 repo root.
 
+The app itself is not in `examples/expo/`. It lives in `examples/shared/`
+(`react-native-plain-text-example-shared`), a private package consumed as
+TypeScript source, so each example app only provides its entry point, font loading
+and tab icons. Its React Native dependencies are peer dependencies: the example app
+supplies them, and `withMetroConfig` (`examples/expo/metro.config.js`) blocks the
+shared package's own `node_modules` copies, so there is one React Native in the
+bundle. The paths below are relative to `examples/shared/`.
+
 Three screens, sharing the specimen furniture in `src/components/Specimen.tsx`
 (cover, section headings, the row that overlays RN's `<Text>` in red), the
 palette in `src/theme.ts`, and the "Compare Text" flag in

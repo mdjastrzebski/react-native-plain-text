@@ -236,7 +236,7 @@ jobs:
             ~/Library/Caches/CocoaPods
           # Committed inputs only: hashing the generated Podfile files would move the key
           # without the pull request changing.
-          key: ios-vrt-pods-v2-${{ runner.os }}-${{ runner.arch }}-xcode26.5-${{ hashFiles('yarn.lock', 'package.json', 'examples/expo/package.json', 'examples/expo/app.json', 'examples/expo/plugins/**', '*.podspec') }}
+          key: ios-vrt-pods-v2-${{ runner.os }}-${{ runner.arch }}-xcode26.5-${{ hashFiles('yarn.lock', 'package.json', 'examples/expo/package.json', 'examples/expo/app.json', 'examples/expo/plugins/**', 'examples/shared/package.json', 'examples/shared/assets/**', '*.podspec') }}
           restore-keys: |
             ios-vrt-pods-v2-${{ runner.os }}-${{ runner.arch }}-xcode26.5-
 

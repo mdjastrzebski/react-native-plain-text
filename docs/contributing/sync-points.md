@@ -68,7 +68,7 @@ most props only touch a few.
 - `ios/PlainTextProps.mm` / RN's generated iOS glue — reads the generated prop into native code
 - `android/src/main/java/com/mdjstack/plaintext/PlainTextViewManager.kt` — `@ReactProp` setter that applies the prop to
   the mounted view
-- `examples/expo/src/screens/FeaturesScreen.tsx` — example app coverage, so the prop is exercised in the dev client
+- `examples/shared/src/screens/FeaturesScreen.tsx` — example app coverage, so the prop is exercised in the dev client
 
 **Contract:** the spec is what the rest of the codebase treats as ground truth (`src/PlainTextViewNativeComponent.ts:8`,
 `// SYNC: this spec is the source of truth for props`). Every other file listed here reads or mirrors it.
@@ -673,7 +673,7 @@ iOS).
   `updateLayoutMetrics` override that marks content for rebuild when the direction flips between LTR and RTL under an
   explicit `left`/`right` (`Undefined`, a new view's starting direction, counts as LTR); `finalizeUpdates:` does the
   one rebuild per transaction, after both props and layout metrics have landed
-- `examples/expo/src/sections/DirectionSection.tsx` — exercises the swap on-device on both platforms against the `<Text>`
+- `examples/shared/src/sections/DirectionSection.tsx` — exercises the swap on-device on both platforms against the `<Text>`
   overlay (no VRT specimen covers it): `left`/`justify`/`auto` plus one Hebrew `auto` row, mounted under `rtl` and then
   flipped in place (same views, no prop change)
 
