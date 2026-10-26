@@ -65,18 +65,36 @@ prefixed names left are the generated ones we implement:
 
 ## Example app
 
-`examples/expo/` is an Expo dev-client app (see `examples/expo/AGENTS.md`, and check the
-versioned Expo docs before touching Expo config). It consumes the library from
-source via `examples/expo/react-native.config.js`, which points the dependency at the
-repo root.
+Two example apps render the same app:
 
-The app itself is not in `examples/expo/`. It lives in `examples/shared/`
+- `examples/expo/`: an Expo dev-client app (see `examples/expo/AGENTS.md`, and check
+  the versioned Expo docs before touching Expo config). Native projects are generated
+  by prebuild and gitignored. It is also the only one with the VRT entry point
+  (`VRT_ENABLED`).
+- `examples/react-native/`: a bare React Native CLI app with committed `ios/` and
+  `android/`, for checking behavior without Expo in the way. Its icons come from
+  `@react-native-vector-icons/ionicons/static`, whose font is bundled by the
+  package's podspec and Gradle script (plus a `UIAppFonts` entry in `Info.plist`).
+
+Both consume the library from source via their `react-native.config.js`, which points
+the dependency at the repo root.
+
+The app itself is in neither. It lives in `examples/shared/`
 (`react-native-plain-text-example-shared`), a private package consumed as
 TypeScript source, so each example app only provides its entry point, font loading
 and tab icons. Its React Native dependencies are peer dependencies: the example app
-supplies them, and `withMetroConfig` (`examples/expo/metro.config.js`) blocks the
+supplies them, and `withMetroConfig` (each app's `metro.config.js`) blocks the
 shared package's own `node_modules` copies, so there is one React Native in the
-bundle. The paths below are relative to `examples/shared/`.
+bundle.
+
+The fonts (Inter and Open Sans) live once, in `examples/shared/assets/fonts/`. Expo
+loads the Inter files with `useFonts` and Open Sans through the `expo-font` config
+plugin. The bare app links all of them into the native projects with `yarn example:rn
+link-assets` (react-native-asset, driven by `assets` in its `react-native.config.js`):
+iOS references the shared files, Android gets copies in `android/app/src/main/assets/fonts/`.
+Rerun it after adding or changing a font. The Android copies and the
+`link-assets-manifest.json` files are committed. The paths below are relative to
+`examples/shared/`.
 
 Three screens, sharing the specimen furniture in `src/components/Specimen.tsx`
 (cover, section headings, the row that overlays RN's `<Text>` in red), the
@@ -116,7 +134,7 @@ The value lives in
 (`Helpers::Constants.min_ios_version_supported`). Check it there rather than
 assuming.
 
-Note the example app is higher: `examples/expo/ios/Podfile` pins `16.4` (Expo's
+Note the Expo example app is higher: `examples/expo/ios/Podfile` pins `16.4` (Expo's
 default). That's the app's floor, not the library's, so never use it to justify
 dropping an `@available` guard.
 

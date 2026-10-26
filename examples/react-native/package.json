@@ -1,0 +1,39 @@
+{
+  "name": "react-native-plain-text-example-react-native",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "link-assets": "react-native-asset"
+  },
+  "dependencies": {
+    "@react-native-vector-icons/ionicons": "^14.0.0",
+    "@react-navigation/bottom-tabs": "^7.18.13",
+    "@react-navigation/native": "^7.3.13",
+    "@react-navigation/native-stack": "^7.18.5",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-memory-footprint": "^0.1.0",
+    "react-native-mmkv": "^4.3.2",
+    "react-native-nitro-modules": "0.35.9",
+    "react-native-plain-text-example-shared": "workspace:*",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-worklets": "0.10.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/runtime": "^7.25.0",
+    "@react-native-community/cli": "20.1.0",
+    "@react-native-community/cli-platform-android": "20.1.0",
+    "@react-native-community/cli-platform-ios": "20.1.0",
+    "@react-native/babel-preset": "0.86.2",
+    "@react-native/metro-config": "0.86.2",
+    "react-native-asset": "^2.3.0",
+    "react-native-builder-bob": "^0.43.0",
+    "react-native-monorepo-config": "^0.4.0"
+  }
+}

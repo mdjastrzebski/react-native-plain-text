@@ -14,10 +14,11 @@ backed directly by the platform's native text widget (`UILabel` on iOS,
 Architecture) native component.
 
 This is a Yarn workspaces monorepo: the library lives in the root directory, and
-`examples/expo/` is an Expo dev-client app used to run and test changes. The app itself
-(screens, sections, theme, VRT scenarios) lives in `examples/shared/`, a private
-TypeScript-source package that each example app renders: the example apps only
-provide their entry point, font loading and tab icons. Use the Node.js
+`examples/expo/` (Expo dev client) and `examples/react-native/` (bare React Native CLI)
+are apps used to run and test changes. The app itself (screens, sections, theme,
+VRT scenarios) lives in `examples/shared/`, a private TypeScript-source package
+that each example app renders: the example apps only provide their entry point,
+font loading and tab icons. Use the Node.js
 version in [`.nvmrc`](./.nvmrc), and use Yarn v4, not `npm`.
 
 ## Commands
@@ -34,15 +35,16 @@ Run from the repo root:
 | `yarn test:cpp`                                       | C++ unit tests in `tests/cpp/`, no framework           |
 | `yarn test:android`                                   | Kotlin unit tests in `android/src/test/` (Robolectric) |
 | `yarn vrt android` / `yarn vrt ios`                   | Visual regression tests on emulator/simulator          |
-| `yarn example:expo ios` / `yarn example:expo android` | Build & run the example app                            |
-| `yarn example:expo start`                             | Metro only (no native rebuild)                         |
+| `yarn example:expo ios` / `yarn example:expo android` | Build & run the Expo example app                       |
+| `yarn example:rn ios` / `yarn example:rn android`     | Build & run the bare React Native example app          |
+| `yarn example:expo start` / `yarn example:rn start`   | Metro only (no native rebuild)                         |
 | `yarn prepare`                                        | Build the shippable library into `lib/`                |
 
 ## Development workflow
 
 Install dependencies with `yarn`.
 
-The example app uses the local copy of the library. Changes to the library's
+The example apps use the local copy of the library. Changes to the library's
 JavaScript are picked up on reload, native changes need a rebuild.
 
 ```sh
@@ -51,12 +53,21 @@ yarn example:expo ios        # build & run on iOS
 yarn example:expo android    # build & run on Android
 ```
 
+`yarn example:rn` takes the same `start`, `ios` and `android` commands. Its `ios/`
+and `android/` folders are committed, so before the first iOS run install the pods:
+
+```sh
+cd examples/react-native/ios && bundle install && bundle exec pod install
+```
+
 The library is iOS/Android only. `PlainText` renders a Fabric native
 component with no web fallback, so there is no `yarn example:expo web`.
 
-To edit native code in an IDE, open `examples/expo/ios/PlainTextExample.xcworkspace`
+To edit native code in an IDE, open `examples/react-native/ios/PlainTextExample.xcworkspace`
 in Xcode (sources under `Pods > Development Pods > react-native-plain-text`) or
-`examples/expo/android` in Android Studio (sources under `react-native-plain-text`).
+`examples/react-native/android` in Android Studio (sources under `react-native-plain-text`).
+The Expo app generates the same projects under `examples/expo/` with prebuild (`ios/`
+and `android/` are gitignored there).
 
 Agents: do not build the native binaries yourself unless explicitly asked to.
 They are slow, and the person you are working with is usually running the app

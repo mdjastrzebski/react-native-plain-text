@@ -1,0 +1,21 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "../shared/assets/fonts/Inter_300Light_Italic.ttf",
+      "sha1": "94e4de3f9d1c2596e28765b0a3ff629b33ee2eb4"
+    },
+    {
+      "path": "../shared/assets/fonts/Inter_400Regular.ttf",
+      "sha1": "7a3fa76705ad586f6410a1b5b0059dd17db20c26"
+    },
+    {
+      "path": "../shared/assets/fonts/Inter_600SemiBold.ttf",
+      "sha1": "863e1483cb0cad642b80fc840072596afd5ff144"
+    },
+    {
+      "path": "../shared/assets/fonts/OpenSans.ttf",
+      "sha1": "5d6a27e51031a826cea0b09c0311a16c4d3f3982"
+    }
+  ]
+}

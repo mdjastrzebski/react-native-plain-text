@@ -22,12 +22,13 @@ separate agent track.
 ## Always
 
 - **Yarn v4 workspaces, never `npm`.** The library is the repo root, `examples/expo/`
-  is an Expo dev-client app for running and testing changes, and `examples/shared/`
-  holds the app's screens, VRT scenarios and theme, which each example app renders.
+  (Expo dev client) and `examples/react-native/` (bare React Native CLI) are apps for
+  running and testing changes, and `examples/shared/` holds the app's screens, VRT
+  scenarios and theme, which each example app renders.
 - **Run `yarn validate` after every change.** It skips `yarn test:android`
   (needs a JDK and the Android SDK), so run that yourself after touching
   `android/src/main/`. CI runs both.
-- **Do not build the native binaries yourself** (`yarn example:expo ios|android`)
+- **Do not build the native binaries yourself** (`yarn example:expo|rn ios|android`)
   unless explicitly asked to.
 
 ## React Native Testing Library in this project

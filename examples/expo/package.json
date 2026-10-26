@@ -12,7 +12,6 @@
     "build:android": "cd android && ./gradlew assembleDebug -DtestBuildType=debug -Dorg.gradle.jvmargs=-Xmx4g"
   },
   "dependencies": {
-    "@expo-google-fonts/inter": "^0.4.2",
     "@expo/metro-runtime": "~57.0.8",
     "@expo/vector-icons": "^15.0.2",
     "@react-navigation/bottom-tabs": "^7.18.13",

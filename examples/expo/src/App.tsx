@@ -1,10 +1,5 @@
-import {
-  useFonts,
-  Inter_300Light_Italic,
-  Inter_400Regular,
-  Inter_600SemiBold,
-} from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
 import { App, INTER, type RenderTabIcon } from 'react-native-plain-text-example-shared';
 
 // Module-level so its identity is stable: the shared App rebuilds the tab
@@ -17,9 +12,9 @@ const renderTabIcon: RenderTabIcon = ({ name, color, size }) => (
 // font, which would make the font rows lie until loading finished.
 export default function ExpoApp() {
   const [fontsLoaded] = useFonts({
-    [INTER.lightItalic]: Inter_300Light_Italic,
-    [INTER.regular]: Inter_400Regular,
-    [INTER.semiBold]: Inter_600SemiBold,
+    [INTER.lightItalic]: require('../../shared/assets/fonts/Inter_300Light_Italic.ttf'),
+    [INTER.regular]: require('../../shared/assets/fonts/Inter_400Regular.ttf'),
+    [INTER.semiBold]: require('../../shared/assets/fonts/Inter_600SemiBold.ttf'),
   });
 
   if (!fontsLoaded) {

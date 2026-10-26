@@ -36,6 +36,7 @@
   ],
   "scripts": {
     "example:expo": "yarn workspace react-native-plain-text-example-expo",
+    "example:rn": "yarn workspace react-native-plain-text-example-react-native",
     "docs": "yarn workspace react-native-plain-text-docs",
     "clean": "del-cli lib tests/cpp/build .vrt",
     "prepare": "bob build",
