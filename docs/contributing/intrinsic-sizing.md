@@ -80,7 +80,9 @@ project's only C++/CMake/JNI, under `android/src/main/jni/`:
   C++ constraints), so build the `MeasureSpec` from them directly. Do **not**
   `PixelUtil.toPixelFromDIP` again, and convert the result **back** to DIP with
   `toDIPFromPixel` for `YogaMeasureOutput`. Double-scaling the input width was
-  what cropped width-constrained wrapping text to too few lines.
+  what cropped width-constrained wrapping text to too few lines. Round the
+  constraints to int px, do not truncate them: a 122px box can arrive as
+  121.99999px, and truncating it wraps text that was measured to fit.
 
 ## Measurement invalidation (both platforms)
 

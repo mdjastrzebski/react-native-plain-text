@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.Layout
 import android.view.View
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
@@ -351,7 +352,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
       } else null
     val measuredWidth =
       if (rawDesiredWidth != null) {
-        if (widthMode == YogaMeasureMode.AT_MOST) minOf(rawDesiredWidth, width.toInt())
+        if (widthMode == YogaMeasureMode.AT_MOST) minOf(rawDesiredWidth, width.roundToInt())
         else rawDesiredWidth
       } else {
         view.measuredWidth
@@ -403,11 +404,13 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
 
   // Size constraints already arrive in pixels: FabricUIManager's getYogaSize()
   // converts the C++ LayoutConstraints to px before this is called, so they map
-  // straight onto a MeasureSpec (the output above is converted back to DIP).
+  // straight onto a MeasureSpec (the output above is converted back to DIP). They
+  // are rounded, not truncated: the px to DIP to px round trip can hand a 122px box
+  // back as 121.99999px, and truncating that wraps text that was measured to fit.
   private fun toMeasureSpec(size: Float, mode: YogaMeasureMode): Int {
     return when (mode) {
-      YogaMeasureMode.EXACTLY -> View.MeasureSpec.makeMeasureSpec(size.toInt(), View.MeasureSpec.EXACTLY)
-      YogaMeasureMode.AT_MOST -> View.MeasureSpec.makeMeasureSpec(size.toInt(), View.MeasureSpec.AT_MOST)
+      YogaMeasureMode.EXACTLY -> View.MeasureSpec.makeMeasureSpec(size.roundToInt(), View.MeasureSpec.EXACTLY)
+      YogaMeasureMode.AT_MOST -> View.MeasureSpec.makeMeasureSpec(size.roundToInt(), View.MeasureSpec.AT_MOST)
       else -> View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
     }
   }
