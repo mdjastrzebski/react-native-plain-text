@@ -325,9 +325,26 @@ using namespace plaintext;
         _label.lineBreakStrategy = lineBreakStrategyFromProp(newViewProps.lineBreakStrategyIOS);
     }
 
+    // Decided before super, which replaces _props and may free what oldViewProps
+    // refers to.
+    BOOL accessibilityLanguageChanged = _forceApplyProps ||
+        oldViewProps.lang != newViewProps.lang ||
+        oldViewProps.accessibilityLanguage != newViewProps.accessibilityLanguage;
+
     _forceApplyProps = NO;
 
     [super updateProps:props oldProps:oldProps];
+
+    // After super: RCTViewComponentView writes the raw accessibilityLanguage prop
+    // (nil when unset), which would otherwise clobber the lang fallback. Only this
+    // view needs it: RCTViewComponentView's isAccessibilityElement defers to
+    // contentView (_label, YES by default), so VoiceOver focuses this view and
+    // never descends into _label.
+    // SYNC: PlainTextView.kt's applyText (its LocaleSpan) is the Android counterpart. See
+    // docs/contributing/sync-points.md#set-19--lang-as-the-screen-reader-language.
+    if (accessibilityLanguageChanged) {
+        self.accessibilityElement.accessibilityLanguage = accessibilityLanguageFromProps(newViewProps);
+    }
 }
 
 // Fabric calls this after every -updateProps/-updateLayoutMetrics batch (mount, update and

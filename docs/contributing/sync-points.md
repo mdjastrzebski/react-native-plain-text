@@ -253,8 +253,9 @@ on both platforms for now, ready for whatever gets A/B tested next.
   letterSpacing is relative to font size)
 - `dirtyLetterSpacing`: `letterSpacing`
 - `dirtyTypeface`: `fontFamily`, `fontWeight`, `fontStyle`
-- `dirtyText`: `text`, `lineHeight`, `textTransform`, plus `fontSize` / `allowFontScaling` / `maxFontSizeMultiplier`
-  again (the `lineHeight` span is scaled too, via `markScaledSizesDirty()`)
+- `dirtyText`: `text`, `lineHeight`, `textTransform`, `lang` (it feeds the `LocaleSpan`),
+  plus `fontSize` / `allowFontScaling` / `maxFontSizeMultiplier` again (the `lineHeight` span is scaled too, via
+  `markScaledSizesDirty()`)
 - Ordered separately, not a dirty flag: `fontVariationSettings` (see below)
 
 Setters whose work is **shared with other props** record state and set one of the flags above; `flushPendingUpdates()`
@@ -693,6 +694,32 @@ and [Set 3](#set-3--the-three-way-default-contract) don't list it.
 changes) — a wrapped RTL paragraph's lines, and its short last line especially, hang on the opposite side. A recycled
 view would otherwise keep the previous mount's side. Both failure modes are silent and visual-only: the Robolectric test
 pins the Android side, but on iOS they only show up on-device, in the example app's Direction section.
+
+---
+
+## Set 19 — `lang` as the screen-reader language
+
+**Props:** `lang`. Besides hyphenation and line breaking, it is the language screen readers speak the text in, on both
+platforms.
+
+iOS resolves it in `accessibilityLanguageFromProps`: RN's own `accessibilityLanguage` wins when set, and `lang` applies
+otherwise. An empty string counts as unset for both. It writes the result to the component view's
+`accessibilityLanguage`, after `RCTViewComponentView`'s own write of the raw prop. The `UILabel` doesn't need it:
+VoiceOver focuses the component view, whose `isAccessibilityElement` defers to its `contentView`, and never descends into
+the label.
+
+Android has no such property, so TalkBack reads it from a `LocaleSpan` over the whole text. It carries the same locale as
+`textLocales`, so it doesn't change layout. Like RN, Android ignores `accessibilityLanguage`: a `LocaleSpan` is a
+`MetricAffectingSpan`, so applying it there would make Android break lines in a different language from iOS.
+
+**Files:**
+
+- `ios/PlainTextProps.h` / `.mm` → `accessibilityLanguageFromProps` — the iOS resolution
+- `ios/RNPlainText.mm` → `updateProps` — applies it after `super`
+- `PlainTextView.kt` → `applyText` — the Android `LocaleSpan`
+- `android/src/test/java/com/mdjstack/plaintext/PlainTextViewLocaleSpanTest.kt` — pins the Android side
+
+**Failure mode:** one platform's screen reader speaks the text in the device language instead of `lang`. Nothing throws.
 
 ---
 
