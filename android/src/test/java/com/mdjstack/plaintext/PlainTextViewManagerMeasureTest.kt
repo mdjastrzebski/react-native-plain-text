@@ -7,6 +7,7 @@ import com.facebook.react.uimanager.PixelUtil
 import com.facebook.yoga.YogaMeasureMode
 import com.facebook.yoga.YogaMeasureOutput
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,5 +54,18 @@ class PlainTextViewManagerMeasureTest {
 
     assertEquals(YogaMeasureOutput.getWidth(intrinsic), YogaMeasureOutput.getWidth(constrained), 0f)
     assertEquals(YogaMeasureOutput.getHeight(intrinsic), YogaMeasureOutput.getHeight(constrained), 0f)
+  }
+
+  // A fractional constraint is a real box, not float noise: the width must not
+  // exceed it, as with RN's floor() in TextLayoutManager.createLayout.
+  @Test
+  fun neverReportsMoreThanAFractionalConstraint() {
+    val intrinsic = measure(0f, YogaMeasureMode.UNDEFINED)
+    val widthPx = PixelUtil.toPixelFromDIP(YogaMeasureOutput.getWidth(intrinsic))
+
+    val constraint = widthPx - 0.4f
+    val constrained = measure(constraint, YogaMeasureMode.AT_MOST)
+
+    assertTrue(PixelUtil.toPixelFromDIP(YogaMeasureOutput.getWidth(constrained)) <= constraint + 0.01f)
   }
 }

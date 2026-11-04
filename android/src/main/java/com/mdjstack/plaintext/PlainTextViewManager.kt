@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.Layout
 import android.view.View
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.roundToInt
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
@@ -352,7 +353,7 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
       } else null
     val measuredWidth =
       if (rawDesiredWidth != null) {
-        if (widthMode == YogaMeasureMode.AT_MOST) minOf(rawDesiredWidth, width.roundToInt())
+        if (widthMode == YogaMeasureMode.AT_MOST) minOf(rawDesiredWidth, atMostPx(width))
         else rawDesiredWidth
       } else {
         view.measuredWidth
@@ -404,13 +405,20 @@ class PlainTextViewManager : SimpleViewManager<PlainTextView>(),
 
   // Size constraints already arrive in pixels: FabricUIManager's getYogaSize()
   // converts the C++ LayoutConstraints to px before this is called, so they map
-  // straight onto a MeasureSpec (the output above is converted back to DIP). They
-  // are rounded, not truncated: the px to DIP to px round trip can hand a 122px box
-  // back as 121.99999px, and truncating that wraps text that was measured to fit.
+  // straight onto a MeasureSpec (the output above is converted back to DIP).
+  //
+  // They are not truncated: the px to DIP to px round trip can hand a 122px box back
+  // as 121.99999px, and truncating that wraps text that was measured to fit.
+  // EXACTLY is Yoga's own box, so it rounds to the nearest px. AT_MOST floors like
+  // RN's TextLayoutManager.createLayout, so text never exceeds the constraint, but
+  // with the 0.01f epsilon RN's ParagraphShadowNode uses for the same float noise
+  // (RN itself floors without it, so <Text> can wrap there too).
+  private fun atMostPx(size: Float): Int = floor(size + 0.01f).toInt()
+
   private fun toMeasureSpec(size: Float, mode: YogaMeasureMode): Int {
     return when (mode) {
       YogaMeasureMode.EXACTLY -> View.MeasureSpec.makeMeasureSpec(size.roundToInt(), View.MeasureSpec.EXACTLY)
-      YogaMeasureMode.AT_MOST -> View.MeasureSpec.makeMeasureSpec(size.roundToInt(), View.MeasureSpec.AT_MOST)
+      YogaMeasureMode.AT_MOST -> View.MeasureSpec.makeMeasureSpec(atMostPx(size), View.MeasureSpec.AT_MOST)
       else -> View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
     }
   }
