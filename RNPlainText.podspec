@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  s.platforms    = { :ios => min_ios_version_supported }
+  s.platforms    = { :ios => min_ios_version_supported, :tvos => min_ios_version_supported }
   s.source       = { :git => "https://github.com/mdjastrzebski/react-native-plain-text.git", :tag => "#{s.version}" }
 
   # cpp/ holds platform-independent C++ shared with Android (which picks it up
