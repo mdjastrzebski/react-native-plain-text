@@ -12,6 +12,7 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.text.TextUtils
 import android.text.style.LineHeightSpan
+import android.text.style.LocaleSpan
 import android.util.AttributeSet
 import android.util.LruCache
 import android.util.TypedValue
@@ -273,22 +274,32 @@ class PlainTextView : AppCompatTextView {
     dirtyText = true
   }
 
-  // The single place text reaches TextView, since a lineHeight span must be layered on.
+  // The single place text reaches TextView, since spans must be layered on.
   private fun applyText() {
     val value = applyTextTransform(rawText?.toString() ?: "", textTransform)
-    if (lineHeightSp.isNaN()) {
+    val lang = appliedLang
+    if (lineHeightSp.isNaN() && lang == null) {
       setText(value)
       return
     }
+    // EXPENSIVE: allocates a SpannableString plus one span per set prop, per apply,
+    // where the early-out above passes the plain string (lineHeight's and lang's
+    // cost, docs/contributing/performance.md).
     val spannable = SpannableString(value)
-    spannable.setSpan(
-      CustomLineHeightSpan(
-        toEffectivePixel(lineHeightSp, allowFontScaling, maxFontSizeMultiplier)
-      ),
-      0,
-      spannable.length,
-      Spannable.SPAN_INCLUSIVE_INCLUSIVE
-    )
+    if (!lineHeightSp.isNaN()) {
+      spannable.setWholeTextSpan(
+        CustomLineHeightSpan(
+          toEffectivePixel(lineHeightSp, allowFontScaling, maxFontSizeMultiplier)
+        )
+      )
+    }
+    // TalkBack picks its speech language from a LocaleSpan only, never textLocales.
+    // Same locale as textLocales (setLang), so layout is unchanged.
+    // SYNC: RNPlainText.mm's updateProps is the iOS counterpart. See
+    // docs/contributing/sync-points.md#set-19--lang-as-the-screen-reader-language.
+    if (lang != null) {
+      spannable.setWholeTextSpan(LocaleSpan(Locale.forLanguageTag(lang)))
+    }
     setText(spannable)
   }
 
@@ -593,11 +604,12 @@ class PlainTextView : AppCompatTextView {
     gravity = (gravity and Gravity.VERTICAL_GRAVITY_MASK.inv()) or vertical
   }
 
-  // Null/empty restores the default locale.
+  // Null/empty restores the default locale. Also feeds the LocaleSpan (see applyText).
   fun setLang(lang: String?) {
     val normalized = if (lang.isNullOrEmpty()) null else lang
     if (normalized == appliedLang) return
     appliedLang = normalized
+    dirtyText = true
 
     textLocales = if (normalized == null) {
       LocaleList.getAdjustedDefault()
@@ -724,6 +736,10 @@ private fun toEffectivePixel(
   } else {
     PixelUtil.toPixelFromDIP(sp)
   }
+}
+
+private fun Spannable.setWholeTextSpan(span: Any) {
+  setSpan(span, 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
 }
 
 // Mirrors <Text> (com.facebook.react.views.text.TextTransform, reimplemented here

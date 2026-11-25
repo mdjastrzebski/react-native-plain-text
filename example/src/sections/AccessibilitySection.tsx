@@ -55,6 +55,14 @@ export function AccessibilitySection({ showText }: { showText: boolean }) {
         disabled
       </TextItem>
       <TextItem
+        label="language (iOS)"
+        showText={showText}
+        style={styles.a11yRow}
+        accessibilityProps={{ accessibilityLanguage: 'es-ES' }}
+      >
+        El veloz murciélago hindú comía feliz cardillo y kiwi
+      </TextItem>
+      <TextItem
         label="hidden"
         showText={showText}
         style={styles.a11yRow}
